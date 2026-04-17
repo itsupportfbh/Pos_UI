@@ -1,0 +1,136 @@
+:host {
+  display: block;
+  min-height: 0;
+  height: 100%;
+}
+
+.sidebar {
+  width: 260px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sidebar.sidebar-open {
+  width: 260px;
+}
+
+.menu-list {
+  height: 100%;
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  overflow: auto;
+  padding-right: 0.15rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar) transparent;
+}
+
+.menu-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menu-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.menu-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--app-scrollbar);
+}
+
+.menu-group {
+  padding: 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.menu-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  margin-bottom: 0.7rem;
+  padding: 0.2rem 0.25rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-group-header i {
+  color: var(--app-primary);
+}
+
+.menu-group-header strong {
+  color: var(--app-text);
+  font-size: 0.95rem;
+}
+
+.menu-group-arrow {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.menu-group-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+.menu-group-items {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.menu-item {
+  display: flex;
+  width: 100%;
+  text-align: left;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.98);
+  color: var(--app-text);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.menu-item span {
+  display: block;
+}
+
+.menu-item strong,
+.menu-item small {
+  display: block;
+}
+
+.menu-item small {
+  margin-top: 0.2rem;
+  color: var(--app-text-muted);
+}
+
+.menu-item.active {
+  border-color: rgba(47, 125, 87, 0.32);
+  box-shadow: 0 10px 20px rgba(34, 91, 63, 0.1);
+  background: rgba(231, 243, 237, 0.95);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .sidebar,
+  .sidebar.sidebar-open {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .menu-list {
+    height: auto;
+    overflow: visible;
+    padding-right: 0;
+  }
+}

@@ -1,0 +1,146 @@
+<p-table
+  #dt
+  [value]="value"
+  [columns]="visibleColumns"
+  [paginator]="paginator"
+  [lazy]="isServerPagination"
+  [first]="first"
+  [rows]="rows"
+  [rowsPerPageOptions]="rowsPerPageOptions"
+  [totalRecords]="resolvedTotalRecords"
+  [loading]="loading"
+  [dataKey]="dataKey"
+  [selectionMode]="selectionMode"
+  [selection]="selection"
+  [sortMode]="sortMode"
+  [sortField]="sortField"
+  [sortOrder]="sortOrder"
+  [showGridlines]="showGridlines"
+  [stripedRows]="stripedRows"
+  [rowHover]="rowHover"
+  [scrollable]="scrollable"
+  [scrollHeight]="scrollHeight"
+  [size]="size"
+  [globalFilterFields]="globalFilterFields"
+  [showCurrentPageReport]="showCurrentPageReport"
+  [currentPageReportTemplate]="currentPageReportTemplate"
+  [paginatorDropdownAppendTo]="'body'"
+  [tableStyle]="{ 'min-width': '100%' }"
+  responsiveLayout="scroll"
+  (selectionChange)="updateSelection($event)"
+  (onPage)="emitPageChange($event)"
+  (onLazyLoad)="emitLazyLoad($event)"
+  (onRowSelect)="emitRowSelect($event)"
+  (onRowUnselect)="emitRowUnselect($event)"
+>
+  <ng-template #caption>
+    <div class="table-toolbar">
+      <div class="table-search-actions">
+        @if (showFilterButton) {
+          <button
+            pButton
+            type="button"
+            [label]="filterButtonLabel"
+            [icon]="filterButtonIcon"
+            severity="secondary"
+            outlined="true"
+            class="table-filter-button"
+            (click)="emitFilterButtonClick()"
+          ></button>
+        }
+
+        <div class="table-search">
+          <input
+            pInputText
+            type="text"
+            [(ngModel)]="globalFilterValue"
+            (input)="dt.filterGlobal(globalFilterValue, 'contains')"
+            [placeholder]="globalFilterPlaceholder"
+          />
+        </div>
+
+        @if (showAddNewButton && toolbarButtonLabel) {
+          <button
+            pButton
+            type="button"
+            [label]="toolbarButtonLabel"
+            [icon]="toolbarButtonIcon"
+            class="table-action-button"
+            (click)="emitToolbarButtonClick()"
+          ></button>
+        }
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template #header let-columns>
+    <tr>
+      @if (selectionMode === 'multiple') {
+        <th class="selection-column">
+          <p-tableHeaderCheckbox />
+        </th>
+      }
+
+      @for (column of columns; track trackByField($index, column)) {
+        <th
+          [pSortableColumn]="column.sortable ? getFieldName(column) : undefined"
+          [style.width]="column.width"
+          [class]="column.headerStyleClass"
+        >
+          <div class="header-cell">
+            <span>{{ column.header }}</span>
+            @if (column.sortable) {
+              <p-sortIcon [field]="getFieldName(column)" />
+            }
+          </div>
+        </th>
+      }
+
+      @if (showRowActions) {
+        <th class="action-column">
+          <div class="header-cell">
+            <span>{{ rowActionHeader }}</span>
+          </div>
+        </th>
+      }
+    </tr>
+  </ng-template>
+
+  <ng-template #body let-rowData let-columns="columns">
+    <tr [pSelectableRow]="selectionMode ? rowData : null">
+      @if (selectionMode === 'multiple') {
+        <td class="selection-column">
+          <p-tableCheckbox [value]="rowData" />
+        </td>
+      }
+
+      @for (column of columns; track trackByField($index, column)) {
+        <td [class]="column.bodyStyleClass ?? column.styleClass">
+          @if (column.type === 'tag') {
+            <p-tag [value]="formatCell(column, rowData)" [severity]="getTagSeverity(column, rowData)" />
+          } @else {
+            {{ formatCell(column, rowData) }}
+          }
+        </td>
+      }
+
+      @if (showRowActions) {
+        <td class="action-column">
+          <div class="row-actions">
+            @if (rowActionsTemplate) {
+              <ng-container *ngTemplateOutlet="rowActionsTemplate; context: { $implicit: rowData }" />
+            }
+          </div>
+        </td>
+      }
+    </tr>
+  </ng-template>
+
+  <ng-template #emptymessage>
+    <tr>
+      <td [attr.colspan]="visibleColumns.length + (selectionMode === 'multiple' ? 1 : 0) + (showRowActions ? 1 : 0)" class="empty-message">
+        {{ emptyMessage }}
+      </td>
+    </tr>
+  </ng-template>
+</p-table>

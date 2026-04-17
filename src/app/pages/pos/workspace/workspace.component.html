@@ -1,0 +1,15 @@
+<main class="pos-page">
+  <app-shell
+    [appName]="appName"
+    [user]="currentUser"
+    [footerDescription]="footerDescription"
+    [sidebarOpen]="sidebarOpen"
+    [activeMenuKey]="activeMenuKey"
+    [menuItems]="sidebarMenus"
+    (menuToggle)="toggleSidebar()"
+    (menuSelect)="selectMenu($event)"
+    (logoutClick)="logout()"
+  >
+    <router-outlet />
+  </app-shell>
+</main>

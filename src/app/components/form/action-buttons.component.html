@@ -1,0 +1,19 @@
+<div class="actions-row">
+  @if (showSecondary && secondaryLabel) {
+    <p-button
+      [label]="secondaryLabel"
+      [icon]="secondaryIcon"
+      severity="secondary"
+      [outlined]="true"
+      [disabled]="secondaryDisabled"
+      (onClick)="onSecondaryClick()"
+    />
+  }
+
+  <p-button
+    [label]="primaryLabel"
+    [icon]="primaryIcon"
+    [disabled]="primaryDisabled"
+    (onClick)="onPrimaryClick()"
+  />
+</div>

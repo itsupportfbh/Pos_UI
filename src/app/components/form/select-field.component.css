@@ -1,0 +1,23 @@
+:host {
+  display: block;
+}
+
+.field-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.field-input {
+  width: 100%;
+}
+
+.field-help {
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+}

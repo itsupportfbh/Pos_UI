@@ -1,0 +1,22 @@
+<div class="field-block">
+  <label class="field-label" [for]="inputId">{{ label }}</label>
+  <input
+    pInputText
+    class="field-input"
+    [id]="inputId"
+    [name]="name || inputId"
+    [type]="type"
+    [placeholder]="placeholder"
+    [autocomplete]="autocomplete"
+    [required]="required"
+    [disabled]="disabled"
+    [readonly]="readonly"
+    [minlength]="minlength ?? null"
+    [maxlength]="maxlength ?? null"
+    [ngModel]="model"
+    (ngModelChange)="onModelChange($event)"
+  />
+  @if (helperText) {
+    <small class="field-help">{{ helperText }}</small>
+  }
+</div>

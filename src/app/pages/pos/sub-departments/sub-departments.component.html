@@ -1,0 +1,88 @@
+<section class="feature-page">
+  <header class="page-header hero-panel">
+    <div>
+      <p class="eyebrow">{{ pageEyebrow }}</p>
+      <h1>{{ pageTitle }}</h1>
+      <p class="page-subtitle">{{ pageSubtitle }}</p>
+    </div>
+  </header>
+
+  <p-card class="feature-card">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Static Data</p>
+        <h2>{{ tableTitle }}</h2>
+        @if (tableDescription) {
+          <p class="section-copy">{{ tableDescription }}</p>
+        }</div>
+    </div>
+
+    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()" [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [paginationMode]="paginationMode" [rows]="tablePageSize" [rowsPerPageOptions]="tableRowsPerPageOptions" [showGridlines]="tableShowGridlines" [stripedRows]="tableStripedRows" [rowHover]="tableRowHover" [emptyMessage]="tableEmptyMessage" [showAddNewButton]="showAddNewButton" [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader" (toolbarButtonClick)="openAddDialog()">
+      <ng-template #rowActions let-row>
+        <p-menu #rowMenu [model]="getRowActionItems(row)" [popup]="true" appendTo="body" styleClass="row-action-menu" />
+        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger" (click)="rowMenu.toggle($event)"></button>
+      </ng-template>
+    </app-shared-table>
+  </p-card>
+</section>
+
+<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false" [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog" [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
+  <p-card class="feature-card filter-drawer-card">
+      <section class="filter-panel filter-panel-compact">
+        <div class="filter-panel-header">
+          <div>
+            <h2>{{ filterTitle }}</h2>
+          </div>
+        </div>
+
+        <section class="field-grid">
+          <app-select-field
+            label="Department"
+            inputId="department"
+            placeholder="Choose department"
+            [options]="departmentOptions"
+            [model]="filterDepartment"
+            (modelChange)="filterDepartment = $event"
+          />
+        </section>
+
+        <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel" [showSecondary]="showSecondaryAction" (secondaryClick)="resetForm()" />
+      </section>
+    </p-card>
+</p-dialog>
+@if (addDialogConfig) {
+  <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
+    <ng-template pTemplate="header">
+      <div class="dialog-copy">
+        <p class="eyebrow">Create Master</p>
+        <h3>{{ dialogTitle }}</h3>
+        <p>{{ dialogSubtitle }}</p>
+      </div>
+    </ng-template>
+
+    <section class="field-grid dialog-grid">
+      <app-select-field
+        label="Department"
+        inputId="dialog-department"
+        placeholder="Choose department"
+        [options]="departmentOptions"
+        [model]="dialogDepartment"
+        (modelChange)="dialogDepartment = $event"
+      />
+
+      <app-text-field
+        label="Sub Department Name"
+        inputId="dialog-subDepartmentName"
+        placeholder="Counter Operations"
+        [model]="dialogSubDepartmentName"
+        (modelChange)="dialogSubDepartmentName = $event"
+      />
+    </section>
+
+    <div class="dialog-actions">
+      <button pButton type="button" label="Cancel" severity="secondary" text="true" (click)="closeAddDialog()"></button>
+      <button pButton type="button" [label]="dialogPrimaryActionLabel" (click)="submitAddDialog()"></button>
+    </div>
+  </p-dialog>
+}
+

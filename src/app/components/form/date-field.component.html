@@ -1,0 +1,19 @@
+<div class="field-block">
+  <label class="field-label" [for]="inputId">{{ label }}</label>
+  <p-datepicker
+    class="field-input"
+    [inputId]="inputId"
+    [placeholder]="placeholder"
+    [showIcon]="showIcon"
+    [showButtonBar]="showButtonBar"
+    [dateFormat]="dateFormat"
+    [minDate]="minDate"
+    [maxDate]="maxDate"
+    [appendTo]="appendTo"
+    [ngModel]="model"
+    (ngModelChange)="onModelChange($event)"
+  />
+  @if (helperText) {
+    <small class="field-help">{{ helperText }}</small>
+  }
+</div>

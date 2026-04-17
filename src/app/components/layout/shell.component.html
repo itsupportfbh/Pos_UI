@@ -1,0 +1,20 @@
+<section class="shell-frame">
+  <app-header [appName]="appName" [user]="user" (menuToggle)="onMenuToggle()" (logoutClick)="onLogoutClick()" />
+
+  <section class="workspace" [class.sidebar-visible]="sidebarOpen">
+    <app-menu
+      [sidebarOpen]="sidebarOpen"
+      [activeMenuKey]="activeMenuKey"
+      [menuItems]="menuItems"
+      (menuSelect)="onMenuSelect($event)"
+    />
+
+    <section class="content-panel">
+      <div class="content-scroll">
+        <ng-content />
+      </div>
+    </section>
+  </section>
+
+  <app-footer [appName]="appName" [description]="footerDescription" />
+</section>

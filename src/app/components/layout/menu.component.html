@@ -1,0 +1,35 @@
+@if (sidebarOpen) {
+  <aside class="sidebar sidebar-open">
+    <nav class="menu-list">
+      @for (group of menuItems; track group.key) {
+        <section class="menu-group">
+          <button type="button" class="menu-group-header" (click)="toggleGroup(group.key)">
+            <i [class]="group.icon"></i>
+            <strong>{{ group.label }}</strong>
+            <span class="menu-group-arrow" [class.expanded]="isGroupExpanded(group.key)">
+              <i class="pi pi-chevron-down"></i>
+            </span>
+          </button>
+
+          @if (isGroupExpanded(group.key)) {
+            <div class="menu-group-items" >
+              @for (item of group.items; track item.key) {
+                <button
+                  type="button"
+                  class="menu-item"
+                  [class.active]="activeMenuKey === item.key"
+                  (click)="onSelect(item.key)"
+                >
+                  <span>
+                    <strong>{{ item.label }}</strong>
+                    <small>{{ item.description }}</small>
+                  </span>
+                </button>
+              }
+            </div>
+          }
+        </section>
+      }
+    </nav>
+  </aside>
+}

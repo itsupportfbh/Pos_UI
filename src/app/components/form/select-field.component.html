@@ -1,0 +1,19 @@
+<div class="field-block">
+  <label class="field-label" [for]="inputId">{{ label }}</label>
+  <p-select
+    class="field-input"
+    [inputId]="inputId"
+    [options]="options"
+    [optionLabel]="optionLabel"
+    [optionValue]="optionValue"
+    [placeholder]="placeholder"
+    [showClear]="showClear"
+    [filter]="filter"
+    [appendTo]="appendTo"
+    [ngModel]="model"
+    (ngModelChange)="onModelChange($event)"
+  />
+  @if (helperText) {
+    <small class="field-help">{{ helperText }}</small>
+  }
+</div>

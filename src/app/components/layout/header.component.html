@@ -1,0 +1,34 @@
+<header class="app-header">
+  <div class="header-left">
+    <button
+      pButton
+      type="button"
+      class="menu-toggle"
+      icon="pi pi-bars"
+      severity="secondary"
+      text="true"
+      (click)="onMenuToggle()"
+    ></button>
+
+    <div class="brand-mark">
+      <span class="brand-icon">A</span>
+      <div>
+        <strong>{{ appName }}</strong>
+        <p>POS operations workspace</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="header-user">
+    <div class="connection-badge" [class.offline]="!isOnline">
+      <i class="pi pi-circle-fill"></i>
+      <span>{{ connectionLabel }}</span>
+    </div>
+    <p-avatar [label]="initials" shape="circle" size="large"></p-avatar>
+    <div class="header-user-details">
+      <strong>{{ user.name }}</strong>
+      <span>{{ user.role }}</span>
+    </div>
+    <button pButton type="button" severity="danger" icon="pi pi-sign-out" text="true" (click)="onLogoutClick()"></button>
+  </div>
+</header>

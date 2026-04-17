@@ -1,0 +1,18 @@
+<div class="field-block">
+  <label class="field-label" [for]="inputId">{{ label }}</label>
+  <p-autocomplete
+    class="field-input"
+    [inputId]="inputId"
+    [placeholder]="placeholder"
+    [dropdown]="dropdown"
+    [forceSelection]="forceSelection"
+    [appendTo]="appendTo"
+    [suggestions]="filteredSuggestions"
+    [ngModel]="model"
+    (completeMethod)="filterSuggestions($event)"
+    (ngModelChange)="onModelChange($event)"
+  />
+  @if (helperText) {
+    <small class="field-help">{{ helperText }}</small>
+  }
+</div>

@@ -1,0 +1,58 @@
+<section class="overview-page">
+  <section class="hero-strip">
+    <div>
+      <p class="eyebrow">POS Dashboard</p>
+      <h1>Today's overview</h1>
+      <p class="hero-copy">Start with the numbers and alerts that matter most, then jump straight into sales, products, or orders.</p>
+    </div>
+    <div class="hero-actions">
+      <p-button label="Open Sales Screen" icon="pi pi-shopping-cart" routerLink="/pos/sales" />
+      <p-button label="View Orders" icon="pi pi-receipt" severity="secondary" [outlined]="true" routerLink="/pos/transactions" />
+    </div>
+  </section>
+
+  <section class="stats-grid">
+    @for (card of counterCards; track card.label) {
+      <article class="stats-card"><span>{{ card.label }}</span><strong>{{ card.value }}</strong><p>{{ card.caption }}</p></article>
+    }
+  </section>
+
+  <section class="overview-grid">
+    <p-card class="overview-card">
+      <div class="section-heading"><div><p class="eyebrow">Sales Graph</p><h2>Hourly billing</h2></div></div>
+      <section class="sales-graph">
+        @for (point of salesGraph; track point.hour) {
+          <article class="graph-column"><span class="graph-value">{{ point.amount | currency: 'USD' : 'symbol' : '1.0-0' }}</span><div class="graph-bar-wrap"><div class="graph-bar" [style.height.%]="point.height"></div></div><strong>{{ point.hour }}</strong></article>
+        }
+      </section>
+    </p-card>
+    <p-card class="overview-card">
+      <div class="section-heading"><div><p class="eyebrow">Top Selling Products</p><h2>Fast movers</h2></div></div>
+      <section class="top-products">
+        @for (product of topProducts; track product.name) {
+          <article class="top-product-card"><div><strong>{{ product.name }}</strong><p>{{ product.sold }}</p></div><span>{{ product.trend }}</span></article>
+        }
+      </section>
+    </p-card>
+  </section>
+
+  <section class="overview-grid">
+    <p-card class="overview-card">
+      <div class="section-heading"><div><p class="eyebrow">Quick Actions</p><h2>Go To</h2></div></div>
+      <section class="quick-grid">
+        @for (action of quickActions; track action.title) {
+          <a class="quick-card" [routerLink]="action.route"><i [class]="action.icon"></i><strong>{{ action.title }}</strong></a>
+        }
+      </section>
+    </p-card>
+    <p-card class="overview-card">
+      <div class="section-heading"><div><p class="eyebrow">Important Alerts</p><h2>What needs attention</h2></div></div>
+      <ul class="note-list">@for (note of dashboardNotes; track note) { <li>{{ note }}</li> }</ul>
+    </p-card>
+  </section>
+
+  <p-card class="overview-card">
+    <div class="section-heading"><div><p class="eyebrow">Recent Bills</p><h2>Latest invoices</h2></div></div>
+    <app-shared-table caption="Recent Invoices" [columns]="invoiceColumns" [value]="recentInvoices" [paginationMode]="paginationMode" [rows]="5" [rowsPerPageOptions]="[5, 10]" [showGridlines]="true" [stripedRows]="true" [rowHover]="true" />
+  </p-card>
+</section>

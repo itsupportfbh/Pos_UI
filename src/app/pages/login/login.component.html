@@ -1,0 +1,174 @@
+<main class="login-page">
+  @if (isMobileApp) {
+    <section class="mobile-login-shell">
+      <article class="mobile-login-hero">
+        <div class="mobile-hero-top">
+          <div class="brand-lockup">
+            <span class="brand-icon">P</span>
+            <div>
+              <strong>Antony POS</strong>
+              <p>Counter billing workspace</p>
+            </div>
+          </div>
+
+          <span class="status-pill">Store Online</span>
+        </div>
+
+        <div class="hero-copy">
+          <p class="eyebrow">Mobile POS</p>
+          <h1>Simple sign in for your sales desk.</h1>
+          <p class="hero-text">A clean billing workspace for store teams, stock tracking, and day-to-day counter work.</p>
+        </div>
+
+        <div class="hero-product-mark">
+          <div class="mark-circle"></div>
+          <div class="mark-card">
+            <span>Antony POS</span>
+            <strong>Billing made clear</strong>
+          </div>
+        </div>
+      </article>
+
+      <p-card class="login-card mobile-login-card">
+        <div class="login-card-copy">
+          <p class="eyebrow">Cashier Access</p>
+          <h2>Continue to register</h2>
+          <p>Use your account to open the sales counter and daily POS tools.</p>
+        </div>
+
+        <form (ngSubmit)="submit()" #loginForm="ngForm">
+          <div class="field">
+            <label for="email">Email</label>
+            <input pInputText id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email" placeholder="antony@gmail.com" />
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <p-password
+              id="password"
+              name="password"
+              [(ngModel)]="password"
+              required
+              autocomplete="current-password"
+              placeholder="antony@123"
+              [feedback]="false"
+              [toggleMask]="true"
+              inputStyleClass="full-width"
+              styleClass="full-width"
+            />
+          </div>
+
+          @if (errorMessage) {
+            <p-message severity="error" [text]="errorMessage" />
+          }
+
+          <button pButton type="submit" label="Start Counter" [disabled]="loginForm.invalid"></button>
+
+          <section class="demo-access">
+            <article class="login-help">
+              <span>Demo Admin</span>
+              <strong>admin@antonypos.com</strong>
+              <small>admin@123</small>
+            </article>
+
+            <article class="login-help">
+              <span>Demo Staff</span>
+              <strong>staff@antonypos.com</strong>
+              <small>staff@123</small>
+            </article>
+          </section>
+        </form>
+      </p-card>
+    </section>
+  } @else {
+    <section class="login-shell">
+      <article class="login-hero">
+        <div class="hero-nav">
+          <div class="brand-lockup">
+            <span class="brand-icon">P</span>
+            <div>
+              <strong>Antony POS</strong>
+              <p>Retail billing operations</p>
+            </div>
+          </div>
+
+          <span class="status-pill">Shift Ready</span>
+        </div>
+
+        <div class="hero-copy">
+          <p class="eyebrow">Retail POS</p>
+          <h1>A cleaner login experience for your billing software.</h1>
+          <p class="hero-text">Designed for daily store work with a calm look, clear access, and a branded sign-in that feels focused from the first screen.</p>
+        </div>
+
+        <section class="hero-brand-panel">
+          <div class="hero-logo-stage">
+            <div class="logo-orb logo-orb-large"></div>
+            <div class="logo-orb logo-orb-small"></div>
+            <div class="logo-tile">
+              <span class="logo-tile-badge">POS</span>
+              <strong>Antony</strong>
+              <p>Retail Billing Suite</p>
+            </div>
+          </div>
+
+          <div class="hero-brand-copy">
+            <p>Inventory, customers, billing, and reports in one organized workspace.</p>
+            <p>Use your account to continue into the store dashboard and daily sales flow.</p>
+          </div>
+        </section>
+      </article>
+
+      <p-card class="login-card">
+        <div class="login-card-copy">
+          <p class="eyebrow">Sign In</p>
+          <h2>Open your POS session</h2>
+          <p>Use your store login to continue to the billing floor and back-office tools.</p>
+        </div>
+
+        <form (ngSubmit)="submit()" #loginForm="ngForm">
+          <div class="field">
+            <label for="email">Email</label>
+            <input pInputText id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email" placeholder="antony@gmail.com" />
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <p-password
+              id="password"
+              name="password"
+              [(ngModel)]="password"
+              required
+              autocomplete="current-password"
+              placeholder="antony@123"
+              [feedback]="false"
+              [toggleMask]="true"
+              inputStyleClass="full-width"
+              styleClass="full-width"
+            />
+          </div>
+
+          @if (errorMessage) {
+            <p-message severity="error" [text]="errorMessage" />
+          }
+
+          <button pButton type="submit" label="Open POS" [disabled]="loginForm.invalid"></button>
+
+          <section class="demo-access">
+            <article class="login-help">
+              <span>Demo Admin</span>
+              <strong>admin@antonypos.com</strong>
+              <small>admin@123</small>
+            </article>
+
+            <article class="login-help">
+              <span>Demo Staff</span>
+              <strong>staff@antonypos.com</strong>
+              <small>staff@123</small>
+            </article>
+          </section>
+        </form>
+      </p-card>
+    </section>
+  }
+</main>
