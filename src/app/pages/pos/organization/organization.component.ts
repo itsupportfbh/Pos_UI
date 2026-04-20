@@ -8,9 +8,11 @@ import { SelectFieldComponent } from '../../../components/form/select-field.comp
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
+import { firstValueFrom } from 'rxjs';
 import { SharedTableComponent } from '../../../components/table/shared-table.component';
 import { FeaturePageConfig } from '../config/models';
 import { AppToastService } from '../../../services/app-toast.service';
+import { Organization, OrganizationService } from '../../../services/organization.service';
 
 const BRANCH_OPTIONS = [
   { label: 'Head Office', value: 'Head Office' },
@@ -83,11 +85,13 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
 })
 export class OrganizationComponent {
   private readonly toast = inject(AppToastService);
+  private readonly organizationService = inject(OrganizationService);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   readonly config: FeaturePageConfig = PAGE_CONFIG;
   readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
   showAddDialog = false;
   dialogSubmitted = false;
+  dialogSaving = false;
   showFilterSidebar = false;
   filterCompanyName = '';
 
@@ -176,15 +180,56 @@ export class OrganizationComponent {
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
       return;
     }
 
-    this.toast.success('Saved', `${this.dialogTitle || this.pageTitle} saved successfully.`);
-    this.closeAddDialog();
+    this.dialogSaving = true;
+
+    const payload: Organization = {
+      code: this.dialogCode,
+      name: this.dialogCompanyName,
+      companyName: this.dialogCompanyName,
+      gstNumber: this.dialogGstNumber,
+      registrationNumber: this.dialogRegistrationNumber,
+      phoneNumber: this.dialogPhoneNumber,
+      email: this.dialogEmail,
+      website: this.dialogWebsite,
+      contactPerson: this.dialogContactPerson,
+      contactPersonPhone: this.dialogContactPersonPhone,
+      contactPersonEmail: this.dialogContactPersonEmail,
+      addressLine1: this.dialogAddressLine1,
+      addressLine2: this.dialogAddressLine2,
+      city: this.dialogCity ?? '',
+      state: this.dialogState ?? '',
+      country: this.dialogCountry ?? '',
+      postalCode: this.dialogPostalCode,
+      remarks: this.dialogRemarks,
+      branch: this.dialogBranch ?? '',
+      status: 'Active'
+    };
+
+    try {
+      const savedOrganization = await firstValueFrom(this.organizationService.create(payload));
+
+      this.tableRows.push({
+        code: savedOrganization.code ?? payload.code,
+        name: savedOrganization.name ?? savedOrganization.companyName ?? payload.name,
+        companyName: savedOrganization.companyName ?? payload.companyName,
+        branch: savedOrganization.branch ?? payload.branch,
+        status: savedOrganization.status ?? 'Active'
+      });
+
+      this.toast.success('Saved', `${payload.name || this.pageTitle} saved successfully.`);
+      this.closeAddDialog();
+    } catch {
+      this.toast.error('Save Failed', 'Unable to save organization. Please check API and try again.');
+    } finally {
+      this.dialogSaving = false;
+    }
   }
 
   editRow(row: Record<string, unknown>): void {
@@ -246,7 +291,24 @@ export class OrganizationComponent {
 
   private resetDialogForm(): void {
     this.dialogSubmitted = false;
+    this.dialogSaving = false;
+    this.dialogCode = '';
     this.dialogCompanyName = '';
+    this.dialogGstNumber = '';
+    this.dialogRegistrationNumber = '';
+    this.dialogPhoneNumber = '';
+    this.dialogEmail = '';
+    this.dialogWebsite = '';
+    this.dialogContactPerson = '';
+    this.dialogContactPersonPhone = '';
+    this.dialogContactPersonEmail = '';
+    this.dialogAddressLine1 = '';
+    this.dialogAddressLine2 = '';
+    this.dialogCity = null;
+    this.dialogState = null;
+    this.dialogCountry = null;
+    this.dialogPostalCode = '';
+    this.dialogRemarks = '';
     this.dialogBranch = null;
   }
 

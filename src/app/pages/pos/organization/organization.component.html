@@ -134,7 +134,8 @@
 
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Cancel" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times" [secondaryText]="true" [secondaryOutlined]="false" (primaryClick)="submitAddDialog()"
+      secondaryIcon="pi pi-times" [primaryLoading]="dialogSaving" [primaryDisabled]="dialogSaving"
+      [secondaryDisabled]="dialogSaving" [secondaryText]="true" [secondaryOutlined]="false" (primaryClick)="submitAddDialog()"
       (secondaryClick)="closeAddDialog()" />
   </div>
 </p-dialog>
