@@ -16,8 +16,8 @@ const AUTH_NAME_KEY = 'userName';
 const AUTH_LOCATION_KEY = 'userLocation';
 
 const DEMO_USERS = [
-  { email: 'admin@antonypos.com', password: 'admin@123', role: 'Admin', name: 'Antony Admin', location: 'Head Office' },
-  { email: 'staff@antonypos.com', password: 'staff@123', role: 'Staff', name: 'Maya Staff', location: 'Counter 1' }
+  { email: 'admin@unityworkpos.com', password: 'unity@123', role: 'Admin', name: 'Unity Work Admin', location: 'Head Office' },
+  { email: 'staff@unityworkpos.com', password: 'staff@123', role: 'Staff', name: 'Maya Staff', location: 'Counter 1' }
 ];
 
 @Component({

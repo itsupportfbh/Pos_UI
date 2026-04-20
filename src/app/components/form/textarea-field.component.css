@@ -1,0 +1,39 @@
+:host {
+  display: block;
+}
+
+.field-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.field-input {
+  width: 100%;
+  resize: vertical;
+}
+
+.field-input.field-invalid {
+  border-color: #dc2626;
+}
+
+.required-mark {
+  color: #dc2626;
+  margin-left: 0.2rem;
+}
+
+.field-help {
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 600;
+}

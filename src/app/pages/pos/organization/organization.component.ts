@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, QueryList, ViewChildren, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -8,7 +8,7 @@ import { SelectFieldComponent } from '../../../components/form/select-field.comp
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableComponent, SharedTablePaginationMode } from '../../../components/table/shared-table.component';
+import { SharedTableComponent } from '../../../components/table/shared-table.component';
 import { FeaturePageConfig } from '../config/models';
 import { AppToastService } from '../../../services/app-toast.service';
 
@@ -17,6 +17,11 @@ const BRANCH_OPTIONS = [
   { label: 'City Center', value: 'City Center' },
   { label: 'Airport Kiosk', value: 'Airport Kiosk' }
 ];
+
+const cityOptions:any = [];
+const stateOptions:any = [];
+const countryOptions:any = [];
+
 const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
@@ -25,46 +30,46 @@ const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
 
 const PAGE_CONFIG: FeaturePageConfig = {
   eyebrow: 'Organization',
-  title: 'Company Profile',
-  subtitle: 'Maintain company identity details.',
-  formTitle: `${'Company Profile'} Filters`,
-  formDescription: `Static ${'Company Profile'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Company Profile',
+  title: 'Organization',
+  subtitle: 'Maintain restaurant organization identity details.',
+  formTitle: `${'Organization'} Filters`,
+  formDescription: `Static ${'Organization'.toLowerCase()} page ready for API integration.`,
+  tableTitle: 'Organization',
   tableDescription: 'Replace this static data with your API response later.',
   helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
   summaryCards: [
-    { label: 'Records', value: `${[{ code: 'ORG-01', name: 'Antony Retail Pvt Ltd', status: 'Active' }].length}`, caption: 'Static records shown on this page' },
+    { label: 'Records', value: `${[{ code: 'ORG-01', name: 'Unity Work Restaurants', status: 'Active' }].length}`, caption: 'Static records shown on this page' },
     { label: 'Module', value: 'Organization', caption: 'Current functional area' },
     { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
   ],
-  fields: [{ key: 'companyName', label: 'Company Name', type: 'text', placeholder: 'Antony Retail Pvt Ltd' }],
-  primaryActionLabel: `Search ${'Company Profile'}`,
+  fields: [{ key: 'companyName', label: 'Organization Name', type: 'text', placeholder: 'Unity Work Restaurants' }],
+  primaryActionLabel: `Search ${'Organization'}`,
   secondaryActionLabel: 'Clear Filters',
   showAddNewButton: true,
   addNewLabel: 'Add New',
-  tableCaption: 'Company Profile',
-  rows: [{ code: 'ORG-01', name: 'Antony Retail Pvt Ltd', companyName: 'Antony Retail Pvt Ltd', branch: 'Head Office', status: 'Active' }],
+  tableCaption: 'Organization',
+  rows: [{ code: 'ORG-01', name: 'Unity Work Restaurants', companyName: 'Unity Work Restaurants', branch: 'Head Office', status: 'Active' }],
   columns: CODE_NAME_COLUMNS
 };
 const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
   eyebrow: 'Organization',
   title: 'Create Organization',
-  subtitle: 'Create a new organization profile.',
+  subtitle: 'Create a new restaurant organization profile.',
   formTitle: `${'Create Organization'} Filters`,
   formDescription: `Static ${'Create Organization'.toLowerCase()} page ready for API integration.`,
   tableTitle: 'Create Organization',
   tableDescription: 'Replace this static data with your API response later.',
   helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
   summaryCards: [
-    { label: 'Records', value: `${[{ code: 'ORG-02', name: 'Antony Retail South', status: 'Draft' }].length}`, caption: 'Static records shown on this page' },
+    { label: 'Records', value: `${[{ code: 'ORG-02', name: 'Unity Work South', status: 'Draft' }].length}`, caption: 'Static records shown on this page' },
     { label: 'Module', value: 'Organization', caption: 'Current functional area' },
     { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
   ],
-  fields: [{ key: 'companyName', label: 'Company Name', type: 'text', placeholder: 'Antony Retail Pvt Ltd' }, { key: 'branch', label: 'Primary Branch', type: 'select', placeholder: 'Choose branch', options: BRANCH_OPTIONS }],
+  fields: [{ key: 'companyName', label: 'Organization Name', type: 'text', placeholder: 'Unity Work Restaurants' }, { key: 'branch', label: 'Primary Branch', type: 'select', placeholder: 'Choose branch', options: BRANCH_OPTIONS }],
   primaryActionLabel: `Search ${'Create Organization'}`,
   secondaryActionLabel: 'Clear Filters',
   tableCaption: 'Create Organization',
-  rows: [{ code: 'ORG-02', name: 'Antony Retail South', companyName: 'Antony Retail South', branch: 'City Center', status: 'Draft' }],
+  rows: [{ code: 'ORG-02', name: 'Unity Work South', companyName: 'Unity Work South', branch: 'City Center', status: 'Draft' }],
   columns: CODE_NAME_COLUMNS
 };
 
@@ -78,19 +83,46 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
 })
 export class OrganizationComponent {
   private readonly toast = inject(AppToastService);
-  readonly paginationMode: SharedTablePaginationMode = 'client';
+  @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   readonly config: FeaturePageConfig = PAGE_CONFIG;
   readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
   showAddDialog = false;
+  dialogSubmitted = false;
   showFilterSidebar = false;
   filterCompanyName = '';
+
+  dialogCode = '';
   dialogCompanyName = '';
+  dialogGstNumber = '';
+  dialogRegistrationNumber = '';
+  dialogPhoneNumber = '';
+  dialogEmail = '';
+  dialogWebsite = '';
+  dialogContactPerson = '';
+  dialogContactPersonPhone = '';
+  dialogContactPersonEmail = '';
+  dialogAddressLine1 = '';
+  dialogAddressLine2 = '';
+  dialogCity: string | null = null;
+  dialogState: string | null = null;
+  dialogCountry: string | null = null;
+  dialogPostalCode = '';
+  dialogRemarks = '';
   dialogBranch: string | null = null;
+  showConfigDialog = false;
+  configOrganizationName = '';
+  configImageName = '';
+  configThemeColor = '#2f7d57';
+  configFontSize = '14';
+
   selectedRow: Record<string, unknown> | null = null;
   readonly pageEyebrow = this.config.eyebrow;
   readonly pageTitle = this.config.title;
   readonly pageSubtitle = this.config.subtitle;
   readonly branchOptions = BRANCH_OPTIONS;
+  readonly cityOptions = cityOptions;
+  readonly stateOptions = stateOptions;
+  readonly countryOptions = countryOptions;
   readonly summaryCards = this.config.summaryCards;
   readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
   readonly filterDescription = this.config.formDescription ?? '';
@@ -106,12 +138,6 @@ export class OrganizationComponent {
   readonly tableCaption = this.config.tableCaption;
   readonly tableColumns = this.config.columns;
   readonly tableRows = this.config.rows;
-  readonly tableEmptyMessage = this.config.emptyMessage ?? 'No records found.';
-  readonly tablePageSize = 5;
-  readonly tableRowsPerPageOptions = [5, 10];
-  readonly tableShowGridlines = true;
-  readonly tableStripedRows = true;
-    readonly tableRowHover = true;
     readonly showAddNewButton = !!this.addDialogConfig;
     readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
     readonly showFilterButton = true;
@@ -121,7 +147,8 @@ export class OrganizationComponent {
     { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
     { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
     { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
-    { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
+    { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') },
+    { label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') }
   ];
 
   resetForm(): void {
@@ -145,10 +172,17 @@ export class OrganizationComponent {
   }
 
   closeAddDialog(): void {
+    this.dialogSubmitted = false;
     this.showAddDialog = false;
   }
 
   submitAddDialog(): void {
+    this.dialogSubmitted = true;
+
+    if (!this.isDialogFormValid()) {
+      return;
+    }
+
     this.toast.success('Saved', `${this.dialogTitle || this.pageTitle} saved successfully.`);
     this.closeAddDialog();
   }
@@ -163,6 +197,26 @@ export class OrganizationComponent {
     this.dialogBranch = typeof row['branch'] === 'string' ? row['branch'] : null;
     this.showAddDialog = true;
     this.toast.info('Edit Mode', `Editing ${String(row['name'] ?? row['code'] ?? this.pageTitle)}.`);
+  }
+
+  openConfigDialog(row: Record<string, unknown>): void {
+    this.resetConfigForm();
+    this.configOrganizationName = String(row['name'] ?? row['companyName'] ?? row['code'] ?? this.pageTitle);
+    this.showConfigDialog = true;
+  }
+
+  closeConfigDialog(): void {
+    this.showConfigDialog = false;
+  }
+
+  submitConfigDialog(): void {
+    this.toast.success('Config Saved', `${this.configOrganizationName || this.pageTitle} configuration saved successfully.`);
+    this.closeConfigDialog();
+  }
+
+  onConfigImageSelect(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.configImageName = input.files?.[0]?.name ?? '';
   }
 
   deleteRow(row: Record<string, unknown>): void {
@@ -191,16 +245,29 @@ export class OrganizationComponent {
   }
 
   private resetDialogForm(): void {
+    this.dialogSubmitted = false;
     this.dialogCompanyName = '';
     this.dialogBranch = null;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private isDialogFormValid(): boolean {
+    return this.textFields?.toArray().every((field) => field.isValid) ?? true;
+  }
+
+  private resetConfigForm(): void {
+    this.configImageName = '';
+    this.configThemeColor = '#2f7d57';
+    this.configFontSize = '14';
+  }
+
+  private handleRowAction(action: 'config' | 'edit' | 'delete' | 'activate' | 'deactivate'): void {
     if (!this.selectedRow) {
       return;
     }
 
-    if (action === 'edit') {
+    if (action === 'config') {
+      this.openConfigDialog(this.selectedRow);
+    } else if (action === 'edit') {
       this.editRow(this.selectedRow);
     } else if (action === 'delete') {
       this.deleteRow(this.selectedRow);

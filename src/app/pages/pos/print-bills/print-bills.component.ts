@@ -8,7 +8,7 @@ import { AutocompleteFieldComponent } from '../../../components/form/autocomplet
 import { DateFieldComponent } from '../../../components/form/date-field.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { SharedTableComponent, SharedTablePaginationMode } from '../../../components/table/shared-table.component';
+import { SharedTableComponent } from '../../../components/table/shared-table.component';
 import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
 
 const PAYMENT_MODE_OPTIONS = [
@@ -20,7 +20,7 @@ const PAYMENT_MODE_OPTIONS = [
 const STATUS_COLUMN: FeaturePageConfig['columns'][number] = { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } };
 
 const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Sales',
+  eyebrow: 'Billing',
   title: 'Print Bills',
   subtitle: 'Review invoices and trigger reprints.',
   formTitle: `${'Print Bills'} Filters`,
@@ -30,7 +30,7 @@ const PAGE_CONFIG: FeaturePageConfig = {
   helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
   summaryCards: [
     { label: 'Records', value: `${[{ invoiceNo: 'INV-2041', payment: 'Cash', total: 28.5, status: 'Printed' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Sales', caption: 'Current functional area' },
+    { label: 'Module', value: 'Billing', caption: 'Current functional area' },
     { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
   ],
   fields: [{ key: 'invoiceNo', label: 'Invoice Number', type: 'text', placeholder: 'Search invoice number' }, { key: 'paymentMode', label: 'Payment Mode', type: 'select', placeholder: 'Choose payment mode', options: PAYMENT_MODE_OPTIONS }],
@@ -51,7 +51,6 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
   styleUrl: './print-bills.component.css'
 })
 export class PrintBillsComponent {
-  readonly paginationMode: SharedTablePaginationMode = 'client';
   readonly config: FeaturePageConfig = PAGE_CONFIG;
   readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
   readonly formState = this.createEmptyState(this.config);
@@ -78,12 +77,6 @@ export class PrintBillsComponent {
   readonly tableCaption = this.config.tableCaption;
   readonly tableColumns = this.config.columns;
   readonly tableRows = this.config.rows;
-  readonly tableEmptyMessage = this.config.emptyMessage ?? 'No records found.';
-  readonly tablePageSize = 5;
-  readonly tableRowsPerPageOptions = [5, 10];
-  readonly tableShowGridlines = true;
-  readonly tableStripedRows = true;
-    readonly tableRowHover = true;
     readonly showAddNewButton = !!this.addDialogConfig;
     readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
     readonly showFilterButton = true;

@@ -17,6 +17,9 @@ export class AutocompleteFieldComponent {
   @Input() helperText = '';
   @Input() suggestions: string[] = [];
   @Input() required = false;
+  @Input() showRequiredMark = false;
+  @Input() submitted = false;
+  @Input() errorMessage = '';
   @Input() disabled = false;
   @Input() dropdown = true;
   @Input() forceSelection = false;
@@ -25,6 +28,14 @@ export class AutocompleteFieldComponent {
   @Output() modelChange = new EventEmitter<string | null>();
 
   filteredSuggestions: string[] = [];
+
+  get showRequiredError(): boolean {
+    return this.submitted && this.required && !this.model?.trim();
+  }
+
+  get requiredErrorMessage(): string {
+    return this.errorMessage || `${this.label} is required.`;
+  }
 
   ngOnInit(): void {
     this.filteredSuggestions = [...this.suggestions];

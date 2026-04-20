@@ -20,12 +20,23 @@ export class SelectFieldComponent {
   @Input() optionLabel = 'label';
   @Input() optionValue = 'value';
   @Input() required = false;
+  @Input() showRequiredMark = false;
+  @Input() submitted = false;
+  @Input() errorMessage = '';
   @Input() disabled = false;
   @Input() showClear = true;
   @Input() filter = true;
   @Input() appendTo: 'body' | 'self' = 'body';
   @Input() model: string | null = null;
   @Output() modelChange = new EventEmitter<string | null>();
+
+  get showRequiredError(): boolean {
+    return this.submitted && this.required && !this.model;
+  }
+
+  get requiredErrorMessage(): string {
+    return this.errorMessage || `${this.label} is required.`;
+  }
 
   onModelChange(value: string | null): void {
     this.modelChange.emit(value);

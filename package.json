@@ -1,5 +1,5 @@
 {
-  "name": "first-angular-app",
+  "name": "unity-work-pos",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -11,7 +11,7 @@
     "cap:sync": "npx cap sync android",
     "cap:open:android": "npx cap open android",
     "android": "npm run build:mobile && npx cap sync android",
-    "serve:ssr:first-angular-app": "node dist/first-angular-app/server/server.mjs"
+    "serve:ssr:unity-work-pos": "node dist/unity-work-pos/server/server.mjs"
   },
   "private": true,
   "packageManager": "npm@11.11.0",

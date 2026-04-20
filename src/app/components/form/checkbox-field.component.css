@@ -1,0 +1,38 @@
+:host {
+  display: block;
+}
+
+.field-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.7rem;
+}
+
+.field-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--app-text);
+  cursor: pointer;
+}
+
+.required-mark {
+  color: #dc2626;
+  margin-left: 0.2rem;
+}
+
+.field-help {
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 600;
+}

@@ -8,7 +8,7 @@ import { AutocompleteFieldComponent } from '../../../components/form/autocomplet
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableComponent, SharedTablePaginationMode } from '../../../components/table/shared-table.component';
+import { SharedTableComponent } from '../../../components/table/shared-table.component';
 import { FeaturePageConfig } from '../config/models';
 import { AppToastService } from '../../../services/app-toast.service';
 
@@ -38,7 +38,7 @@ const PAGE_CONFIG: FeaturePageConfig = {
   showAddNewButton: true,
   addNewLabel: 'Add New',
   tableCaption: 'Branches',
-  rows: [{ code: 'BR-001', name: 'Head Office', branchName: 'Head Office', organizationName: 'Antony Retail Pvt Ltd', status: 'Active' }],
+  rows: [{ code: 'BR-001', name: 'Head Office', branchName: 'Head Office', organizationName: 'Unity Work Restaurants', status: 'Active' }],
   columns: CODE_NAME_COLUMNS
 };
 const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
@@ -55,11 +55,11 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
     { label: 'Module', value: 'Organization', caption: 'Current functional area' },
     { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
   ],
-  fields: [{ key: 'branchName', label: 'Branch Name', type: 'text', placeholder: 'City Center' }, { key: 'organizationName', label: 'Organization', type: 'text', placeholder: 'Antony Retail Pvt Ltd' }],
+  fields: [{ key: 'branchName', label: 'Branch Name', type: 'text', placeholder: 'City Center' }, { key: 'organizationName', label: 'Organization', type: 'text', placeholder: 'Unity Work Restaurants' }],
   primaryActionLabel: `Search ${'Create Branch'}`,
   secondaryActionLabel: 'Clear Filters',
   tableCaption: 'Create Branch',
-  rows: [{ code: 'BR-010', name: 'City Center', branchName: 'City Center', organizationName: 'Antony Retail Pvt Ltd', status: 'Draft' }],
+  rows: [{ code: 'BR-010', name: 'City Center', branchName: 'City Center', organizationName: 'Unity Work Restaurants', status: 'Draft' }],
   columns: CODE_NAME_COLUMNS
 };
 
@@ -73,7 +73,6 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
 })
 export class BranchesComponent {
   private readonly toast = inject(AppToastService);
-  readonly paginationMode: SharedTablePaginationMode = 'client';
   readonly config: FeaturePageConfig = PAGE_CONFIG;
   readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
   showAddDialog = false;
@@ -85,7 +84,7 @@ export class BranchesComponent {
   readonly pageEyebrow = this.config.eyebrow;
   readonly pageTitle = this.config.title;
   readonly pageSubtitle = this.config.subtitle;
-  readonly organizationOptions = ['Antony Retail Pvt Ltd', 'Antony Retail South', 'Antony Retail Express'];
+  readonly organizationOptions = ['Unity Work Restaurants', 'Unity Work South', 'Unity Work Express'];
   readonly summaryCards = this.config.summaryCards;
   readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
   readonly filterDescription = this.config.formDescription ?? '';
@@ -101,12 +100,6 @@ export class BranchesComponent {
   readonly tableCaption = this.config.tableCaption;
   readonly tableColumns = this.config.columns;
   readonly tableRows = this.config.rows;
-  readonly tableEmptyMessage = this.config.emptyMessage ?? 'No records found.';
-  readonly tablePageSize = 5;
-  readonly tableRowsPerPageOptions = [5, 10];
-  readonly tableShowGridlines = true;
-  readonly tableStripedRows = true;
-    readonly tableRowHover = true;
     readonly showAddNewButton = !!this.addDialogConfig;
     readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
     readonly showFilterButton = true;

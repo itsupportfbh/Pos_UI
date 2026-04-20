@@ -1,0 +1,51 @@
+:host {
+  display: block;
+}
+
+.field-block {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.field-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.required-mark {
+  color: #dc2626;
+  margin-left: 0.2rem;
+}
+
+.radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1rem;
+  min-height: 2.7rem;
+  align-items: center;
+}
+
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.radio-row label {
+  color: var(--app-text);
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.field-help {
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 600;
+}

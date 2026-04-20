@@ -1,0 +1,28 @@
+<div class="field-block">
+  <label class="field-label" [for]="inputId">
+    {{ label }}
+    @if (showRequiredMark) {
+      <span class="required-mark">*</span>
+    }
+  </label>
+  <textarea
+    pTextarea
+    class="field-input"
+    [class.field-invalid]="showRequiredError"
+    [id]="inputId"
+    [name]="name || inputId"
+    [placeholder]="placeholder"
+    [required]="required"
+    [disabled]="disabled"
+    [readonly]="readonly"
+    [rows]="rows"
+    [maxlength]="maxlength ?? null"
+    [ngModel]="model"
+    (ngModelChange)="onModelChange($event)"
+  ></textarea>
+  @if (showRequiredError) {
+    <small class="field-error">{{ requiredErrorMessage }}</small>
+  } @else if (helperText) {
+    <small class="field-help">{{ helperText }}</small>
+  }
+</div>

@@ -1,8 +1,14 @@
 <div class="field-block">
-  <label class="field-label" [for]="inputId">{{ label }}</label>
+  <label class="field-label" [for]="inputId">
+    {{ label }}
+    @if (showRequiredMark) {
+      <span class="required-mark">*</span>
+    }
+  </label>
   <input
     pInputText
     class="field-input"
+    [class.field-invalid]="showValidationError"
     [id]="inputId"
     [name]="name || inputId"
     [type]="type"
@@ -16,7 +22,11 @@
     [ngModel]="model"
     (ngModelChange)="onModelChange($event)"
   />
-  @if (helperText) {
+  @if (showRequiredError) {
+    <small class="field-error">{{ requiredErrorMessage }}</small>
+  } @else if (showFormatError) {
+    <small class="field-error">{{ formatValidationMessage }}</small>
+  } @else if (helperText) {
     <small class="field-help">{{ helperText }}</small>
   }
 </div>

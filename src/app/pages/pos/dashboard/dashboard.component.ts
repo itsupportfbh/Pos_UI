@@ -3,7 +3,7 @@ import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
-import { SharedTableColumn, SharedTableComponent, SharedTablePaginationMode } from '../../../components/table/shared-table.component';
+import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
 type InvoiceRow = { invoiceNo: string; counter: string; cashier: string; payment: string; total: number; status: string };
 
@@ -15,12 +15,11 @@ type InvoiceRow = { invoiceNo: string; counter: string; cashier: string; payment
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent {
-  readonly paginationMode: SharedTablePaginationMode = 'client';
   readonly quickActions = [
-    { title: 'New Sale', route: '/pos/sales', icon: 'pi pi-shopping-cart' },
-    { title: 'Products', route: '/pos/products', icon: 'pi pi-box' },
+    { title: 'Billing', route: '/pos/billing', icon: 'pi pi-shopping-cart' },
+    { title: 'Menus', route: '/pos/menus', icon: 'pi pi-box' },
     { title: 'Low Stock', route: '/pos/low-stock', icon: 'pi pi-exclamation-triangle' },
-    { title: 'Orders', route: '/pos/transactions', icon: 'pi pi-receipt' }
+    { title: 'Return Refund', route: '/pos/return-refund', icon: 'pi pi-receipt' }
   ];
   readonly counterCards = [
     { label: 'Today Sales', value: '$8,426', caption: 'Across all active counters' },
@@ -49,7 +48,7 @@ export class DashboardComponent {
   readonly recentInvoices: InvoiceRow[] = [
     { invoiceNo: 'INV-2041', counter: 'Counter 1', cashier: 'Maria', payment: 'Cash', total: 28.5, status: 'Paid' },
     { invoiceNo: 'INV-2040', counter: 'Counter 2', cashier: 'Sahana', payment: 'UPI', total: 63.4, status: 'Paid' },
-    { invoiceNo: 'INV-2038', counter: 'Wholesale Desk', cashier: 'Antony', payment: 'Credit', total: 114.2, status: 'Open' }
+    { invoiceNo: 'INV-2038', counter: 'Wholesale Desk', cashier: 'Unity', payment: 'Credit', total: 114.2, status: 'Open' }
   ];
   readonly invoiceColumns: SharedTableColumn<InvoiceRow>[] = [
     { field: 'invoiceNo', header: 'Invoice', sortable: true, width: '10rem' },

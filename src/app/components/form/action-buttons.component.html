@@ -3,8 +3,13 @@
     <p-button
       [label]="secondaryLabel"
       [icon]="secondaryIcon"
-      severity="secondary"
-      [outlined]="true"
+      [severity]="secondarySeverity"
+      [outlined]="secondaryOutlined"
+      [text]="secondaryText"
+      [raised]="secondaryRaised"
+      [rounded]="secondaryRounded"
+      [size]="buttonSize"
+      [loading]="secondaryLoading"
       [disabled]="secondaryDisabled"
       (onClick)="onSecondaryClick()"
     />
@@ -13,6 +18,13 @@
   <p-button
     [label]="primaryLabel"
     [icon]="primaryIcon"
+    [severity]="primarySeverity"
+    [outlined]="primaryOutlined"
+    [text]="primaryText"
+    [raised]="primaryRaised"
+    [rounded]="primaryRounded"
+    [size]="buttonSize"
+    [loading]="primaryLoading"
     [disabled]="primaryDisabled"
     (onClick)="onPrimaryClick()"
   />

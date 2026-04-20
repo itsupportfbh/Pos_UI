@@ -39,6 +39,10 @@
   color: #16a34a;
 }
 
+:host ::ng-deep .row-action-menu .row-action-permissions .p-menu-item-icon {
+  color: #7c3aed;
+}
+
 :host ::ng-deep .row-action-menu .row-action-inactive .p-menu-item-icon {
   color: #b45309;
 }
@@ -77,4 +81,119 @@
 
 :host ::ng-deep .filter-drawer-card .p-card-body {
   padding: 0;
+}
+
+.permissions-panel {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 1rem;
+}
+
+.permissions-note {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(231, 243, 237, 0.96), rgba(255, 255, 255, 0.98));
+}
+
+.permissions-note span {
+  color: var(--app-text-muted);
+  font-size: 0.88rem;
+}
+
+.permissions-search {
+  justify-self: start;
+  width: min(28rem, 100%);
+}
+
+.permissions-table {
+  display: grid;
+  gap: 0.4rem;
+  max-height: 52vh;
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.permissions-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(11rem, 1.25fr) repeat(6, minmax(4.25rem, 0.55fr));
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.permissions-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f7faf8;
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.permission-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  color: var(--app-text);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.permission-check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--app-primary);
+}
+
+.permission-full {
+  color: var(--app-primary-strong);
+}
+
+.permissions-empty {
+  padding: 1rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 0.9rem;
+  color: var(--app-text-muted);
+  text-align: center;
+}
+
+.permissions-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--app-border);
+  background: #fff;
+}
+
+:host ::ng-deep .permissions-dialog .p-dialog-content {
+  padding-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .permissions-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .permissions-header {
+    display: none;
+  }
+
+  .permission-check {
+    justify-content: flex-start;
+  }
+
+  .permissions-actions {
+    position: static;
+  }
 }

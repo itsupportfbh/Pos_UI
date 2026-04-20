@@ -24,13 +24,6 @@
       [caption]="tableCaption"
       [columns]="tableColumns"
       [value]="tableRows"
-      [paginationMode]="paginationMode"
-      [rows]="tablePageSize"
-      [rowsPerPageOptions]="tableRowsPerPageOptions"
-      [showGridlines]="tableShowGridlines"
-      [stripedRows]="tableStripedRows"
-      [rowHover]="tableRowHover"
-      [emptyMessage]="tableEmptyMessage"
       [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel"
       (toolbarButtonClick)="openAddDialog()"
@@ -100,8 +93,16 @@
     </section>
 
     <div class="dialog-actions">
-      <button pButton type="button" label="Cancel" severity="secondary" text="true" (click)="closeAddDialog()"></button>
-      <button pButton type="button" [label]="dialogPrimaryActionLabel" (click)="submitAddDialog()"></button>
+      <app-action-buttons
+        [primaryLabel]="dialogPrimaryActionLabel"
+        secondaryLabel="Cancel"
+        primaryIcon="pi pi-save"
+        secondaryIcon="pi pi-times"
+        [secondaryText]="true"
+        [secondaryOutlined]="false"
+        (primaryClick)="submitAddDialog()"
+        (secondaryClick)="closeAddDialog()"
+      />
     </div>
   </p-dialog>
 }

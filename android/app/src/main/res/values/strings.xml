@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Antony CRM</string>
-    <string name="title_activity_main">Antony CRM</string>
-    <string name="package_name">com.antony.crm</string>
-    <string name="custom_url_scheme">com.antony.crm</string>
+    <string name="app_name">Unity work POS</string>
+    <string name="title_activity_main">Unity work POS</string>
+    <string name="package_name">com.unitywork.pos</string>
+    <string name="custom_url_scheme">com.unitywork.pos</string>
 </resources>

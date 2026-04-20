@@ -8,9 +8,19 @@ import { SelectFieldComponent } from '../../../components/form/select-field.comp
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableComponent, SharedTablePaginationMode } from '../../../components/table/shared-table.component';
+import { SharedTableComponent } from '../../../components/table/shared-table.component';
 import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
 import { AppToastService } from '../../../services/app-toast.service';
+
+type PagePermission = {
+  pageName: string;
+  groupName: string;
+  view: boolean;
+  add: boolean;
+  edit: boolean;
+  delete: boolean;
+  print: boolean;
+};
 
 const ROLE_OPTIONS = [
   { label: 'Admin', value: 'Admin' },
@@ -87,15 +97,32 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
 })
 export class RolesComponent {
   private readonly toast = inject(AppToastService);
-  readonly paginationMode: SharedTablePaginationMode = 'client';
   readonly config: FeaturePageConfig = PAGE_CONFIG;
   readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
   showAddDialog = false;
   showFilterSidebar = false;
+  showPermissionsDialog = false;
+  permissionRoleName = '';
+  permissionSearchText = '';
   filterRole: string | null = null;
   filterBranch: string | null = null;
   dialogRoleName = '';
   dialogBranch: string | null = null;
+  selectedRow: Record<string, unknown> | null = null;
+  permissionPages: PagePermission[] = [
+    { groupName: 'Billing', pageName: 'Billing', view: true, add: true, edit: true, delete: false, print: true },
+    { groupName: 'Billing', pageName: 'Print Bills', view: true, add: false, edit: false, delete: false, print: true },
+    { groupName: 'Food Menu', pageName: 'Menus', view: true, add: true, edit: true, delete: false, print: false },
+    { groupName: 'Food Menu', pageName: 'Categories', view: true, add: true, edit: true, delete: false, print: false },
+    { groupName: 'Inventory', pageName: 'Stock In', view: true, add: true, edit: true, delete: false, print: false },
+    { groupName: 'Inventory', pageName: 'Current Stock', view: true, add: false, edit: false, delete: false, print: true },
+    { groupName: 'Orders', pageName: 'Return Refund', view: true, add: true, edit: true, delete: false, print: true },
+    { groupName: 'Reports', pageName: 'Daily Sales', view: true, add: false, edit: false, delete: false, print: true },
+    { groupName: 'Reports', pageName: 'Monthly Sales', view: true, add: false, edit: false, delete: false, print: true },
+    { groupName: 'Reports', pageName: 'Menu wise Sales', view: true, add: false, edit: false, delete: false, print: true },
+    { groupName: 'Organization', pageName: 'Organization', view: true, add: true, edit: true, delete: false, print: false },
+    { groupName: 'Users & Roles', pageName: 'Users', view: true, add: true, edit: true, delete: false, print: false }
+  ];
   readonly pageEyebrow = this.config.eyebrow;
   readonly pageTitle = this.config.title;
   readonly pageSubtitle = this.config.subtitle;
@@ -116,17 +143,31 @@ export class RolesComponent {
   readonly tableCaption = this.config.tableCaption;
   readonly tableColumns = this.config.columns;
   readonly tableRows = this.config.rows;
-  readonly tableEmptyMessage = this.config.emptyMessage ?? 'No records found.';
-  readonly tablePageSize = 5;
-  readonly tableRowsPerPageOptions = [5, 10];
-  readonly tableShowGridlines = true;
-  readonly tableStripedRows = true;
-    readonly tableRowHover = true;
     readonly showAddNewButton = !!this.addDialogConfig;
     readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
     readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  readonly rowActionItems: MenuItem[] = [
+    { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
+    { label: 'Permissions', icon: 'pi pi-lock', styleClass: 'row-action-permissions', command: () => this.handleRowAction('permissions') },
+    { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
+    { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
+    { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
+  ];
+
+  get filteredPermissionPages(): PagePermission[] {
+    const searchText = this.permissionSearchText.trim().toLowerCase();
+
+    if (!searchText) {
+      return this.permissionPages;
+    }
+
+    return this.permissionPages.filter((page) =>
+      page.groupName.toLowerCase().includes(searchText) ||
+      page.pageName.toLowerCase().includes(searchText)
+    );
+  }
 
   resetForm(): void {
     this.filterRole = null;
@@ -189,13 +230,59 @@ export class RolesComponent {
     this.toast.info('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as inactive.`);
   }
 
-  getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-    return [
-      { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.editRow(row) },
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.deleteRow(row) },
-      { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.activateRow(row) },
-      { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.deactivateRow(row) }
-    ];
+  openPermissionsDialog(row: Record<string, unknown>): void {
+    this.permissionRoleName = String(row['name'] ?? row['code'] ?? this.pageTitle);
+    this.permissionSearchText = '';
+    this.showPermissionsDialog = true;
+  }
+
+  closePermissionsDialog(): void {
+    this.showPermissionsDialog = false;
+  }
+
+  savePermissionsDialog(): void {
+    this.toast.success('Permissions Saved', `${this.permissionRoleName || 'Role'} permissions saved successfully.`);
+    this.closePermissionsDialog();
+  }
+
+  setPagePermission(page: PagePermission, permission: keyof Omit<PagePermission, 'pageName' | 'groupName'>, event: Event): void {
+    page[permission] = (event.target as HTMLInputElement).checked;
+  }
+
+  setAllPagePermissions(page: PagePermission, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    page.view = checked;
+    page.add = checked;
+    page.edit = checked;
+    page.delete = checked;
+    page.print = checked;
+  }
+
+  isFullAccess(page: PagePermission): boolean {
+    return page.view && page.add && page.edit && page.delete && page.print;
+  }
+
+  openRowActions(menu: any, event: Event, row: Record<string, unknown>): void {
+    this.selectedRow = row;
+    menu.toggle(event);
+  }
+
+  private handleRowAction(action: 'permissions' | 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+    if (!this.selectedRow) {
+      return;
+    }
+
+    if (action === 'permissions') {
+      this.openPermissionsDialog(this.selectedRow);
+    } else if (action === 'edit') {
+      this.editRow(this.selectedRow);
+    } else if (action === 'delete') {
+      this.deleteRow(this.selectedRow);
+    } else if (action === 'activate') {
+      this.activateRow(this.selectedRow);
+    } else {
+      this.deactivateRow(this.selectedRow);
+    }
   }
 
   private resetDialogForm(): void {

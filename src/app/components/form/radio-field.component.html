@@ -1,0 +1,28 @@
+<div class="field-block">
+  <span class="field-label">
+    {{ label }}
+    @if (showRequiredMark) {
+      <span class="required-mark">*</span>
+    }
+  </span>
+  <div class="radio-group">
+    @for (option of options; track option.value; let index = $index) {
+      <div class="radio-row">
+        <p-radio-button
+          [inputId]="optionId(index)"
+          [name]="name || inputId"
+          [value]="option.value"
+          [disabled]="disabled"
+          [ngModel]="model"
+          (ngModelChange)="onModelChange($event)"
+        />
+        <label [for]="optionId(index)">{{ option.label }}</label>
+      </div>
+    }
+  </div>
+  @if (showRequiredError) {
+    <small class="field-error">{{ requiredErrorMessage }}</small>
+  } @else if (helperText) {
+    <small class="field-help">{{ helperText }}</small>
+  }
+</div>

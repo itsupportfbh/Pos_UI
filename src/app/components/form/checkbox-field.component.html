@@ -1,0 +1,23 @@
+<div class="field-block">
+  <div class="checkbox-row">
+    <p-checkbox
+      [inputId]="inputId"
+      [name]="name || inputId"
+      [binary]="true"
+      [disabled]="disabled"
+      [ngModel]="model"
+      (ngModelChange)="onModelChange($event)"
+    />
+    <label class="field-label" [for]="inputId">
+      {{ label }}
+      @if (showRequiredMark) {
+        <span class="required-mark">*</span>
+      }
+    </label>
+  </div>
+  @if (showRequiredError) {
+    <small class="field-error">{{ requiredErrorMessage }}</small>
+  } @else if (helperText) {
+    <small class="field-help">{{ helperText }}</small>
+  }
+</div>
