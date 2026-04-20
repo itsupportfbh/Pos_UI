@@ -3,11 +3,11 @@
     <div>
       <p class="eyebrow">POS Dashboard</p>
       <h1>Today's overview</h1>
-      <p class="hero-copy">Start with the numbers and alerts that matter most, then jump straight into sales, products, or orders.</p>
+      <p class="hero-copy">Start with the numbers and alerts that matter most, then jump straight into billing, menus, or return refunds.</p>
     </div>
     <div class="hero-actions">
-      <p-button label="Open Sales Screen" icon="pi pi-shopping-cart" routerLink="/pos/sales" />
-      <p-button label="View Orders" icon="pi pi-receipt" severity="secondary" [outlined]="true" routerLink="/pos/transactions" />
+      <p-button label="Open Billing" icon="pi pi-shopping-cart" routerLink="/pos/billing" />
+      <p-button label="Return Refund" icon="pi pi-receipt" severity="secondary" [outlined]="true" routerLink="/pos/return-refund" />
     </div>
   </section>
 
@@ -53,6 +53,6 @@
 
   <p-card class="overview-card">
     <div class="section-heading"><div><p class="eyebrow">Recent Bills</p><h2>Latest invoices</h2></div></div>
-    <app-shared-table caption="Recent Invoices" [columns]="invoiceColumns" [value]="recentInvoices" [paginationMode]="paginationMode" [rows]="5" [rowsPerPageOptions]="[5, 10]" [showGridlines]="true" [stripedRows]="true" [rowHover]="true" />
+    <app-shared-table caption="Recent Invoices" [columns]="invoiceColumns" [value]="recentInvoices" />
   </p-card>
 </section>

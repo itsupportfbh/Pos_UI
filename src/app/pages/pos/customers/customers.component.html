@@ -17,10 +17,10 @@
         }</div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()" [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [paginationMode]="paginationMode" [rows]="tablePageSize" [rowsPerPageOptions]="tableRowsPerPageOptions" [showGridlines]="tableShowGridlines" [stripedRows]="tableStripedRows" [rowHover]="tableRowHover" [emptyMessage]="tableEmptyMessage" [showAddNewButton]="showAddNewButton" [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader" (toolbarButtonClick)="openAddDialog()">
+    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()" [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton" [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader" (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
-        <p-menu #rowMenu [model]="getRowActionItems(row)" [popup]="true" appendTo="body" styleClass="row-action-menu" />
-        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger" (click)="rowMenu.toggle($event)"></button>
+        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
+        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger" (click)="openRowActions(rowMenu, $event, row)"></button>
       </ng-template>
     </app-shared-table>
   </p-card>
@@ -90,8 +90,16 @@
     </section>
 
     <div class="dialog-actions">
-      <button pButton type="button" label="Cancel" severity="secondary" text="true" (click)="closeAddDialog()"></button>
-      <button pButton type="button" [label]="dialogPrimaryActionLabel" (click)="submitAddDialog()"></button>
+      <app-action-buttons
+        [primaryLabel]="dialogPrimaryActionLabel"
+        secondaryLabel="Cancel"
+        primaryIcon="pi pi-save"
+        secondaryIcon="pi pi-times"
+        [secondaryText]="true"
+        [secondaryOutlined]="false"
+        (primaryClick)="submitAddDialog()"
+        (secondaryClick)="closeAddDialog()"
+      />
     </div>
   </p-dialog>
 }

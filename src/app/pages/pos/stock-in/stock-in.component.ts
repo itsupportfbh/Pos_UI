@@ -8,7 +8,7 @@ import { AutocompleteFieldComponent } from '../../../components/form/autocomplet
 import { DateFieldComponent } from '../../../components/form/date-field.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { SharedTableComponent, SharedTablePaginationMode } from '../../../components/table/shared-table.component';
+import { SharedTableComponent } from '../../../components/table/shared-table.component';
 import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
 
 const STOCK_LOCATION_OPTIONS = [
@@ -60,7 +60,6 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
   styleUrl: './stock-in.component.css'
 })
 export class StockInComponent {
-  readonly paginationMode: SharedTablePaginationMode = 'client';
   readonly config: FeaturePageConfig = PAGE_CONFIG;
   readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
   readonly formState = this.createEmptyState(this.config);
@@ -88,12 +87,6 @@ export class StockInComponent {
   readonly tableCaption = this.config.tableCaption;
   readonly tableColumns = this.config.columns;
   readonly tableRows = this.config.rows;
-  readonly tableEmptyMessage = this.config.emptyMessage ?? 'No records found.';
-  readonly tablePageSize = 5;
-  readonly tableRowsPerPageOptions = [5, 10];
-  readonly tableShowGridlines = true;
-  readonly tableStripedRows = true;
-    readonly tableRowHover = true;
     readonly showAddNewButton = !!this.addDialogConfig;
     readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
     readonly showFilterButton = true;

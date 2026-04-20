@@ -13,75 +13,171 @@
         <p class="eyebrow">Static Data</p>
         <h2>{{ tableTitle }}</h2>
         @if (tableDescription) {
-          <p class="section-copy">{{ tableDescription }}</p>
-        }</div>
+        <p class="section-copy">{{ tableDescription }}</p>
+        }
+      </div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()" [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [paginationMode]="paginationMode" [rows]="tablePageSize" [rowsPerPageOptions]="tableRowsPerPageOptions" [showGridlines]="tableShowGridlines" [stripedRows]="tableStripedRows" [rowHover]="tableRowHover" [emptyMessage]="tableEmptyMessage" [showAddNewButton]="showAddNewButton" [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader" (toolbarButtonClick)="openAddDialog()">
+    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
+      (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
-        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger" (click)="openRowActions(rowMenu, $event, row)"></button>
+        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
+          (click)="openRowActions(rowMenu, $event, row)"></button>
       </ng-template>
     </app-shared-table>
   </p-card>
 </section>
 
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false" [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog" [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
+<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+  [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
+  [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
   <p-card class="feature-card filter-drawer-card">
-      <section class="filter-panel filter-panel-compact">
-        <div class="filter-panel-header">
-          <div>
-            <h2>{{ filterTitle }}</h2>
-          </div>
+    <section class="filter-panel filter-panel-compact">
+      <div class="filter-panel-header">
+        <div>
+          <h2>{{ filterTitle }}</h2>
         </div>
+      </div>
 
-        <section class="field-grid">
-          <app-text-field
-            label="Company Name"
-            inputId="companyName"
-            placeholder="Antony Retail Pvt Ltd"
-            [model]="filterCompanyName"
-            (modelChange)="filterCompanyName = $event"
-          />
-        </section>
-
-        <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel" [showSecondary]="showSecondaryAction" (secondaryClick)="resetForm()" />
+      <section class="field-grid">
+        <app-text-field label="Organization Name" inputId="companyName" placeholder="Unity Work Restaurants"
+          [model]="filterCompanyName" (modelChange)="filterCompanyName = $event" />
       </section>
-    </p-card>
+
+      <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
+        [showSecondary]="showSecondaryAction" (secondaryClick)="resetForm()" />
+    </section>
+  </p-card>
 </p-dialog>
 @if (addDialogConfig) {
-  <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
-    <ng-template pTemplate="header">
-      <div class="dialog-copy">
-        <p class="eyebrow">Create Master</p>
-        <h3>{{ dialogTitle }}</h3>
-        <p>{{ dialogSubtitle }}</p>
-      </div>
-    </ng-template>
-
-    <section class="field-grid dialog-grid">
-      <app-text-field
-        label="Company Name"
-        inputId="dialog-companyName"
-        placeholder="Antony Retail Pvt Ltd"
-        [model]="dialogCompanyName"
-        (modelChange)="dialogCompanyName = $event"
-      />
-
-      <app-select-field
-        label="Primary Branch"
-        inputId="dialog-branch"
-        placeholder="Choose branch"
-        [options]="branchOptions"
-        [model]="dialogBranch"
-        (modelChange)="dialogBranch = $event"
-      />
-    </section>
-
-    <div class="dialog-actions">
-      <button pButton type="button" label="Cancel" severity="secondary" text="true" (click)="closeAddDialog()"></button>
-      <button pButton type="button" [label]="dialogPrimaryActionLabel" (click)="submitAddDialog()"></button>
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '70rem', maxWidth: '100vw' }" [draggable]="false"
+  [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
+  <ng-template pTemplate="header">
+    <div class="dialog-copy">
+      <p class="eyebrow">Create Master</p>
+      <h3>{{ dialogTitle }}</h3>
+      <p>{{ dialogSubtitle }}</p>
     </div>
-  </p-dialog>
+  </ng-template>
+
+  <section class="field-grid dialog-grid">
+    <app-text-field label="Code" inputId="dialog-code" placeholder="Organization Code" [model]="dialogCode"
+      (modelChange)="dialogCode = $event" />
+
+    <app-text-field label="Name" inputId="dialog-companyName" placeholder="Organization Name" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Company name is required."
+      [textWithNumbersOnly]="true" formatErrorMessage="Company name allows text and numbers only."
+      [model]="dialogCompanyName" (modelChange)="dialogCompanyName = $event" />
+
+    <app-text-field label="GST Number" inputId="dialog-gstNumber" placeholder="GST Number" [submitted]="dialogSubmitted"
+      [textWithNumbersOnly]="true" formatErrorMessage="GST Number allows text and numbers only."
+      [model]="dialogGstNumber" (modelChange)="dialogGstNumber = $event" />
+
+    <app-text-field label="Registration Number" inputId="dialog-registrationNumber" placeholder="Registration Number"
+      [submitted]="dialogSubmitted" [textWithNumbersOnly]="true"
+      formatErrorMessage="Registration Number allows text and numbers only."
+      [model]="dialogRegistrationNumber" (modelChange)="dialogRegistrationNumber = $event" />
+
+    <app-text-field label="Phone Number" inputId="dialog-phoneNumber" placeholder="Phone Number"
+      [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only."
+      [model]="dialogPhoneNumber" (modelChange)="dialogPhoneNumber = $event" />
+
+    <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [submitted]="dialogSubmitted"
+      [emailOnly]="true" formatErrorMessage="Enter a valid Email."
+      [model]="dialogEmail"
+      (modelChange)="dialogEmail = $event" />
+
+    <app-text-field label="Website" inputId="dialog-website" placeholder="Website" [model]="dialogWebsite"
+      (modelChange)="dialogWebsite = $event" />
+
+    <app-text-field label="Contact Person" inputId="dialog-contactPerson" placeholder="Contact Person"
+      [submitted]="dialogSubmitted" [textOnly]="true" formatErrorMessage="Contact Person allows text only."
+      [model]="dialogContactPerson" (modelChange)="dialogContactPerson = $event" />
+
+    <app-text-field label="Contact Person Phone" inputId="dialog-contactPersonPhone" placeholder="Contact Person Phone"
+      [submitted]="dialogSubmitted" [numbersOnly]="true"
+      formatErrorMessage="Contact Person Phone allows numbers only."
+      [model]="dialogContactPersonPhone" (modelChange)="dialogContactPersonPhone = $event" />
+
+    <app-text-field label="Contact Person Email" inputId="dialog-contactPersonEmail" placeholder="Contact Person Email"
+      [submitted]="dialogSubmitted" [emailOnly]="true" formatErrorMessage="Enter a valid Contact Person Email."
+      [model]="dialogContactPersonEmail" (modelChange)="dialogContactPersonEmail = $event" />
+
+    <app-text-field label="Address Line 1" inputId="dialog-addressLine1" placeholder="Address Line 1"
+      [model]="dialogAddressLine1" (modelChange)="dialogAddressLine1 = $event" />
+
+    <app-text-field label="Address Line 2" inputId="dialog-addressLine2" placeholder="Address Line 2"
+      [model]="dialogAddressLine2" (modelChange)="dialogAddressLine2 = $event" />
+
+    <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
+      [model]="dialogCity" (modelChange)="dialogCity = $event" />
+
+    <app-select-field label="State" inputId="dialog-state" placeholder="Choose state" [options]="stateOptions"
+      [model]="dialogState" (modelChange)="dialogState = $event" />
+
+    <app-select-field label="Country" inputId="dialog-country" placeholder="Choose country" [options]="countryOptions"
+      [model]="dialogCountry" (modelChange)="dialogCountry = $event" />
+
+    <app-text-field label="Postal Code" inputId="dialog-postalCode" placeholder="Postal Code"
+      [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Postal Code allows numbers only."
+      [model]="dialogPostalCode" (modelChange)="dialogPostalCode = $event" />
+
+    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks" [model]="dialogRemarks"
+      (modelChange)="dialogRemarks = $event" />
+
+    <app-select-field label="Primary Branch" inputId="dialog-branch" placeholder="Choose branch"
+      [options]="branchOptions" [model]="dialogBranch" (modelChange)="dialogBranch = $event" />
+  </section>
+
+  <div class="dialog-actions">
+    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Cancel" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-times" [primaryLoading]="dialogSaving" [primaryDisabled]="dialogSaving"
+      [secondaryDisabled]="dialogSaving" [secondaryText]="true" [secondaryOutlined]="false" (primaryClick)="submitAddDialog()"
+      (secondaryClick)="closeAddDialog()" />
+  </div>
+</p-dialog>
 }
 
+<p-dialog [(visible)]="showConfigDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }"
+  [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeConfigDialog()">
+  <ng-template pTemplate="header">
+    <div class="dialog-copy">
+      <p class="eyebrow">Organization Config</p>
+      <h3>Add Config</h3>
+      <p>Configure logo, theme color, and typography for {{ configOrganizationName || pageTitle }}.</p>
+    </div>
+  </ng-template>
+
+  <section class="field-grid dialog-grid config-dialog-grid">
+    <label class="upload-field" for="dialog-config-image">
+      <span>Image Upload</span>
+      <input id="dialog-config-image" type="file" accept="image/*" (change)="onConfigImageSelect($event)" />
+      <small>{{ configImageName || 'Choose organization logo or brand image' }}</small>
+    </label>
+
+    <label class="color-field" for="dialog-theme-color">
+      <span>Theme Color</span>
+      <input id="dialog-theme-color" type="color" [value]="configThemeColor"
+        (input)="configThemeColor = $any($event.target).value" />
+      <small>{{ configThemeColor }}</small>
+    </label>
+
+    <app-text-field label="Font Size" inputId="dialog-font-size" type="number" placeholder="14"
+      helperText="Enter font size in px" [model]="configFontSize" (modelChange)="configFontSize = $event" />
+  </section>
+
+  <div class="config-preview" [style.--preview-color]="configThemeColor" [style.font-size.px]="configFontSize || 14">
+    <span>Preview</span>
+    <strong>{{ configOrganizationName || 'Organization Name' }}</strong>
+    <p>This preview uses the selected theme color and font size.</p>
+  </div>
+
+  <div class="dialog-actions">
+    <app-action-buttons primaryLabel="Save Config" secondaryLabel="Cancel" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-times" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitConfigDialog()" (secondaryClick)="closeConfigDialog()" />
+  </div>
+</p-dialog>

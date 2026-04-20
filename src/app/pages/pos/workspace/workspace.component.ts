@@ -19,11 +19,11 @@ const AUTH_LOCATION_KEY = 'userLocation';
   styleUrl: './workspace.component.css'
 })
 export class WorkspaceComponent {
-  readonly appName = 'Antony POS';
+  readonly appName = 'Unity work POS';
   readonly currentUser = {
-    name: localStorage.getItem(AUTH_NAME_KEY) ?? 'Antony Admin',
+    name: localStorage.getItem(AUTH_NAME_KEY) ?? 'Unity Work Admin',
     role: localStorage.getItem(AUTH_ROLE_KEY) ?? 'Admin',
-    email: localStorage.getItem(AUTH_ROLE_KEY) === 'Staff' ? 'staff@antonypos.com' : 'admin@antonypos.com',
+    email: localStorage.getItem(AUTH_ROLE_KEY) === 'Staff' ? 'staff@unityworkpos.com' : 'admin@unityworkpos.com',
     location: localStorage.getItem(AUTH_LOCATION_KEY) ?? 'Head Office'
   };
   readonly footerDescription = 'POS workspace for billing, stock tracking, and daily sales operations';

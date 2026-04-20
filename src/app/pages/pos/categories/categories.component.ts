@@ -7,7 +7,7 @@ import { ActionButtonsComponent } from '../../../components/form/action-buttons.
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableComponent, SharedTablePaginationMode } from '../../../components/table/shared-table.component';
+import { SharedTableComponent } from '../../../components/table/shared-table.component';
 import { FeaturePageConfig } from '../config/models';
 import { AppToastService } from '../../../services/app-toast.service';
 
@@ -75,7 +75,6 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
 })
 export class CategoriesComponent {
   private readonly toast = inject(AppToastService);
-  readonly paginationMode: SharedTablePaginationMode = 'client';
   readonly config: FeaturePageConfig = PAGE_CONFIG;
   readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
   showAddDialog = false;
@@ -83,6 +82,7 @@ export class CategoriesComponent {
   filterCategoryName = '';
   dialogCategoryCode = '';
   dialogCategoryName = '';
+  selectedRow: Record<string, unknown> | null = null;
   readonly pageEyebrow = this.config.eyebrow;
   readonly pageTitle = this.config.title;
   readonly pageSubtitle = this.config.subtitle;
@@ -101,17 +101,17 @@ export class CategoriesComponent {
   readonly tableCaption = this.config.tableCaption;
   readonly tableColumns = this.config.columns;
   readonly tableRows = this.config.rows;
-  readonly tableEmptyMessage = this.config.emptyMessage ?? 'No records found.';
-  readonly tablePageSize = 5;
-  readonly tableRowsPerPageOptions = [5, 10];
-  readonly tableShowGridlines = true;
-  readonly tableStripedRows = true;
-    readonly tableRowHover = true;
     readonly showAddNewButton = !!this.addDialogConfig;
     readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
     readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  readonly rowActionItems: MenuItem[] = [
+    { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
+    { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
+    { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
+    { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
+  ];
 
   resetForm(): void {
     this.filterCategoryName = '';
@@ -173,13 +173,25 @@ export class CategoriesComponent {
     this.toast.info('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as inactive.`);
   }
 
-  getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-    return [
-      { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.editRow(row) },
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.deleteRow(row) },
-      { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.activateRow(row) },
-      { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.deactivateRow(row) }
-    ];
+  openRowActions(menu: any, event: Event, row: Record<string, unknown>): void {
+    this.selectedRow = row;
+    menu.toggle(event);
+  }
+
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+    if (!this.selectedRow) {
+      return;
+    }
+
+    if (action === 'edit') {
+      this.editRow(this.selectedRow);
+    } else if (action === 'delete') {
+      this.deleteRow(this.selectedRow);
+    } else if (action === 'activate') {
+      this.activateRow(this.selectedRow);
+    } else {
+      this.deactivateRow(this.selectedRow);
+    }
   }
 
   private resetDialogForm(): void {
