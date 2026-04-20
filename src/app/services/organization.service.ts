@@ -1,30 +1,34 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { ApiListResponse } from './api-response.model';
 import { RuntimeConfigService } from './runtime-config.service';
 
 export interface Organization {
-  id?: number | string;
-  code?: string;
-  name?: string;
-  companyName?: string;
-  gstNumber?: string;
-  registrationNumber?: string;
-  phoneNumber?: string;
-  email?: string;
-  website?: string;
-  contactPerson?: string;
-  contactPersonPhone?: string;
-  contactPersonEmail?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postalCode?: string;
-  remarks?: string;
-  branch?: string;
-  status?: string;
+  Id?: number;
+  Code?: string;
+  Name?: string;
+  GSTNo?: string;
+  RegistrationNo?: string;
+  Phone?: string;
+  Email?: string;
+  Website?: string;
+  ContactPerson?: string;
+  ContactMobileNo?: string;
+  ContactEmail?: string;
+  Address1?: string;
+  Address2?: string;
+  City?: number;
+  State?: number;
+  Country?: number;
+  PostalCode?: number;
+  Remarks?: string;
+  IsActive?: boolean;
+  CreatedBy?: number | null;
+  CreatedDate?: string;
+  UpdatedBy?: number | null;
+  UpdatedDate?: string | null;
+  IsDeleted?: boolean;
 }
 
 export interface OrganizationStatusRequest {
@@ -51,21 +55,21 @@ export class OrganizationService {
     return this.http.put<Organization>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(): Observable<Organization[]> {
-    return this.http.get<Organization[]>(`${this.baseUrl}/${this.controllerPath}/GetAllOrganization`);
+  getAll(): Observable<ApiListResponse<Organization>> {
+    return this.http.get<ApiListResponse<Organization>>(`${this.baseUrl}/${this.controllerPath}/GetAllOrganization`);
   }
 
   getById(id: number | string): Observable<Organization> {
-    return this.http.get<Organization>(`${this.baseUrl}/${this.controllerPath}/GetById/${id}`);
+    return this.http.get<Organization>(`${this.baseUrl}/${this.controllerPath}/GetById?Id=${id}`);
   }
 
 
   delete(id: number | string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${this.controllerPath}/Delete/${id}`);
+    return this.http.delete<void>(`${this.baseUrl}/${this.controllerPath}/Delete?Id=${id}`);
   }
 
-  activeInActive(payload: OrganizationStatusRequest): Observable<Organization> {
-    return this.http.put<Organization>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive`, payload);
+  activeInActive(id: number | string, isActive: boolean): Observable<void> {
+    return this.http.put<void>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
   }
 
   private get baseUrl(): string {

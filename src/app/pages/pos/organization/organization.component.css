@@ -56,6 +56,30 @@
   background: var(--app-primary-soft);
 }
 
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.8rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.status-active {
+  border: 1px solid #86efac;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-inactive {
+  border: 1px solid #fecaca;
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 
 :host ::ng-deep .filter-drawer-dialog {
   margin: 0;

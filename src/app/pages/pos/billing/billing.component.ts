@@ -5,7 +5,7 @@ import { CardModule } from 'primeng/card';
 import { AutocompleteFieldComponent } from '../../../components/form/autocomplete-field.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { Option } from '../config/models';
+import { FieldOption } from '../../../components/form/field-option.model';
 
 type Product = { id: number; name: string; category: string; price: number; stock: number; barcode: string };
 type CartItem = Product & { quantity: number };
@@ -19,7 +19,7 @@ type CartItem = Product & { quantity: number };
 })
 export class BillingComponent {
   readonly customers = ['Walk-in Customer', 'Asha Retail', 'Kiran Traders', 'Vijay Kumar'];
-  readonly paymentModes: Option[] = [{ label: 'Cash', value: 'Cash' }, { label: 'UPI', value: 'UPI' }, { label: 'Card', value: 'Card' }, { label: 'Credit', value: 'Credit' }];
+  readonly paymentModes: FieldOption[] = [{ label: 'Cash', value: 'Cash' }, { label: 'UPI', value: 'UPI' }, { label: 'Card', value: 'Card' }, { label: 'Credit', value: 'Credit' }];
   readonly products: Product[] = [
     { id: 1, name: 'Arabica Coffee 250g', category: 'Beverages', price: 12.5, stock: 42, barcode: '8901002001010' },
     { id: 2, name: 'Brown Bread Loaf', category: 'Bakery', price: 3.25, stock: 19, barcode: '8901002001011' },

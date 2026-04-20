@@ -4,7 +4,7 @@ import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { ShellComponent } from '../../../components/layout/shell.component';
 import { POS_MENU_GROUPS } from '../config/menu.config';
-import { MenuGroup } from '../config/models';
+import { MenuGroup } from '../../../components/layout/menu.model';
 
 const AUTH_TOKEN_KEY = 'authToken';
 const AUTH_ROLE_KEY = 'userRole';

@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MenuGroup } from '../../pages/pos/config/models';
+import { MenuGroup } from './menu.model';
 
 @Component({
   selector: 'app-menu',

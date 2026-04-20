@@ -1,4 +1,4 @@
-import { MenuGroup } from './models';
+import { MenuGroup } from '../../../components/layout/menu.model';
 
 export const POS_MENU_GROUPS: MenuGroup[] = [
   { key: 'dashboard-group', label: 'Dashboard', icon: 'pi pi-home', items: [{ key: 'dashboard', label: 'Overview', description: 'Billing, return refunds, and alerts', route: 'dashboard' }] },

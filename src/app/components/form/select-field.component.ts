@@ -2,7 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
-import { Option } from '../../pages/pos/config/models';
+import { FieldOption } from './field-option.model';
+
+export type SelectFieldValue = string | number | null;
 
 @Component({
   selector: 'app-select-field',
@@ -16,7 +18,7 @@ export class SelectFieldComponent {
   @Input({ required: true }) inputId = '';
   @Input() placeholder = 'Select';
   @Input() helperText = '';
-  @Input() options: Option[] = [];
+  @Input() options: FieldOption[] = [];
   @Input() optionLabel = 'label';
   @Input() optionValue = 'value';
   @Input() required = false;
@@ -27,8 +29,9 @@ export class SelectFieldComponent {
   @Input() showClear = true;
   @Input() filter = true;
   @Input() appendTo: 'body' | 'self' = 'body';
-  @Input() model: string | null = null;
-  @Output() modelChange = new EventEmitter<string | null>();
+  @Input() numberValue = false;
+  @Input() model: SelectFieldValue = null;
+  @Output() modelChange = new EventEmitter<any>();
 
   get showRequiredError(): boolean {
     return this.submitted && this.required && !this.model;
@@ -38,7 +41,21 @@ export class SelectFieldComponent {
     return this.errorMessage || `${this.label} is required.`;
   }
 
-  onModelChange(value: string | null): void {
+  onModelChange(value: SelectFieldValue): void {
+    if (this.numberValue) {
+      this.modelChange.emit(this.toNumberOrZero(value));
+      return;
+    }
+
     this.modelChange.emit(value);
+  }
+
+  private toNumberOrZero(value: SelectFieldValue): number {
+    if (value === null || value === '') {
+      return 0;
+    }
+
+    const numberValue = Number(value);
+    return Number.isNaN(numberValue) ? 0 : numberValue;
   }
 }

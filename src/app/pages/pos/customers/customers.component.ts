@@ -8,8 +8,7 @@ import { AutocompleteFieldComponent } from '../../../components/form/autocomplet
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableComponent } from '../../../components/table/shared-table.component';
-import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
+import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 
 const BRANCH_OPTIONS = [
@@ -74,6 +73,55 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
 };
 
 
+type FeatureFieldType = 'text' | 'select' | 'autocomplete' | 'date';
+
+interface FeatureFieldConfig {
+  key: string;
+  label: string;
+  type: FeatureFieldType;
+  placeholder?: string;
+  helperText?: string;
+  required?: boolean;
+  disabled?: boolean;
+  options?: { label: string | number; value: string | number }[];
+  suggestions?: string[];
+  optionLabel?: string;
+  showClear?: boolean;
+  filter?: boolean;
+  dropdown?: boolean;
+  forceSelection?: boolean;
+  showIcon?: boolean;
+  dateFormat?: string;
+  minDate?: Date;
+  maxDate?: Date;
+}
+
+interface SummaryCard {
+  label: string;
+  value: string;
+  caption: string;
+}
+
+interface FeaturePageConfig {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  formTitle?: string;
+  formDescription?: string;
+  tableTitle?: string;
+  tableDescription?: string;
+  helperPoints?: string[];
+  summaryCards: SummaryCard[];
+  fields: FeatureFieldConfig[];
+  primaryActionLabel: string;
+  secondaryActionLabel?: string;
+  showAddNewButton?: boolean;
+  addNewLabel?: string;
+  tableCaption: string;
+  emptyMessage?: string;
+  rows: Record<string, unknown>[];
+  columns: SharedTableColumn<Record<string, unknown>>[];
+}
 @Component({
   selector: 'app-customers',
   standalone: true,
@@ -211,6 +259,7 @@ export class CustomersComponent {
     this.dialogBranch = null;
   }
 }
+
 
 
 

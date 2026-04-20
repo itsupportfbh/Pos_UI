@@ -1,16 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
-import { SelectFieldComponent } from '../../../components/form/select-field.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { firstValueFrom } from 'rxjs';
-import { SharedTableComponent } from '../../../components/table/shared-table.component';
-import { FeaturePageConfig } from '../config/models';
+import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Organization, OrganizationService } from '../../../services/organization.service';
 
@@ -20,60 +19,21 @@ const BRANCH_OPTIONS = [
   { label: 'Airport Kiosk', value: 'Airport Kiosk' }
 ];
 
-const cityOptions:any = [];
-const stateOptions:any = [];
-const countryOptions:any = [];
+const cityOptions: any = [];
+const stateOptions: any = [];
+const countryOptions: any = [];
 
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
-  { field: 'code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
+const ORGANIZATION_COLUMNS: SharedTableColumn<Organization>[] = [
+  { field: 'RowNumber', header: '#', sortable: true, width: '0rem' },
+  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
+  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
+  {
+    field: 'Status',
+    header: 'Status',
+    sortable: true,
+    width: '9rem'
+  }
 ];
-
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Organization',
-  title: 'Organization',
-  subtitle: 'Maintain restaurant organization identity details.',
-  formTitle: `${'Organization'} Filters`,
-  formDescription: `Static ${'Organization'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Organization',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'ORG-01', name: 'Unity Work Restaurants', status: 'Active' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Organization', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'companyName', label: 'Organization Name', type: 'text', placeholder: 'Unity Work Restaurants' }],
-  primaryActionLabel: `Search ${'Organization'}`,
-  secondaryActionLabel: 'Clear Filters',
-  showAddNewButton: true,
-  addNewLabel: 'Add New',
-  tableCaption: 'Organization',
-  rows: [{ code: 'ORG-01', name: 'Unity Work Restaurants', companyName: 'Unity Work Restaurants', branch: 'Head Office', status: 'Active' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
-  eyebrow: 'Organization',
-  title: 'Create Organization',
-  subtitle: 'Create a new restaurant organization profile.',
-  formTitle: `${'Create Organization'} Filters`,
-  formDescription: `Static ${'Create Organization'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Create Organization',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'ORG-02', name: 'Unity Work South', status: 'Draft' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Organization', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'companyName', label: 'Organization Name', type: 'text', placeholder: 'Unity Work Restaurants' }, { key: 'branch', label: 'Primary Branch', type: 'select', placeholder: 'Choose branch', options: BRANCH_OPTIONS }],
-  primaryActionLabel: `Search ${'Create Organization'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Create Organization',
-  rows: [{ code: 'ORG-02', name: 'Unity Work South', companyName: 'Unity Work South', branch: 'City Center', status: 'Draft' }],
-  columns: CODE_NAME_COLUMNS
-};
 
 
 @Component({
@@ -83,18 +43,19 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
   templateUrl: './organization.component.html',
   styleUrl: './organization.component.css'
 })
-export class OrganizationComponent {
+export class OrganizationComponent implements OnInit {
   private readonly toast = inject(AppToastService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
   showAddDialog = false;
+  isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
   showFilterSidebar = false;
   filterCompanyName = '';
 
+  dialogId = 0;
   dialogCode = '';
   dialogCompanyName = '';
   dialogGstNumber = '';
@@ -107,9 +68,9 @@ export class OrganizationComponent {
   dialogContactPersonEmail = '';
   dialogAddressLine1 = '';
   dialogAddressLine2 = '';
-  dialogCity: string | null = null;
-  dialogState: string | null = null;
-  dialogCountry: string | null = null;
+  dialogCity: SelectFieldValue = null;
+  dialogState: SelectFieldValue = null;
+  dialogCountry: SelectFieldValue = null;
   dialogPostalCode = '';
   dialogRemarks = '';
   dialogBranch: string | null = null;
@@ -120,40 +81,37 @@ export class OrganizationComponent {
   configFontSize = '14';
 
   selectedRow: Record<string, unknown> | null = null;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
+  readonly pageEyebrow = 'Organization';
+  readonly pageTitle = 'Organization';
+  readonly pageSubtitle = 'Maintain restaurant organization identity details.';
   readonly branchOptions = BRANCH_OPTIONS;
   readonly cityOptions = cityOptions;
   readonly stateOptions = stateOptions;
   readonly countryOptions = countryOptions;
-  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
-  readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
-    readonly showFilterButton = true;
+  readonly filterTitle = 'Organization Filters';
+  readonly primaryActionLabel = 'Search Organization';
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  dialogTitle = 'Create Organization';
+  dialogSubtitle = 'Create a new restaurant organization profile.';
+  dialogPrimaryActionLabel = 'Save';
+  readonly tableTitle = 'Organization';
+  readonly tableDescription = 'Organization records loaded from API.';
+  readonly tableCaption = 'Organization';
+  readonly tableColumns = ORGANIZATION_COLUMNS;
+  tableRows: Organization[] = [];
+
+
+  readonly showAddNewButton = true;
+  readonly addNewButtonLabel = 'Add New';
+  readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-  readonly rowActionItems: MenuItem[] = [
-    { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
-    { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
-    { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
-    { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') },
-    { label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') }
-  ];
+  rowActionItems: MenuItem[] = [];
+
+  ngOnInit(): void {
+    this.loadOrganizations();
+  }
 
   resetForm(): void {
     this.filterCompanyName = '';
@@ -167,15 +125,17 @@ export class OrganizationComponent {
     this.showFilterSidebar = false;
   }
   openAddDialog(): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
-
     this.resetDialogForm();
+    this.isEditMode = false;
+    this.dialogTitle = 'Create Organization';
+    this.dialogSubtitle = 'Create a new restaurant organization profile.';
+    this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
 
   closeAddDialog(): void {
+    this.loadOrganizations();
+    this.isEditMode = false;
     this.dialogSubmitted = false;
     this.showAddDialog = false;
   }
@@ -190,58 +150,111 @@ export class OrganizationComponent {
     this.dialogSaving = true;
 
     const payload: Organization = {
-      code: this.dialogCode,
-      name: this.dialogCompanyName,
-      companyName: this.dialogCompanyName,
-      gstNumber: this.dialogGstNumber,
-      registrationNumber: this.dialogRegistrationNumber,
-      phoneNumber: this.dialogPhoneNumber,
-      email: this.dialogEmail,
-      website: this.dialogWebsite,
-      contactPerson: this.dialogContactPerson,
-      contactPersonPhone: this.dialogContactPersonPhone,
-      contactPersonEmail: this.dialogContactPersonEmail,
-      addressLine1: this.dialogAddressLine1,
-      addressLine2: this.dialogAddressLine2,
-      city: this.dialogCity ?? '',
-      state: this.dialogState ?? '',
-      country: this.dialogCountry ?? '',
-      postalCode: this.dialogPostalCode,
-      remarks: this.dialogRemarks,
-      branch: this.dialogBranch ?? '',
-      status: 'Active'
+      Id: this.dialogId,
+      Code: this.dialogCode,
+      Name: this.dialogCompanyName,
+      GSTNo: this.dialogGstNumber,
+      RegistrationNo: this.dialogRegistrationNumber,
+      Phone: this.dialogPhoneNumber,
+      Email: this.dialogEmail,
+      Website: this.dialogWebsite,
+      ContactPerson: this.dialogContactPerson,
+      ContactMobileNo: this.dialogContactPersonPhone,
+      ContactEmail: this.dialogContactPersonEmail,
+      Address1: this.dialogAddressLine1,
+      Address2: this.dialogAddressLine2,
+      City: Number(this.dialogCity || 0),
+      State: Number(this.dialogState || 0),
+      Country: Number(this.dialogCountry || 0),
+      PostalCode: Number(this.dialogPostalCode || 0),
+      Remarks: this.dialogRemarks,
+      IsActive: true,
+      CreatedBy: 0,
+      CreatedDate: new Date().toISOString(),
+      UpdatedBy: 0,
+      UpdatedDate: null,
+      IsDeleted: false
     };
-
     try {
-      const savedOrganization = await firstValueFrom(this.organizationService.create(payload));
+      let response: any;
+      if (!payload.Id) {
+       response = await firstValueFrom(this.organizationService.create(payload));
+      } else {
+         response = await firstValueFrom(this.organizationService.update(payload));
+      }
 
-      this.tableRows.push({
-        code: savedOrganization.code ?? payload.code,
-        name: savedOrganization.name ?? savedOrganization.companyName ?? payload.name,
-        companyName: savedOrganization.companyName ?? payload.companyName,
-        branch: savedOrganization.branch ?? payload.branch,
-        status: savedOrganization.status ?? 'Active'
-      });
+      if (response.ErrorInfo.Message == true && !payload.Id) {
+        this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+        else if (response.ErrorInfo.Message == true && payload.Id) {
+        this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+      else {
+        this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', response.ErrorInfo.Message || 'Unable to save organization.');
+      }
 
-      this.toast.success('Saved', `${payload.name || this.pageTitle} saved successfully.`);
-      this.closeAddDialog();
     } catch {
-      this.toast.error('Save Failed', 'Unable to save organization. Please check API and try again.');
+      this.toast.error(payload.Id ? 'Update Failed' :'Save Failed', 'Unable to save organization.');
     } finally {
       this.dialogSaving = false;
     }
   }
 
-  editRow(row: Record<string, unknown>): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
+  loadOrganizations(): void{
+    this.organizationService.getAll().subscribe({
+      next: (response) => {
+        let RowNumber = 1;
+        this.tableRows = (response.result ?? []).map((x: any) => {
+          x.RowNumber = RowNumber++;
+          x.Status = x.IsActive ? 'Active' : 'Inactive';
+          return x;
+        });
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.toast.error('Load Failed', 'Unable to load organizations. Please check API and try again.');
+      }
+    });
+  }
 
+  editRow(row:any): void {
     this.resetDialogForm();
-    this.dialogCompanyName = String(row['companyName'] ?? row['name'] ?? '');
-    this.dialogBranch = typeof row['branch'] === 'string' ? row['branch'] : null;
+    this.isEditMode = true;
+    this.dialogTitle = 'Edit Organization';
+    this.dialogSubtitle = 'Update the selected restaurant organization profile.';
+    this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
-    this.toast.info('Edit Mode', `Editing ${String(row['name'] ?? row['code'] ?? this.pageTitle)}.`);
+     this.organizationService.getById(row['Id']).subscribe({
+      next: (response:any) => {
+        const organization = response.result|| {};
+        this.dialogId = organization.Id ?? 0;
+        this.dialogCode = organization.Code ?? '';
+        this.dialogCompanyName = organization.Name ?? '';
+        this.dialogGstNumber = organization.GSTNo ?? '';
+        this.dialogRegistrationNumber = organization.RegistrationNo ?? '';
+        this.dialogPhoneNumber = organization.Phone ?? '';
+        this.dialogEmail = organization.Email ?? '';
+        this.dialogWebsite = organization.Website ?? '';
+        this.dialogContactPerson = organization.ContactPerson ?? '';
+        this.dialogContactPersonPhone = organization.ContactMobileNo ?? '';
+        this.dialogContactPersonEmail = organization.ContactEmail ?? '';
+        this.dialogAddressLine1 = organization.Address1 ?? '';
+        this.dialogAddressLine2 = organization.Address2 ?? '';
+        this.dialogCity = organization.City ?? null;
+        this.dialogState = organization.State ?? null;
+        this.dialogCountry = organization.Country ?? null;
+        this.dialogPostalCode = organization.PostalCode ? String(organization.PostalCode) : '';
+        this.dialogRemarks = organization.Remarks ?? '';
+        this.dialogBranch = null;
+      },
+      error: () => {
+        this.toast.error('Load Failed', 'Unable to load organizations. Please check API and try again.');
+      }
+    });
   }
 
   openConfigDialog(row: Record<string, unknown>): void {
@@ -264,34 +277,67 @@ export class OrganizationComponent {
     this.configImageName = input.files?.[0]?.name ?? '';
   }
 
-  deleteRow(row: Record<string, unknown>): void {
-    const rowIndex = this.tableRows.indexOf(row);
+  async deleteRow(row:any): Promise<void> {
+    try {
+     let response: any = await firstValueFrom(this.organizationService.delete(row['Id']));
+    
+     if (response.ErrorInfo.Message == true) {
+     this.toast.success('Deleted', `${String(row['name'] ?? row['code'] ?? 'Record')} deleted successfully.`);
+      this.loadOrganizations();
+     }
+      else {
+      this.toast.error('Delete Failed', response.ErrorInfo.Message || `Unable to delete ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+     }
 
-    if (rowIndex >= 0) {
-      this.tableRows.splice(rowIndex, 1);
-    }
-
-    this.toast.warn('Deleted', `${String(row['name'] ?? row['code'] ?? 'Record')} removed successfully.`);
+    } catch {
+      this.toast.error('Delete Failed', `Unable to delete ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+    } 
   }
 
-  activateRow(row: Record<string, unknown>): void {
-    row['status'] = 'Active';
-    this.toast.success('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as active.`);
+  async activateRow(row:any): Promise<void> {
+    try {
+     let response: any = await firstValueFrom(this.organizationService.activeInActive(row['Id'], true));
+    
+     if (response.ErrorInfo.Message == true) {
+     this.toast.success('Activated', `${String(row['name'] ?? row['code'] ?? 'Record')} activated successfully.`);
+      this.loadOrganizations();
+     }
+      else {
+      this.toast.error('Activation Failed', response.ErrorInfo.Message || `Unable to activate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+     }
+
+    } catch {
+      this.toast.error('Activation Failed', `Unable to activate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+    } 
   }
 
-  deactivateRow(row: Record<string, unknown>): void {
-    row['status'] = 'Inactive';
-    this.toast.info('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as inactive.`);
+  async deactivateRow(row:any): Promise<void> {
+    try {
+     let response: any = await firstValueFrom(this.organizationService.activeInActive(row['Id'], false));
+    
+     if (response.ErrorInfo.Message == true) {
+     this.toast.success('Deactivated', `${String(row['name'] ?? row['code'] ?? 'Record')} deactivated successfully.`);
+      this.loadOrganizations();
+     }
+      else {
+      this.toast.error('Deactivation Failed', response.ErrorInfo.Message || `Unable to deactivate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+     }
+
+    } catch {
+      this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+    } 
   }
 
   openRowActions(menu: any, event: Event, row: Record<string, unknown>): void {
     this.selectedRow = row;
+    this.rowActionItems = this.getRowActionItems(row);
     menu.toggle(event);
   }
 
   private resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
+    this.dialogId = 0;
     this.dialogCode = '';
     this.dialogCompanyName = '';
     this.dialogGstNumber = '';
@@ -320,6 +366,23 @@ export class OrganizationComponent {
     this.configImageName = '';
     this.configThemeColor = '#2f7d57';
     this.configFontSize = '14';
+  }
+
+  private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
+    const items: MenuItem[] = [
+      { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
+      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+    ];
+
+    if (row['IsActive'] === true) {
+      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+    } else {
+      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+
+    return items;
   }
 
   private handleRowAction(action: 'config' | 'edit' | 'delete' | 'activate' | 'deactivate'): void {

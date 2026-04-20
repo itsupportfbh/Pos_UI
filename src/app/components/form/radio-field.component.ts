@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RadioButtonModule } from 'primeng/radiobutton';
-import { Option } from '../../pages/pos/config/models';
+import { FieldOption } from './field-option.model';
 
 @Component({
   selector: 'app-radio-field',
@@ -16,7 +16,7 @@ export class RadioFieldComponent {
   @Input({ required: true }) inputId = '';
   @Input() name = '';
   @Input() helperText = '';
-  @Input() options: Option[] = [];
+  @Input() options: FieldOption[] = [];
   @Input() required = false;
   @Input() showRequiredMark = false;
   @Input() submitted = false;

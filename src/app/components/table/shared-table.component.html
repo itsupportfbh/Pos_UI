@@ -33,7 +33,7 @@
   (onRowSelect)="emitRowSelect($event)"
   (onRowUnselect)="emitRowUnselect($event)"
 >
-  <ng-template #caption>
+  <ng-template pTemplate="caption">
     <div class="table-toolbar">
       <div class="table-search-actions">
         @if (showFilterButton) {
@@ -73,7 +73,7 @@
     </div>
   </ng-template>
 
-  <ng-template #header let-columns>
+  <ng-template pTemplate="header" let-columns>
     <tr>
       @if (selectionMode === 'multiple') {
         <th class="selection-column">
@@ -106,7 +106,7 @@
     </tr>
   </ng-template>
 
-  <ng-template #body let-rowData let-columns="columns">
+  <ng-template pTemplate="body" let-rowData let-columns="columns">
     <tr [pSelectableRow]="selectionMode ? rowData : null">
       @if (selectionMode === 'multiple') {
         <td class="selection-column">
@@ -116,7 +116,9 @@
 
       @for (column of columns; track trackByField($index, column)) {
         <td [class]="column.bodyStyleClass ?? column.styleClass">
-          @if (column.type === 'tag') {
+          @if (getFieldName(column) === 'Status' && statusTemplate) {
+            <ng-container *ngTemplateOutlet="statusTemplate; context: { $implicit: rowData }" />
+          } @else if (column.type === 'tag') {
             <p-tag [value]="formatCell(column, rowData)" [severity]="getTagSeverity(column, rowData)" />
           } @else {
             {{ formatCell(column, rowData) }}
@@ -136,7 +138,7 @@
     </tr>
   </ng-template>
 
-  <ng-template #emptymessage>
+  <ng-template pTemplate="emptymessage">
     <tr>
       <td [attr.colspan]="visibleColumns.length + (selectionMode === 'multiple' ? 1 : 0) + (showRowActions ? 1 : 0)" class="empty-message">
         {{ emptyMessage }}

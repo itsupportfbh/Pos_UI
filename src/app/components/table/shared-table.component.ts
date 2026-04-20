@@ -51,6 +51,7 @@ export interface SharedTableColumn<T = Record<string, unknown>> {
 })
 export class SharedTableComponent<T extends Record<string, unknown> = Record<string, unknown>> {
   @ContentChild('rowActions', { read: TemplateRef }) rowActionsTemplate?: TemplateRef<{ $implicit: T }>;
+  @ContentChild('statusTemplate', { read: TemplateRef }) statusTemplate?: TemplateRef<{ $implicit: T }>;
   @Input() columns: SharedTableColumn<T>[] = [];
   @Input() value: T[] = [];
   @Input() caption = '';

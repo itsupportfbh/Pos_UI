@@ -8,8 +8,7 @@ import { AutocompleteFieldComponent } from '../../../components/form/autocomplet
 import { DateFieldComponent } from '../../../components/form/date-field.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { SharedTableComponent } from '../../../components/table/shared-table.component';
-import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
+import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
 const CATEGORY_OPTIONS = [
   { label: 'Beverages', value: 'Beverages' },
@@ -48,6 +47,55 @@ const PAGE_CONFIG: FeaturePageConfig = {
 const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
 
 
+type FeatureFieldType = 'text' | 'select' | 'autocomplete' | 'date';
+
+interface FeatureFieldConfig {
+  key: string;
+  label: string;
+  type: FeatureFieldType;
+  placeholder?: string;
+  helperText?: string;
+  required?: boolean;
+  disabled?: boolean;
+  options?: { label: string | number; value: string | number }[];
+  suggestions?: string[];
+  optionLabel?: string;
+  showClear?: boolean;
+  filter?: boolean;
+  dropdown?: boolean;
+  forceSelection?: boolean;
+  showIcon?: boolean;
+  dateFormat?: string;
+  minDate?: Date;
+  maxDate?: Date;
+}
+
+interface SummaryCard {
+  label: string;
+  value: string;
+  caption: string;
+}
+
+interface FeaturePageConfig {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  formTitle?: string;
+  formDescription?: string;
+  tableTitle?: string;
+  tableDescription?: string;
+  helperPoints?: string[];
+  summaryCards: SummaryCard[];
+  fields: FeatureFieldConfig[];
+  primaryActionLabel: string;
+  secondaryActionLabel?: string;
+  showAddNewButton?: boolean;
+  addNewLabel?: string;
+  tableCaption: string;
+  emptyMessage?: string;
+  rows: Record<string, unknown>[];
+  columns: SharedTableColumn<Record<string, unknown>>[];
+}
 @Component({
   selector: 'app-menu-sales',
   standalone: true,
@@ -157,6 +205,7 @@ export class MenuSalesComponent {
     }
   }
 }
+
 
 
 

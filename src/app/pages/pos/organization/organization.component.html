@@ -17,7 +17,6 @@
         }
       </div>
     </div>
-
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
@@ -27,9 +26,16 @@
         <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
           (click)="openRowActions(rowMenu, $event, row)"></button>
       </ng-template>
+
+      <ng-template #statusTemplate let-row>
+        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+          [class.status-inactive]="row.Status === 'Inactive'">
+          {{ row.Status }}
+        </span>
+      </ng-template>
     </app-shared-table>
   </p-card>
-</section>
+</section> 
 
 <p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
   [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
@@ -52,12 +58,10 @@
     </section>
   </p-card>
 </p-dialog>
-@if (addDialogConfig) {
 <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '70rem', maxWidth: '100vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
-      <p class="eyebrow">Create Master</p>
       <h3>{{ dialogTitle }}</h3>
       <p>{{ dialogSubtitle }}</p>
     </div>
@@ -113,12 +117,15 @@
       [model]="dialogAddressLine2" (modelChange)="dialogAddressLine2 = $event" />
 
     <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
+      [numberValue]="true"
       [model]="dialogCity" (modelChange)="dialogCity = $event" />
 
     <app-select-field label="State" inputId="dialog-state" placeholder="Choose state" [options]="stateOptions"
+      [numberValue]="true"
       [model]="dialogState" (modelChange)="dialogState = $event" />
 
     <app-select-field label="Country" inputId="dialog-country" placeholder="Choose country" [options]="countryOptions"
+      [numberValue]="true"
       [model]="dialogCountry" (modelChange)="dialogCountry = $event" />
 
     <app-text-field label="Postal Code" inputId="dialog-postalCode" placeholder="Postal Code"
@@ -139,13 +146,11 @@
       (secondaryClick)="closeAddDialog()" />
   </div>
 </p-dialog>
-}
 
 <p-dialog [(visible)]="showConfigDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }"
   [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeConfigDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
-      <p class="eyebrow">Organization Config</p>
       <h3>Add Config</h3>
       <p>Configure logo, theme color, and typography for {{ configOrganizationName || pageTitle }}.</p>
     </div>

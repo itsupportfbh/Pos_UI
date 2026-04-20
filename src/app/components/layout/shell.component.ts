@@ -3,7 +3,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FooterComponent } from './footer.component';
 import { HeaderComponent } from './header.component';
 import { MenuComponent } from './menu.component';
-import { MenuGroup } from '../../pages/pos/config/models';
+import { MenuGroup } from './menu.model';
 
 type ShellUser = {
   name: string;
