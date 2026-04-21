@@ -212,7 +212,7 @@ export class OrganizationComponent implements OnInit {
         this.changeDetector.detectChanges();
       },
       error: () => {
-        this.toast.error('Load Failed', 'Unable to load organizations. Please check API and try again.');
+        this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
       }
     });
   }
@@ -248,7 +248,7 @@ export class OrganizationComponent implements OnInit {
         this.dialogBranch = null;
       },
       error: () => {
-        this.toast.error('Load Failed', 'Unable to load organizations. Please check API and try again.');
+        this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
       }
     });
   }

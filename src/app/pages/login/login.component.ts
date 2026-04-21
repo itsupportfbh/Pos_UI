@@ -53,7 +53,6 @@ export class LoginComponent {
 
         this.loginSession = {
           Expiration: loginData.Expiration ?? '',
-          Status: loginData.Status ?? '',
           Token: loginData.Token ?? '',
         };
 
