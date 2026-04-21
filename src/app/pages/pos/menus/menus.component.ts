@@ -11,114 +11,13 @@ import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 
-const CATEGORY_OPTIONS = [
-  { label: 'Beverages', value: 'Beverages' },
-  { label: 'Bakery', value: 'Bakery' },
-  { label: 'Dairy', value: 'Dairy' },
-  { label: 'Snacks', value: 'Snacks' },
-  { label: 'Groceries', value: 'Groceries' }
-];
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
+const CATEGORY_OPTIONS: { label: string | number; value: string | number }[] = [];
+const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
 ];
 
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Food Menu',
-  title: 'Menus',
-  subtitle: 'Manage product master data.',
-  formTitle: `${'Menus'} Filters`,
-  formDescription: `Static ${'Menus'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Menus',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'SKU-101', name: 'Arabica Coffee 250g', status: 'Active' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Food Menu', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'productCode', label: 'Product Code', type: 'text', placeholder: 'Search SKU or code' }, { key: 'category', label: 'Category', type: 'select', placeholder: 'Choose category', options: CATEGORY_OPTIONS }],
-  primaryActionLabel: `Search ${'Menus'}`,
-  secondaryActionLabel: 'Clear Filters',
-  showAddNewButton: true,
-  addNewLabel: 'Add New',
-  tableCaption: 'Menus',
-  rows: [{ code: 'SKU-101', name: 'Arabica Coffee 250g', status: 'Active' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
-  eyebrow: 'Food Menu',
-  title: 'Create Product',
-  subtitle: 'Create a new sellable item.',
-  formTitle: `${'Create Product'} Filters`,
-  formDescription: `Static ${'Create Product'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Create Product',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'SKU-2301', name: 'Blue Bean Premium Coffee', status: 'Draft' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Food Menu', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'productCode', label: 'Product Code', type: 'text', placeholder: 'SKU-2301' }, { key: 'category', label: 'Category', type: 'select', placeholder: 'Choose category', options: CATEGORY_OPTIONS }],
-  primaryActionLabel: `Search ${'Create Product'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Create Product',
-  rows: [{ code: 'SKU-2301', name: 'Blue Bean Premium Coffee', status: 'Draft' }],
-  columns: CODE_NAME_COLUMNS
-};
-
-
-type FeatureFieldType = 'text' | 'select' | 'autocomplete' | 'date';
-
-interface FeatureFieldConfig {
-  key: string;
-  label: string;
-  type: FeatureFieldType;
-  placeholder?: string;
-  helperText?: string;
-  required?: boolean;
-  disabled?: boolean;
-  options?: { label: string | number; value: string | number }[];
-  suggestions?: string[];
-  optionLabel?: string;
-  showClear?: boolean;
-  filter?: boolean;
-  dropdown?: boolean;
-  forceSelection?: boolean;
-  showIcon?: boolean;
-  dateFormat?: string;
-  minDate?: Date;
-  maxDate?: Date;
-}
-
-interface SummaryCard {
-  label: string;
-  value: string;
-  caption: string;
-}
-
-interface FeaturePageConfig {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  formTitle?: string;
-  formDescription?: string;
-  tableTitle?: string;
-  tableDescription?: string;
-  helperPoints?: string[];
-  summaryCards: SummaryCard[];
-  fields: FeatureFieldConfig[];
-  primaryActionLabel: string;
-  secondaryActionLabel?: string;
-  showAddNewButton?: boolean;
-  addNewLabel?: string;
-  tableCaption: string;
-  emptyMessage?: string;
-  rows: Record<string, unknown>[];
-  columns: SharedTableColumn<Record<string, unknown>>[];
-}
 @Component({
   selector: 'app-menus',
   standalone: true,
@@ -127,37 +26,34 @@ interface FeaturePageConfig {
   styleUrl: './menus.component.css'
 })
 export class MenusComponent {
-  private readonly toast = inject(AppToastService);
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
-  showAddDialog = false;
+  private readonly toast = inject(AppToastService);  showAddDialog = false;
   showFilterSidebar = false;
   filterProductCode = '';
   filterCategory: string | null = null;
   dialogProductCode = '';
   dialogCategory: string | null = null;
   selectedRow: Record<string, unknown> | null = null;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
+  readonly pageEyebrow = 'Food Menu';
+  readonly pageTitle = 'Menus';
+  readonly pageSubtitle = 'Manage product master data.';
   readonly categoryOptions = CATEGORY_OPTIONS;
-  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
+  
+  readonly filterTitle = `${'Menus'} Filters`;
+  readonly filterDescription = `API data will be loaded for ${'Menus'.toLowerCase()}.`;
+  readonly fields: any[] = [{ key: 'productCode', label: 'Product Code', type: 'text', placeholder: 'Search SKU or code' }, { key: 'category', label: 'Category', type: 'select', placeholder: 'Choose category', options: CATEGORY_OPTIONS }];
+  readonly primaryActionLabel = `Search ${'Menus'}`;
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  readonly dialogTitle = 'Create Product';
+  readonly dialogSubtitle = 'Create a new sellable item.';
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
+  readonly tableTitle = 'Menus';
+  readonly tableDescription = 'API response data will be shown here.';
+  readonly tableCaption = 'Menus';
+  readonly tableColumns = CODE_NAME_COLUMNS;
+  tableRows: Record<string, unknown>[] = [];
+    readonly showAddNewButton = true;
+    readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
     readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -181,11 +77,7 @@ export class MenusComponent {
     this.showFilterSidebar = false;
   }
   openAddDialog(): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
-
-    this.resetDialogForm();
+        this.resetDialogForm();
     this.showAddDialog = true;
   }
 
@@ -199,11 +91,7 @@ export class MenusComponent {
   }
 
   editRow(row: Record<string, unknown>): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
-
-    this.dialogProductCode = String(row['productCode'] ?? row['code'] ?? '');
+        this.dialogProductCode = String(row['productCode'] ?? row['code'] ?? '');
     this.dialogCategory = typeof row['category'] === 'string' ? row['category'] : null;
     this.showAddDialog = true;
     this.toast.info('Edit Mode', `Editing ${String(row['name'] ?? row['code'] ?? this.pageTitle)}.`);

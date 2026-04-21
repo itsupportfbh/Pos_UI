@@ -10,7 +10,7 @@
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">Static Data</p>
+        <p class="eyebrow">API Data</p>
         <h2>{{ tableTitle }}</h2>
         @if (tableDescription) {
           <p class="section-copy">{{ tableDescription }}</p>
@@ -63,7 +63,7 @@
     </section>
   </p-card>
 </p-dialog>
-@if (addDialogConfig) {
+@if (showAddNewButton) {
   <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
     <ng-template pTemplate="header">
       <div class="dialog-copy">

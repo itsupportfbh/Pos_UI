@@ -11,117 +11,18 @@ import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 
-const BRANCH_OPTIONS = [
-  { label: 'Head Office', value: 'Head Office' },
-  { label: 'City Center', value: 'City Center' },
-  { label: 'Airport Kiosk', value: 'Airport Kiosk' }
-];
-const CUSTOMER_SUGGESTIONS = ['Asha Retail', 'Kiran Traders', 'Vijay Kumar'];
-const CUSTOMER_FIELDS: FeatureFieldConfig[] = [
+const BRANCH_OPTIONS: { label: string | number; value: string | number }[] = [];
+const CUSTOMER_SUGGESTIONS: string[] = [];
+const CUSTOMER_FIELDS: any[] = [
   { key: 'customerName', label: 'Customer', type: 'autocomplete', placeholder: 'Search customer', suggestions: CUSTOMER_SUGGESTIONS },
   { key: 'branch', label: 'Branch', type: 'select', placeholder: 'Choose branch', options: BRANCH_OPTIONS }
 ];
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
+const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
 ];
 
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Customers',
-  title: 'Customer List',
-  subtitle: 'Manage customer master details.',
-  formTitle: `${'Customer List'} Filters`,
-  formDescription: `Static ${'Customer List'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Customer List',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'CUS-1001', name: 'Asha Retail', status: 'Active' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Customers', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: CUSTOMER_FIELDS,
-  primaryActionLabel: `Search ${'Customer List'}`,
-  secondaryActionLabel: 'Clear Filters',
-  showAddNewButton: true,
-  addNewLabel: 'Add New',
-  tableCaption: 'Customer List',
-  rows: [{ code: 'CUS-1001', name: 'Asha Retail', status: 'Active' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
-  eyebrow: 'Customers',
-  title: 'Create Customer',
-  subtitle: 'Capture new customer profiles.',
-  formTitle: `${'Create Customer'} Filters`,
-  formDescription: `Static ${'Create Customer'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Create Customer',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'CUS-1101', name: 'Nila Stores', status: 'Draft' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Customers', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: CUSTOMER_FIELDS,
-  primaryActionLabel: `Search ${'Create Customer'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Create Customer',
-  rows: [{ code: 'CUS-1101', name: 'Nila Stores', status: 'Draft' }],
-  columns: CODE_NAME_COLUMNS
-};
-
-
-type FeatureFieldType = 'text' | 'select' | 'autocomplete' | 'date';
-
-interface FeatureFieldConfig {
-  key: string;
-  label: string;
-  type: FeatureFieldType;
-  placeholder?: string;
-  helperText?: string;
-  required?: boolean;
-  disabled?: boolean;
-  options?: { label: string | number; value: string | number }[];
-  suggestions?: string[];
-  optionLabel?: string;
-  showClear?: boolean;
-  filter?: boolean;
-  dropdown?: boolean;
-  forceSelection?: boolean;
-  showIcon?: boolean;
-  dateFormat?: string;
-  minDate?: Date;
-  maxDate?: Date;
-}
-
-interface SummaryCard {
-  label: string;
-  value: string;
-  caption: string;
-}
-
-interface FeaturePageConfig {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  formTitle?: string;
-  formDescription?: string;
-  tableTitle?: string;
-  tableDescription?: string;
-  helperPoints?: string[];
-  summaryCards: SummaryCard[];
-  fields: FeatureFieldConfig[];
-  primaryActionLabel: string;
-  secondaryActionLabel?: string;
-  showAddNewButton?: boolean;
-  addNewLabel?: string;
-  tableCaption: string;
-  emptyMessage?: string;
-  rows: Record<string, unknown>[];
-  columns: SharedTableColumn<Record<string, unknown>>[];
-}
 @Component({
   selector: 'app-customers',
   standalone: true,
@@ -130,38 +31,35 @@ interface FeaturePageConfig {
   styleUrl: './customers.component.css'
 })
 export class CustomersComponent {
-  private readonly toast = inject(AppToastService);
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
-  showAddDialog = false;
+  private readonly toast = inject(AppToastService);  showAddDialog = false;
   showFilterSidebar = false;
   filterCustomerName: string | null = null;
   filterBranch: string | null = null;
   dialogCustomerName: string | null = null;
   dialogBranch: string | null = null;
   selectedRow: Record<string, unknown> | null = null;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
+  readonly pageEyebrow = 'Customers';
+  readonly pageTitle = 'Customer List';
+  readonly pageSubtitle = 'Manage customer master details.';
   readonly customerSuggestions = CUSTOMER_SUGGESTIONS;
   readonly branchOptions = BRANCH_OPTIONS;
-  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
+  
+  readonly filterTitle = `${'Customer List'} Filters`;
+  readonly filterDescription = `API data will be loaded for ${'Customer List'.toLowerCase()}.`;
+  readonly fields: any[] = CUSTOMER_FIELDS;
+  readonly primaryActionLabel = `Search ${'Customer List'}`;
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  readonly dialogTitle = 'Create Customer';
+  readonly dialogSubtitle = 'Capture new customer profiles.';
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
+  readonly tableTitle = 'Customer List';
+  readonly tableDescription = 'API response data will be shown here.';
+  readonly tableCaption = 'Customer List';
+  readonly tableColumns = CODE_NAME_COLUMNS;
+  tableRows: Record<string, unknown>[] = [];
+    readonly showAddNewButton = true;
+    readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
     readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -185,11 +83,7 @@ export class CustomersComponent {
     this.showFilterSidebar = false;
   }
   openAddDialog(): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
-
-    this.resetDialogForm();
+        this.resetDialogForm();
     this.showAddDialog = true;
   }
 
@@ -203,11 +97,7 @@ export class CustomersComponent {
   }
 
   editRow(row: Record<string, unknown>): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
-
-    this.dialogCustomerName = typeof row['customerName'] === 'string' ? row['customerName'] : String(row['name'] ?? '');
+        this.dialogCustomerName = typeof row['customerName'] === 'string' ? row['customerName'] : String(row['name'] ?? '');
     this.dialogBranch = typeof row['branch'] === 'string' ? row['branch'] : null;
     this.showAddDialog = true;
     this.toast.info('Edit Mode', `Editing ${String(row['name'] ?? row['code'] ?? this.pageTitle)}.`);

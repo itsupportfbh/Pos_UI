@@ -1,11 +1,21 @@
 import { CanActivateFn, Router, Routes } from '@angular/router';
 import { inject } from '@angular/core';
 
-const AUTH_TOKEN_KEY = 'authToken';
+const LOGIN_SESSION_KEY = 'loginSession';
+const USER_DETAILS_KEY = 'userDetails';
 
 const isLoggedIn = (): boolean => {
   try {
-    return !!localStorage.getItem(AUTH_TOKEN_KEY);
+    const loginSession = localStorage.getItem(LOGIN_SESSION_KEY);
+    const userDetails = localStorage.getItem(USER_DETAILS_KEY);
+
+    if (!loginSession || !userDetails) {
+      return false;
+    }
+
+    const session = JSON.parse(loginSession);
+    const user = JSON.parse(userDetails);
+    return !!session.Token && !!user.UserId;
   } catch {
     return false;
   }

@@ -39,7 +39,7 @@
         <form (ngSubmit)="submit()" #loginForm="ngForm">
           <div class="field">
             <label for="email">Email</label>
-            <input pInputText id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email" placeholder="admin@unityworkpos.com" />
+            <input pInputText id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email" placeholder="Enter email" />
           </div>
 
           <div class="field">
@@ -50,7 +50,7 @@
               [(ngModel)]="password"
               required
               autocomplete="current-password"
-              placeholder="unity@123"
+              placeholder="Enter password"
               [feedback]="false"
               [toggleMask]="true"
               inputStyleClass="full-width"
@@ -62,21 +62,7 @@
             <p-message severity="error" [text]="errorMessage" />
           }
 
-          <button pButton type="submit" label="Start Counter" [disabled]="loginForm.invalid"></button>
-
-          <section class="demo-access">
-            <article class="login-help">
-              <span>Demo Admin</span>
-              <strong>admin@unityworkpos.com</strong>
-              <small>unity@123</small>
-            </article>
-
-            <article class="login-help">
-              <span>Demo Staff</span>
-              <strong>staff@unityworkpos.com</strong>
-              <small>staff@123</small>
-            </article>
-          </section>
+          <button pButton type="submit" label="Start Counter" [loading]="loginSaving" [disabled]="loginForm.invalid || loginSaving"></button>
         </form>
       </p-card>
     </section>
@@ -129,7 +115,7 @@
         <form (ngSubmit)="submit()" #loginForm="ngForm">
           <div class="field">
             <label for="email">Email</label>
-            <input pInputText id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email" placeholder="admin@unityworkpos.com" />
+            <input pInputText id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email" placeholder="Enter email" />
           </div>
 
           <div class="field">
@@ -140,7 +126,7 @@
               [(ngModel)]="password"
               required
               autocomplete="current-password"
-              placeholder="unity@123"
+              placeholder="Enter password"
               [feedback]="false"
               [toggleMask]="true"
               inputStyleClass="full-width"
@@ -152,23 +138,41 @@
             <p-message severity="error" [text]="errorMessage" />
           }
 
-          <button pButton type="submit" label="Open POS" [disabled]="loginForm.invalid"></button>
-
-          <section class="demo-access">
-            <article class="login-help">
-              <span>Demo Admin</span>
-              <strong>admin@unityworkpos.com</strong>
-              <small>unity@123</small>
-            </article>
-
-            <article class="login-help">
-              <span>Demo Staff</span>
-              <strong>staff@unityworkpos.com</strong>
-              <small>staff@123</small>
-            </article>
-          </section>
+          <button pButton type="submit" label="Open POS" [loading]="loginSaving" [disabled]="loginForm.invalid || loginSaving"></button>
         </form>
       </p-card>
     </section>
   }
 </main>
+
+<p-dialog
+  [(visible)]="showRoleDialog"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="true"
+  (onHide)="closeRoleDialog()"
+  [style]="{ width: '46rem', maxWidth: '94vw' }"
+>
+  <ng-template pTemplate="header">
+    <div class="role-dialog-copy">
+      <h3>Select your role</h3>
+      <p>This login has multiple roles. Choose one role to continue.</p>
+    </div>
+  </ng-template>
+
+  <section class="role-card-grid">
+    @for (userDetail of userDetailsList; track userDetail.RoleId) {
+      <button type="button" class="role-card" (click)="selectUserDetails(userDetail)">
+        <span class="role-card-label">Role</span>
+        <strong>{{ userDetail.RoleName }}</strong>
+        <small>{{ userDetail.UserName }}</small>
+
+        <div class="role-card-meta">
+          <span>{{ userDetail.OrgName || 'Organization' }}</span>
+          <span>{{ userDetail.BranchName || 'Branch' }}</span>
+        </div>
+      </button>
+    }
+  </section>
+</p-dialog>

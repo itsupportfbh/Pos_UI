@@ -13,11 +13,7 @@ import { SharedTableColumn, SharedTableComponent } from '../../../components/tab
 import { AppToastService } from '../../../services/app-toast.service';
 import { Organization, OrganizationService } from '../../../services/organization.service';
 
-const BRANCH_OPTIONS = [
-  { label: 'Head Office', value: 'Head Office' },
-  { label: 'City Center', value: 'City Center' },
-  { label: 'Airport Kiosk', value: 'Airport Kiosk' }
-];
+const BRANCH_OPTIONS: { label: string | number; value: string | number }[] = [];
 
 const cityOptions: any = [];
 const stateOptions: any = [];
@@ -370,11 +366,11 @@ export class OrganizationComponent implements OnInit {
 
   private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
     const items: MenuItem[] = [
-      { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
 
     if (row['IsActive'] === true) {
+      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });

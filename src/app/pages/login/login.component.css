@@ -411,9 +411,86 @@ label {
   font-size: 0.84rem;
 }
 
+.role-dialog-copy h3,
+.role-dialog-copy p {
+  margin: 0;
+}
+
+.role-dialog-copy h3 {
+  color: var(--app-text);
+  font-size: 1.45rem;
+}
+
+.role-dialog-copy p:last-child {
+  margin-top: 0.35rem;
+  color: var(--app-text-muted);
+}
+
+.role-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.role-card {
+  display: grid;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #ffffff, #f5faf7);
+  color: var(--app-text);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.role-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--app-primary);
+  box-shadow: 0 14px 28px rgba(24, 55, 37, 0.1);
+}
+
+.role-card-label {
+  color: var(--app-primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.role-card strong {
+  font-size: 1.15rem;
+}
+
+.role-card small {
+  color: var(--app-text-muted);
+}
+
+.role-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+}
+
+.role-card-meta span {
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  background: var(--app-primary-soft);
+  color: var(--app-primary-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 @media (max-width: 1080px) {
   .login-shell {
     grid-template-columns: 1fr;
+  }
+
+  .role-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .login-hero {
@@ -453,5 +530,9 @@ label {
 
   .login-card ::ng-deep .p-card-body {
     padding: 1.4rem;
+  }
+
+  .role-card-grid {
+    grid-template-columns: 1fr;
   }
 }

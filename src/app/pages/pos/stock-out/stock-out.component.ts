@@ -10,90 +10,13 @@ import { SelectFieldComponent } from '../../../components/form/select-field.comp
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
-const STOCK_LOCATION_OPTIONS = [
-  { label: 'Main Store', value: 'Main Store' },
-  { label: 'Back Room', value: 'Back Room' },
-  { label: 'Cold Storage', value: 'Cold Storage' }
-];
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
+const STOCK_LOCATION_OPTIONS: { label: string | number; value: string | number }[] = [];
+const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
 ];
 
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Inventory',
-  title: 'Stock Out',
-  subtitle: 'Record stock issues and damage.',
-  formTitle: `${'Stock Out'} Filters`,
-  formDescription: `Static ${'Stock Out'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Stock Out',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'STO-01', name: 'Organic Milk 1L', status: 'Posted' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Inventory', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'itemName', label: 'Item', type: 'autocomplete', placeholder: 'Search item', suggestions: ['Organic Milk 1L'] }, { key: 'location', label: 'Location', type: 'select', placeholder: 'Choose location', options: STOCK_LOCATION_OPTIONS }],
-  primaryActionLabel: `Search ${'Stock Out'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Stock Out',
-  rows: [{ code: 'STO-01', name: 'Organic Milk 1L', status: 'Posted' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
-
-
-type FeatureFieldType = 'text' | 'select' | 'autocomplete' | 'date';
-
-interface FeatureFieldConfig {
-  key: string;
-  label: string;
-  type: FeatureFieldType;
-  placeholder?: string;
-  helperText?: string;
-  required?: boolean;
-  disabled?: boolean;
-  options?: { label: string | number; value: string | number }[];
-  suggestions?: string[];
-  optionLabel?: string;
-  showClear?: boolean;
-  filter?: boolean;
-  dropdown?: boolean;
-  forceSelection?: boolean;
-  showIcon?: boolean;
-  dateFormat?: string;
-  minDate?: Date;
-  maxDate?: Date;
-}
-
-interface SummaryCard {
-  label: string;
-  value: string;
-  caption: string;
-}
-
-interface FeaturePageConfig {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  formTitle?: string;
-  formDescription?: string;
-  tableTitle?: string;
-  tableDescription?: string;
-  helperPoints?: string[];
-  summaryCards: SummaryCard[];
-  fields: FeatureFieldConfig[];
-  primaryActionLabel: string;
-  secondaryActionLabel?: string;
-  showAddNewButton?: boolean;
-  addNewLabel?: string;
-  tableCaption: string;
-  emptyMessage?: string;
-  rows: Record<string, unknown>[];
-  columns: SharedTableColumn<Record<string, unknown>>[];
-}
 @Component({
   selector: 'app-stock-out',
   standalone: true,
@@ -101,35 +24,32 @@ interface FeaturePageConfig {
   templateUrl: './stock-out.component.html',
   styleUrl: './stock-out.component.css'
 })
-export class StockOutComponent {
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
-  readonly formState = this.createEmptyState(this.config);
-  readonly dialogFormState = this.addDialogConfig ? this.createEmptyState(this.addDialogConfig) : {};
+export class StockOutComponent {  readonly formState: Record<string, string | Date | null> = {};
+  readonly dialogFormState: Record<string, string | Date | null> = {};
   showAddDialog = false;
   showFilterSidebar = false;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
-  readonly itemSuggestions = ['Organic Milk 1L'];
-  readonly stockLocationOptions = STOCK_LOCATION_OPTIONS;  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
-  readonly dialogFields = this.addDialogConfig?.fields ?? [];
+  readonly pageEyebrow = 'Inventory';
+  readonly pageTitle = 'Stock Out';
+  readonly pageSubtitle = 'Record stock issues and damage.';
+  readonly itemSuggestions: string[] = [];
+  readonly stockLocationOptions = STOCK_LOCATION_OPTIONS;  
+  readonly filterTitle = `${'Stock Out'} Filters`;
+  readonly filterDescription = `API data will be loaded for ${'Stock Out'.toLowerCase()}.`;
+  readonly fields: any[] = [{ key: 'itemName', label: 'Item', type: 'autocomplete', placeholder: 'Search item', suggestions: ['Organic Milk 1L'] }, { key: 'location', label: 'Location', type: 'select', placeholder: 'Choose location', options: STOCK_LOCATION_OPTIONS }];
+  readonly primaryActionLabel = `Search ${'Stock Out'}`;
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  readonly dialogTitle = '';
+  readonly dialogSubtitle = '';
+  readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
+  readonly tableTitle = 'Stock Out';
+  readonly tableDescription = 'API response data will be shown here.';
+  readonly tableCaption = 'Stock Out';
+  readonly tableColumns = CODE_NAME_COLUMNS;
+  tableRows: Record<string, unknown>[] = [];
+    readonly showAddNewButton = false;
+    readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
     readonly showFilterButton = true;
 
   getFieldValue(fieldKey: string): string | Date | null {
@@ -162,7 +82,7 @@ export class StockOutComponent {
   }
 
   resetForm(): void {
-    this.resetState(this.formState, this.config);
+    this.resetState(this.formState, this.fields);
   }
 
   openFilterSidebar(): void {
@@ -173,11 +93,11 @@ export class StockOutComponent {
     this.showFilterSidebar = false;
   }
   openAddDialog(): void {
-    if (!this.addDialogConfig) {
+    if (!this.showAddNewButton) {
       return;
     }
 
-    this.resetState(this.dialogFormState, this.addDialogConfig);
+    this.resetState(this.dialogFormState, this.dialogFields);
     this.showAddDialog = true;
   }
 
@@ -189,23 +109,16 @@ export class StockOutComponent {
     this.closeAddDialog();
   }
 
-  trackByField(_: number, field: FeatureFieldConfig): string {
+  trackByField(_: number, field: any): string {
     return field.key;
   }
 
-  private createEmptyState(config: FeaturePageConfig): Record<string, string | Date | null> {
-    return config.fields.reduce<Record<string, string | Date | null>>((state, field) => {
-      state[field.key] = null;
-      return state;
-    }, {});
-  }
-
-  private resetState(state: Record<string, string | Date | null>, config: FeaturePageConfig): void {
+  private resetState(state: Record<string, string | Date | null>, fields: any[]): void {
     for (const key of Object.keys(state)) {
       delete state[key];
     }
 
-    for (const field of config.fields) {
+    for (const field of fields) {
       state[field.key] = null;
     }
   }

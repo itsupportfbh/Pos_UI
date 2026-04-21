@@ -18,21 +18,16 @@ type CartItem = Product & { quantity: number };
   styleUrl: './billing.component.css'
 })
 export class BillingComponent {
-  readonly customers = ['Walk-in Customer', 'Asha Retail', 'Kiran Traders', 'Vijay Kumar'];
-  readonly paymentModes: FieldOption[] = [{ label: 'Cash', value: 'Cash' }, { label: 'UPI', value: 'UPI' }, { label: 'Card', value: 'Card' }, { label: 'Credit', value: 'Credit' }];
-  readonly products: Product[] = [
-    { id: 1, name: 'Arabica Coffee 250g', category: 'Beverages', price: 12.5, stock: 42, barcode: '8901002001010' },
-    { id: 2, name: 'Brown Bread Loaf', category: 'Bakery', price: 3.25, stock: 19, barcode: '8901002001011' },
-    { id: 3, name: 'Organic Milk 1L', category: 'Dairy', price: 2.75, stock: 28, barcode: '8901002001012' },
-    { id: 4, name: 'Chocolate Cookies', category: 'Snacks', price: 4.5, stock: 35, barcode: '8901002001013' }
-  ];
+  readonly customers: string[] = [];
+  readonly paymentModes: FieldOption[] = [];
+  readonly products: Product[] = [];
 
   productSearch = '';
   barcodeSearch = '';
-  selectedCustomer: string | null = 'Walk-in Customer';
-  selectedPaymentMode: string | null = 'Cash';
+  selectedCustomer: string | null = null;
+  selectedPaymentMode: string | null = null;
   discountInput = '0';
-  cartItems: CartItem[] = [{ ...this.products[0], quantity: 1 }, { ...this.products[1], quantity: 2 }];
+  cartItems: CartItem[] = [];
 
   addToCart(product: Product): void {
     const existing = this.cartItems.find((item) => item.id === product.id);

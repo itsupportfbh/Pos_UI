@@ -11,111 +11,13 @@ import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 
-const COUNTER_OPTIONS = [
-  { label: 'Main Billing Counter', value: 'Main Billing Counter' },
-  { label: 'Takeaway Counter', value: 'Takeaway Counter' },
-  { label: 'Kitchen Counter', value: 'Kitchen Counter' }
-];
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
+const COUNTER_OPTIONS: { label: string | number; value: string | number }[] = [];
+const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
 ];
 
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Organization',
-  title: 'Printers',
-  subtitle: 'Maintain billing and kitchen printer mappings.',
-  formTitle: `${'Printers'} Filters`,
-  formDescription: `Static ${'Printers'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Printers',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'PRN-01', name: 'Billing Printer', status: 'Active' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Organization', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'counter', label: 'Counter', type: 'select', placeholder: 'Choose counter', options: COUNTER_OPTIONS }],
-  primaryActionLabel: `Search ${'Printers'}`,
-  secondaryActionLabel: 'Clear Filters',
-  showAddNewButton: true,
-  addNewLabel: 'Add New',
-  tableCaption: 'Printers',
-  rows: [{ code: 'PRN-01', name: 'Billing Printer', counter: 'Main Billing Counter', status: 'Active' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
-  eyebrow: 'Organization',
-  title: 'Create Printer',
-  subtitle: 'Create a new printer configuration for restaurant operations.',
-  formTitle: `${'Create Printer'} Filters`,
-  formDescription: `Static ${'Create Printer'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Create Printer',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'PRN-10', name: 'Kitchen Printer', status: 'Draft' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Organization', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'printerName', label: 'Printer Name', type: 'text', placeholder: 'Kitchen Printer' }, { key: 'counter', label: 'Counter', type: 'select', placeholder: 'Choose counter', options: COUNTER_OPTIONS }],
-  primaryActionLabel: `Search ${'Create Printer'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Create Printer',
-  rows: [{ code: 'PRN-10', name: 'Kitchen Printer', counter: 'Kitchen Counter', status: 'Draft' }],
-  columns: CODE_NAME_COLUMNS
-};
-
-type FeatureFieldType = 'text' | 'select' | 'autocomplete' | 'date';
-
-interface FeatureFieldConfig {
-  key: string;
-  label: string;
-  type: FeatureFieldType;
-  placeholder?: string;
-  helperText?: string;
-  required?: boolean;
-  disabled?: boolean;
-  options?: { label: string | number; value: string | number }[];
-  suggestions?: string[];
-  optionLabel?: string;
-  showClear?: boolean;
-  filter?: boolean;
-  dropdown?: boolean;
-  forceSelection?: boolean;
-  showIcon?: boolean;
-  dateFormat?: string;
-  minDate?: Date;
-  maxDate?: Date;
-}
-
-interface SummaryCard {
-  label: string;
-  value: string;
-  caption: string;
-}
-
-interface FeaturePageConfig {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  formTitle?: string;
-  formDescription?: string;
-  tableTitle?: string;
-  tableDescription?: string;
-  helperPoints?: string[];
-  summaryCards: SummaryCard[];
-  fields: FeatureFieldConfig[];
-  primaryActionLabel: string;
-  secondaryActionLabel?: string;
-  showAddNewButton?: boolean;
-  addNewLabel?: string;
-  tableCaption: string;
-  emptyMessage?: string;
-  rows: Record<string, unknown>[];
-  columns: SharedTableColumn<Record<string, unknown>>[];
-}
 @Component({
   selector: 'app-printers',
   standalone: true,
@@ -124,36 +26,33 @@ interface FeaturePageConfig {
   styleUrl: './printers.component.css'
 })
 export class PrintersComponent {
-  private readonly toast = inject(AppToastService);
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
-  showAddDialog = false;
+  private readonly toast = inject(AppToastService);  showAddDialog = false;
   showFilterSidebar = false;
   filterCounter: string | null = null;
   dialogPrinterName = '';
   dialogCounter: string | null = null;
   selectedRow: Record<string, unknown> | null = null;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
+  readonly pageEyebrow = 'Organization';
+  readonly pageTitle = 'Printers';
+  readonly pageSubtitle = 'Maintain billing and kitchen printer mappings.';
   readonly counterOptions = COUNTER_OPTIONS;
-  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
+  
+  readonly filterTitle = `${'Printers'} Filters`;
+  readonly filterDescription = `API data will be loaded for ${'Printers'.toLowerCase()}.`;
+  readonly fields: any[] = [{ key: 'counter', label: 'Counter', type: 'select', placeholder: 'Choose counter', options: COUNTER_OPTIONS }];
+  readonly primaryActionLabel = `Search ${'Printers'}`;
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  readonly dialogTitle = 'Create Printer';
+  readonly dialogSubtitle = 'Create a new printer configuration for restaurant operations.';
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-  readonly showAddNewButton = !!this.addDialogConfig;
-  readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
+  readonly tableTitle = 'Printers';
+  readonly tableDescription = 'API response data will be shown here.';
+  readonly tableCaption = 'Printers';
+  readonly tableColumns = CODE_NAME_COLUMNS;
+  tableRows: Record<string, unknown>[] = [];
+  readonly showAddNewButton = true;
+  readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -177,11 +76,7 @@ export class PrintersComponent {
   }
 
   openAddDialog(): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
-
-    this.resetDialogForm();
+        this.resetDialogForm();
     this.showAddDialog = true;
   }
 
@@ -195,11 +90,7 @@ export class PrintersComponent {
   }
 
   editRow(row: Record<string, unknown>): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
-
-    this.dialogPrinterName = String(row['printerName'] ?? row['name'] ?? '');
+        this.dialogPrinterName = String(row['printerName'] ?? row['name'] ?? '');
     this.dialogCounter = typeof row['counter'] === 'string' ? row['counter'] : null;
     this.showAddDialog = true;
     this.toast.info('Edit Mode', `Editing ${String(row['name'] ?? row['code'] ?? this.pageTitle)}.`);

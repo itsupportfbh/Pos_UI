@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
@@ -6,25 +5,24 @@ import { ShellComponent } from '../../../components/layout/shell.component';
 import { POS_MENU_GROUPS } from '../config/menu.config';
 import { MenuGroup } from '../../../components/layout/menu.model';
 
-const AUTH_TOKEN_KEY = 'authToken';
-const AUTH_ROLE_KEY = 'userRole';
-const AUTH_NAME_KEY = 'userName';
-const AUTH_LOCATION_KEY = 'userLocation';
+const LOGIN_SESSION_KEY = 'loginSession';
+const USER_DETAILS_KEY = 'userDetails';
 
 @Component({
   selector: 'app-pos-workspace',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, ShellComponent],
+  imports: [RouterOutlet, ShellComponent],
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.component.css'
 })
 export class WorkspaceComponent {
+  private readonly userDetails = this.getUserDetails();
   readonly appName = 'Unity work POS';
   readonly currentUser = {
-    name: localStorage.getItem(AUTH_NAME_KEY) ?? 'Unity Work Admin',
-    role: localStorage.getItem(AUTH_ROLE_KEY) ?? 'Admin',
-    email: localStorage.getItem(AUTH_ROLE_KEY) === 'Staff' ? 'staff@unityworkpos.com' : 'admin@unityworkpos.com',
-    location: localStorage.getItem(AUTH_LOCATION_KEY) ?? 'Head Office'
+    name: this.userDetails.UserName ?? 'User',
+    role: this.userDetails.RoleName ?? '',
+    email: this.userDetails.UserCode ?? '',
+    location: this.userDetails.BranchName ?? ''
   };
   readonly footerDescription = 'POS workspace for billing, stock tracking, and daily sales operations';
   readonly sidebarMenus: MenuGroup[] = POS_MENU_GROUPS;
@@ -38,10 +36,8 @@ export class WorkspaceComponent {
   }
 
   logout(): void {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(AUTH_ROLE_KEY);
-    localStorage.removeItem(AUTH_NAME_KEY);
-    localStorage.removeItem(AUTH_LOCATION_KEY);
+    localStorage.removeItem(LOGIN_SESSION_KEY);
+    localStorage.removeItem(USER_DETAILS_KEY);
     this.router.navigate(['/login']);
   }
 
@@ -55,5 +51,13 @@ export class WorkspaceComponent {
   private syncActiveMenu(url: string): void {
     const routeSegment = url.split('/').filter(Boolean).at(-1);
     this.activeMenuKey = routeSegment && routeSegment !== 'pos' ? routeSegment : 'dashboard';
+  }
+
+  private getUserDetails(): any {
+    try {
+      return JSON.parse(localStorage.getItem(USER_DETAILS_KEY) ?? '{}');
+    } catch {
+      return {};
+    }
   }
 }

@@ -11,107 +11,11 @@ import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
+const BRANCH_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
 ];
-
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Organization',
-  title: 'Branches',
-  subtitle: 'Maintain store branches.',
-  formTitle: `${'Branches'} Filters`,
-  formDescription: `Static ${'Branches'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Branches',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'BR-001', name: 'Head Office', status: 'Active' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Organization', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'branchName', label: 'Branch Name', type: 'text', placeholder: 'City Center' }],
-  primaryActionLabel: `Search ${'Branches'}`,
-  secondaryActionLabel: 'Clear Filters',
-  showAddNewButton: true,
-  addNewLabel: 'Add New',
-  tableCaption: 'Branches',
-  rows: [{ code: 'BR-001', name: 'Head Office', branchName: 'Head Office', organizationName: 'Unity Work Restaurants', status: 'Active' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
-  eyebrow: 'Organization',
-  title: 'Create Branch',
-  subtitle: 'Create a new branch for the organization.',
-  formTitle: `${'Create Branch'} Filters`,
-  formDescription: `Static ${'Create Branch'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Create Branch',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'BR-010', name: 'City Center', status: 'Draft' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Organization', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'branchName', label: 'Branch Name', type: 'text', placeholder: 'City Center' }, { key: 'organizationName', label: 'Organization', type: 'text', placeholder: 'Unity Work Restaurants' }],
-  primaryActionLabel: `Search ${'Create Branch'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Create Branch',
-  rows: [{ code: 'BR-010', name: 'City Center', branchName: 'City Center', organizationName: 'Unity Work Restaurants', status: 'Draft' }],
-  columns: CODE_NAME_COLUMNS
-};
-
-
-type FeatureFieldType = 'text' | 'select' | 'autocomplete' | 'date';
-
-interface FeatureFieldConfig {
-  key: string;
-  label: string;
-  type: FeatureFieldType;
-  placeholder?: string;
-  helperText?: string;
-  required?: boolean;
-  disabled?: boolean;
-  options?: { label: string | number; value: string | number }[];
-  suggestions?: string[];
-  optionLabel?: string;
-  showClear?: boolean;
-  filter?: boolean;
-  dropdown?: boolean;
-  forceSelection?: boolean;
-  showIcon?: boolean;
-  dateFormat?: string;
-  minDate?: Date;
-  maxDate?: Date;
-}
-
-interface SummaryCard {
-  label: string;
-  value: string;
-  caption: string;
-}
-
-interface FeaturePageConfig {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  formTitle?: string;
-  formDescription?: string;
-  tableTitle?: string;
-  tableDescription?: string;
-  helperPoints?: string[];
-  summaryCards: SummaryCard[];
-  fields: FeatureFieldConfig[];
-  primaryActionLabel: string;
-  secondaryActionLabel?: string;
-  showAddNewButton?: boolean;
-  addNewLabel?: string;
-  tableCaption: string;
-  emptyMessage?: string;
-  rows: Record<string, unknown>[];
-  columns: SharedTableColumn<Record<string, unknown>>[];
-}
 @Component({
   selector: 'app-branches',
   standalone: true,
@@ -121,36 +25,32 @@ interface FeaturePageConfig {
 })
 export class BranchesComponent {
   private readonly toast = inject(AppToastService);
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
   showAddDialog = false;
   showFilterSidebar = false;
   filterBranchName = '';
   dialogBranchName = '';
   dialogOrganizationName: string | null = null;
   selectedRow: Record<string, unknown> | null = null;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
-  readonly organizationOptions = ['Unity Work Restaurants', 'Unity Work South', 'Unity Work Express'];
-  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
+  readonly pageEyebrow = 'Organization';
+  readonly pageTitle = 'Branches';
+  readonly pageSubtitle = 'Maintain store branches.';
+  readonly organizationOptions: string[] = [];
+  readonly filterTitle = 'Branches Filters';
+  readonly filterDescription = 'API data will be loaded for branches.';
+  readonly primaryActionLabel = 'Search Branches';
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  readonly dialogTitle = 'Create Branch';
+  readonly dialogSubtitle = 'Create a new branch for the organization.';
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
-    readonly showFilterButton = true;
+  readonly tableTitle = 'Branches';
+  readonly tableDescription = 'API response data will be shown here.';
+  readonly tableCaption = 'Branches';
+  readonly tableColumns = BRANCH_COLUMNS;
+  tableRows: Record<string, unknown>[] = [];
+  readonly showAddNewButton = true;
+  readonly addNewButtonLabel = 'Add New';
+  readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
   readonly rowActionItems: MenuItem[] = [
@@ -172,10 +72,6 @@ export class BranchesComponent {
     this.showFilterSidebar = false;
   }
   openAddDialog(): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
-
     this.resetDialogForm();
     this.showAddDialog = true;
   }
@@ -190,10 +86,6 @@ export class BranchesComponent {
   }
 
   editRow(row: Record<string, unknown>): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
-
     this.resetDialogForm();
     this.dialogBranchName = String(row['branchName'] ?? row['name'] ?? '');
     this.dialogOrganizationName = typeof row['organizationName'] === 'string' ? row['organizationName'] : null;
