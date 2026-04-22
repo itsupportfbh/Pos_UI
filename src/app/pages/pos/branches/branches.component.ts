@@ -78,7 +78,7 @@ export class BranchesComponent implements OnInit {
   private readonly branchService = inject(BranchService);
  private readonly changeDetector = inject(ChangeDetectorRef);
   // Replace this with logged-in user org id
-  private readonly orgId = 1;
+   //orgId = this.userDetails.orgId;
 
   showAddDialog = false;
   showFilterSidebar = false;
@@ -106,7 +106,7 @@ export class BranchesComponent implements OnInit {
     PostalCode: undefined,
     Country: undefined,
     Remarks: '',
-    OrgId: this.orgId,
+    OrgId: undefined,
     IsActive: true,
     CreatedBy: 1,
     UpdatedBy: 1,
@@ -130,7 +130,7 @@ export class BranchesComponent implements OnInit {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-
+userDetails: any = {};
   tableRows: BranchRow[] = [];
 
   readonly rowActionItems: MenuItem[] = [
@@ -175,13 +175,14 @@ export class BranchesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.loadBranches();
   }
 
   loadBranches(): void {
     this.isLoading = true;
 
-    this.branchService.getAll(this.orgId).subscribe({
+    this.branchService.getAll(this.userDetails.orgId).subscribe({
       next: (response: any) => {
         const result = response?.result ?? response ?? [];
         let RowNumber = 1;
@@ -255,7 +256,7 @@ export class BranchesComponent implements OnInit {
 
     const payload: Branch = {
       ...this.dialogModel,
-      OrgId: this.orgId,
+      OrgId: this.userDetails.orgId,
       IsActive: this.dialogModel.IsActive ?? true,
       IsDeleted: false
     };
@@ -283,7 +284,7 @@ export class BranchesComponent implements OnInit {
       return;
     }
 
-    payload.CreatedBy = 1;
+    payload.CreatedBy = this.userDetails.UserId;
 
     this.branchService.create(payload).subscribe({
       next: (response: any) => {
@@ -402,7 +403,7 @@ export class BranchesComponent implements OnInit {
       PostalCode: undefined,
       Country: undefined,
       Remarks: '',
-      OrgId: this.orgId,
+      OrgId: this.userDetails.orgId,
       IsActive: true,
       CreatedBy: 1,
       UpdatedBy: 1,
