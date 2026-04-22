@@ -116,8 +116,8 @@
 
       @for (column of columns; track trackByField($index, column)) {
         <td [class]="column.bodyStyleClass ?? column.styleClass">
-          @if (getFieldName(column) === 'Status' && statusTemplate) {
-            <ng-container *ngTemplateOutlet="statusTemplate; context: { $implicit: rowData }" />
+          @if (getCellTemplate(column)) {
+            <ng-container *ngTemplateOutlet="getCellTemplate(column); context: { $implicit: rowData, column: column }" />
           } @else if (column.type === 'tag') {
             <p-tag [value]="formatCell(column, rowData)" [severity]="getTagSeverity(column, rowData)" />
           } @else {

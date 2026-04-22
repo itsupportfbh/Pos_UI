@@ -1,5 +1,5 @@
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
-import { Component, ContentChild, EventEmitter, Input, Output, TemplateRef } from '@angular/core';
+import { Component, ContentChild, ContentChildren, Directive, EventEmitter, Input, Output, QueryList, TemplateRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -41,6 +41,16 @@ export interface SharedTableColumn<T = Record<string, unknown>> {
   formatter?: (value: unknown, row: T) => string;
 }
 
+@Directive({
+  selector: 'ng-template[appTableCellTemplate]',
+  standalone: true
+})
+export class SharedTableCellTemplateDirective<T = Record<string, unknown>> {
+  @Input('appTableCellTemplate') field = '';
+
+  constructor(public readonly templateRef: TemplateRef<{ $implicit: T; column: SharedTableColumn<T> }>) {}
+}
+
 @Component({
   selector: 'app-shared-table',
   standalone: true,
@@ -51,7 +61,7 @@ export interface SharedTableColumn<T = Record<string, unknown>> {
 })
 export class SharedTableComponent<T extends Record<string, unknown> = Record<string, unknown>> {
   @ContentChild('rowActions', { read: TemplateRef }) rowActionsTemplate?: TemplateRef<{ $implicit: T }>;
-  @ContentChild('statusTemplate', { read: TemplateRef }) statusTemplate?: TemplateRef<{ $implicit: T }>;
+  @ContentChildren(SharedTableCellTemplateDirective) cellTemplates?: QueryList<SharedTableCellTemplateDirective<T>>;
   @Input() columns: SharedTableColumn<T>[] = [];
   @Input() value: T[] = [];
   @Input() caption = '';
@@ -230,6 +240,11 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
   getTagSeverity(column: SharedTableColumn<T>, row: T): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
     const value = String(row[this.getFieldName(column)] ?? '');
     return column.tagSeverityMap?.[value] ?? 'secondary';
+  }
+
+  getCellTemplate(column: SharedTableColumn<T>): TemplateRef<{ $implicit: T; column: SharedTableColumn<T> }> | null {
+    const fieldName = this.getFieldName(column);
+    return this.cellTemplates?.find((template) => template.field === fieldName)?.templateRef ?? null;
   }
 
   trackByField(_: number, column: SharedTableColumn<T>): string {

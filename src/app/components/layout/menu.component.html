@@ -17,8 +17,8 @@
                 <button
                   type="button"
                   class="menu-item"
-                  [class.active]="activeMenuKey === item.key"
-                  (click)="onSelect(item.key)"
+                  [class.active]="activeMenuKey === item.route"
+                  (click)="onSelect(item.route)"
                 >
                   <span>
                     <strong>{{ item.label }}</strong>

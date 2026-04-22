@@ -40,7 +40,6 @@ export class PrintBillsComponent {  readonly formState: Record<string, string | 
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Print Bills';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Print Bills';
   readonly tableColumns: SharedTableColumn<Record<string, unknown>>[] = [
     { field: 'invoiceNo', header: 'Invoice', sortable: true, width: '10rem' },

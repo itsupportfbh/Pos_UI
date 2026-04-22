@@ -48,7 +48,6 @@ export class MenusComponent {
   readonly dialogSubtitle = 'Create a new sellable item.';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Menus';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Menus';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

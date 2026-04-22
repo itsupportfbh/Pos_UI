@@ -44,7 +44,6 @@ export class PaymentsComponent {  readonly formState: Record<string, string | Da
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Payment History';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Payment History';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

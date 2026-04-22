@@ -43,7 +43,6 @@ export class DailySalesComponent {  readonly formState: Record<string, string | 
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Daily Sales';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Daily Sales';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

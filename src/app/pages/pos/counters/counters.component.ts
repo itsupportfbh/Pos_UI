@@ -47,7 +47,6 @@ export class CountersComponent {
   readonly dialogSubtitle = 'Create a new restaurant counter.';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Counters';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Counters';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

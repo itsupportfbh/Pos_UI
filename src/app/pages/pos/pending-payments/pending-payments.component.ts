@@ -48,7 +48,6 @@ export class PendingPaymentsComponent {  readonly formState: Record<string, stri
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Pending Payments';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Pending Payments';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

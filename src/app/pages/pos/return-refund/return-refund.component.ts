@@ -44,7 +44,6 @@ export class ReturnRefundComponent {  readonly formState: Record<string, string 
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Return Refund';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Return Refund';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

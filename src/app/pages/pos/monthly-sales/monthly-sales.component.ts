@@ -44,7 +44,6 @@ export class MonthlySalesComponent {  readonly formState: Record<string, string 
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Monthly Sales';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Monthly Sales';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

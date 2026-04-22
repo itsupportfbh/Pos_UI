@@ -54,7 +54,6 @@ export class CustomersComponent {
   readonly dialogSubtitle = 'Capture new customer profiles.';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Customer List';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Customer List';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

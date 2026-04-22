@@ -53,7 +53,6 @@ export class UsersComponent {
   readonly dialogSubtitle = 'Create a new user account.';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Users';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Users';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

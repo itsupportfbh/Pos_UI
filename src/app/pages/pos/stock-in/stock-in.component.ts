@@ -46,7 +46,6 @@ export class StockInComponent {  readonly formState: Record<string, string | Dat
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Stock In';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Stock In';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

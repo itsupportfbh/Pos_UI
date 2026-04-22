@@ -9,7 +9,7 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { firstValueFrom } from 'rxjs';
-import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Organization, OrganizationService } from '../../../services/organization.service';
 
@@ -20,14 +20,15 @@ const stateOptions: any = [];
 const countryOptions: any = [];
 
 const ORGANIZATION_COLUMNS: SharedTableColumn<Organization>[] = [
-  { field: 'RowNumber', header: '#', sortable: true, width: '0rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
+  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
+  { field: 'Code', header: 'Code', sortable: true, width: '9rem' },
+  { field: 'Name', header: 'Name', sortable: true, width: '20rem' },
+  { field: 'Website', header: 'Website', sortable: true, width: '22rem' },
   {
     field: 'Status',
     header: 'Status',
     sortable: true,
-    width: '9rem'
+    width: '8rem'
   }
 ];
 
@@ -35,7 +36,7 @@ const ORGANIZATION_COLUMNS: SharedTableColumn<Organization>[] = [
 @Component({
   selector: 'app-organization',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, SharedTableCellTemplateDirective],
   templateUrl: './organization.component.html',
   styleUrl: './organization.component.css'
 })
@@ -92,11 +93,10 @@ export class OrganizationComponent implements OnInit {
   dialogSubtitle = 'Create a new restaurant organization profile.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Organization';
-  readonly tableDescription = 'Organization records loaded from API.';
   readonly tableCaption = 'Organization';
   readonly tableColumns = ORGANIZATION_COLUMNS;
   tableRows: Organization[] = [];
-
+  userDetails: any = {};
 
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
@@ -106,6 +106,7 @@ export class OrganizationComponent implements OnInit {
   rowActionItems: MenuItem[] = [];
 
   ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.loadOrganizations();
   }
 
@@ -165,9 +166,9 @@ export class OrganizationComponent implements OnInit {
       PostalCode: Number(this.dialogPostalCode || 0),
       Remarks: this.dialogRemarks,
       IsActive: true,
-      CreatedBy: 0,
+      CreatedBy: Number(this.userDetails.UserId || 0),
       CreatedDate: new Date().toISOString(),
-      UpdatedBy: 0,
+      UpdatedBy: Number(this.userDetails.UserId || 0),
       UpdatedDate: null,
       IsDeleted: false
     };
@@ -215,6 +216,14 @@ export class OrganizationComponent implements OnInit {
         this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
       }
     });
+  }
+
+  getWebsiteUrl(website: string): string {
+    if (website.startsWith('http://') || website.startsWith('https://')) {
+      return website;
+    }
+
+    return `https://${website}`;
   }
 
   editRow(row:any): void {
@@ -330,11 +339,11 @@ export class OrganizationComponent implements OnInit {
     menu.toggle(event);
   }
 
-  private resetDialogForm(): void {
+   resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
-    this.dialogCode = '';
+    // this.dialogCode = '';
     this.dialogCompanyName = '';
     this.dialogGstNumber = '';
     this.dialogRegistrationNumber = '';

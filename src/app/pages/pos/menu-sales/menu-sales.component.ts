@@ -44,7 +44,6 @@ export class MenuSalesComponent {  readonly formState: Record<string, string | D
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Menu wise Sales';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Menu wise Sales';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

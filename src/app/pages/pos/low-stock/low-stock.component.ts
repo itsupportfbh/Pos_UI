@@ -44,7 +44,6 @@ export class LowStockComponent {  readonly formState: Record<string, string | Da
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Low Stock Alert';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Low Stock Alert';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

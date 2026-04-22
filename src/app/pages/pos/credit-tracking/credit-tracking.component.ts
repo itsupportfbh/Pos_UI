@@ -48,7 +48,6 @@ export class CreditTrackingComponent {  readonly formState: Record<string, strin
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Credit Tracking';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Credit Tracking';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

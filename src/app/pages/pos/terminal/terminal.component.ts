@@ -47,7 +47,6 @@ export class TerminalComponent {
   readonly dialogSubtitle = 'Create a new POS terminal under a counter.';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Terminal';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Terminal';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

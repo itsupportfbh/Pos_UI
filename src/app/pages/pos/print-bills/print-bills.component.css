@@ -1,22 +1,4 @@
 :host { display: block; }
-.feature-page { display: grid; gap: 1rem; padding: 1.1rem 0.2rem 1.25rem; }
-.hero-panel { display: grid; gap: 1rem; padding: 1.2rem 1.3rem; border: 1px solid var(--app-border); border-radius: 1.25rem; background: linear-gradient(135deg, rgba(231, 243, 237, 0.96), rgba(255, 255, 255, 0.98)); }
-.hero-panel h1, .section-heading h2, .dialog-copy h3, .filter-panel-header h2 { margin: 0; }
-.page-subtitle, .section-copy, .dialog-copy p { margin: 0.45rem 0 0; color: var(--app-text-muted); }
-.summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
-.summary-card, .feature-card { border: 1px solid var(--app-border); border-radius: 1rem; background: rgba(255, 255, 255, 0.97); box-shadow: 0 8px 18px rgba(24, 55, 37, 0.04); }
-.summary-card { padding: 1rem 1.1rem; }
-.summary-card span, .summary-card p { color: var(--app-text-muted); }
-.summary-card strong { display: block; margin-top: 0.35rem; font-size: 1.4rem; }
-.summary-card p { margin: 0.45rem 0 0; }
-.section-heading { margin-bottom: 1rem; }
-.filter-panel { display: grid; gap: 0.9rem; padding: 1rem 1.1rem; border: 1px solid var(--app-border); border-radius: 1rem; background: linear-gradient(180deg, rgba(247, 250, 248, 0.98), rgba(255, 255, 255, 0.98)); }
-.filter-panel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
-.field-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
-.dialog-grid { padding-top: 0.25rem; }
-.dialog-actions { display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; }
-@media (max-width: 1100px) { .summary-grid, .field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 768px) { .feature-page { padding-inline: 0; } .summary-grid, .field-grid { grid-template-columns: 1fr; } .dialog-actions { flex-direction: column; } .filter-panel-header { flex-direction: column; } }
 
 :host ::ng-deep .filter-drawer-dialog {
   margin: 0;

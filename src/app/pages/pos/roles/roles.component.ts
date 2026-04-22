@@ -68,7 +68,6 @@ export class RolesComponent {
   readonly dialogSubtitle = 'Create a new role template.';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Roles';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Roles';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

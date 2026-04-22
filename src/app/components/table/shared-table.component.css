@@ -20,7 +20,7 @@
 :host ::ng-deep .p-datatable .p-datatable-header {
   background: transparent;
   border: 0;
-  padding: 1rem 1.25rem 0.5rem;
+  padding: 0.5rem 0.65rem 0.35rem;
 }
 
 :host ::ng-deep .p-datatable .p-datatable-thead > tr > th {
@@ -28,14 +28,17 @@
   background: #f8fafc;
   color: var(--app-text);
   border-color: var(--app-border);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 700;
+  padding: 0.42rem 0.58rem;
 }
 
 :host ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
   vertical-align: middle;
   border-color: var(--app-border);
   color: var(--app-text);
+  font-size: 0.8rem;
+  padding: 0.36rem 0.58rem;
 }
 
 :host ::ng-deep .p-datatable .p-datatable-tbody > tr:hover > td {
@@ -46,9 +49,10 @@
   border-width: 1px 0 0;
   border-color: var(--app-border);
   background: #fff;
-  gap: 0.5rem;
+  gap: 0.35rem;
   flex-wrap: wrap;
-  padding: 0.85rem 1rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8rem;
 }
 
 :host ::ng-deep .p-paginator .p-paginator-rpp-dropdown,
@@ -78,7 +82,7 @@
 .table-toolbar {
   align-items: center;
   display: flex;
-  gap: 1rem;
+  gap: 0.65rem;
   justify-content: flex-end;
   padding: 0.25rem 0;
 }
@@ -86,18 +90,18 @@
 .table-search-actions {
   align-items: center;
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .table-title {
-  font-size: 1.1rem;
+  font-size: 0.92rem;
   font-weight: 600;
   margin: 0;
   color: var(--app-text);
 }
 
 .table-search {
-  min-width: 16rem;
+  min-width: 12rem;
 }
 
 .table-search input {
@@ -119,11 +123,11 @@
 }
 
 .selection-column {
-  width: 3rem;
+  width: 2.5rem;
 }
 
 .action-column {
-  width: 5rem;
+  width: 4rem;
 }
 
 .row-actions {
@@ -141,7 +145,7 @@
 }
 
 .empty-message {
-  padding: 1.25rem;
+  padding: 0.85rem;
   text-align: center;
   color: var(--app-text-muted);
 }

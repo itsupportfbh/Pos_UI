@@ -44,7 +44,6 @@ export class BranchesComponent {
   readonly dialogSubtitle = 'Create a new branch for the organization.';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Branches';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Branches';
   readonly tableColumns = BRANCH_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

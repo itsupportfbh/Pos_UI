@@ -44,7 +44,6 @@ export class CategoriesComponent {
   readonly dialogSubtitle = 'Create a new product category.';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Categories';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Categories';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

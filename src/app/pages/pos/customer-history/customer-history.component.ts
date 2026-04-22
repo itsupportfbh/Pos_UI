@@ -48,7 +48,6 @@ export class CustomerHistoryComponent {  readonly formState: Record<string, stri
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Purchase History';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Purchase History';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];

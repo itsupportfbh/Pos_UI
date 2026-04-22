@@ -47,7 +47,6 @@ export class PrintersComponent {
   readonly dialogSubtitle = 'Create a new printer configuration for restaurant operations.';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Printers';
-  readonly tableDescription = 'API response data will be shown here.';
   readonly tableCaption = 'Printers';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];
