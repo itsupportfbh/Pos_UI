@@ -7,9 +7,9 @@ import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
-import { AutocompleteFieldComponent } from '../../../components/form/autocomplete-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import {
+  SharedTableCellTemplateDirective,
   SharedTableColumn,
   SharedTableComponent
 } from '../../../components/table/shared-table.component';
@@ -17,31 +17,9 @@ import {
 import { AppToastService } from '../../../services/app-toast.service';
 import { Branch, BranchService } from '../../../services/branch.service';
 
-type BranchRow = {
-  id: number;
-  code: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  contactPerson?: string;
-  contactMobileNo?: string;
-  contactEmail?: string;
-  address1?: string;
-  address2?: string;
-  city?: number;
-  state?: number;
-  postalCode?: number;
-  country?: number;
-  remarks?: string;
-  orgId: number;
-  isActive: boolean;
-  createdBy?: number | null;
-  createdDate?: string;
-  updatedBy?: number | null;
-  updatedDate?: string | null;
-  isDeleted?: boolean;
-  status: string;
-  rowNumber: number;
+type BranchRow = Branch & {
+  RowNumber: number;
+  Status: string;
 };
 
 const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
@@ -65,10 +43,10 @@ const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
     CardModule,
     DialogModule,
     TextFieldComponent,
-    AutocompleteFieldComponent,
     ActionButtonsComponent,
     MenuModule,
-    SharedTableComponent
+    SharedTableComponent,
+    SharedTableCellTemplateDirective
   ],
   templateUrl: './branches.component.html',
   styleUrl: './branches.component.css'
@@ -76,9 +54,7 @@ const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
 export class BranchesComponent implements OnInit {
   private readonly toast = inject(AppToastService);
   private readonly branchService = inject(BranchService);
- private readonly changeDetector = inject(ChangeDetectorRef);
-  // Replace this with logged-in user org id
-   //orgId = this.userDetails.orgId;
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   showAddDialog = false;
   showFilterSidebar = false;
@@ -101,15 +77,15 @@ export class BranchesComponent implements OnInit {
     ContactEmail: '',
     Address1: '',
     Address2: '',
-    City: undefined,
-    State: undefined,
-    PostalCode: undefined,
-    Country: undefined,
+    City: 0,
+    State: 0,
+    PostalCode: 0,
+    Country: 0,
     Remarks: '',
-    OrgId: undefined,
+    OrgId: 0,
     IsActive: true,
-    CreatedBy: 1,
-    UpdatedBy: 1,
+    CreatedBy: 0,
+    UpdatedBy: 0,
     IsDeleted: false
   };
 
@@ -129,7 +105,7 @@ export class BranchesComponent implements OnInit {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-userDetails: any = {};
+  userDetails: any = {};
   tableRows: BranchRow[] = [];
 
   readonly rowActionItems: MenuItem[] = [
@@ -180,10 +156,10 @@ userDetails: any = {};
 
   loadBranches(): void {
     this.isLoading = true;
+    const orgId = Number(this.userDetails.OrgId || 0);
 
-    this.branchService.getAll(this.userDetails.orgId).subscribe({
+    this.branchService.getAll(orgId).subscribe({
       next: (response: any) => {
-        const result = response?.result ?? response ?? [];
         let RowNumber = 1;
         this.tableRows = (response.result ?? []).map((x: any) => {
           x.RowNumber = RowNumber++;
@@ -213,8 +189,8 @@ userDetails: any = {};
     }
 
     this.tableRows = this.tableRows.filter((row) =>
-      row.name?.toLowerCase().includes(searchText) ||
-      row.code?.toLowerCase().includes(searchText)
+      row.Name?.toLowerCase().includes(searchText) ||
+      row.Code?.toLowerCase().includes(searchText)
     );
   }
 
@@ -255,7 +231,7 @@ userDetails: any = {};
 
     const payload: Branch = {
       ...this.dialogModel,
-      OrgId: this.userDetails.orgId,
+      OrgId: Number(this.userDetails.OrgId || 0),
       IsActive: this.dialogModel.IsActive ?? true,
       IsDeleted: false
     };
@@ -304,39 +280,39 @@ userDetails: any = {};
 
   editRow(row: BranchRow): void {
     this.isEditMode = true;
-    this.editingBranchId = row.id;
+    this.editingBranchId = row.Id ?? 0;
 
-    this.branchService.getById(row.id).subscribe({
+    this.branchService.getById(row.Id ?? 0).subscribe({
       next: (response: any) => {
         const branch = response?.result?.[0] ?? response?.result ?? response;
 
         this.dialogModel = {
-          Id: branch?.id ?? branch?.Id ?? row.id,
-          Code: branch?.code ?? branch?.Code ?? row.code,
-          Name: branch?.name ?? branch?.Name ?? row.name,
-          Phone: branch?.phone ?? branch?.Phone ?? row.phone ?? '',
-          Email: branch?.email ?? branch?.Email ?? row.email ?? '',
-          ContactPerson: branch?.contactPerson ?? branch?.ContactPerson ?? row.contactPerson ?? '',
-          ContactMobileNo: branch?.contactMobileNo ?? branch?.ContactMobileNo ?? row.contactMobileNo ?? '',
-          ContactEmail: branch?.contactEmail ?? branch?.ContactEmail ?? row.contactEmail ?? '',
-          Address1: branch?.address1 ?? branch?.Address1 ?? row.address1 ?? '',
-          Address2: branch?.address2 ?? branch?.Address2 ?? row.address2 ?? '',
-          City: branch?.city ?? branch?.City ?? row.city,
-          State: branch?.state ?? branch?.State ?? row.state,
-          PostalCode: branch?.postalCode ?? branch?.PostalCode ?? row.postalCode,
-          Country: branch?.country ?? branch?.Country ?? row.country,
-          Remarks: branch?.remarks ?? branch?.Remarks ?? row.remarks ?? '',
-          OrgId: branch?.orgId ?? branch?.OrgId ?? row.orgId,
-          IsActive: branch?.isActive ?? branch?.IsActive ?? row.isActive,
-          CreatedBy: branch?.createdBy ?? branch?.CreatedBy ?? 1,
-          CreatedDate: branch?.createdDate ?? branch?.CreatedDate,
+          Id: branch?.Id ?? row.Id,
+          Code: branch?.Code ?? row.Code,
+          Name: branch?.Name ?? row.Name,
+          Phone: branch?.Phone ?? row.Phone ?? '',
+          Email: branch?.Email ?? row.Email ?? '',
+          ContactPerson: branch?.ContactPerson ?? row.ContactPerson ?? '',
+          ContactMobileNo: branch?.ContactMobileNo ?? row.ContactMobileNo ?? '',
+          ContactEmail: branch?.ContactEmail ?? row.ContactEmail ?? '',
+          Address1: branch?.Address1 ?? row.Address1 ?? '',
+          Address2: branch?.Address2 ?? row.Address2 ?? '',
+          City: branch?.City ?? row.City,
+          State: branch?.State ?? row.State,
+          PostalCode: branch?.PostalCode ?? row.PostalCode,
+          Country: branch?.Country ?? row.Country,
+          Remarks: branch?.Remarks ?? row.Remarks ?? '',
+          OrgId: branch?.OrgId ?? row.OrgId,
+          IsActive: branch?.IsActive ?? row.IsActive,
+          CreatedBy: branch?.CreatedBy ?? 1,
+          CreatedDate: branch?.CreatedDate,
           UpdatedBy: 1,
-          UpdatedDate: branch?.updatedDate ?? branch?.UpdatedDate,
-          IsDeleted: branch?.isDeleted ?? branch?.IsDeleted ?? false
+          UpdatedDate: branch?.UpdatedDate,
+          IsDeleted: branch?.IsDeleted ?? false
         };
 
         this.showAddDialog = true;
-        this.toast.info('Edit Mode', `Editing ${row.name}.`);
+        this.toast.info('Edit Mode', `Editing ${row.Name}.`);
       },
       error: () => {
         this.toast.error('Load Failed', 'Unable to load branch details.');
@@ -345,9 +321,9 @@ userDetails: any = {};
   }
 
   deleteRow(row: BranchRow): void {
-    this.branchService.delete(row.id).subscribe({
+    this.branchService.delete(row.Id ?? 0).subscribe({
       next: () => {
-        this.toast.warn('Deleted', `${row.name} removed successfully.`);
+        this.toast.warn('Deleted', `${row.Name} removed successfully.`);
         this.loadBranches();
       },
       error: () => {
@@ -357,9 +333,9 @@ userDetails: any = {};
   }
 
   activateRow(row: BranchRow): void {
-    this.branchService.activeInActive(row.id, true).subscribe({
+    this.branchService.activeInActive(row.Id ?? 0, true).subscribe({
       next: () => {
-        this.toast.success('Status Updated', `${row.name} marked as active.`);
+        this.toast.success('Status Updated', `${row.Name} marked as active.`);
         this.loadBranches();
       },
       error: () => {
@@ -369,9 +345,9 @@ userDetails: any = {};
   }
 
   deactivateRow(row: BranchRow): void {
-    this.branchService.activeInActive(row.id, false).subscribe({
+    this.branchService.activeInActive(row.Id ?? 0, false).subscribe({
       next: () => {
-        this.toast.info('Status Updated', `${row.name} marked as inactive.`);
+        this.toast.info('Status Updated', `${row.Name} marked as inactive.`);
         this.loadBranches();
       },
       error: () => {
@@ -402,7 +378,7 @@ userDetails: any = {};
       PostalCode: undefined,
       Country: undefined,
       Remarks: '',
-      OrgId: this.userDetails.orgId,
+      OrgId: Number(this.userDetails.OrgId || 0),
       IsActive: true,
       CreatedBy: 1,
       UpdatedBy: 1,

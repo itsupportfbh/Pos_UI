@@ -60,20 +60,16 @@ export class BranchService {
   }
 
   getAll(orgid: number): Observable<ApiListResponse<Branch>> {
-    const params = new HttpParams().set('orgid', orgid.toString());
 
     return this.http.get<ApiListResponse<Branch>>(
-      `${this.baseUrl}/${this.controllerPath}/GetAllBranch`,
-      { params }
+      `${this.baseUrl}/${this.controllerPath}/GetAllBranch?orgid=${orgid}`
     );
   }
 
   getById(id: number | string): Observable<Branch> {
-    const params = new HttpParams().set('Id', id.toString());
 
     return this.http.get<Branch>(
-      `${this.baseUrl}/${this.controllerPath}/GetBranchbyId`,
-      { params }
+      `${this.baseUrl}/${this.controllerPath}/GetBranchbyId?id=${id}`
     );
   }
 

@@ -44,7 +44,7 @@
           (click)="openRowActions(rowMenu, $event, row)"
         ></button>
       </ng-template>
-      <ng-template #statusTemplate let-row>
+      <ng-template appTableCellTemplate="Status" let-row>
         <span class="status-badge" [class.status-active]="row.Status === 'Active'"
           [class.status-inactive]="row.Status === 'Inactive'">
           {{ row.Status }}
