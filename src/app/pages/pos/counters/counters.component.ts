@@ -10,12 +10,39 @@ import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { Counter, CounterService } from '../../../services/counter.service';
 
-const BRANCH_OPTIONS: { label: string | number; value: string | number }[] = [];
-const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
+
+
+type CounterRow = {
+  id: number;
+  code: string;
+  name: string;
+  phone?: string;
+  branchId: number;
+  remarks?: string;
+  orgId: number;
+  isActive: boolean;
+  createdBy?: number | null;
+  createdDate?: string;
+  updatedBy?: number | null;
+  updatedDate?: string | null;
+  isDeleted?: boolean;
+
+  // UI fields
+  status: string;
+  RowNumber: number;
+};
+const BRANCH_COLUMNS: SharedTableColumn<CounterRow>[] = [
+  { field: 'RowNumber', header: '#', sortable: false, width: '5rem' },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
+  {
+    field: 'Status',
+    header: 'Status',
+    sortable: true,
+    width: '9rem'
+  }
 ];
 
 @Component({
