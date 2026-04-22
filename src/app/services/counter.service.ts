@@ -4,21 +4,12 @@ import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
 import { RuntimeConfigService } from './runtime-config.service';
 
-export interface Branch {
+export interface Counter {
   Id?: number;
   Code?: string;
   Name?: string;
   Phone?: string;
-  Email?: string;
-  ContactPerson?: string;
-  ContactMobileNo?: string;
-  ContactEmail?: string;
-  Address1?: string;
-  Address2?: string;
-  City?: number;
-  State?: number;
-  PostalCode?: number;
-  Country?: number;
+  BranchId?: number;
   Remarks?: string;
   OrgId?: number;
   IsActive?: boolean;
@@ -29,7 +20,7 @@ export interface Branch {
   IsDeleted?: boolean;
 }
 
-export interface BranchStatusRequest {
+export interface CounterStatusRequest {
   id: number | string;
   isActive: boolean;
 }
@@ -37,7 +28,7 @@ export interface BranchStatusRequest {
 @Injectable({
   providedIn: 'root'
 })
-export class BranchService {
+export class CounterService {
   private readonly controllerPath = 'Branch';
 
   constructor(
@@ -45,34 +36,34 @@ export class BranchService {
     private readonly runtimeConfig: RuntimeConfigService
   ) {}
 
-  create(payload: Branch): Observable<any> {
+  create(payload: Counter): Observable<any> {
     return this.http.post<any>(
       `${this.baseUrl}/${this.controllerPath}/Create`,
       payload
     );
   }
 
-  update(payload: Branch): Observable<any> {
+  update(payload: Counter): Observable<any> {
     return this.http.put<any>(
       `${this.baseUrl}/${this.controllerPath}/Update`,
       payload
     );
   }
 
-  getAll(orgid: number): Observable<ApiListResponse<Branch>> {
+  getAll(orgid: number): Observable<ApiListResponse<Counter>> {
     const params = new HttpParams().set('orgid', orgid.toString());
 
-    return this.http.get<ApiListResponse<Branch>>(
-      `${this.baseUrl}/${this.controllerPath}/GetAllBranch`,
+    return this.http.get<ApiListResponse<Counter>>(
+      `${this.baseUrl}/${this.controllerPath}/GetAllCounter`,
       { params }
     );
   }
 
-  getById(id: number | string): Observable<Branch> {
+  getById(id: number | string): Observable<Counter> {
     const params = new HttpParams().set('Id', id.toString());
 
-    return this.http.get<Branch>(
-      `${this.baseUrl}/${this.controllerPath}/GetBranchbyId`,
+    return this.http.get<Counter>(
+      `${this.baseUrl}/${this.controllerPath}/GetCounterbyId`,
       { params }
     );
   }

@@ -10,6 +10,7 @@ import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { Counter, CounterService } from '../../../services/counter.service';
 
 const BRANCH_OPTIONS: { label: string | number; value: string | number }[] = [];
 const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
