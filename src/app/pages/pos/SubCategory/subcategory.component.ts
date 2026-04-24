@@ -30,7 +30,7 @@ type SubCategoryRow = {
 };
 
 const SUBCATEGORY_COLUMNS: SharedTableColumn<SubCategoryRow>[] = [
-  { field: 'RowNumber', header: '#', sortable: false, width: '5rem' },
+  { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem' },
@@ -254,27 +254,27 @@ export class SubCategoryComponent {
 
     this.SubcategoryService.getById(row.id).subscribe({
       next: (response: any) => {
-        const category = response?.result?.[0] ?? response?.result ?? response;
+        const subcategory = response?.result?.[0] ?? response?.result ?? response;
 
         this.dialogModel = {
-          Id: category?.id ?? category?.Id ?? row.id,
-          code: category?.code ?? category?.Code ?? row.code,
-          name: category?.name ?? category?.Name ?? row.name,
-          categoryId: category?.categoryId ?? category?.CategoryId ?? row.categoryId,
-          OrgId: category?.orgId ?? category?.OrgId ?? row.orgId,
-          IsActive: category?.isActive ?? category?.IsActive ?? row.isActive,
-          CreatedBy: category?.createdBy ?? category?.CreatedBy ?? 1,
-          CreatedDate: category?.createdDate ?? category?.CreatedDate,
-          UpdatedBy: category?.createdBy ?? category?.CreatedBy ?? 1,
-          UpdatedDate: category?.updatedDate ?? category?.UpdatedDate,
-          IsDeleted: category?.isDeleted ?? category?.IsDeleted ?? false
+          Id: subcategory?.id ?? subcategory?.Id ?? row.id,
+          code: subcategory?.code ?? subcategory?.Code ?? row.code,
+          name: subcategory?.name ?? subcategory?.Name ?? row.name,
+          categoryId: subcategory?.categoryId ?? subcategory?.CategoryId ?? row.categoryId,
+          OrgId: subcategory?.orgId ?? subcategory?.OrgId ?? row.orgId,
+          IsActive: subcategory?.isActive ?? subcategory?.IsActive ?? row.isActive,
+          CreatedBy: subcategory?.createdBy ?? subcategory?.CreatedBy ?? 1,
+          CreatedDate: subcategory?.createdDate ?? subcategory?.CreatedDate,
+          UpdatedBy: subcategory?.updatedBy ?? subcategory?.UpdatedBy ?? 1,
+          UpdatedDate: subcategory?.updatedDate ?? subcategory?.UpdatedDate,
+          IsDeleted: subcategory?.isDeleted ?? subcategory?.IsDeleted ?? false
         };
 
         this.showAddDialog = true;
         this.toast.info('Edit Mode', `Editing ${row.name}.`);
       },
       error: () => {
-        this.toast.error('Load Failed', 'Unable to load category details.');
+        this.toast.error('Load Failed', 'Unable to load subcategory details.');
       }
     });
   }

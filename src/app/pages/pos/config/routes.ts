@@ -25,6 +25,7 @@ const branchesPage = () => import('../branches/branches.component').then((module
 const countersPage = () => import('../counters/counters.component').then((module) => module.CountersComponent);
 const terminalPage = () => import('../terminal/terminal.component').then((module) => module.TerminalComponent);
 const printersPage = () => import('../printers/printers.component').then((module) => module.PrintersComponent);
+const TaxPage = () => import('../tax/tax.component').then((module) => module.TaxComponent);
 const usersPage = () => import('../users/users.component').then((module) => module.UsersComponent);
 const rolesPage = () => import('../roles/roles.component').then((module) => module.RolesComponent);
 
@@ -58,6 +59,7 @@ export const POS_ROUTES: Routes = [
       { path: 'counters', loadComponent: countersPage },
       { path: 'terminal', loadComponent: terminalPage },
       { path: 'printers', loadComponent: printersPage },
+      { path: 'Tax', loadComponent: TaxPage },
       { path: 'users', loadComponent: usersPage },
       { path: 'roles', loadComponent: rolesPage }
     ]

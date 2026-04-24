@@ -19,6 +19,10 @@
     [readonly]="readonly"
     [minlength]="minlength ?? null"
     [maxlength]="maxlength ?? null"
+    [attr.inputmode]="inputMode || null"
+    [attr.step]="step ?? null"
+    [attr.min]="min ?? null"
+    [attr.max]="max ?? null"
     [ngModel]="model"
     (ngModelChange)="onModelChange($event)"
   />
