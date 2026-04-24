@@ -38,12 +38,12 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Menu Name" inputId="menuName" placeholder="Enter menu name"
-          [model]="filterMenuName" (modelChange)="filterMenuName = $event" />
+        <app-text-field label="Category Name" inputId="categoryName" placeholder="Enter category name"
+          [model]="filterSubCategoryName" (modelChange)="filterSubCategoryName = $event" />
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (primaryClick)="searchMenus()" (secondaryClick)="resetForm()" />
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchSubCategories()" (secondaryClick)="resetForm()" />
     </section>
   </p-card>
 </p-dialog>
@@ -57,10 +57,10 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Menu Code" inputId="dialog-menuCode" placeholder="MENU-01"
+    <app-text-field label="SubCategory Code" inputId="dialog-subcategoryCode" placeholder="SUBCAT-01"
       [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
 
-    <app-text-field label="Menu Name" inputId="dialog-menuName" placeholder="Soups"
+    <app-text-field label="SubCategory Name" inputId="dialog-subcategoryName" placeholder="Soups"
       [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
       
       <app-select-field label="Category" inputId="dialog-category" placeholder="Select category"

@@ -6,6 +6,7 @@ const billingPage = () => import('../billing/billing.component').then((module) =
 const printBillsPage = () => import('../print-bills/print-bills.component').then((module) => module.PrintBillsComponent);
 const menusPage = () => import('../menus/menus.component').then((module) => module.MenusComponent);
 const categoriesPage = () => import('../categories/categories.component').then((module) => module.CategoriesComponent);
+const subCategoriesPage = () => import('../SubCategory/subcategory.component').then((module) => module.SubCategoryComponent);
 const stockInPage = () => import('../stock-in/stock-in.component').then((module) => module.StockInComponent);
 const stockOutPage = () => import('../stock-out/stock-out.component').then((module) => module.StockOutComponent);
 const currentStockPage = () => import('../current-stock/current-stock.component').then((module) => module.CurrentStockComponent);
@@ -38,6 +39,7 @@ export const POS_ROUTES: Routes = [
       { path: 'print-bills', loadComponent: printBillsPage },
       { path: 'menus', loadComponent: menusPage },
       { path: 'categories', loadComponent: categoriesPage },
+      { path: 'subcategories', loadComponent: subCategoriesPage },
       { path: 'stock-in', loadComponent: stockInPage },
       { path: 'stock-out', loadComponent: stockOutPage },
       { path: 'current-stock', loadComponent: currentStockPage },

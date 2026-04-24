@@ -5,16 +5,38 @@
         <h2>{{ tableTitle }}</h2></div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
-      (toolbarButtonClick)="openAddDialog()">
+     <app-shared-table
+      [showFilterButton]="showFilterButton"
+      (filterButtonClick)="openFilterSidebar()"
+      [caption]="tableCaption"
+      [columns]="tableColumns"
+      [value]="tableRows"
+      [showAddNewButton]="showAddNewButton"
+      [toolbarButtonLabel]="addNewButtonLabel"
+      [showRowActions]="showRowActions"
+      [rowActionHeader]="rowActionHeader"
+      (toolbarButtonClick)="openAddDialog()"
+    >
       <ng-template #rowActions let-row>
-        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
-        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
-          (click)="openRowActions(rowMenu, $event, row)"></button>
+        <p-menu
+          #rowMenu
+          [model]="rowActionItems"
+          [popup]="true"
+          appendTo="body"
+          styleClass="row-action-menu"
+        ></p-menu>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-ellipsis-v"
+          [text]="true"
+          [rounded]="true"
+          class="row-action-trigger"
+          (click)="openRowActions(rowMenu, $event, row)"
+        ></button>
       </ng-template>
-      <ng-template #statusTemplate let-row>
+      <ng-template appTableCellTemplate="Status" let-row>
         <span class="status-badge" [class.status-active]="row.Status === 'Active'"
           [class.status-inactive]="row.Status === 'Inactive'">
           {{ row.Status }}
@@ -41,7 +63,7 @@
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (secondaryClick)="resetForm()" />
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchCategories()" (secondaryClick)="resetForm()" />
     </section>
   </p-card>
 </p-dialog>
@@ -58,7 +80,7 @@
     <app-text-field label="Category Code" inputId="dialog-categoryCode" placeholder="CAT-02"
       [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
 
-    <app-text-field label="Category Name" inputId="dialog-categoryName" placeholder="Bakery"
+    <app-text-field label="Category Name" inputId="dialog-categoryName" placeholder="Starters"
       [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
   </section>
 

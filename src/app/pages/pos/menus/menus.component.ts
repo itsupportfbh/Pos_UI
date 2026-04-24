@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -10,50 +10,93 @@ import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { Menu, MenuService } from '../../../services/FoodMenu.service';
+import { Category, CategoryService } from '../../../services/Category.service';
 
-const CATEGORY_OPTIONS: { label: string | number; value: string | number }[] = [];
-const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
+type MenuRow = {
+  id: number;
+  code: string;
+  name: string;
+  categoryId: number;
+  orgId: number;
+  isActive: boolean;
+  createdBy?: number | null;
+  createdDate?: string;
+  updatedBy?: number | null;
+  updatedDate?: string | null;
+  isDeleted?: boolean;
+  status: string;
+  rowNumber: number;
+};
+
+const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
+  { field: 'RowNumber', header: '#', sortable: false, width: '5rem' },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
+  { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem' },
+  {
+    field: 'Status',
+    header: 'Status',
+    sortable: true,
+    width: '9rem'
+  }
 ];
 
 @Component({
   selector: 'app-menus',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent],
   templateUrl: './menus.component.html',
   styleUrl: './menus.component.css'
 })
 export class MenusComponent {
-  private readonly toast = inject(AppToastService);  showAddDialog = false;
+  private readonly toast = inject(AppToastService);
+  private readonly menuService = inject(MenuService);
+  private readonly categoryService = inject(CategoryService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+
+  showAddDialog = false;
   showFilterSidebar = false;
-  filterProductCode = '';
-  filterCategory: string | null = null;
-  dialogProductCode = '';
-  dialogCategory: string | null = null;
-  selectedRow: Record<string, unknown> | null = null;
-  readonly pageEyebrow = 'Food Menu';
-  readonly pageTitle = 'Menus';
-  readonly pageSubtitle = 'Manage product master data.';
-  readonly categoryOptions = CATEGORY_OPTIONS;
-  
+  isLoading = false;
+  isEditMode = false;
+  filterMenuName = '';
+  dialogMenuCode = '';
+  dialogMenuName = '';
+  OrgId = 0;
+
+  tableRows: MenuRow[] = [];
+  selectedRow: MenuRow | null = null;
+  editingMenuId: number | null = null;
+
+  categoryOptions: any[] = [];
+  dialogCategory: number | null = null;
+
+  dialogModel: Menu = {
+    Id: 0,
+    code: '',
+    name: '',
+    categoryId: 0,
+    OrgId: this.OrgId,
+    IsActive: true,
+    CreatedBy: 1,
+    UpdatedBy: 1,
+    IsDeleted: false
+  };
+
   readonly filterTitle = `${'Menus'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'Menus'.toLowerCase()}.`;
-  readonly fields: any[] = [{ key: 'productCode', label: 'Product Code', type: 'text', placeholder: 'Search SKU or code' }, { key: 'category', label: 'Category', type: 'select', placeholder: 'Choose category', options: CATEGORY_OPTIONS }];
+  readonly fields: any[] = [{ key: 'MenuName', label: 'Menu Name', type: 'text', placeholder: 'Enter menu name' }];
   readonly primaryActionLabel = `Search ${'Menus'}`;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  readonly dialogTitle = 'Create Product';
-  readonly dialogSubtitle = 'Create a new sellable item.';
+  readonly dialogTitle = 'Create Menu';
   readonly dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Menus';
   readonly tableCaption = 'Menus';
-  readonly tableColumns = CODE_NAME_COLUMNS;
-  tableRows: Record<string, unknown>[] = [];
-    readonly showAddNewButton = true;
-    readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
-    readonly showFilterButton = true;
+  readonly tableColumns = MENU_COLUMNS;
+  readonly showAddNewButton = true;
+  readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+  readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
   readonly rowActionItems: MenuItem[] = [
@@ -63,9 +106,66 @@ export class MenusComponent {
     { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
   ];
 
+  ngOnInit(): void {
+    const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    const userId = Number(userDetails.UserId || 0);
+    this.OrgId = Number(userDetails.OrgId || 0);
+    this.loadMenus();
+    this.loadCategories();
+  }
+
+  loadCategories() {
+    this.categoryService.getAll(this.OrgId).subscribe((res: any) => {
+      this.categoryOptions = (res.result || []).map((item: any) => ({
+        label: item.name,
+        value: item.id
+      }));
+    });
+  }
+
+  loadMenus(): void {
+    this.isLoading = true;
+
+    this.menuService.getAll(this.OrgId).subscribe({
+      next: (response: any) => {
+        const result = response?.result ?? response ?? [];
+        let RowNumber = 1;
+        this.tableRows = (response.result ?? []).map((x: any) => {
+          x.RowNumber = RowNumber++;
+          x.Status = x.isactive ? 'Active' : 'Inactive';
+          return x;
+        });
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.toast.error(
+          'Load Failed',
+          'Unable to load categories. Please check API and try again.'
+        );
+      },
+      complete: () => {
+        this.isLoading = false;
+      }
+    });
+  }
+
+  searchMenus(): void {
+    const searchText = this.filterMenuName.trim().toLowerCase();
+
+    if (!searchText) {
+      this.loadMenus();
+      return;
+    }
+
+    this.tableRows = this.tableRows.filter((row) =>
+      row.name?.toLowerCase().includes(searchText) ||
+      row.code?.toLowerCase().includes(searchText)
+    );
+  }
+
   resetForm(): void {
-    this.filterProductCode = '';
-    this.filterCategory = null;
+    this.filterMenuName = '';
+    this.loadMenus();
   }
 
   openFilterSidebar(): void {
@@ -76,47 +176,146 @@ export class MenusComponent {
     this.showFilterSidebar = false;
   }
   openAddDialog(): void {
-        this.resetDialogForm();
+    this.isEditMode = false;
+    this.editingMenuId = null;
+    this.resetDialogForm();
     this.showAddDialog = true;
   }
 
   closeAddDialog(): void {
-    this.showAddDialog = false;
+    this.resetDialogForm();
+    //this.showAddDialog = false;
   }
 
   submitAddDialog(): void {
-    this.toast.success('Saved', `${this.dialogTitle || this.pageTitle} saved successfully.`);
-    this.closeAddDialog();
-  }
-
-  editRow(row: Record<string, unknown>): void {
-        this.dialogProductCode = String(row['productCode'] ?? row['code'] ?? '');
-    this.dialogCategory = typeof row['category'] === 'string' ? row['category'] : null;
-    this.showAddDialog = true;
-    this.toast.info('Edit Mode', `Editing ${String(row['name'] ?? row['code'] ?? this.pageTitle)}.`);
-  }
-
-  deleteRow(row: Record<string, unknown>): void {
-    const rowIndex = this.tableRows.indexOf(row);
-
-    if (rowIndex >= 0) {
-      this.tableRows.splice(rowIndex, 1);
+    if (!this.dialogModel.code?.trim()) {
+      this.toast.warn('Validation', 'Sub Category code is required.');
+      return;
     }
 
-    this.toast.warn('Deleted', `${String(row['name'] ?? row['code'] ?? 'Record')} removed successfully.`);
+    if (!this.dialogModel.name?.trim()) {
+      this.toast.warn('Validation', 'Sub Category name is required.');
+      return;
+    }
+    
+
+    const payload: Menu = {
+      ...this.dialogModel,
+      OrgId: this.OrgId,
+      IsActive: this.dialogModel.IsActive ?? true,
+      IsDeleted: false
+    };
+
+    if (this.isEditMode && this.editingMenuId) {
+      payload.Id = this.editingMenuId;
+      payload.UpdatedBy = 1;
+
+      this.menuService.update(payload).subscribe({
+        next: (response: any) => {
+          if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
+            this.toast.warn('Duplicate', 'Menu already exists.');
+            return;
+          }
+
+          this.toast.success('Updated', 'Menu updated successfully.');
+          this.closeAddDialog();
+          this.loadMenus();
+        },
+        error: () => {
+          this.toast.error('Update Failed', 'Unable to update menu.');
+        }
+      });
+
+      return;
+    }
+
+    payload.CreatedBy = 1;
+
+    this.menuService.create(payload).subscribe({
+      next: (response: any) => {
+        if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
+          this.toast.warn('Duplicate', 'Menu already exists.');
+          return;
+        }
+
+        this.toast.success('Saved', 'Menu saved successfully.');
+        this.closeAddDialog();
+        this.loadMenus();
+      },
+      error: () => {
+        this.toast.error('Save Failed', 'Unable to save menu.');
+      }
+    });
   }
 
-  activateRow(row: Record<string, unknown>): void {
-    row['status'] = 'Active';
-    this.toast.success('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as active.`);
+  editRow(row: MenuRow): void {
+    this.isEditMode = true;
+    this.editingMenuId = row.id;
+
+    this.menuService.getById(row.id).subscribe({
+      next: (response: any) => {
+        const category = response?.result?.[0] ?? response?.result ?? response;
+
+        this.dialogModel = {
+          Id: category?.id ?? category?.Id ?? row.id,
+          code: category?.code ?? category?.Code ?? row.code,
+          name: category?.name ?? category?.Name ?? row.name,
+          categoryId: category?.categoryId ?? category?.CategoryId ?? row.categoryId,
+          OrgId: category?.orgId ?? category?.OrgId ?? row.orgId,
+          IsActive: category?.isActive ?? category?.IsActive ?? row.isActive,
+          CreatedBy: category?.createdBy ?? category?.CreatedBy ?? 1,
+          CreatedDate: category?.createdDate ?? category?.CreatedDate,
+          UpdatedBy: category?.createdBy ?? category?.CreatedBy ?? 1,
+          UpdatedDate: category?.updatedDate ?? category?.UpdatedDate,
+          IsDeleted: category?.isDeleted ?? category?.IsDeleted ?? false
+        };
+
+        this.showAddDialog = true;
+        this.toast.info('Edit Mode', `Editing ${row.name}.`);
+      },
+      error: () => {
+        this.toast.error('Load Failed', 'Unable to load category details.');
+      }
+    });
   }
 
-  deactivateRow(row: Record<string, unknown>): void {
-    row['status'] = 'Inactive';
-    this.toast.info('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as inactive.`);
+  deleteRow(row: MenuRow): void {
+    this.menuService.delete(row.id).subscribe({
+      next: () => {
+        this.toast.warn('Deleted', `${row.name} removed successfully.`);
+        this.loadMenus();
+      },
+      error: () => {
+        this.toast.error('Delete Failed', 'Unable to delete menu.');
+      }
+    });
   }
 
-  openRowActions(menu: any, event: Event, row: Record<string, unknown>): void {
+  activateRow(row: MenuRow): void {
+    this.menuService.activeInActive(row.id, true).subscribe({
+      next: () => {
+        this.toast.success('Status Updated', `${row.name} marked as active.`);
+        this.loadMenus();
+      },
+      error: () => {
+        this.toast.error('Update Failed', 'Unable to activate menu.');
+      }
+    });
+  }
+
+  deactivateRow(row: MenuRow): void {
+    this.menuService.activeInActive(row.id, false).subscribe({
+      next: () => {
+        this.toast.info('Status Updated', `${row.name} marked as inactive.`);
+        this.loadMenus();
+      },
+      error: () => {
+        this.toast.error('Update Failed', 'Unable to deactivate menu.');
+      }
+    });
+  }
+
+  openRowActions(menu: any, event: Event, row: MenuRow): void {
     this.selectedRow = row;
     menu.toggle(event);
   }
@@ -138,21 +337,16 @@ export class MenusComponent {
   }
 
   private resetDialogForm(): void {
-    this.dialogProductCode = '';
-    this.dialogCategory = null;
+    this.dialogModel = {
+      Id: 0,
+      code: '',
+      name: '',
+      categoryId: 0,
+      OrgId: this.OrgId,
+      IsActive: true,
+      CreatedBy: 1,
+      UpdatedBy: 1,
+      IsDeleted: false
+    };
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

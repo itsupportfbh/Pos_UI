@@ -19,6 +19,8 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "baseHref": "./",
+            "deployUrl": "./",
             "assets": [
               {
                 "glob": "**/*",
