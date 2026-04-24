@@ -1,4 +1,6 @@
 <section class="feature-page">
+  <p-confirmDialog />
+
   <header class="page-header hero-panel">
     <div>
       <p class="eyebrow">{{ pageEyebrow }}</p>
@@ -32,16 +34,16 @@
 
       <ng-template appTableCellTemplate="Website" let-row>
         @if (row.Website) {
-          <a class="website-link" [href]="getWebsiteUrl(row.Website)" target="_blank" rel="noopener noreferrer">
-            {{ row.Website }}
-          </a>
+        <a class="website-link" [href]="getWebsiteUrl(row.Website)" target="_blank" rel="noopener noreferrer">
+          {{ row.Website }}
+        </a>
         } @else {
-          <span>-</span>
+        <span>-</span>
         }
       </ng-template>
     </app-shared-table>
   </p-card>
-</section> 
+</section>
 
 <p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
   [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
@@ -75,7 +77,7 @@
 
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" inputId="dialog-code" placeholder="Organization Code" [model]="dialogCode"
-      (modelChange)="dialogCode = $event" />
+       />
 
     <app-text-field label="Name" inputId="dialog-companyName" placeholder="Organization Name" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Company name is required."
@@ -88,16 +90,15 @@
 
     <app-text-field label="Registration Number" inputId="dialog-registrationNumber" placeholder="Registration Number"
       [submitted]="dialogSubmitted" [textWithNumbersOnly]="true"
-      formatErrorMessage="Registration Number allows text and numbers only."
-      [model]="dialogRegistrationNumber" (modelChange)="dialogRegistrationNumber = $event" />
+      formatErrorMessage="Registration Number allows text and numbers only." [model]="dialogRegistrationNumber"
+      (modelChange)="dialogRegistrationNumber = $event" />
 
     <app-text-field label="Phone Number" inputId="dialog-phoneNumber" placeholder="Phone Number"
       [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only."
       [model]="dialogPhoneNumber" (modelChange)="dialogPhoneNumber = $event" />
 
     <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [submitted]="dialogSubmitted"
-      [emailOnly]="true" formatErrorMessage="Enter a valid Email."
-      [model]="dialogEmail"
+      [emailOnly]="true" formatErrorMessage="Enter a valid Email." [model]="dialogEmail"
       (modelChange)="dialogEmail = $event" />
 
     <app-text-field label="Website" inputId="dialog-website" placeholder="Website" [model]="dialogWebsite"
@@ -108,8 +109,7 @@
       [model]="dialogContactPerson" (modelChange)="dialogContactPerson = $event" />
 
     <app-text-field label="Contact Person Phone" inputId="dialog-contactPersonPhone" placeholder="Contact Person Phone"
-      [submitted]="dialogSubmitted" [numbersOnly]="true"
-      formatErrorMessage="Contact Person Phone allows numbers only."
+      [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Contact Person Phone allows numbers only."
       [model]="dialogContactPersonPhone" (modelChange)="dialogContactPersonPhone = $event" />
 
     <app-text-field label="Contact Person Email" inputId="dialog-contactPersonEmail" placeholder="Contact Person Email"
@@ -122,17 +122,14 @@
     <app-text-field label="Address Line 2" inputId="dialog-addressLine2" placeholder="Address Line 2"
       [model]="dialogAddressLine2" (modelChange)="dialogAddressLine2 = $event" />
 
-    <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
-      [numberValue]="true"
-      [model]="dialogCity" (modelChange)="dialogCity = $event" />
+    <app-select-field label="Country" inputId="dialog-country" placeholder="Choose country" [options]="countryOptions"
+      [numberValue]="true" [model]="dialogCountry" (modelChange)="onCountryChange($event)" />
 
     <app-select-field label="State" inputId="dialog-state" placeholder="Choose state" [options]="stateOptions"
-      [numberValue]="true"
-      [model]="dialogState" (modelChange)="dialogState = $event" />
+      [numberValue]="true" [model]="dialogState" (modelChange)="onStateChange($event)" />
 
-    <app-select-field label="Country" inputId="dialog-country" placeholder="Choose country" [options]="countryOptions"
-      [numberValue]="true"
-      [model]="dialogCountry" (modelChange)="dialogCountry = $event" />
+    <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
+      [numberValue]="true" [model]="dialogCity" (modelChange)="dialogCity = $event" />
 
     <app-text-field label="Postal Code" inputId="dialog-postalCode" placeholder="Postal Code"
       [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Postal Code allows numbers only."
@@ -140,16 +137,13 @@
 
     <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks" [model]="dialogRemarks"
       (modelChange)="dialogRemarks = $event" />
-
-    <app-select-field label="Primary Branch" inputId="dialog-branch" placeholder="Choose branch"
-      [options]="branchOptions" [model]="dialogBranch" (modelChange)="dialogBranch = $event" />
   </section>
 
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
       secondaryIcon="pi pi-refresh" [primaryLoading]="dialogSaving" [primaryDisabled]="dialogSaving"
-      [secondaryDisabled]="dialogSaving" [secondaryText]="true" [secondaryOutlined]="false" (primaryClick)="submitAddDialog()"
-      (secondaryClick)="resetDialogForm()" />
+      [secondaryDisabled]="dialogSaving" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()" />
   </div>
 </p-dialog>
 

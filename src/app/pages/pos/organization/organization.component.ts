@@ -1,23 +1,23 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { MenuItem } from 'primeng/api';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { firstValueFrom } from 'rxjs';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { CommonService } from '../../../services/common.service';
 import { Organization, OrganizationService } from '../../../services/organization.service';
 
-const BRANCH_OPTIONS: { label: string | number; value: string | number }[] = [];
-
-const cityOptions: any = [];
-const stateOptions: any = [];
-const countryOptions: any = [];
+const cityOptions: any[] = [];
+const stateOptions: any[] = [];
+const countryOptions: any[] = [];
 
 const ORGANIZATION_COLUMNS: SharedTableColumn<Organization>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
@@ -36,13 +36,16 @@ const ORGANIZATION_COLUMNS: SharedTableColumn<Organization>[] = [
 @Component({
   selector: 'app-organization',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, SharedTableCellTemplateDirective],
+  imports: [CommonModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, SharedTableCellTemplateDirective],
+  providers: [ConfirmationService],
   templateUrl: './organization.component.html',
   styleUrl: './organization.component.css'
 })
 export class OrganizationComponent implements OnInit {
   private readonly toast = inject(AppToastService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly commonService = inject(CommonService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   showAddDialog = false;
@@ -70,7 +73,6 @@ export class OrganizationComponent implements OnInit {
   dialogCountry: SelectFieldValue = null;
   dialogPostalCode = '';
   dialogRemarks = '';
-  dialogBranch: string | null = null;
   showConfigDialog = false;
   configOrganizationName = '';
   configImageName = '';
@@ -81,10 +83,9 @@ export class OrganizationComponent implements OnInit {
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Organization';
   readonly pageSubtitle = 'Maintain restaurant organization identity details.';
-  readonly branchOptions = BRANCH_OPTIONS;
-  readonly cityOptions = cityOptions;
-  readonly stateOptions = stateOptions;
-  readonly countryOptions = countryOptions;
+  cityOptions = cityOptions;
+  stateOptions = stateOptions;
+  countryOptions = countryOptions;
   readonly filterTitle = 'Organization Filters';
   readonly primaryActionLabel = 'Search Organization';
   readonly secondaryActionLabel = 'Clear Filters';
@@ -127,7 +128,10 @@ export class OrganizationComponent implements OnInit {
     this.dialogTitle = 'Create Organization';
     this.dialogSubtitle = 'Create a new restaurant organization profile.';
     this.dialogPrimaryActionLabel = 'Save';
+
     this.showAddDialog = true;
+
+    void this.loadCountries();
   }
 
   closeAddDialog(): void {
@@ -135,6 +139,78 @@ export class OrganizationComponent implements OnInit {
     this.isEditMode = false;
     this.dialogSubmitted = false;
     this.showAddDialog = false;
+  }
+
+
+  async loadCountries(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetCountry());
+      const countries = response?.result ?? [];
+
+      this.countryOptions = countries.map((country: any) => ({
+        label: country.Name ?? '',
+        value: country.Id ?? 0
+      }));
+    } catch {
+      this.countryOptions = [];
+      this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
+    }
+  }
+
+  onCountryChange(value: SelectFieldValue): void {
+    this.dialogCountry = value;
+    this.dialogState = null;
+    this.dialogCity = null;
+    this.stateOptions = [];
+    this.cityOptions = [];
+
+    if (!value || Number(value) === 0) {
+      return;
+    }
+
+    void this.loadStates(Number(value));
+  }
+
+  async loadStates(countryId: number): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetStateByCountryId(countryId));
+      const states = response?.result ?? [];
+
+      this.stateOptions = states.map((state: any) => ({
+        label: state.Name ?? '',
+        value: state.Id ?? 0
+      }));
+    } catch {
+      this.stateOptions = [];
+      this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
+    }
+  }
+
+  onStateChange(value: SelectFieldValue): void {
+    this.dialogState = value;
+    this.dialogCity = null;
+    this.cityOptions = [];
+
+    if (!value || Number(value) === 0) {
+      return;
+    }
+
+    void this.loadCities(Number(value));
+  }
+
+  async loadCities(stateId: number): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetCityByStateId(stateId));
+      const cities = response?.result ?? [];
+
+      this.cityOptions = cities.map((city: any) => ({
+        label: city.Name ?? '',
+        value: city.Id ?? 0
+      }));
+    } catch {
+      this.cityOptions = [];
+      this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
+    }
   }
 
   async submitAddDialog(): Promise<void> {
@@ -226,40 +302,51 @@ export class OrganizationComponent implements OnInit {
     return `https://${website}`;
   }
 
-  editRow(row:any): void {
+  async editRow(row:any): Promise<void> {
     this.resetDialogForm();
     this.isEditMode = true;
     this.dialogTitle = 'Edit Organization';
     this.dialogSubtitle = 'Update the selected restaurant organization profile.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
-     this.organizationService.getById(row['Id']).subscribe({
-      next: (response:any) => {
-        const organization = response.result|| {};
-        this.dialogId = organization.Id ?? 0;
-        this.dialogCode = organization.Code ?? '';
-        this.dialogCompanyName = organization.Name ?? '';
-        this.dialogGstNumber = organization.GSTNo ?? '';
-        this.dialogRegistrationNumber = organization.RegistrationNo ?? '';
-        this.dialogPhoneNumber = organization.Phone ?? '';
-        this.dialogEmail = organization.Email ?? '';
-        this.dialogWebsite = organization.Website ?? '';
-        this.dialogContactPerson = organization.ContactPerson ?? '';
-        this.dialogContactPersonPhone = organization.ContactMobileNo ?? '';
-        this.dialogContactPersonEmail = organization.ContactEmail ?? '';
-        this.dialogAddressLine1 = organization.Address1 ?? '';
-        this.dialogAddressLine2 = organization.Address2 ?? '';
-        this.dialogCity = organization.City ?? null;
-        this.dialogState = organization.State ?? null;
-        this.dialogCountry = organization.Country ?? null;
-        this.dialogPostalCode = organization.PostalCode ? String(organization.PostalCode) : '';
-        this.dialogRemarks = organization.Remarks ?? '';
-        this.dialogBranch = null;
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.getById(row['Id']));
+      const organization = response.result ?? {};
+
+      this.dialogId = organization.Id ?? 0;
+      this.dialogCode = organization.Code ?? '';
+      this.dialogCompanyName = organization.Name ?? '';
+      this.dialogGstNumber = organization.GSTNo ?? '';
+      this.dialogRegistrationNumber = organization.RegistrationNo ?? '';
+      this.dialogPhoneNumber = organization.Phone ?? '';
+      this.dialogEmail = organization.Email ?? '';
+      this.dialogWebsite = organization.Website ?? '';
+      this.dialogContactPerson = organization.ContactPerson ?? '';
+      this.dialogContactPersonPhone = organization.ContactMobileNo ?? '';
+      this.dialogContactPersonEmail = organization.ContactEmail ?? '';
+      this.dialogAddressLine1 = organization.Address1 ?? '';
+      this.dialogAddressLine2 = organization.Address2 ?? '';
+      this.dialogPostalCode = organization.PostalCode ? String(organization.PostalCode) : '';
+      this.dialogRemarks = organization.Remarks ?? '';
+
+      await this.loadCountries();
+      this.dialogCountry = organization.Country ?? null;
+
+      if (this.dialogCountry) {
+        await this.loadStates(Number(this.dialogCountry));
       }
-    });
+
+      this.dialogState = organization.State ?? null;
+
+      if (this.dialogState) {
+        await this.loadCities(Number(this.dialogState));
+      }
+
+      this.dialogCity = organization.City ?? null;
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+    }
   }
 
   openConfigDialog(row: Record<string, unknown>): void {
@@ -339,6 +426,54 @@ export class OrganizationComponent implements OnInit {
     menu.toggle(event);
   }
 
+  confirmDeleteRow(row: Record<string, unknown>): void {
+    const name = String(row['Name'] ?? row['Code'] ?? 'this organization');
+
+    this.confirmationService.confirm({
+      header: 'Delete Confirmation',
+      message: `Are you sure you want to delete ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.deleteRow(row);
+      }
+    });
+  }
+
+  confirmActivateRow(row: Record<string, unknown>): void {
+    const name = String(row['Name'] ?? row['Code'] ?? 'this organization');
+
+    this.confirmationService.confirm({
+      header: 'Activate Confirmation',
+      message: `Are you sure you want to activate ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-success',
+      accept: () => {
+        this.activateRow(row);
+      }
+    });
+  }
+
+  confirmDeactivateRow(row: Record<string, unknown>): void {
+    const name = String(row['Name'] ?? row['Code'] ?? 'this organization');
+
+    this.confirmationService.confirm({
+      header: 'Inactive Confirmation',
+      message: `Are you sure you want to inactive ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-warn',
+      accept: () => {
+        this.deactivateRow(row);
+      }
+    });
+  }
+
    resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
@@ -360,7 +495,6 @@ export class OrganizationComponent implements OnInit {
     this.dialogCountry = null;
     this.dialogPostalCode = '';
     this.dialogRemarks = '';
-    this.dialogBranch = null;
   }
 
   private isDialogFormValid(): boolean {
@@ -400,11 +534,11 @@ export class OrganizationComponent implements OnInit {
     } else if (action === 'edit') {
       this.editRow(this.selectedRow);
     } else if (action === 'delete') {
-      this.deleteRow(this.selectedRow);
+      this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
-      this.activateRow(this.selectedRow);
+      this.confirmActivateRow(this.selectedRow);
     } else {
-      this.deactivateRow(this.selectedRow);
+      this.confirmDeactivateRow(this.selectedRow);
     }
   }
 }

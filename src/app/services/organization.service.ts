@@ -31,11 +31,6 @@ export interface Organization {
   IsDeleted?: boolean;
 }
 
-export interface OrganizationStatusRequest {
-  id: number | string;
-  isActive: boolean;
-}
-
 @Injectable({
   providedIn: 'root'
 })
