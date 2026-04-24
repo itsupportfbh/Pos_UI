@@ -1,37 +1,35 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
-import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import {
-  SharedTableCellTemplateDirective,
-  SharedTableColumn,
-  SharedTableComponent
-} from '../../../components/table/shared-table.component';
-
 import { AppToastService } from '../../../services/app-toast.service';
 import { Branch, BranchService } from '../../../services/branch.service';
+import { CommonService } from '../../../services/common.service';
 
 type BranchRow = Branch & {
   RowNumber: number;
   Status: string;
 };
 
+const cityOptions: any[] = [];
+const stateOptions: any[] = [];
+const countryOptions: any[] = [];
+
 const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
-  { field: 'RowNumber', header: '#', sortable: false, width: '5rem' },
-  { field: 'code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'name', header: 'Name', sortable: true, width: '18rem' },
-  {
-    field: 'Status',
-    header: 'Status',
-    sortable: true,
-    width: '9rem'
-  }
+  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
+  { field: 'Code', header: 'Code', sortable: true, width: '9rem' },
+  { field: 'Name', header: 'Name', sortable: true, width: '20rem' },
+  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
 @Component({
@@ -39,64 +37,72 @@ const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
   standalone: true,
   imports: [
     CommonModule,
+    ConfirmDialogModule,
     ButtonModule,
     CardModule,
     DialogModule,
     TextFieldComponent,
+    SelectFieldComponent,
     ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
     SharedTableCellTemplateDirective
   ],
+  providers: [ConfirmationService],
   templateUrl: './branches.component.html',
   styleUrl: './branches.component.css'
 })
 export class BranchesComponent implements OnInit {
   private readonly toast = inject(AppToastService);
   private readonly branchService = inject(BranchService);
+  private readonly commonService = inject(CommonService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+
+  @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
 
   showAddDialog = false;
   showFilterSidebar = false;
   isEditMode = false;
-  isLoading = false;
-
+  dialogSubmitted = false;
+  dialogSaving = false;
   filterBranchName = '';
 
-  selectedRow: BranchRow | null = null;
-  editingBranchId: number | null = null;
+  dialogId = 0;
+  dialogCode = '';
+  dialogName = '';
+  dialogPhone = '';
+  dialogEmail = '';
+  dialogContactPerson = '';
+  dialogContactMobileNo = '';
+  dialogContactEmail = '';
+  dialogAddress1 = '';
+  dialogAddress2 = '';
+  dialogCity: SelectFieldValue = null;
+  dialogState: SelectFieldValue = null;
+  dialogCountry: SelectFieldValue = null;
+  dialogPostalCode = '';
+  dialogRemarks = '';
 
-  dialogModel: Branch = {
-    Id: 0,
-    Code: '',
-    Name: '',
-    Phone: '',
-    Email: '',
-    ContactPerson: '',
-    ContactMobileNo: '',
-    ContactEmail: '',
-    Address1: '',
-    Address2: '',
-    City: 0,
-    State: 0,
-    PostalCode: 0,
-    Country: 0,
-    Remarks: '',
-    OrgId: 0,
-    IsActive: true,
-    CreatedBy: 0,
-    UpdatedBy: 0,
-    IsDeleted: false
-  };
+  selectedRow: BranchRow | null = null;
+  rowActionItems: MenuItem[] = [];
+  tableRows: BranchRow[] = [];
+  userDetails: any = {};
+  cityOptions = cityOptions;
+  stateOptions = stateOptions;
+  countryOptions = countryOptions;
 
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Branches';
-  readonly pageSubtitle = 'Maintain store branches.';
+  readonly pageSubtitle = 'Maintain restaurant branch details.';
   readonly filterTitle = 'Branch Filters';
-  readonly filterDescription = 'Filter and manage branch records.';
   readonly primaryActionLabel = 'Search Branches';
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
+  dialogTitle = 'Create Branch';
+  dialogSubtitle = 'Create a new branch for the organization.';
+  dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Branches';
   readonly tableCaption = 'Branches';
   readonly tableColumns = BRANCH_COLUMNS;
@@ -105,49 +111,6 @@ export class BranchesComponent implements OnInit {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-  userDetails: any = {};
-  tableRows: BranchRow[] = [];
-
-  readonly rowActionItems: MenuItem[] = [
-    {
-      label: 'Edit',
-      icon: 'pi pi-pencil',
-      styleClass: 'row-action-edit',
-      command: () => this.handleRowAction('edit')
-    },
-    {
-      label: 'Delete',
-      icon: 'pi pi-trash',
-      styleClass: 'row-action-delete',
-      command: () => this.handleRowAction('delete')
-    },
-    {
-      label: 'Active',
-      icon: 'pi pi-check-circle',
-      styleClass: 'row-action-active',
-      command: () => this.handleRowAction('activate')
-    },
-    {
-      label: 'Inactive',
-      icon: 'pi pi-ban',
-      styleClass: 'row-action-inactive',
-      command: () => this.handleRowAction('deactivate')
-    }
-  ];
-
-  get dialogTitle(): string {
-    return this.isEditMode ? 'Edit Branch' : 'Create Branch';
-  }
-
-  get dialogSubtitle(): string {
-    return this.isEditMode
-      ? 'Update the selected branch details.'
-      : 'Create a new branch for the organization.';
-  }
-
-  get dialogPrimaryActionLabel(): string {
-    return this.isEditMode ? 'Update' : 'Save';
-  }
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -155,29 +118,28 @@ export class BranchesComponent implements OnInit {
   }
 
   loadBranches(): void {
-    this.isLoading = true;
     const orgId = Number(this.userDetails.OrgId || 0);
 
     this.branchService.getAll(orgId).subscribe({
-      next: (response: any) => {
+      next: (response) => {
         let RowNumber = 1;
         this.tableRows = (response.result ?? []).map((x: any) => {
           x.RowNumber = RowNumber++;
-          x.Status = x.isactive ? 'Active' : 'Inactive';
+          x.Status = x.IsActive ? 'Active' : 'Inactive';
           return x;
         });
+
         this.changeDetector.detectChanges();
       },
       error: () => {
-        this.toast.error(
-          'Load Failed',
-          'Unable to load branches. Please check API and try again.'
-        );
-      },
-      complete: () => {
-        this.isLoading = false;
+        this.toast.error('Load Failed', 'Unable to load branches. Please check API and try again.');
       }
     });
+  }
+
+  resetForm(): void {
+    this.filterBranchName = '';
+    this.loadBranches();
   }
 
   searchBranches(): void {
@@ -189,14 +151,11 @@ export class BranchesComponent implements OnInit {
     }
 
     this.tableRows = this.tableRows.filter((row) =>
-      row.Name?.toLowerCase().includes(searchText) ||
-      row.Code?.toLowerCase().includes(searchText)
+      String(row.Name ?? '').toLowerCase().includes(searchText) ||
+      String(row.Code ?? '').toLowerCase().includes(searchText) ||
+      String(row.Phone ?? '').toLowerCase().includes(searchText) ||
+      String(row.Email ?? '').toLowerCase().includes(searchText)
     );
-  }
-
-  resetForm(): void {
-    this.filterBranchName = '';
-    this.loadBranches();
   }
 
   openFilterSidebar(): void {
@@ -208,182 +167,348 @@ export class BranchesComponent implements OnInit {
   }
 
   openAddDialog(): void {
-    this.isEditMode = false;
-    this.editingBranchId = null;
     this.resetDialogForm();
+    this.isEditMode = false;
+    this.dialogTitle = 'Create Branch';
+    this.dialogSubtitle = 'Create a new branch for the organization.';
+    this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+    void this.loadCountries();
   }
 
   closeAddDialog(): void {
+    this.loadBranches();
+    this.isEditMode = false;
+    this.dialogSubmitted = false;
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
-    if (!this.dialogModel.Code?.trim()) {
-      this.toast.warn('Validation', 'Branch code is required.');
+  async loadCountries(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetCountry());
+      const countries = response?.result ?? [];
+
+      this.countryOptions = countries.map((country: any) => ({
+        label: country.Name ?? '',
+        value: country.Id ?? 0
+      }));
+    } catch {
+      this.countryOptions = [];
+      this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
+    }
+  }
+
+  onCountryChange(value: SelectFieldValue): void {
+    this.dialogCountry = value;
+    this.dialogState = null;
+    this.dialogCity = null;
+    this.stateOptions = [];
+    this.cityOptions = [];
+
+    if (!value || Number(value) === 0) {
       return;
     }
 
-    if (!this.dialogModel.Name?.trim()) {
-      this.toast.warn('Validation', 'Branch name is required.');
+    void this.loadStates(Number(value));
+  }
+
+  async loadStates(countryId: number): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetStateByCountryId(countryId));
+      const states = response?.result ?? [];
+
+      this.stateOptions = states.map((state: any) => ({
+        label: state.Name ?? '',
+        value: state.Id ?? 0
+      }));
+    } catch {
+      this.stateOptions = [];
+      this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
+    }
+  }
+
+  onStateChange(value: SelectFieldValue): void {
+    this.dialogState = value;
+    this.dialogCity = null;
+    this.cityOptions = [];
+
+    if (!value || Number(value) === 0) {
       return;
     }
+
+    void this.loadCities(Number(value));
+  }
+
+  async loadCities(stateId: number): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetCityByStateId(stateId));
+      const cities = response?.result ?? [];
+
+      this.cityOptions = cities.map((city: any) => ({
+        label: city.Name ?? '',
+        value: city.Id ?? 0
+      }));
+    } catch {
+      this.cityOptions = [];
+      this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
+    }
+  }
+
+  async submitAddDialog(): Promise<void> {
+    this.dialogSubmitted = true;
+
+    if (!this.isDialogFormValid()) {
+      return;
+    }
+
+    this.dialogSaving = true;
 
     const payload: Branch = {
-      ...this.dialogModel,
+      Id: this.dialogId,
+      Code: this.dialogCode,
+      Name: this.dialogName,
+      Phone: this.dialogPhone,
+      Email: this.dialogEmail,
+      ContactPerson: this.dialogContactPerson,
+      ContactMobileNo: this.dialogContactMobileNo,
+      ContactEmail: this.dialogContactEmail,
+      Address1: this.dialogAddress1,
+      Address2: this.dialogAddress2,
+      City: Number(this.dialogCity || 0),
+      State: Number(this.dialogState || 0),
+      Country: Number(this.dialogCountry || 0),
+      PostalCode: Number(this.dialogPostalCode || 0),
+      Remarks: this.dialogRemarks,
       OrgId: Number(this.userDetails.OrgId || 0),
-      IsActive: this.dialogModel.IsActive ?? true,
+      IsActive: true,
+      CreatedBy: Number(this.userDetails.UserId || 0),
+      CreatedDate: new Date().toISOString(),
+      UpdatedBy: Number(this.userDetails.UserId || 0),
+      UpdatedDate: null,
       IsDeleted: false
     };
 
-    if (this.isEditMode && this.editingBranchId) {
-      payload.Id = this.editingBranchId;
-      payload.UpdatedBy = 1;
+    try {
+      let response: any;
 
-      this.branchService.update(payload).subscribe({
-        next: (response: any) => {
-          if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-            this.toast.warn('Duplicate', 'Branch already exists.');
-            return;
-          }
+      if (!payload.Id) {
+        response = await firstValueFrom(this.branchService.create(payload));
+      } else {
+        response = await firstValueFrom(this.branchService.update(payload));
+      }
 
-          this.toast.success('Updated', 'Branch updated successfully.');
-          this.closeAddDialog();
-          this.loadBranches();
-        },
-        error: () => {
-          this.toast.error('Update Failed', 'Unable to update branch.');
-        }
-      });
+      if (response.ErrorInfo.Message === true && response.result === 'AlreadyExists') {
+        this.toast.warn('Already Exists', `${payload.Name || this.pageTitle} already exists. Please use a different name.`);
+        this.dialogName = '';
+        return;
+      }
 
-      return;
-    }
-
-    payload.CreatedBy = this.userDetails.UserId;
-
-    this.branchService.create(payload).subscribe({
-      next: (response: any) => {
-        if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-          this.toast.warn('Duplicate', 'Branch already exists.');
-          return;
-        }
-
-        this.toast.success('Saved', 'Branch saved successfully.');
+      if (response.ErrorInfo.Message === true && !payload.Id) {
+        this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
         this.closeAddDialog();
-        this.loadBranches();
-      },
-      error: () => {
-        this.toast.error('Save Failed', 'Unable to save branch.');
+        return;
       }
-    });
+
+      if (response.ErrorInfo.Message === true && payload.Id) {
+        this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', response.ErrorInfo.Message || 'Unable to save branch.');
+    } catch {
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save branch.');
+    } finally {
+      this.dialogSaving = false;
+    }
   }
 
-  editRow(row: BranchRow): void {
+  async editRow(row: BranchRow): Promise<void> {
+    this.resetDialogForm();
     this.isEditMode = true;
-    this.editingBranchId = row.Id ?? 0;
+    this.dialogTitle = 'Edit Branch';
+    this.dialogSubtitle = 'Update the selected branch details.';
+    this.dialogPrimaryActionLabel = 'Update';
+    this.showAddDialog = true;
 
-    this.branchService.getById(row.Id ?? 0).subscribe({
-      next: (response: any) => {
-        const branch = response?.result?.[0] ?? response?.result ?? response;
+    try {
+      const response: any = await firstValueFrom(this.branchService.getById(row.Id ?? 0));
+      const branch = response.result ?? {};
 
-        this.dialogModel = {
-          Id: branch?.Id ?? row.Id,
-          Code: branch?.Code ?? row.Code,
-          Name: branch?.Name ?? row.Name,
-          Phone: branch?.Phone ?? row.Phone ?? '',
-          Email: branch?.Email ?? row.Email ?? '',
-          ContactPerson: branch?.ContactPerson ?? row.ContactPerson ?? '',
-          ContactMobileNo: branch?.ContactMobileNo ?? row.ContactMobileNo ?? '',
-          ContactEmail: branch?.ContactEmail ?? row.ContactEmail ?? '',
-          Address1: branch?.Address1 ?? row.Address1 ?? '',
-          Address2: branch?.Address2 ?? row.Address2 ?? '',
-          City: branch?.City ?? row.City,
-          State: branch?.State ?? row.State,
-          PostalCode: branch?.PostalCode ?? row.PostalCode,
-          Country: branch?.Country ?? row.Country,
-          Remarks: branch?.Remarks ?? row.Remarks ?? '',
-          OrgId: branch?.OrgId ?? row.OrgId,
-          IsActive: branch?.IsActive ?? row.IsActive,
-          CreatedBy: branch?.CreatedBy ?? 1,
-          CreatedDate: branch?.CreatedDate,
-          UpdatedBy: 1,
-          UpdatedDate: branch?.UpdatedDate,
-          IsDeleted: branch?.IsDeleted ?? false
-        };
+      this.dialogId = branch.Id ?? 0;
+      this.dialogCode = branch.Code ?? '';
+      this.dialogName = branch.Name ?? '';
+      this.dialogPhone = branch.Phone ?? '';
+      this.dialogEmail = branch.Email ?? '';
+      this.dialogContactPerson = branch.ContactPerson ?? '';
+      this.dialogContactMobileNo = branch.ContactMobileNo ?? '';
+      this.dialogContactEmail = branch.ContactEmail ?? '';
+      this.dialogAddress1 = branch.Address1 ?? '';
+      this.dialogAddress2 = branch.Address2 ?? '';
+      this.dialogPostalCode = branch.PostalCode ? String(branch.PostalCode) : '';
+      this.dialogRemarks = branch.Remarks ?? '';
 
-        this.showAddDialog = true;
-        this.toast.info('Edit Mode', `Editing ${row.Name}.`);
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load branch details.');
+      await this.loadCountries();
+      this.dialogCountry = branch.Country ?? null;
+
+      if (this.dialogCountry) {
+        await this.loadStates(Number(this.dialogCountry));
       }
-    });
+
+      this.dialogState = branch.State ?? null;
+
+      if (this.dialogState) {
+        await this.loadCities(Number(this.dialogState));
+      }
+
+      this.dialogCity = branch.City ?? null;
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load branch details. Please check and try again.');
+    }
   }
 
-  deleteRow(row: BranchRow): void {
-    this.branchService.delete(row.Id ?? 0).subscribe({
-      next: () => {
-        this.toast.warn('Deleted', `${row.Name} removed successfully.`);
+  async deleteRow(row: BranchRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.branchService.delete(row.Id ?? 0));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deleted', `${String(row.Name ?? row.Code ?? 'Record')} deleted successfully.`);
         this.loadBranches();
-      },
-      error: () => {
-        this.toast.error('Delete Failed', 'Unable to delete branch.');
+        return;
       }
-    });
+
+      this.toast.error('Delete Failed', response.ErrorInfo.Message || `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Delete Failed', `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
   }
 
-  activateRow(row: BranchRow): void {
-    this.branchService.activeInActive(row.Id ?? 0, true).subscribe({
-      next: () => {
-        this.toast.success('Status Updated', `${row.Name} marked as active.`);
+  async activateRow(row: BranchRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.branchService.activeInActive(row.Id ?? 0, true));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Activated', `${String(row.Name ?? row.Code ?? 'Record')} activated successfully.`);
         this.loadBranches();
-      },
-      error: () => {
-        this.toast.error('Update Failed', 'Unable to activate branch.');
+        return;
       }
-    });
+
+      this.toast.error('Activation Failed', response.ErrorInfo.Message || `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Activation Failed', `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
   }
 
-  deactivateRow(row: BranchRow): void {
-    this.branchService.activeInActive(row.Id ?? 0, false).subscribe({
-      next: () => {
-        this.toast.info('Status Updated', `${row.Name} marked as inactive.`);
+  async deactivateRow(row: BranchRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.branchService.activeInActive(row.Id ?? 0, false));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deactivated', `${String(row.Name ?? row.Code ?? 'Record')} deactivated successfully.`);
         this.loadBranches();
-      },
-      error: () => {
-        this.toast.error('Update Failed', 'Unable to deactivate branch.');
+        return;
       }
-    });
+
+      this.toast.error('Deactivation Failed', response.ErrorInfo.Message || `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
   }
 
   openRowActions(menu: any, event: Event, row: BranchRow): void {
     this.selectedRow = row;
+    this.rowActionItems = this.getRowActionItems(row);
     menu.toggle(event);
   }
 
-  private resetDialogForm(): void {
-    this.dialogModel = {
-      Id: 0,
-      Code: '',
-      Name: '',
-      Phone: '',
-      Email: '',
-      ContactPerson: '',
-      ContactMobileNo: '',
-      ContactEmail: '',
-      Address1: '',
-      Address2: '',
-      City: undefined,
-      State: undefined,
-      PostalCode: undefined,
-      Country: undefined,
-      Remarks: '',
-      OrgId: Number(this.userDetails.OrgId || 0),
-      IsActive: true,
-      CreatedBy: 1,
-      UpdatedBy: 1,
-      IsDeleted: false
-    };
+  confirmDeleteRow(row: BranchRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this branch');
+
+    this.confirmationService.confirm({
+      header: 'Delete Confirmation',
+      message: `Are you sure you want to delete ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.deleteRow(row);
+      }
+    });
+  }
+
+  confirmActivateRow(row: BranchRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this branch');
+
+    this.confirmationService.confirm({
+      header: 'Activate Confirmation',
+      message: `Are you sure you want to activate ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-success',
+      accept: () => {
+        this.activateRow(row);
+      }
+    });
+  }
+
+  confirmDeactivateRow(row: BranchRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this branch');
+
+    this.confirmationService.confirm({
+      header: 'Deactivate Confirmation',
+      message: `Are you sure you want to deactivate ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-warn',
+      accept: () => {
+        this.deactivateRow(row);
+      }
+    });
+  }
+
+  resetDialogForm(): void {
+    this.dialogSubmitted = false;
+    this.dialogSaving = false;
+    this.dialogId = 0;
+    this.dialogCode = '';
+    this.dialogName = '';
+    this.dialogPhone = '';
+    this.dialogEmail = '';
+    this.dialogContactPerson = '';
+    this.dialogContactMobileNo = '';
+    this.dialogContactEmail = '';
+    this.dialogAddress1 = '';
+    this.dialogAddress2 = '';
+    this.dialogCity = null;
+    this.dialogState = null;
+    this.dialogCountry = null;
+    this.dialogPostalCode = '';
+    this.dialogRemarks = '';
+  }
+
+  private isDialogFormValid(): boolean {
+    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+
+    return areTextFieldsValid && areSelectFieldsValid;
+  }
+
+  private getRowActionItems(row: BranchRow): MenuItem[] {
+    const items: MenuItem[] = [
+      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+    ];
+
+    if (row.IsActive === true) {
+      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+    } else {
+      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    return items;
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
@@ -391,19 +516,14 @@ export class BranchesComponent implements OnInit {
       return;
     }
 
-    switch (action) {
-      case 'edit':
-        this.editRow(this.selectedRow);
-        break;
-      case 'delete':
-        this.deleteRow(this.selectedRow);
-        break;
-      case 'activate':
-        this.activateRow(this.selectedRow);
-        break;
-      case 'deactivate':
-        this.deactivateRow(this.selectedRow);
-        break;
+    if (action === 'edit') {
+      this.editRow(this.selectedRow);
+    } else if (action === 'delete') {
+      this.confirmDeleteRow(this.selectedRow);
+    } else if (action === 'activate') {
+      this.confirmActivateRow(this.selectedRow);
+    } else {
+      this.confirmDeactivateRow(this.selectedRow);
     }
   }
 }

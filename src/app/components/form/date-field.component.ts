@@ -29,6 +29,10 @@ export class DateFieldComponent {
   @Input() model: Date | null = null;
   @Output() modelChange = new EventEmitter<Date | null>();
 
+  get isValid(): boolean {
+    return !(this.required && !this.model);
+  }
+
   get showRequiredError(): boolean {
     return this.submitted && this.required && !this.model;
   }

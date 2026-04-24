@@ -48,6 +48,7 @@ export class OrganizationComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
   showAddDialog = false;
   isEditMode = false;
   dialogSubmitted = false;
@@ -214,6 +215,7 @@ export class OrganizationComponent implements OnInit {
   }
 
   async submitAddDialog(): Promise<void> {
+    debugger;
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
@@ -251,17 +253,23 @@ export class OrganizationComponent implements OnInit {
     try {
       let response: any;
       if (!payload.Id) {
-       response = await firstValueFrom(this.organizationService.create(payload));
+        response = await firstValueFrom(this.organizationService.create(payload));
       } else {
-         response = await firstValueFrom(this.organizationService.update(payload));
+        response = await firstValueFrom(this.organizationService.update(payload));
       }
+      debugger;
 
-      if (response.ErrorInfo.Message == true && !payload.Id) {
+      if (response.ErrorInfo.Message == true && response.result == "AlreadyExists") {
+        this.toast.warn('Already Exists', `${payload.Name || this.pageTitle} already exists. Please use a different name.`);
+        this.dialogCompanyName = '';
+        return;
+      }
+      else if (response.ErrorInfo.Message == true && !payload.Id) {
         this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
         this.closeAddDialog();
         return;
       }
-        else if (response.ErrorInfo.Message == true && payload.Id) {
+      else if (response.ErrorInfo.Message == true && payload.Id) {
         this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
         this.closeAddDialog();
         return;
@@ -271,13 +279,13 @@ export class OrganizationComponent implements OnInit {
       }
 
     } catch {
-      this.toast.error(payload.Id ? 'Update Failed' :'Save Failed', 'Unable to save organization.');
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save organization.');
     } finally {
       this.dialogSaving = false;
     }
   }
 
-  loadOrganizations(): void{
+  loadOrganizations(): void {
     this.organizationService.getAll().subscribe({
       next: (response) => {
         let RowNumber = 1;
@@ -302,7 +310,7 @@ export class OrganizationComponent implements OnInit {
     return `https://${website}`;
   }
 
-  async editRow(row:any): Promise<void> {
+  async editRow(row: any): Promise<void> {
     this.resetDialogForm();
     this.isEditMode = true;
     this.dialogTitle = 'Edit Organization';
@@ -369,55 +377,55 @@ export class OrganizationComponent implements OnInit {
     this.configImageName = input.files?.[0]?.name ?? '';
   }
 
-  async deleteRow(row:any): Promise<void> {
+  async deleteRow(row: any): Promise<void> {
     try {
-     let response: any = await firstValueFrom(this.organizationService.delete(row['Id']));
-    
-     if (response.ErrorInfo.Message == true) {
-     this.toast.success('Deleted', `${String(row['name'] ?? row['code'] ?? 'Record')} deleted successfully.`);
-      this.loadOrganizations();
-     }
+      let response: any = await firstValueFrom(this.organizationService.delete(row['Id']));
+
+      if (response.ErrorInfo.Message == true) {
+        this.toast.success('Deleted', `${String(row['name'] ?? row['code'] ?? 'Record')} deleted successfully.`);
+        this.loadOrganizations();
+      }
       else {
-      this.toast.error('Delete Failed', response.ErrorInfo.Message || `Unable to delete ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
-     }
+        this.toast.error('Delete Failed', response.ErrorInfo.Message || `Unable to delete ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+      }
 
     } catch {
       this.toast.error('Delete Failed', `Unable to delete ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
-    } 
+    }
   }
 
-  async activateRow(row:any): Promise<void> {
+  async activateRow(row: any): Promise<void> {
     try {
-     let response: any = await firstValueFrom(this.organizationService.activeInActive(row['Id'], true));
-    
-     if (response.ErrorInfo.Message == true) {
-     this.toast.success('Activated', `${String(row['name'] ?? row['code'] ?? 'Record')} activated successfully.`);
-      this.loadOrganizations();
-     }
+      let response: any = await firstValueFrom(this.organizationService.activeInActive(row['Id'], true));
+
+      if (response.ErrorInfo.Message == true) {
+        this.toast.success('Activated', `${String(row['name'] ?? row['code'] ?? 'Record')} activated successfully.`);
+        this.loadOrganizations();
+      }
       else {
-      this.toast.error('Activation Failed', response.ErrorInfo.Message || `Unable to activate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
-     }
+        this.toast.error('Activation Failed', response.ErrorInfo.Message || `Unable to activate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+      }
 
     } catch {
       this.toast.error('Activation Failed', `Unable to activate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
-    } 
+    }
   }
 
-  async deactivateRow(row:any): Promise<void> {
+  async deactivateRow(row: any): Promise<void> {
     try {
-     let response: any = await firstValueFrom(this.organizationService.activeInActive(row['Id'], false));
-    
-     if (response.ErrorInfo.Message == true) {
-     this.toast.success('Deactivated', `${String(row['name'] ?? row['code'] ?? 'Record')} deactivated successfully.`);
-      this.loadOrganizations();
-     }
+      let response: any = await firstValueFrom(this.organizationService.activeInActive(row['Id'], false));
+
+      if (response.ErrorInfo.Message == true) {
+        this.toast.success('Deactivated', `${String(row['name'] ?? row['code'] ?? 'Record')} deactivated successfully.`);
+        this.loadOrganizations();
+      }
       else {
-      this.toast.error('Deactivation Failed', response.ErrorInfo.Message || `Unable to deactivate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
-     }
+        this.toast.error('Deactivation Failed', response.ErrorInfo.Message || `Unable to deactivate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+      }
 
     } catch {
       this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
-    } 
+    }
   }
 
   openRowActions(menu: any, event: Event, row: Record<string, unknown>): void {
@@ -474,7 +482,7 @@ export class OrganizationComponent implements OnInit {
     });
   }
 
-   resetDialogForm(): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
@@ -498,7 +506,10 @@ export class OrganizationComponent implements OnInit {
   }
 
   private isDialogFormValid(): boolean {
-    return this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+
+    return areTextFieldsValid && areSelectFieldsValid;
   }
 
   private resetConfigForm(): void {

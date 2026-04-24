@@ -76,11 +76,12 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Code" inputId="dialog-code" placeholder="Organization Code" [model]="dialogCode"
-       />
+    <app-text-field label="Code" inputId="dialog-code" placeholder="Organization Code" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true" [model]="dialogCode"
+      (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Name" inputId="dialog-companyName" placeholder="Organization Name" [required]="true"
-      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Company name is required."
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."
       [textWithNumbersOnly]="true" formatErrorMessage="Company name allows text and numbers only."
       [model]="dialogCompanyName" (modelChange)="dialogCompanyName = $event" />
 
@@ -93,24 +94,29 @@
       formatErrorMessage="Registration Number allows text and numbers only." [model]="dialogRegistrationNumber"
       (modelChange)="dialogRegistrationNumber = $event" />
 
-    <app-text-field label="Phone Number" inputId="dialog-phoneNumber" placeholder="Phone Number"
-      [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only."
-      [model]="dialogPhoneNumber" (modelChange)="dialogPhoneNumber = $event" />
+    <app-text-field label="Phone Number" inputId="dialog-phoneNumber" placeholder="Phone Number" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Phone Number is required."
+      [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only." [model]="dialogPhoneNumber"
+      (modelChange)="dialogPhoneNumber = $event" />
 
-    <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [submitted]="dialogSubmitted"
-      [emailOnly]="true" formatErrorMessage="Enter a valid Email." [model]="dialogEmail"
-      (modelChange)="dialogEmail = $event" />
+    <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Email is required." [emailOnly]="true"
+      formatErrorMessage="Enter a valid Email." [model]="dialogEmail" (modelChange)="dialogEmail = $event" />
 
     <app-text-field label="Website" inputId="dialog-website" placeholder="Website" [model]="dialogWebsite"
       (modelChange)="dialogWebsite = $event" />
 
     <app-text-field label="Contact Person" inputId="dialog-contactPerson" placeholder="Contact Person"
-      [submitted]="dialogSubmitted" [textOnly]="true" formatErrorMessage="Contact Person allows text only."
-      [model]="dialogContactPerson" (modelChange)="dialogContactPerson = $event" />
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Contact Person is required." [textOnly]="true"
+      formatErrorMessage="Contact Person allows text only." [model]="dialogContactPerson"
+      (modelChange)="dialogContactPerson = $event" />
 
     <app-text-field label="Contact Person Phone" inputId="dialog-contactPersonPhone" placeholder="Contact Person Phone"
-      [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Contact Person Phone allows numbers only."
-      [model]="dialogContactPersonPhone" (modelChange)="dialogContactPersonPhone = $event" />
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Contact Person Phone is required." [numbersOnly]="true"
+      formatErrorMessage="Contact Person Phone allows numbers only." [model]="dialogContactPersonPhone"
+      (modelChange)="dialogContactPersonPhone = $event" />
 
     <app-text-field label="Contact Person Email" inputId="dialog-contactPersonEmail" placeholder="Contact Person Email"
       [submitted]="dialogSubmitted" [emailOnly]="true" formatErrorMessage="Enter a valid Contact Person Email."
@@ -123,17 +129,22 @@
       [model]="dialogAddressLine2" (modelChange)="dialogAddressLine2 = $event" />
 
     <app-select-field label="Country" inputId="dialog-country" placeholder="Choose country" [options]="countryOptions"
-      [numberValue]="true" [model]="dialogCountry" (modelChange)="onCountryChange($event)" />
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Country is required." [numberValue]="true" [model]="dialogCountry"
+      (modelChange)="onCountryChange($event)" />
 
     <app-select-field label="State" inputId="dialog-state" placeholder="Choose state" [options]="stateOptions"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="State is required."
       [numberValue]="true" [model]="dialogState" (modelChange)="onStateChange($event)" />
 
     <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="City is required."
       [numberValue]="true" [model]="dialogCity" (modelChange)="dialogCity = $event" />
 
-    <app-text-field label="Postal Code" inputId="dialog-postalCode" placeholder="Postal Code"
-      [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Postal Code allows numbers only."
-      [model]="dialogPostalCode" (modelChange)="dialogPostalCode = $event" />
+    <app-text-field label="Postal Code" inputId="dialog-postalCode" placeholder="Postal Code" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Postal Code is required."
+      [numbersOnly]="true" formatErrorMessage="Postal Code allows numbers only." [model]="dialogPostalCode"
+      (modelChange)="dialogPostalCode = $event" />
 
     <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks" [model]="dialogRemarks"
       (modelChange)="dialogRemarks = $event" />

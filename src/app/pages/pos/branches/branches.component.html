@@ -1,4 +1,6 @@
 <section class="feature-page">
+  <p-confirmDialog />
+
   <header class="page-header hero-panel">
     <div>
       <p class="eyebrow">{{ pageEyebrow }}</p>
@@ -10,40 +12,20 @@
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
-        <h2>{{ tableTitle }}</h2></div>
+        <h2>{{ tableTitle }}</h2>
+      </div>
     </div>
 
-    <app-shared-table
-      [showFilterButton]="showFilterButton"
-      (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption"
-      [columns]="tableColumns"
-      [value]="tableRows"
-      [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel"
-      [showRowActions]="showRowActions"
-      [rowActionHeader]="rowActionHeader"
-      (toolbarButtonClick)="openAddDialog()"
-    >
+    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
+      (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
-        <p-menu
-          #rowMenu
-          [model]="rowActionItems"
-          [popup]="true"
-          appendTo="body"
-          styleClass="row-action-menu"
-        ></p-menu>
-
-        <button
-          pButton
-          type="button"
-          icon="pi pi-ellipsis-v"
-          [text]="true"
-          [rounded]="true"
-          class="row-action-trigger"
-          (click)="openRowActions(rowMenu, $event, row)"
-        ></button>
+        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
+        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
+          (click)="openRowActions(rowMenu, $event, row)"></button>
       </ng-template>
+
       <ng-template appTableCellTemplate="Status" let-row>
         <span class="status-badge" [class.status-active]="row.Status === 'Active'"
           [class.status-inactive]="row.Status === 'Inactive'">
@@ -54,165 +36,105 @@
   </p-card>
 </section>
 
-<p-dialog
-  [(visible)]="showFilterSidebar"
-  [modal]="true"
-  position="right"
-  [draggable]="false"
-  [resizable]="false"
-  [closable]="true"
-  [dismissableMask]="true"
-  styleClass="filter-drawer-dialog"
-  [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }"
-  (onHide)="closeFilterSidebar()"
->
+<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+  [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
+  [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
   <p-card class="feature-card filter-drawer-card">
     <section class="filter-panel filter-panel-compact">
       <div class="filter-panel-header">
         <div>
           <h2>{{ filterTitle }}</h2>
-          <p class="section-copy">{{ filterDescription }}</p>
         </div>
       </div>
 
       <section class="field-grid">
-        <app-text-field
-          label="Branch Name"
-          inputId="branchName"
-          placeholder="Enter branch name"
-          [model]="filterBranchName"
-          (modelChange)="filterBranchName = $event"
-        ></app-text-field>
+        <app-text-field label="Branch Name" inputId="branchName" placeholder="Enter branch name"
+          [model]="filterBranchName" (modelChange)="filterBranchName = $event" />
       </section>
 
-      <app-action-buttons
-        [primaryLabel]="primaryActionLabel"
-        [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction"
-        (primaryClick)="searchBranches()"
-        (secondaryClick)="resetForm()"
-      ></app-action-buttons>
+      <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchBranches()" (secondaryClick)="resetForm()" />
     </section>
   </p-card>
 </p-dialog>
 
-<p-dialog
-  [(visible)]="showAddDialog"
-  [modal]="true"
-  [style]="{ width: '52rem', maxWidth: '96vw' }"
-  [draggable]="false"
-  [resizable]="false"
-  [closable]="true"
-  (onHide)="closeAddDialog()"
->
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '70rem', maxWidth: '100vw' }" [draggable]="false"
+  [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
-      <p class="eyebrow">Branch Master</p>
       <h3>{{ dialogTitle }}</h3>
       <p>{{ dialogSubtitle }}</p>
     </div>
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field
-      label="Code"
-      inputId="dialog-code"
-      placeholder="Enter branch code"
-      [model]="dialogModel.Code ?? ''"
-      (modelChange)="dialogModel.Code = $event"
-    ></app-text-field>
+    <app-text-field label="Code" inputId="dialog-code" placeholder="Branch Code" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required."
+      [textWithNumbersOnly]="true" formatErrorMessage="Code allows text and numbers only." [disabled]="true" [model]="dialogCode"
+      (modelChange)="dialogCode = $event" />
 
-    <app-text-field
-      label="Branch Name"
-      inputId="dialog-name"
-      placeholder="Enter branch name"
-      [model]="dialogModel.Name ?? ''"
-      (modelChange)="dialogModel.Name = $event"
-    ></app-text-field>
+    <app-text-field label="Name" inputId="dialog-name" placeholder="Branch Name" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."
+      [textWithNumbersOnly]="true" formatErrorMessage="Name allows text and numbers only." [model]="dialogName"
+      (modelChange)="dialogName = $event" />
 
-    <app-text-field
-      label="Phone"
-      inputId="dialog-phone"
-      placeholder="Enter phone number"
-      [model]="dialogModel.Phone ?? ''"
-      (modelChange)="dialogModel.Phone = $event"
-    ></app-text-field>
+    <app-text-field label="Phone Number" inputId="dialog-phone" placeholder="Phone Number" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Phone Number is required."
+      [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only." [model]="dialogPhone"
+      (modelChange)="dialogPhone = $event" />
 
-    <app-text-field
-      label="Email"
-      inputId="dialog-email"
-      placeholder="Enter email"
-      [model]="dialogModel.Email ?? ''"
-      (modelChange)="dialogModel.Email = $event"
-    ></app-text-field>
+    <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Email is required." [emailOnly]="true"
+      formatErrorMessage="Enter a valid Email." [model]="dialogEmail" (modelChange)="dialogEmail = $event" />
 
-    <app-text-field
-      label="Contact Person"
-      inputId="dialog-contactPerson"
-      placeholder="Enter contact person"
-      [model]="dialogModel.ContactPerson ?? ''"
-      (modelChange)="dialogModel.ContactPerson = $event"
-    ></app-text-field>
+    <app-text-field label="Contact Person" inputId="dialog-contact-person" placeholder="Contact Person"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Contact Person is required." [textOnly]="true"
+      formatErrorMessage="Contact Person allows text only." [model]="dialogContactPerson"
+      (modelChange)="dialogContactPerson = $event" />
 
-    <app-text-field
-      label="Contact Mobile"
-      inputId="dialog-contactMobileNo"
-      placeholder="Enter contact mobile number"
-      [model]="dialogModel.ContactMobileNo ?? ''"
-      (modelChange)="dialogModel.ContactMobileNo = $event"
-    ></app-text-field>
+    <app-text-field label="Contact Person Phone" inputId="dialog-contact-phone" placeholder="Contact Person Phone"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Contact Person Phone is required." [numbersOnly]="true"
+      formatErrorMessage="Contact Person Phone allows numbers only." [model]="dialogContactMobileNo"
+      (modelChange)="dialogContactMobileNo = $event" />
 
-    <app-text-field
-      label="Contact Email"
-      inputId="dialog-contactEmail"
-      placeholder="Enter contact email"
-      [model]="dialogModel.ContactEmail ?? ''"
-      (modelChange)="dialogModel.ContactEmail = $event"
-    ></app-text-field>
+    <app-text-field label="Contact Person Email" inputId="dialog-contact-email" placeholder="Contact Person Email"
+      [emailOnly]="true" [submitted]="dialogSubmitted" formatErrorMessage="Enter a valid Contact Person Email."
+      [model]="dialogContactEmail" (modelChange)="dialogContactEmail = $event" />
 
-    <app-text-field
-      label="Address 1"
-      inputId="dialog-address1"
-      placeholder="Enter address line 1"
-      [model]="dialogModel.Address1 ?? ''"
-      (modelChange)="dialogModel.Address1 = $event"
-    ></app-text-field>
+    <app-text-field label="Address Line 1" inputId="dialog-address1" placeholder="Address Line 1"
+      [model]="dialogAddress1" (modelChange)="dialogAddress1 = $event" />
 
-    <app-text-field
-      label="Address 2"
-      inputId="dialog-address2"
-      placeholder="Enter address line 2"
-      [model]="dialogModel.Address2 ?? ''"
-      (modelChange)="dialogModel.Address2 = $event"
-    ></app-text-field>
+    <app-text-field label="Address Line 2" inputId="dialog-address2" placeholder="Address Line 2"
+      [model]="dialogAddress2" (modelChange)="dialogAddress2 = $event" />
 
-    <app-text-field
-      label="Postal Code"
-      inputId="dialog-postalCode"
-      placeholder="Enter postal code"
-      [model]="dialogModel.PostalCode?.toString() ?? ''"
-      (modelChange)="dialogModel.PostalCode = $event ? +$event : undefined"
-    ></app-text-field>
+    <app-select-field label="Country" inputId="dialog-country" placeholder="Choose country" [options]="countryOptions"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Country is required." [numberValue]="true" [model]="dialogCountry"
+      (modelChange)="onCountryChange($event)" />
 
-    <app-text-field
-      label="Remarks"
-      inputId="dialog-remarks"
-      placeholder="Enter remarks"
-      [model]="dialogModel.Remarks ?? ''"
-      (modelChange)="dialogModel.Remarks = $event"
-    ></app-text-field>
+    <app-select-field label="State" inputId="dialog-state" placeholder="Choose state" [options]="stateOptions"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="State is required."
+      [numberValue]="true" [model]="dialogState" (modelChange)="onStateChange($event)" />
+
+    <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="City is required."
+      [numberValue]="true" [model]="dialogCity" (modelChange)="dialogCity = $event" />
+
+    <app-text-field label="Postal Code" inputId="dialog-postal-code" placeholder="Postal Code" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Postal Code is required."
+      [numbersOnly]="true" formatErrorMessage="Postal Code allows numbers only." [model]="dialogPostalCode"
+      (modelChange)="dialogPostalCode = $event" />
+
+    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks" [model]="dialogRemarks"
+      (modelChange)="dialogRemarks = $event" />
   </section>
 
   <div class="dialog-actions">
-    <app-action-buttons
-      [primaryLabel]="dialogPrimaryActionLabel"
-      secondaryLabel="Cancel"
-      primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times"
-      [secondaryText]="true"
-      [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()"
-      (secondaryClick)="closeAddDialog()"
-    ></app-action-buttons>
+    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-refresh" [primaryLoading]="dialogSaving" [primaryDisabled]="dialogSaving"
+      [secondaryDisabled]="dialogSaving" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()" />
   </div>
 </p-dialog>

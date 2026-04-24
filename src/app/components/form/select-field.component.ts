@@ -33,6 +33,10 @@ export class SelectFieldComponent {
   @Input() model: SelectFieldValue = null;
   @Output() modelChange = new EventEmitter<any>();
 
+  get isValid(): boolean {
+    return !(this.required && !this.model);
+  }
+
   get showRequiredError(): boolean {
     return this.submitted && this.required && !this.model;
   }

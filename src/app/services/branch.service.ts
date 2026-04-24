@@ -29,11 +29,6 @@ export interface Branch {
   IsDeleted?: boolean;
 }
 
-export interface BranchStatusRequest {
-  id: number | string;
-  isActive: boolean;
-}
-
 @Injectable({
   providedIn: 'root'
 })
@@ -66,9 +61,9 @@ export class BranchService {
     );
   }
 
-  getById(id: number | string): Observable<Branch> {
+  getById(id: number | string): Observable<any> {
 
-    return this.http.get<Branch>(
+    return this.http.get<any>(
       `${this.baseUrl}/${this.controllerPath}/GetBranchbyId?id=${id}`
     );
   }
