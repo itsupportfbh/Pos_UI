@@ -4,17 +4,20 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
 import { Category, CategoryService } from '../../../services/Category.service';
 
-type CategoryRow = {
+type SubCategoryRow = {
   id: number;
   code: string;
   name: string;
+  categoryId: number;
   orgId: number;
   isActive: boolean;
   createdBy?: number | null;
@@ -26,10 +29,11 @@ type CategoryRow = {
   rowNumber: number;
 };
 
-const CATEGORY_COLUMNS: SharedTableColumn<CategoryRow>[] = [
+const SUBCATEGORY_COLUMNS: SharedTableColumn<SubCategoryRow>[] = [
   { field: 'RowNumber', header: '#', sortable: false, width: '5rem' },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
+  { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem' },
   {
     field: 'Status',
     header: 'Status',
@@ -41,12 +45,13 @@ const CATEGORY_COLUMNS: SharedTableColumn<CategoryRow>[] = [
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
-  templateUrl: './categories.component.html',
-  styleUrl: './categories.component.css'
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent],
+  templateUrl: './subcategory.component.html',
+  styleUrl: './subcategory.component.css'
 })
-export class CategoriesComponent {
+export class SubCategoryComponent {
   private readonly toast = inject(AppToastService);
+  private readonly SubcategoryService = inject(subCategoryService);
   private readonly categoryService = inject(CategoryService);
   private readonly changeDetector = inject(ChangeDetectorRef);
 
@@ -54,37 +59,41 @@ export class CategoriesComponent {
   showFilterSidebar = false;
   isLoading = false;
   isEditMode = false;
-  filterCategoryName = '';
-  dialogCategoryCode = '';
-  dialogCategoryName = '';
+  filterSubCategoryName = '';
+  dialogSubCategoryCode = '';
+  dialogSubCategoryName = '';
   OrgId = 0;
 
-  tableRows: CategoryRow[] = [];
-  selectedRow: CategoryRow | null = null;
-  editingCategoryId: number | null = null;
+  tableRows: SubCategoryRow[] = [];
+  selectedRow: SubCategoryRow | null = null;
+  editingSubCategoryId: number | null = null;
 
-  dialogModel: Category = {
+  categoryOptions: any[] = [];
+  dialogCategory: number | null = null;
+
+  dialogModel: subCategory = {
     Id: 0,
     code: '',
     name: '',
+    categoryId: 0,
     OrgId: this.OrgId,
     IsActive: true,
     CreatedBy: 1,
     UpdatedBy: 1,
     IsDeleted: false
-  };  
+  };
 
-  readonly filterTitle = `${'Categories'} Filters`;
-  readonly filterDescription = `API data will be loaded for ${'Categories'.toLowerCase()}.`;
-  readonly fields: any[] = [{ key: 'categoryName', label: 'Category Name', type: 'text', placeholder: 'Enter category name' }];
-  readonly primaryActionLabel = `Search ${'Categories'}`;
+  readonly filterTitle = `${'SubCategories'} Filters`;
+  readonly filterDescription = `API data will be loaded for ${'SubCategories'.toLowerCase()}.`;
+  readonly fields: any[] = [{ key: 'SubcategoryName', label: 'SubCategory Name', type: 'text', placeholder: 'Enter subcategory name' }];
+  readonly primaryActionLabel = `Search ${'SubCategories'}`;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  readonly dialogTitle = 'Create Category';
+  readonly dialogTitle = 'Create SubCategory';
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Categories';
-  readonly tableCaption = 'Categories';
-  readonly tableColumns = CATEGORY_COLUMNS;
+  readonly tableTitle = 'SubCategories';
+  readonly tableCaption = 'SubCategories';
+  readonly tableColumns = SUBCATEGORY_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
   readonly showFilterButton = true;
@@ -101,13 +110,23 @@ export class CategoriesComponent {
     const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     const userId = Number(userDetails.UserId || 0);
     this.OrgId = Number(userDetails.OrgId || 0);
+    this.loadSubCategories();
     this.loadCategories();
   }
 
-  loadCategories(): void {
+  loadCategories() {
+    this.categoryService.getAll(this.OrgId).subscribe((res: any) => {
+      this.categoryOptions = (res.result || []).map((item: any) => ({
+        label: item.name,
+        value: item.id
+      }));
+    });
+  }
+
+  loadSubCategories(): void {
     this.isLoading = true;
 
-    this.categoryService.getAll(this.OrgId).subscribe({
+    this.SubcategoryService.getAll(this.OrgId).subscribe({
       next: (response: any) => {
         const result = response?.result ?? response ?? [];
         let RowNumber = 1;
@@ -130,11 +149,11 @@ export class CategoriesComponent {
     });
   }
 
-  searchCategories(): void {
-    const searchText = this.filterCategoryName.trim().toLowerCase();
+  searchSubCategories(): void {
+    const searchText = this.filterSubCategoryName.trim().toLowerCase();
 
     if (!searchText) {
-      this.loadCategories();
+      this.loadSubCategories();
       return;
     }
 
@@ -145,8 +164,8 @@ export class CategoriesComponent {
   }
 
   resetForm(): void {
-    this.filterCategoryName = '';
-    this.loadCategories();
+    this.filterSubCategoryName = '';
+    this.loadSubCategories();
   }
 
   openFilterSidebar(): void {
@@ -158,7 +177,7 @@ export class CategoriesComponent {
   }
   openAddDialog(): void {
     this.isEditMode = false;
-    this.editingCategoryId = null;
+    this.editingSubCategoryId = null;
     this.resetDialogForm();
     this.showAddDialog = true;
   }
@@ -170,40 +189,40 @@ export class CategoriesComponent {
 
   submitAddDialog(): void {
     if (!this.dialogModel.code?.trim()) {
-      this.toast.warn('Validation', 'Category code is required.');
+      this.toast.warn('Validation', 'Sub Category code is required.');
       return;
     }
 
     if (!this.dialogModel.name?.trim()) {
-      this.toast.warn('Validation', 'Category name is required.');
+      this.toast.warn('Validation', 'Sub Category name is required.');
       return;
     }
-    debugger;
+    
 
-    const payload: Category = {
+    const payload: subCategory = {
       ...this.dialogModel,
       OrgId: this.OrgId,
       IsActive: this.dialogModel.IsActive ?? true,
       IsDeleted: false
     };
 
-    if (this.isEditMode && this.editingCategoryId) {
-      payload.Id = this.editingCategoryId;
+    if (this.isEditMode && this.editingSubCategoryId) {
+      payload.Id = this.editingSubCategoryId;
       payload.UpdatedBy = 1;
 
-      this.categoryService.update(payload).subscribe({
+      this.SubcategoryService.update(payload).subscribe({
         next: (response: any) => {
           if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-            this.toast.warn('Duplicate', 'Category already exists.');
+            this.toast.warn('Duplicate', 'SubCategory already exists.');
             return;
           }
 
-          this.toast.success('Updated', 'Category updated successfully.');
+          this.toast.success('Updated', 'SubCategory updated successfully.');
           this.closeAddDialog();
-          this.loadCategories();
+          this.loadSubCategories();
         },
         error: () => {
-          this.toast.error('Update Failed', 'Unable to update category.');
+          this.toast.error('Update Failed', 'Unable to update subcategory.');
         }
       });
 
@@ -212,28 +231,28 @@ export class CategoriesComponent {
 
     payload.CreatedBy = 1;
 
-    this.categoryService.create(payload).subscribe({
+    this.SubcategoryService.create(payload).subscribe({
       next: (response: any) => {
         if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-          this.toast.warn('Duplicate', 'Category already exists.');
+          this.toast.warn('Duplicate', 'SubCategory already exists.');
           return;
         }
 
-        this.toast.success('Saved', 'Category saved successfully.');
+        this.toast.success('Saved', 'SubCategory saved successfully.');
         this.closeAddDialog();
-        this.loadCategories();
+        this.loadSubCategories();
       },
       error: () => {
-        this.toast.error('Save Failed', 'Unable to save Category.');
+        this.toast.error('Save Failed', 'Unable to save subcategory.');
       }
     });
   }
 
-  editRow(row: CategoryRow): void {
+  editRow(row: SubCategoryRow): void {
     this.isEditMode = true;
-    this.editingCategoryId = row.id;
+    this.editingSubCategoryId = row.id;
 
-    this.categoryService.getById(row.id).subscribe({
+    this.SubcategoryService.getById(row.id).subscribe({
       next: (response: any) => {
         const category = response?.result?.[0] ?? response?.result ?? response;
 
@@ -241,6 +260,7 @@ export class CategoriesComponent {
           Id: category?.id ?? category?.Id ?? row.id,
           code: category?.code ?? category?.Code ?? row.code,
           name: category?.name ?? category?.Name ?? row.name,
+          categoryId: category?.categoryId ?? category?.CategoryId ?? row.categoryId,
           OrgId: category?.orgId ?? category?.OrgId ?? row.orgId,
           IsActive: category?.isActive ?? category?.IsActive ?? row.isActive,
           CreatedBy: category?.createdBy ?? category?.CreatedBy ?? 1,
@@ -259,43 +279,43 @@ export class CategoriesComponent {
     });
   }
 
-  deleteRow(row: CategoryRow): void {
-    this.categoryService.delete(row.id).subscribe({
+  deleteRow(row: SubCategoryRow): void {
+    this.SubcategoryService.delete(row.id).subscribe({
       next: () => {
         this.toast.warn('Deleted', `${row.name} removed successfully.`);
-        this.loadCategories();
+        this.loadSubCategories();
       },
       error: () => {
-        this.toast.error('Delete Failed', 'Unable to delete category.');
+        this.toast.error('Delete Failed', 'Unable to delete subcategory.');
       }
     });
   }
 
-  activateRow(row: CategoryRow): void {
-    this.categoryService.activeInActive(row.id, true).subscribe({
+  activateRow(row: SubCategoryRow): void {
+    this.SubcategoryService.activeInActive(row.id, true).subscribe({
       next: () => {
         this.toast.success('Status Updated', `${row.name} marked as active.`);
-        this.loadCategories();
+        this.loadSubCategories();
       },
       error: () => {
-        this.toast.error('Update Failed', 'Unable to activate category.');
+        this.toast.error('Update Failed', 'Unable to activate subcategory.');
       }
     });
   }
 
-  deactivateRow(row: CategoryRow): void {
-    this.categoryService.activeInActive(row.id, false).subscribe({
+  deactivateRow(row: SubCategoryRow): void {
+    this.SubcategoryService.activeInActive(row.id, false).subscribe({
       next: () => {
         this.toast.info('Status Updated', `${row.name} marked as inactive.`);
-        this.loadCategories();
+        this.loadSubCategories();
       },
       error: () => {
-        this.toast.error('Update Failed', 'Unable to deactivate category.');
+        this.toast.error('Update Failed', 'Unable to deactivate subcategory.');
       }
     });
   }
 
-  openRowActions(menu: any, event: Event, row: CategoryRow): void {
+  openRowActions(menu: any, event: Event, row: SubCategoryRow): void {
     this.selectedRow = row;
     menu.toggle(event);
   }
@@ -321,11 +341,12 @@ export class CategoriesComponent {
       Id: 0,
       code: '',
       name: '',
+      categoryId: 0,
       OrgId: this.OrgId,
       IsActive: true,
       CreatedBy: 1,
       UpdatedBy: 1,
       IsDeleted: false
     };
-  } 
+  }
 }
