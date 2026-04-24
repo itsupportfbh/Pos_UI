@@ -30,7 +30,7 @@ type MenuRow = {
 };
 
 const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
-  { field: 'RowNumber', header: '#', sortable: false, width: '5rem' },
+  { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem' },
@@ -140,7 +140,7 @@ export class MenusComponent {
       error: () => {
         this.toast.error(
           'Load Failed',
-          'Unable to load categories. Please check API and try again.'
+          'Unable to load menus. Please check API and try again.'
         );
       },
       complete: () => {
@@ -254,27 +254,27 @@ export class MenusComponent {
 
     this.menuService.getById(row.id).subscribe({
       next: (response: any) => {
-        const category = response?.result?.[0] ?? response?.result ?? response;
+        const menu = response?.result?.[0] ?? response?.result ?? response;
 
         this.dialogModel = {
-          Id: category?.id ?? category?.Id ?? row.id,
-          code: category?.code ?? category?.Code ?? row.code,
-          name: category?.name ?? category?.Name ?? row.name,
-          categoryId: category?.categoryId ?? category?.CategoryId ?? row.categoryId,
-          OrgId: category?.orgId ?? category?.OrgId ?? row.orgId,
-          IsActive: category?.isActive ?? category?.IsActive ?? row.isActive,
-          CreatedBy: category?.createdBy ?? category?.CreatedBy ?? 1,
-          CreatedDate: category?.createdDate ?? category?.CreatedDate,
-          UpdatedBy: category?.createdBy ?? category?.CreatedBy ?? 1,
-          UpdatedDate: category?.updatedDate ?? category?.UpdatedDate,
-          IsDeleted: category?.isDeleted ?? category?.IsDeleted ?? false
+          Id: menu?.id ?? menu?.Id ?? row.id,
+          code: menu?.code ?? menu?.Code ?? row.code,
+          name: menu?.name ?? menu?.Name ?? row.name,
+          categoryId: menu?.categoryId ?? menu?.CategoryId ?? row.categoryId,
+          OrgId: menu?.orgId ?? menu?.OrgId ?? row.orgId,
+          IsActive: menu?.isActive ?? menu?.IsActive ?? row.isActive,
+          CreatedBy: menu?.createdBy ?? menu?.CreatedBy ?? 1,
+          CreatedDate: menu?.createdDate ?? menu?.CreatedDate,
+          UpdatedBy: menu?.updatedBy ?? menu?.UpdatedBy ?? 1,
+          UpdatedDate: menu?.updatedDate ?? menu?.UpdatedDate,
+          IsDeleted: menu?.isDeleted ?? menu?.IsDeleted ?? false
         };
 
         this.showAddDialog = true;
         this.toast.info('Edit Mode', `Editing ${row.name}.`);
       },
       error: () => {
-        this.toast.error('Load Failed', 'Unable to load category details.');
+        this.toast.error('Load Failed', 'Unable to load menu details.');
       }
     });
   }

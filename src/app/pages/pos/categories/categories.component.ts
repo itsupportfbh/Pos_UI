@@ -27,7 +27,7 @@ type CategoryRow = {
 };
 
 const CATEGORY_COLUMNS: SharedTableColumn<CategoryRow>[] = [
-  { field: 'RowNumber', header: '#', sortable: false, width: '5rem' },
+  { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   {

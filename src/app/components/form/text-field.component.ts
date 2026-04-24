@@ -40,6 +40,10 @@ export class TextFieldComponent {
   @Input() readonly = false;
   @Input() minlength?: number;
   @Input() maxlength?: number;
+  @Input() inputMode = '';
+  @Input() step?: string;
+  @Input() min?: number;
+  @Input() max?: number;
   @Input() model = '';
   @Output() modelChange = new EventEmitter<string>();
 
