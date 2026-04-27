@@ -1,4 +1,6 @@
 <section class="feature-page">
+  <p-confirmDialog />
+
   <header class="page-header hero-panel">
     <div>
       <p class="eyebrow">{{ pageEyebrow }}</p>
@@ -13,10 +15,19 @@
         <h2>{{ tableTitle }}</h2></div>
     </div>
 
+ 
+
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()" [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton" [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader" (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
         <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger" (click)="openRowActions(rowMenu, $event, row)"></button>
+      </ng-template>
+
+      <ng-template appTableCellTemplate="Status" let-row>
+        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+          [class.status-inactive]="row.Status === 'Inactive'">
+          {{ row.Status }}
+        </span>
       </ng-template>
     </app-shared-table>
   </p-card>
@@ -34,19 +45,34 @@
         <section class="field-grid">
           <app-text-field
             label="Counter Name"
-            inputId="departmentName"
+            inputId="CounterName"
             placeholder="Main Billing Counter"
-            [model]="filterDepartmentName"
-            (modelChange)="filterDepartmentName = $event"
+            [model]="filterCounterName"
+            (modelChange)="filterCounterName = $event"
           />
         </section>
+        <!-- Branch dropdown starts -->
+  <div class="mb-3" style="max-width: 280px;">
+    <app-select-field
+      label="Branch"
+      inputId="counter-branch-filter"
+      placeholder="Choose branch"
+      [options]="branchOptions"
+      [numberValue]="true"
+      [model]="selectedBranchId"
+      (modelChange)="onBranchChange($event)"
+     >
+    </app-select-field>
+  </div>
+  <!-- Branch dropdown ends -->
 
-        <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel" [showSecondary]="showSecondaryAction" (secondaryClick)="resetForm()" />
+
+        <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel" [showSecondary]="showSecondaryAction"(primaryClick)="searchCounters()" (secondaryClick)="resetForm()" />
       </section>
     </p-card>
 </p-dialog>
 @if (showAddNewButton) {
-  <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
     <ng-template pTemplate="header">
       <div class="dialog-copy">
         <p class="eyebrow">Create Master</p>
@@ -56,34 +82,82 @@
     </ng-template>
 
     <section class="field-grid dialog-grid">
-      <app-text-field
-        label="Counter Name"
-        inputId="dialog-departmentName"
-        placeholder="Takeaway Counter"
-        [model]="dialogDepartmentName"
-        (modelChange)="dialogDepartmentName = $event"
-      />
+  <app-text-field
+    label="Counter Code"
+    inputId="dialog-counterCode"
+    placeholder="CTR001"
+    [required]="true"
+    [showRequiredMark]="true"
+    [submitted]="dialogSubmitted"
+    errorMessage="Counter Code is required."
+    [textWithNumbersOnly]="true"
+    formatErrorMessage="Counter Code allows text and numbers only."
+    [model]="dialogCounterCode"
+    (modelChange)="dialogCounterCode = $event"
+  />
 
-      <app-select-field
-        label="Branch"
-        inputId="dialog-branch"
-        placeholder="Choose branch"
-        [options]="branchOptions"
-        [model]="dialogBranch"
-        (modelChange)="dialogBranch = $event"
-      />
-    </section>
+  <app-text-field
+    label="Counter Name"
+    inputId="dialog-counterName"
+    placeholder="Takeaway Counter"
+    [required]="true"
+    [showRequiredMark]="true"
+    [submitted]="dialogSubmitted"
+    errorMessage="Counter Name is required."
+    [textWithNumbersOnly]="true"
+    formatErrorMessage="Counter Name allows text and numbers only."
+    [model]="dialogCounterName"
+    (modelChange)="dialogCounterName = $event"
+  />
+
+  <app-text-field
+    label="Phone"
+    inputId="dialog-phone"
+    placeholder="9876543210"
+    [submitted]="dialogSubmitted"
+    [numbersOnly]="true"
+    formatErrorMessage="Phone allows numbers only."
+    [model]="dialogPhone"
+    (modelChange)="dialogPhone = $event"
+  />
+  
+  <app-select-field
+  label="Branch"
+  inputId="dialog-counter-branch"
+  placeholder="Choose branch"
+  [options]="branchOptions"
+  [required]="true"
+  [showRequiredMark]="true"
+  [submitted]="dialogSubmitted"
+  errorMessage="Branch is required."
+  [numberValue]="true"
+  [model]="dialogBranch"
+  (modelChange)="dialogBranch = $event">
+</app-select-field>
+
+  <app-text-field
+    label="Remarks"
+    inputId="dialog-remarks"
+    placeholder="Enter remarks"
+    [model]="dialogRemarks"
+    (modelChange)="dialogRemarks = $event"
+  />
+</section>
+    
 
     <div class="dialog-actions">
       <app-action-buttons
         [primaryLabel]="dialogPrimaryActionLabel"
-        secondaryLabel="Cancel"
+        secondaryLabel="Clear"
         primaryIcon="pi pi-save"
-        secondaryIcon="pi pi-times"
+        secondaryIcon="pi pi-refresh"
+        [primaryLoading]="dialogSaving"
+        [primaryDisabled]="dialogSaving"
+        [secondaryDisabled]="dialogSaving"
         [secondaryText]="true"
         [secondaryOutlined]="false"
-        (primaryClick)="submitAddDialog()"
-        (secondaryClick)="closeAddDialog()"
+        (primaryClick)="submitAddCounter()"
+        (secondaryClick)="resetDialogForm()"
       />
     </div>
   </p-dialog>

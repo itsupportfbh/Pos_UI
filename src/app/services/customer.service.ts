@@ -4,12 +4,22 @@ import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
 import { RuntimeConfigService } from './runtime-config.service';
 
-export interface Counter {
+export interface Customer {
   Id?: number;
   Code?: string;
   Name?: string;
-  Phone?: string;
-  BranchId?: number;
+  MobileNo?: string;
+  EmailId?: string;
+  AddressLine1?: string;
+  CityId?: number | null;
+  StateId?: number | null;
+  CountryId?: number | null;
+  Pincode?: string;
+  DateOfBirth?: string | null;
+  Gender?: string;
+  MemberNo?: string;
+  OpeningBalance?: number;
+  IsMember?: boolean;
   Remarks?: string;
   OrgId?: number;
   IsActive?: boolean;
@@ -20,43 +30,39 @@ export interface Counter {
   IsDeleted?: boolean;
 }
 
-export interface CounterStatusRequest {
-  id: number | string;
-  isActive: boolean;
-}
-
 @Injectable({
   providedIn: 'root'
 })
-export class CounterService {
-  private readonly controllerPath = 'Counter';
+export class CustomerService {
+  private readonly controllerPath = 'Customer';
 
   constructor(
     private readonly http: HttpClient,
     private readonly runtimeConfig: RuntimeConfigService
   ) {}
 
-  create(payload: Counter): Observable<any> {
+  create(payload: Customer): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/${this.controllerPath}/Create`, payload);
   }
 
-  update(payload: Counter): Observable<any> {
+  update(payload: Customer): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(orgId: number, branchId: number): Observable<ApiListResponse<Counter>> {
-    return this.http.get<ApiListResponse<Counter>>(
-      `${this.baseUrl}/${this.controllerPath}/GetAllCounter?orgId=${orgId}&branchId=${branchId}`
+  getAll(orgId: number): Observable<ApiListResponse<Customer>> {
+    return this.http.get<ApiListResponse<Customer>>(
+      `${this.baseUrl}/${this.controllerPath}/GetAllCustomer?orgId=${orgId}`
     );
   }
 
   getById(id: number | string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetCounterbyId?id=${id}`);
+    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetCustomerbyId?id=${id}`);
   }
 
   delete(id: number | string): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/Delete?id=${id}`);
+    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`);
   }
+
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
     const params = new HttpParams()
       .set('Id', id.toString())
