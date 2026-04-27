@@ -184,7 +184,9 @@ export class MenusComponent {
 
   closeAddDialog(): void {
     this.resetDialogForm();
-    //this.showAddDialog = false;
+    this.loadMenus();
+    this.isEditMode = false;
+    this.showAddDialog = false;
   }
 
   submitAddDialog(): void {
