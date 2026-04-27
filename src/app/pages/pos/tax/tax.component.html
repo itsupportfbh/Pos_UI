@@ -1,4 +1,6 @@
 <section class="feature-page">
+  <p-confirmDialog />
+  
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
@@ -57,14 +59,14 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Tax Code" inputId="dialog-taxCode" placeholder="TAX-01" [model]="dialogModel.code ?? ''"
+    <app-text-field label="Tax Code" inputId="dialog-taxCode" [showRequiredMark]="true" placeholder="TAX-01" [model]="dialogModel.code ?? ''"
       (modelChange)="dialogModel.code = $event" />
 
-    <app-text-field label="Tax Name" inputId="dialog-taxName" placeholder="Tax9.00" [model]="dialogModel.name ?? ''"
+    <app-text-field label="Tax Name" inputId="dialog-taxName" [showRequiredMark]="true" placeholder="Tax9.00" [model]="dialogModel.name ?? ''"
       (modelChange)="dialogModel.name = $event" />
 
-    <app-text-field label="Tax Rate" inputId="dialog-taxRate" type="number" inputMode="decimal" step="0.01" [min]="0" placeholder="9.00"
-      [model]="(dialogModel.rate ?? 0).toString()" (modelChange)="dialogModel.rate = +$event" />
+    <app-text-field label="Tax Rate" inputId="dialog-taxRate" [showRequiredMark]="true" type="number"
+      [model]="dialogModel.percentage?.toString() ?? ''" (modelChange)="onRateChange($event)" />
 
   </section>
 

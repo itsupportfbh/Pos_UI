@@ -6,12 +6,12 @@ import { DialogModule } from 'primeng/dialog';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { MenuItem } from 'primeng/api';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
-import { Tax, TaxService } from '../../../services/taxservice';
-import { subCategory } from '../../../services/SubCategory.service';
+import { Tax, TaxService } from '../../../services/tax.service';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 type TaxRow = {
     id: number;
@@ -45,13 +45,15 @@ const TAX_COLUMNS: SharedTableColumn<TaxRow>[] = [
 @Component({
     selector: 'app-taxes',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent],
+    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule],
+    providers: [ConfirmationService],
     templateUrl: './tax.component.html',
     styleUrl: './tax.component.css'
 })
 export class TaxComponent {
     private readonly toast = inject(AppToastService);
     private readonly TaxService = inject(TaxService);
+    private readonly confirmationService = inject(ConfirmationService);
     private readonly changeDetector = inject(ChangeDetectorRef);
 
     showAddDialog = false;
@@ -73,7 +75,7 @@ export class TaxComponent {
         Id: 0,
         code: '',
         name: '',
-        rate: 0,
+        percentage: 0,
         OrgId: this.OrgId,
         IsActive: true,
         CreatedBy: 1,
@@ -87,8 +89,8 @@ export class TaxComponent {
     readonly primaryActionLabel = `Search ${'Taxes'}`;
     readonly secondaryActionLabel = 'Clear Filters';
     readonly showSecondaryAction = true;
-    readonly dialogTitle = 'Create Tax';
-    readonly dialogPrimaryActionLabel = 'Save';
+    dialogTitle = 'Create Tax';
+    dialogPrimaryActionLabel = 'Save';
     readonly tableTitle = 'Taxes';
     readonly tableCaption = 'Taxes';
     readonly tableColumns = TAX_COLUMNS;
@@ -97,12 +99,7 @@ export class TaxComponent {
     readonly showFilterButton = true;
     readonly showRowActions = true;
     readonly rowActionHeader = 'Actions';
-    readonly rowActionItems: MenuItem[] = [
-        { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
-        { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
-        { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
-        { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
-    ];
+    rowActionItems: MenuItem[] = [];
 
     ngOnInit(): void {
         const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -168,11 +165,15 @@ export class TaxComponent {
         this.editingTaxId = null;
         this.resetDialogForm();
         this.showAddDialog = true;
+        this.dialogTitle = 'Create Tax';
+        this.dialogPrimaryActionLabel = 'Save';
     }
 
     closeAddDialog(): void {
         this.resetDialogForm();
-        //this.showAddDialog = false;
+        this.loadTaxes();
+        this.isEditMode = false;
+        this.showAddDialog = false;
     }
 
     submitAddDialog(): void {
@@ -180,12 +181,14 @@ export class TaxComponent {
             this.toast.warn('Validation', 'Tax code is required.');
             return;
         }
-
         if (!this.dialogModel.name?.trim()) {
             this.toast.warn('Validation', 'Tax name is required.');
             return;
         }
-
+        if (!this.dialogModel.percentage || this.dialogModel.percentage <= 0) {
+            this.toast.warn('Validation', 'Tax percentage is required.');
+            return;
+        }
 
         const payload: Tax = {
             ...this.dialogModel,
@@ -238,9 +241,15 @@ export class TaxComponent {
         });
     }
 
+    onRateChange(value: string): void {
+        this.dialogModel.percentage = value ? parseFloat(value) : 0;
+    }
+
     editRow(row: TaxRow): void {
         this.isEditMode = true;
         this.editingTaxId = row.id;
+        this.dialogTitle = 'Edit Tax';
+        this.dialogPrimaryActionLabel = 'Update';
 
         this.TaxService.getById(row.id).subscribe({
             next: (response: any) => {
@@ -250,7 +259,7 @@ export class TaxComponent {
                     Id: tax?.id ?? tax?.Id ?? row.id,
                     code: tax?.code ?? tax?.Code ?? row.code,
                     name: tax?.name ?? tax?.Name ?? row.name,
-                    rate: tax?.rate ?? tax?.Rate ?? row.rate,
+                    percentage: tax?.rate ?? tax?.Rate ?? row.rate,
                     OrgId: tax?.orgId ?? tax?.OrgId ?? row.orgId,
                     IsActive: tax?.isActive ?? tax?.IsActive ?? row.isActive,
                     CreatedBy: tax?.createdBy ?? tax?.CreatedBy ?? 1,
@@ -264,7 +273,7 @@ export class TaxComponent {
                 this.toast.info('Edit Mode', `Editing ${row.name}.`);
             },
             error: () => {
-                this.toast.error('Load Failed', 'Unable to load category details.');
+                this.toast.error('Load Failed', 'Unable to load tax details.');
             }
         });
     }
@@ -305,9 +314,73 @@ export class TaxComponent {
         });
     }
 
+    confirmDeleteRow(row: TaxRow): void {
+        const name = row.name ?? row.code ?? 'this Category';
+
+        this.confirmationService.confirm({
+            header: 'Delete Confirmation',
+            message: `Are you sure you want to delete ${name}?`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'Yes',
+            rejectLabel: 'No',
+            acceptButtonStyleClass: 'p-button-danger',
+            accept: () => {
+                this.deleteRow(row);
+            }
+        });
+    }
+
+    confirmActivateRow(row: TaxRow): void {
+        const name = row.name ?? row.code ?? 'this Category';
+
+        this.confirmationService.confirm({
+            header: 'Activate Confirmation',
+            message: `Are you sure you want to activate ${name}?`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'Yes',
+            rejectLabel: 'No',
+            acceptButtonStyleClass: 'p-button-success',
+            accept: () => {
+                this.activateRow(row);
+            }
+        });
+    }
+
+    confirmDeactivateRow(row: TaxRow): void {
+        const name = row.name ?? row.code ?? 'this category';
+
+        this.confirmationService.confirm({
+            header: 'Inactive Confirmation',
+            message: `Are you sure you want to inactive ${name}?`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptLabel: 'Yes',
+            rejectLabel: 'No',
+            acceptButtonStyleClass: 'p-button-warn',
+            accept: () => {
+                this.deactivateRow(row);
+            }
+        });
+    }
+
     openRowActions(menu: any, event: Event, row: TaxRow): void {
         this.selectedRow = row;
+        this.rowActionItems = this.getRowActionItems(row);
         menu.toggle(event);
+    }
+
+    private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
+        const items: MenuItem[] = [
+            { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+        ];
+
+        if (row['isactive'] === true) {
+            items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+            items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+        } else {
+            items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+        }
+
+        return items;
     }
 
     private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
@@ -318,11 +391,11 @@ export class TaxComponent {
         if (action === 'edit') {
             this.editRow(this.selectedRow);
         } else if (action === 'delete') {
-            this.deleteRow(this.selectedRow);
+            this.confirmDeleteRow(this.selectedRow);
         } else if (action === 'activate') {
-            this.activateRow(this.selectedRow);
+            this.confirmActivateRow(this.selectedRow);
         } else {
-            this.deactivateRow(this.selectedRow);
+            this.confirmDeactivateRow(this.selectedRow);
         }
     }
 
@@ -330,8 +403,8 @@ export class TaxComponent {
         this.dialogModel = {
             Id: 0,
             code: '',
-            name: '', 
-            rate: 0,
+            name: '',
+            percentage: 0,
             OrgId: this.OrgId,
             IsActive: true,
             CreatedBy: 1,

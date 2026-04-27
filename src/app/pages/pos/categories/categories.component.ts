@@ -5,11 +5,12 @@ import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { MenuItem } from 'primeng/api';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Category, CategoryService } from '../../../services/Category.service';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 type CategoryRow = {
   id: number;
@@ -41,7 +42,8 @@ const CATEGORY_COLUMNS: SharedTableColumn<CategoryRow>[] = [
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule],
+  providers: [ConfirmationService],
   templateUrl: './categories.component.html',
   styleUrl: './categories.component.css'
 })
@@ -49,6 +51,7 @@ export class CategoriesComponent {
   private readonly toast = inject(AppToastService);
   private readonly categoryService = inject(CategoryService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly confirmationService = inject(ConfirmationService);
 
   showAddDialog = false;
   showFilterSidebar = false;
@@ -72,7 +75,7 @@ export class CategoriesComponent {
     CreatedBy: 1,
     UpdatedBy: 1,
     IsDeleted: false
-  };  
+  };
 
   readonly filterTitle = `${'Categories'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'Categories'.toLowerCase()}.`;
@@ -80,8 +83,8 @@ export class CategoriesComponent {
   readonly primaryActionLabel = `Search ${'Categories'}`;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  readonly dialogTitle = 'Create Category';
-  readonly dialogPrimaryActionLabel = 'Save';
+  dialogTitle = 'Create Category';
+  dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Categories';
   readonly tableCaption = 'Categories';
   readonly tableColumns = CATEGORY_COLUMNS;
@@ -90,7 +93,7 @@ export class CategoriesComponent {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-  readonly rowActionItems: MenuItem[] = [
+  rowActionItems: MenuItem[] = [
     { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
     { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
     { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
@@ -161,11 +164,15 @@ export class CategoriesComponent {
     this.editingCategoryId = null;
     this.resetDialogForm();
     this.showAddDialog = true;
+    this.dialogTitle = 'Create Category';
+    this.dialogPrimaryActionLabel = 'Save';
   }
 
   closeAddDialog(): void {
     this.resetDialogForm();
-    //this.showAddDialog = false;
+    this.loadCategories();
+    this.isEditMode = false;
+    this.showAddDialog = false;
   }
 
   submitAddDialog(): void {
@@ -187,6 +194,8 @@ export class CategoriesComponent {
       IsDeleted: false
     };
 
+    console.log('Submitting category:', payload);
+
     if (this.isEditMode && this.editingCategoryId) {
       payload.Id = this.editingCategoryId;
       payload.UpdatedBy = 1;
@@ -194,11 +203,11 @@ export class CategoriesComponent {
       this.categoryService.update(payload).subscribe({
         next: (response: any) => {
           if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-            this.toast.warn('Duplicate', 'Category already exists.');
+            this.toast.warn('Duplicate', `${payload.name} already exists.`);
             return;
           }
 
-          this.toast.success('Updated', 'Category updated successfully.');
+          this.toast.success('Updated', `${payload.name} updated successfully.`);
           this.closeAddDialog();
           this.loadCategories();
         },
@@ -215,11 +224,11 @@ export class CategoriesComponent {
     this.categoryService.create(payload).subscribe({
       next: (response: any) => {
         if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-          this.toast.warn('Duplicate', 'Category already exists.');
+          this.toast.warn('Duplicate', `${payload.name} already exists.`);
           return;
         }
 
-        this.toast.success('Saved', 'Category saved successfully.');
+        this.toast.success('Saved', `${payload.name} saved successfully.`);
         this.closeAddDialog();
         this.loadCategories();
       },
@@ -232,6 +241,8 @@ export class CategoriesComponent {
   editRow(row: CategoryRow): void {
     this.isEditMode = true;
     this.editingCategoryId = row.id;
+    this.dialogTitle = 'Edit Category';
+    this.dialogPrimaryActionLabel = 'Update';
 
     this.categoryService.getById(row.id).subscribe({
       next: (response: any) => {
@@ -259,6 +270,22 @@ export class CategoriesComponent {
     });
   }
 
+  confirmDeleteRow(row: CategoryRow): void {
+    const name = row.name ?? row.code ?? 'this Category';
+
+    this.confirmationService.confirm({
+      header: 'Delete Confirmation',
+      message: `Are you sure you want to delete ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.deleteRow(row);
+      }
+    });
+  }
+
   deleteRow(row: CategoryRow): void {
     this.categoryService.delete(row.id).subscribe({
       next: () => {
@@ -267,6 +294,38 @@ export class CategoriesComponent {
       },
       error: () => {
         this.toast.error('Delete Failed', 'Unable to delete category.');
+      }
+    });
+  }
+
+  confirmActivateRow(row: CategoryRow): void {
+    const name = row.name ?? row.code ?? 'this Category';
+
+    this.confirmationService.confirm({
+      header: 'Activate Confirmation',
+      message: `Are you sure you want to activate ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-success',
+      accept: () => {
+        this.activateRow(row);
+      }
+    });
+  }
+
+  confirmDeactivateRow(row: CategoryRow): void {
+    const name = row.name ?? row.code ?? 'this category';
+
+    this.confirmationService.confirm({
+      header: 'Inactive Confirmation',
+      message: `Are you sure you want to inactive ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-warn',
+      accept: () => {
+        this.deactivateRow(row);
       }
     });
   }
@@ -297,7 +356,23 @@ export class CategoriesComponent {
 
   openRowActions(menu: any, event: Event, row: CategoryRow): void {
     this.selectedRow = row;
+    this.rowActionItems = this.getRowActionItems(row);
     menu.toggle(event);
+  }
+
+  private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
+    const items: MenuItem[] = [
+      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+    ];
+    debugger;
+    if (row['isactive'] === true) {
+      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+    } else {
+      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+   
+    return items;
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
@@ -307,12 +382,12 @@ export class CategoriesComponent {
 
     if (action === 'edit') {
       this.editRow(this.selectedRow);
-    } else if (action === 'delete') {
-      this.deleteRow(this.selectedRow);
+    } else if (action === 'delete') {       
+      this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
-      this.activateRow(this.selectedRow);
+      this.confirmActivateRow(this.selectedRow);
     } else {
-      this.deactivateRow(this.selectedRow);
+      this.confirmDeactivateRow(this.selectedRow);
     }
   }
 
@@ -327,5 +402,5 @@ export class CategoriesComponent {
       UpdatedBy: 1,
       IsDeleted: false
     };
-  } 
+  }
 }

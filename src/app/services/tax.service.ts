@@ -8,7 +8,7 @@ export interface Tax {
     Id?: number;
     code?: string;
     name?: string;
-    rate: number;
+    percentage: number;
     OrgId?: number;
     IsActive?: boolean;
     CreatedBy?: number | null;
