@@ -135,7 +135,7 @@ export class TerminalComponent {
     }
 
     loadCounters() {
-        this.counterService.getAll(this.OrgId).subscribe((res: any) => {
+        this.counterService.getAll(this.OrgId, this.BranchId).subscribe((res: any) => {
             this.counterOptions = (res.result || []).map((item: any) => ({
                 label: item.Name,
                 value: item.Id
