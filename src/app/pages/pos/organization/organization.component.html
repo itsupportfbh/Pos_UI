@@ -1,11 +1,12 @@
 <section class="feature-page">
   <p-confirmDialog />
 
-  <header class="page-header hero-panel">
-    <div>
-      <p class="eyebrow">{{ pageEyebrow }}</p>
-      <h1>{{ pageTitle }}</h1>
-      <p class="page-subtitle">{{ pageSubtitle }}</p>
+  <header class="organization-page-header">
+    <div class="organization-page-title">
+      <div class="organization-page-heading">
+        <h1>{{ pageTitle }}</h1>
+        <p>{{ pageSubtitle }}</p>
+      </div>
     </div>
   </header>
 
@@ -14,34 +15,67 @@
       <div>
         <h2>{{ tableTitle }}</h2>
       </div>
+      <div class="organization-card-actions">
+        @if (showFilterButton) {
+          <button pButton type="button" icon="pi pi-filter" label="Filter" severity="secondary" outlined="true"
+            (click)="openFilterSidebar()"></button>
+        }
+        @if (showAddNewButton) {
+          <button pButton type="button" icon="pi pi-plus" [label]="addNewButtonLabel" (click)="openAddDialog()"></button>
+        }
+      </div>
     </div>
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
-      (toolbarButtonClick)="openAddDialog()">
-      <ng-template #rowActions let-row>
+
+    <section class="organization-card-grid">
+      @for (row of tableRows; track row.Id) {
+        <article class="organization-card">
+          <div class="organization-card-head">
+            <div class="organization-card-copy">
+              <h3 [title]="row.Name || '-'">{{ row.Name || '-' }}</h3>
+              <div class="organization-card-subline">
+                <span class="organization-card-code">{{ row.Code || '-' }}</span>
+                @if (row.Website) {
+                  <span class="organization-card-dot"></span>
+                  <a class="organization-card-website" [href]="getWebsiteUrl(row.Website)" target="_blank" rel="noopener noreferrer">
+                    {{ row.Website }}
+                  </a>
+                }
+              </div>
+            </div>
+            <div class="organization-card-menu">
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
         <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
           (click)="openRowActions(rowMenu, $event, row)"></button>
-      </ng-template>
+            </div>
+          </div>
 
-      <ng-template appTableCellTemplate="Status" let-row>
-        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
-          [class.status-inactive]="row.Status === 'Inactive'">
-          {{ row.Status }}
-        </span>
-      </ng-template>
+          <div class="organization-card-tags">
+            <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+              [class.status-inactive]="row.Status === 'Inactive'">
+              {{ row.Status }}
+            </span>
+          </div>
 
-      <ng-template appTableCellTemplate="Website" let-row>
-        @if (row.Website) {
-        <a class="website-link" [href]="getWebsiteUrl(row.Website)" target="_blank" rel="noopener noreferrer">
-          {{ row.Website }}
-        </a>
-        } @else {
-        <span>-</span>
-        }
-      </ng-template>
-    </app-shared-table>
+          <div class="organization-card-body">
+            <div class="organization-card-meta-row organization-card-meta-wide">
+              <span class="organization-card-meta-label">Email</span>
+              <strong [title]="row.Email || '-'">{{ row.Email || '-' }}</strong>
+            </div>
+
+            <div class="organization-card-meta-row">
+              <span class="organization-card-meta-label">Phone</span>
+              <strong>{{ row.Phone || '-' }}</strong>
+            </div>
+          </div>
+        </article>
+      }
+
+      @if (!tableRows.length) {
+        <div class="organization-card-empty">
+          No organizations found.
+        </div>
+      }
+    </section>
   </p-card>
 </section>
 

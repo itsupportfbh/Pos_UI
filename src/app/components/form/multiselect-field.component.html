@@ -16,7 +16,7 @@
     [filter]="filter"
     [appendTo]="appendTo"
     [display]="display"
-    [ngModel]="model"
+    [(ngModel)]="model"
     (ngModelChange)="onModelChange($event)"
   />
   @if (showRequiredError) {

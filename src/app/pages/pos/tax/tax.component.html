@@ -66,7 +66,7 @@
       (modelChange)="dialogModel.name = $event" />
 
     <app-text-field label="Tax Rate" inputId="dialog-taxRate" [showRequiredMark]="true" type="number"
-      [model]="dialogModel.percentage?.toString() ?? ''" (modelChange)="onRateChange($event)" />
+      [model]="dialogModel.percentage.toString()" (modelChange)="onRateChange($event)" />
 
   </section>
 

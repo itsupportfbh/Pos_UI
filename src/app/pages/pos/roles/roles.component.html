@@ -76,9 +76,9 @@
   </section>
 
   <div class="dialog-actions">
-    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Cancel" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="closeAddDialog()" />
+    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()" />
   </div>
 </p-dialog>
 
@@ -138,8 +138,8 @@
   </section>
 
   <div class="permissions-actions">
-    <app-action-buttons primaryLabel="Save Permissions" secondaryLabel="Cancel" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times" [secondaryText]="true" [secondaryOutlined]="false"
+    <app-action-buttons primaryLabel="Save Permissions" secondaryLabel="Clear" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
       (primaryClick)="savePermissionsDialog()" (secondaryClick)="closePermissionsDialog()" />
   </div>
 </p-dialog>

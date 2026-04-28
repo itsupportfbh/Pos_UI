@@ -25,6 +25,7 @@ export interface UserMaster {
   State?: number;
   Country?: number;
   PostalCode?: string;
+  ImageFile?: File | null;
   UserBranchMapping?: UserBranchMapping[];
   UserRoleMapping?: UserRoleMapping[];
   IsActive?: boolean;
@@ -64,17 +65,21 @@ export interface UserRoleMapping {
 })
 export class UserMasterService {
   private readonly controllerPath = 'UserMaster';
+  private readonly userRoleMappingControllerPath = 'UserRoleMapping';
+  private readonly userBranchMappingControllerPath = 'UserBranchMapping';
+
+
 
   constructor(
     private readonly http: HttpClient,
     private readonly runtimeConfig: RuntimeConfigService
   ) {}
 
-  create(payload: UserMaster): Observable<any> {
+  create(payload: FormData): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/${this.controllerPath}/Create`, payload);
   }
 
-  update(payload: UserMaster): Observable<any> {
+  update(payload: FormData): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
@@ -92,6 +97,14 @@ export class UserMasterService {
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
+  }
+
+   getuserBranchesByUserId(UserId: number | string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/${this.userBranchMappingControllerPath}/GetByUserId?UserId=${UserId}`);
+  }
+
+   getuserRolesByUserId(UserId: number | string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/${this.userRoleMappingControllerPath}/GetByUserId?UserId=${UserId}`);
   }
 
   private get baseUrl(): string {

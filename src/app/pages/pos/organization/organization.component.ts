@@ -10,7 +10,6 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { firstValueFrom } from 'rxjs';
-import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { CommonService } from '../../../services/common.service';
 import { Organization, OrganizationService } from '../../../services/organization.service';
@@ -19,24 +18,10 @@ const cityOptions: any[] = [];
 const stateOptions: any[] = [];
 const countryOptions: any[] = [];
 
-const ORGANIZATION_COLUMNS: SharedTableColumn<Organization>[] = [
-  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '9rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '20rem' },
-  { field: 'Website', header: 'Website', sortable: true, width: '22rem' },
-  {
-    field: 'Status',
-    header: 'Status',
-    sortable: true,
-    width: '8rem'
-  }
-];
-
-
 @Component({
   selector: 'app-organization',
   standalone: true,
-  imports: [CommonModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, SharedTableCellTemplateDirective],
+  imports: [CommonModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule],
   providers: [ConfirmationService],
   templateUrl: './organization.component.html',
   styleUrl: './organization.component.css'
@@ -80,7 +65,7 @@ export class OrganizationComponent implements OnInit {
   configThemeColor = '#2f7d57';
   configFontSize = '14';
 
-  selectedRow: Record<string, unknown> | null = null;
+  selectedRow: any = null;
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Organization';
   readonly pageSubtitle = 'Maintain restaurant organization identity details.';
@@ -95,16 +80,12 @@ export class OrganizationComponent implements OnInit {
   dialogSubtitle = 'Create a new restaurant organization profile.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Organization';
-  readonly tableCaption = 'Organization';
-  readonly tableColumns = ORGANIZATION_COLUMNS;
-  tableRows: Organization[] = [];
+  tableRows: any[] = [];
   userDetails: any = {};
 
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
   readonly showFilterButton = true;
-  readonly showRowActions = true;
-  readonly rowActionHeader = 'Actions';
   rowActionItems: MenuItem[] = [];
 
   ngOnInit(): void {
@@ -291,6 +272,9 @@ export class OrganizationComponent implements OnInit {
         let RowNumber = 1;
         this.tableRows = (response.result ?? []).map((x: any) => {
           x.RowNumber = RowNumber++;
+          x.Phone = x.Phone ?? x.phone ?? x.MobileNo ?? x.mobileNo ?? '';
+          x.Email = x.Email ?? x.email ?? '';
+          x.Website = x.Website ?? x.website ?? '';
           x.Status = x.IsActive ? 'Active' : 'Inactive';
           return x;
         });
@@ -357,7 +341,7 @@ export class OrganizationComponent implements OnInit {
     }
   }
 
-  openConfigDialog(row: Record<string, unknown>): void {
+  openConfigDialog(row: any): void {
     this.resetConfigForm();
     this.configOrganizationName = String(row['name'] ?? row['companyName'] ?? row['code'] ?? this.pageTitle);
     this.showConfigDialog = true;
@@ -428,13 +412,13 @@ export class OrganizationComponent implements OnInit {
     }
   }
 
-  openRowActions(menu: any, event: Event, row: Record<string, unknown>): void {
+  openRowActions(menu: any, event: Event, row: any): void {
     this.selectedRow = row;
     this.rowActionItems = this.getRowActionItems(row);
     menu.toggle(event);
   }
 
-  confirmDeleteRow(row: Record<string, unknown>): void {
+  confirmDeleteRow(row: any): void {
     const name = String(row['Name'] ?? row['Code'] ?? 'this organization');
 
     this.confirmationService.confirm({
@@ -450,7 +434,7 @@ export class OrganizationComponent implements OnInit {
     });
   }
 
-  confirmActivateRow(row: Record<string, unknown>): void {
+  confirmActivateRow(row: any): void {
     const name = String(row['Name'] ?? row['Code'] ?? 'this organization');
 
     this.confirmationService.confirm({
@@ -466,7 +450,7 @@ export class OrganizationComponent implements OnInit {
     });
   }
 
-  confirmDeactivateRow(row: Record<string, unknown>): void {
+  confirmDeactivateRow(row: any): void {
     const name = String(row['Name'] ?? row['Code'] ?? 'this organization');
 
     this.confirmationService.confirm({
@@ -518,7 +502,7 @@ export class OrganizationComponent implements OnInit {
     this.configFontSize = '14';
   }
 
-  private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
+  private getRowActionItems(row: any): MenuItem[] {
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];

@@ -6,6 +6,7 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface Organization {
   Id?: number;
+  RowNumber?: number;
   Code?: string;
   Name?: string;
   GSTNo?: string;
@@ -24,6 +25,7 @@ export interface Organization {
   PostalCode?: number;
   Remarks?: string;
   IsActive?: boolean;
+  Status?: string;
   CreatedBy?: number | null;
   CreatedDate?: string;
   UpdatedBy?: number | null;

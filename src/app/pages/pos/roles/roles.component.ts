@@ -450,7 +450,7 @@ export class RolesComponent {
     return this.textFields?.toArray().every((field) => field.isValid) ?? true;
   }
 
-  private resetDialogForm(): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;

@@ -196,6 +196,39 @@ label {
   background: linear-gradient(135deg, rgba(231, 243, 237, 0.96), rgba(255, 255, 255, 0.98));
 }
 
+.page-header.hero-panel {
+  gap: 0.35rem !important;
+  padding: 0.1rem 0 0.35rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.page-header.hero-panel > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  min-width: 0;
+}
+
+.page-header.hero-panel .eyebrow {
+  display: none !important;
+}
+
+.page-header.hero-panel h1 {
+  margin: 0;
+  font-size: 1.3rem !important;
+  line-height: 1.1 !important;
+}
+
+.page-header.hero-panel .page-subtitle {
+  margin: 0 !important;
+  font-size: 0.83rem !important;
+  line-height: 1.35 !important;
+}
+
 .hero-panel h1,
 .section-heading h2,
 .dialog-copy h3,
@@ -286,6 +319,12 @@ label {
 @media (max-width: 768px) {
   .feature-page {
     padding-inline: 0;
+  }
+
+  .page-header.hero-panel > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
   }
 
   .summary-grid,

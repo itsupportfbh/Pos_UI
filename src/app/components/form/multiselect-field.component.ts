@@ -45,6 +45,7 @@ export class MultiSelectFieldComponent {
   }
 
   onModelChange(value: MultiSelectFieldValue | null): void {
-    this.modelChange.emit(value ?? []);
+    this.model = [...(value ?? [])];
+    this.modelChange.emit(this.model);
   }
 }

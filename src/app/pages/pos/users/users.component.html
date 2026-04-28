@@ -28,11 +28,17 @@
     <section class="user-card-grid">
       @for (row of tableRows; track row.Id) {
         <article class="user-card">
-          <div class="user-card-top">
-            <img class="user-card-avatar" [src]="getUserImage(row)" [alt]="row.Name" />
-            <div class="user-card-copy">
-              <h3>{{ row.Name || '-' }}</h3>
-              <span>{{ row.OrganizationName || '' }}</span>
+          <div class="user-card-head">
+            <div class="user-card-top">
+              <img class="user-card-avatar" [src]="getUserImage(row)" [alt]="row.Name" />
+              <div class="user-card-copy">
+                <h3 [title]="row.Name || '-'">{{ row.Name || '-' }}</h3>
+                <div class="user-card-subline">
+                  <span class="user-card-code">{{ row.EmpCode || row.Code || '-' }}</span>
+                  <span class="user-card-dot"></span>
+                  <span class="user-card-gender">{{ row.GenderName || '-' }}</span>
+                </div>
+              </div>
             </div>
             <div class="user-card-menu">
               <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
@@ -41,11 +47,42 @@
             </div>
           </div>
 
-          <div class="user-card-bottom">
+          <div class="user-card-tags">
             <span class="status-badge" [class.status-active]="row.Status === 'Active'"
               [class.status-inactive]="row.Status === 'Inactive'">
               {{ row.Status }}
             </span>
+
+            <span class="meta-badge" [class.meta-badge-admin]="row.IsAdmin === 'Yes'">
+              {{ row.IsAdmin === 'Yes' ? 'Admin User' : 'Standard User' }}
+            </span>
+          </div>
+
+          <div class="user-card-body">
+            <div class="user-card-meta-row user-card-meta-wide">
+              <span class="user-card-meta-label">Email</span>
+              <strong class="user-card-email" [title]="row.Email || '-'">{{ row.Email || '-' }}</strong>
+            </div>
+
+            <div class="user-card-meta-row">
+              <span class="user-card-meta-label">Contact</span>
+              <strong>{{ row.ContactNumber || '-' }}</strong>
+            </div>
+
+            <div class="user-card-meta-row">
+              <span class="user-card-meta-label">Gender</span>
+              <strong>{{ row.GenderName || '-' }}</strong>
+            </div>
+
+            <div class="user-card-meta-row">
+              <span class="user-card-meta-label">Age</span>
+              <strong>{{ row.Age || '-' }}</strong>
+            </div>
+
+            <div class="user-card-meta-row">
+              <span class="user-card-meta-label">DOB</span>
+              <strong>{{ row.DateOfBirth ? (row.DateOfBirth | date:'dd/MM/yyyy') : '-' }}</strong>
+            </div>
           </div>
         </article>
       }
@@ -175,8 +212,8 @@
   </section>
 
   <div class="dialog-actions">
-    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Cancel" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="closeAddDialog()" />
+    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()" />
   </div>
 </p-dialog>

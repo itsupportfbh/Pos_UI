@@ -44,7 +44,7 @@ export class TextFieldComponent {
   @Input() step?: string;
   @Input() min?: number;
   @Input() max?: number;
-  @Input() model = '';
+  @Input() model: string | number = '';
   @Output() modelChange = new EventEmitter<string>();
 
   get showRequiredError(): boolean {
@@ -73,6 +73,10 @@ export class TextFieldComponent {
 
   onModelChange(value: string): void {
     this.modelChange.emit(value);
+  }
+
+  private get modelValue(): string {
+    return String(this.model ?? '');
   }
 
   private get activeFormatRule(): TextFieldRule | null {
@@ -113,11 +117,11 @@ export class TextFieldComponent {
   }
 
   private get isRequiredValueMissing(): boolean {
-    return this.required && !this.model.trim();
+    return this.required && !this.modelValue.trim();
   }
 
   private get isFormatInvalid(): boolean {
-    const value = this.model.trim();
+    const value = this.modelValue.trim();
     const activeRule = this.activeFormatRule;
 
     return !!value && !!activeRule && !activeRule.pattern.test(value);

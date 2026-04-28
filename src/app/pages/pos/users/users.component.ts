@@ -18,36 +18,8 @@ import { AppToastService } from '../../../services/app-toast.service';
 import { BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
 import { RoleService } from '../../../services/role.service';
-import { UserMaster, UserMasterService } from '../../../services/usermaster.service';
-
-type UserRow = {
-  Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
-  Email: string;
-  ContactNumber: string;
-  EmpCode: string;
-  ImageName: string;
-  ImageUrl: string;
-  Gender: string;
-  GenderName: string;
-  DateOfBirth: Date | null;
-  Age: number;
-  IsAdmin: string;
-  Address1: string;
-  Address2: string;
-  Country: number;
-  State: number;
-  City: number;
-  PostalCode: string;
-  BranchNames: string[];
-  RoleNames: string[];
-  RoleName: string;
-  OrganizationName: string;
-  Status: string;
-  IsActive: boolean;
-};
+import { RuntimeConfigService } from '../../../services/runtime-config.service';
+import { UserBranchMapping, UserMaster, UserMasterService, UserRoleMapping } from '../../../services/usermaster.service';
 
 const cityOptions: any[] = [];
 const stateOptions: any[] = [];
@@ -92,6 +64,7 @@ export class UsersComponent implements OnInit {
   private readonly roleService = inject(RoleService);
   private readonly userMasterService = inject(UserMasterService);
   private readonly commonService = inject(CommonService);
+  private readonly runtimeConfig = inject(RuntimeConfigService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -113,7 +86,9 @@ export class UsersComponent implements OnInit {
   dialogContactNumber = '';
   dialogEmpCode = '';
   dialogImageName = '';
+  dialogImage = '';
   dialogImageUrl = '';
+  dialogImageFile: File | null = null;
   dialogGender: string | null = null;
   dialogDateOfBirth: Date | null = null;
   dialogAge = '';
@@ -126,11 +101,13 @@ export class UsersComponent implements OnInit {
   dialogPostalCode = '';
   dialogBranches: MultiSelectFieldValue = [];
   dialogRoles: MultiSelectFieldValue = [];
+  dialogUserBranchMappings: UserBranchMapping[] = [];
+  dialogUserRoleMappings: UserRoleMapping[] = [];
 
-  selectedRow: UserRow | null = null;
+  selectedRow: any = null;
   rowActionItems: MenuItem[] = [];
-  allRows: UserRow[] = [];
-  tableRows: UserRow[] = [];
+  allRows: any[] = [];
+  tableRows: any[] = [];
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
@@ -214,9 +191,11 @@ export class UsersComponent implements OnInit {
       next: (response) => {
         this.tableRows = (response.result ?? []).map((x: any) => {
           x.ContactNumber = x.ContactNo ? String(x.ContactNo) : '';
-          x.ImageUrl = x.Image ?? '';
+          x.Image = this.normalizeImageValue(x.Image ?? '');
+          x.ImageUrl = this.getImagePreviewUrl(x.Image ?? '');
           x.DateOfBirth = x.DOB ? new Date(x.DOB) : null;
           x.IsAdmin = x.IsAdmin === true ? 'Yes' : 'No';
+          x.GenderName = this.getGenderName(x.Gender ? String(x.Gender) : null);
           x.Status = x.IsActive ? 'Active' : 'Inactive';
           return x;
         });
@@ -363,7 +342,8 @@ export class UsersComponent implements OnInit {
       Email: this.dialogEmail,
       ContactNo: Number(this.dialogContactNumber || 0),
       OrgId: Number(this.userDetails.OrgId || 0),
-      Image: this.dialogImageUrl,
+      Image: this.dialogImage,
+      ImageFile: this.dialogImageFile,
       EmpCode: this.dialogEmpCode,
       Gender: Number(this.dialogGender || 0),
       DOB: this.dialogDateOfBirth ? this.dialogDateOfBirth.toISOString() : null,
@@ -375,7 +355,7 @@ export class UsersComponent implements OnInit {
       City: Number(this.dialogCity || 0),
       PostalCode: this.dialogPostalCode,
       UserBranchMapping: this.dialogBranches.map((branchId) => ({
-        Id: 0,
+        Id: this.dialogUserBranchMappings.find((x) => Number(x.BranchId || 0) === Number(branchId || 0))?.Id ?? 0,
         UserId: this.dialogId  ||0,
         BranchId: Number(branchId || 0),
         IsActive: true,
@@ -386,7 +366,7 @@ export class UsersComponent implements OnInit {
         IsDeleted: false
       })),
       UserRoleMapping: this.dialogRoles.map((roleId) => ({
-        Id: 0,
+        Id: this.dialogUserRoleMappings.find((x) => Number(x.RoleId || 0) === Number(roleId || 0))?.Id ?? 0,
         UserId: this.dialogId ||0,
         RoleId: Number(roleId || 0),
         IsActive: true,
@@ -404,13 +384,15 @@ export class UsersComponent implements OnInit {
       IsDeleted: false
     };
 
+    const formData = this.createUserFormData(payload);
+
     try {
       let response: any;
 
       if (!payload.Id) {
-        response = await firstValueFrom(this.userMasterService.create(payload));
+        response = await firstValueFrom(this.userMasterService.create(formData));
       } else {
-        response = await firstValueFrom(this.userMasterService.update(payload));
+        response = await firstValueFrom(this.userMasterService.update(formData));
       }
 
       if (response.ErrorInfo.Message === true && response.result === 'AlreadyExists') {
@@ -437,12 +419,13 @@ export class UsersComponent implements OnInit {
     }
   }
 
-  async editRow(row: UserRow): Promise<void> {
+  async editRow(row: any): Promise<void> {
     this.isEditMode = true;
+      this.showAddDialog = true;
+
     this.dialogTitle = 'Edit User';
     this.dialogSubtitle = 'Update the selected user profile.';
     this.dialogPrimaryActionLabel = 'Update';
-    this.showAddDialog = true;
 
     try {
       const response: any = await firstValueFrom(this.userMasterService.getById(row.Id ?? 0));
@@ -455,8 +438,10 @@ export class UsersComponent implements OnInit {
       this.dialogEmail = user.Email ?? '';
       this.dialogContactNumber = user.ContactNo ? String(user.ContactNo) : '';
       this.dialogEmpCode = user.EmpCode ?? '';
-      this.dialogImageName = '';
-      this.dialogImageUrl = user.Image ?? '';
+      this.dialogImage = this.normalizeImageValue(user.Image ?? '');
+      this.dialogImageName = this.getImageFileName(this.dialogImage);
+      this.dialogImageUrl = this.getImagePreviewUrl(this.dialogImage);
+      this.dialogImageFile = null;
       this.dialogGender = user.Gender ? String(user.Gender) : null;
       this.dialogDateOfBirth = user.DOB ? new Date(user.DOB) : null;
       this.dialogAge = String(user.Age || '');
@@ -464,11 +449,19 @@ export class UsersComponent implements OnInit {
       this.dialogAddress1 = user.Address1 ?? '';
       this.dialogAddress2 = user.Address2 ?? '';
       this.dialogPostalCode = user.PostalCode ?? '';
-      this.dialogBranches = (user.UserBranchMapping ?? []).map((branch: any) => Number(branch.BranchId || 0));
-      this.dialogRoles = (user.UserRoleMapping ?? []).map((role: any) => Number(role.RoleId || 0));
 
       await this.loadBranches();
       await this.loadRoles();
+
+      const userBranchResponse: any = await firstValueFrom(this.userMasterService.getuserBranchesByUserId(row.Id ?? 0));
+      const userRoleResponse: any = await firstValueFrom(this.userMasterService.getuserRolesByUserId(row.Id ?? 0));
+
+      this.dialogUserBranchMappings = userBranchResponse.result ?? [];
+      this.dialogUserRoleMappings = userRoleResponse.result ?? [];
+      this.dialogBranches = (userBranchResponse.result ?? []).map((branch: any) => Number(branch.BranchId || 0));
+      this.dialogRoles = (userRoleResponse.result ?? []).map((role: any) => Number(role.RoleId || 0));
+      this.changeDetector.detectChanges();
+
       await this.loadCountries();
       this.dialogCountry = user.Country || null;
 
@@ -488,7 +481,7 @@ export class UsersComponent implements OnInit {
     }
   }
 
-  async deleteRow(row: UserRow): Promise<void> {
+  async deleteRow(row: any): Promise<void> {
     try {
       const response: any = await firstValueFrom(this.userMasterService.delete(row.Id ?? 0));
 
@@ -504,7 +497,7 @@ export class UsersComponent implements OnInit {
     }
   }
 
-  async activateRow(row: UserRow): Promise<void> {
+  async activateRow(row: any): Promise<void> {
     try {
       const response: any = await firstValueFrom(this.userMasterService.activeInActive(row.Id ?? 0, true));
 
@@ -520,7 +513,7 @@ export class UsersComponent implements OnInit {
     }
   }
 
-  async deactivateRow(row: UserRow): Promise<void> {
+  async deactivateRow(row: any): Promise<void> {
     try {
       const response: any = await firstValueFrom(this.userMasterService.activeInActive(row.Id ?? 0, false));
 
@@ -536,13 +529,17 @@ export class UsersComponent implements OnInit {
     }
   }
 
-  openRowActions(menu: any, event: Event, row: UserRow): void {
+  openRowActions(menu: any, event: MouseEvent, row: any): void {
+    event.preventDefault();
+    event.stopPropagation();
     this.selectedRow = row;
     this.rowActionItems = this.getRowActionItems(row);
+    menu.model = this.rowActionItems;
+    this.changeDetector.detectChanges();
     menu.toggle(event);
   }
 
-  confirmDeleteRow(row: UserRow): void {
+  confirmDeleteRow(row: any): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
       message: `Are you sure you want to delete ${row.Name || 'this user'}?`,
@@ -556,7 +553,7 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  confirmActivateRow(row: UserRow): void {
+  confirmActivateRow(row: any): void {
     this.confirmationService.confirm({
       header: 'Activate Confirmation',
       message: `Are you sure you want to activate ${row.Name || 'this user'}?`,
@@ -570,7 +567,7 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  confirmDeactivateRow(row: UserRow): void {
+  confirmDeactivateRow(row: any): void {
     this.confirmationService.confirm({
       header: 'Deactivate Confirmation',
       message: `Are you sure you want to deactivate ${row.Name || 'this user'}?`,
@@ -593,31 +590,160 @@ export class UsersComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
 
-    this.dialogImageName = file?.name ?? '';
-
     if (!file) {
-      this.dialogImageUrl = '';
+      this.dialogImageFile = null;
+      this.dialogImageName = this.getImageFileName(this.dialogImage);
       return;
     }
+
+    this.dialogImageName = file.name;
+    this.dialogImageFile = file;
 
     const reader = new FileReader();
     reader.onload = () => {
       this.dialogImageUrl = String(reader.result ?? '');
+      this.changeDetector.detectChanges();
     };
     reader.readAsDataURL(file);
   }
 
-  getUserImage(row: UserRow): string {
+  getUserImage(row: any): string {
     if (row.ImageUrl) {
       return row.ImageUrl;
     }
 
     const initials = encodeURIComponent((row.Name || 'U').trim().charAt(0).toUpperCase());
     return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><rect width='120' height='120' rx='24' fill='%23e2e8f0'/><circle cx='60' cy='44' r='20' fill='%2394a3b8'/><path d='M24 102c6-18 20-28 36-28s30 10 36 28' fill='%2394a3b8'/><text x='60' y='112' text-anchor='middle' font-size='18' font-family='Arial' fill='%23475569'>${initials}</text></svg>`;
+  
   }
 
   private getGenderName(gender: string | null): string {
-    return this.genderOptions.find((x) => x.value === gender)?.label as string ?? '';
+    return this.genderOptions.find((x) => x.value === gender)?.label ?? '';
+  }
+
+  private normalizeImageValue(image: string): string {
+    if (!image) {
+      return '';
+    }
+
+    if (image.startsWith('data:')) {
+      return image;
+    }
+
+    const marker = '/FileUpload/';
+    const markerIndex = image.indexOf(marker);
+
+    if (markerIndex >= 0) {
+      return image.substring(markerIndex + marker.length);
+    }
+
+    const normalizedImage = image.replace(/^\/+/, '');
+
+    if (normalizedImage.startsWith('FileUpload/')) {
+      return this.normalizeImageValue(normalizedImage.substring('FileUpload/'.length));
+    }
+
+    if (normalizedImage.startsWith('User/User/')) {
+      return this.normalizeImageValue(normalizedImage.substring('User/'.length));
+    }
+
+    return normalizedImage;
+  }
+
+  private getImagePreviewUrl(image: string): string {
+    if (!image) {
+      return '';
+    }
+
+    if (image.startsWith('http://') || image.startsWith('https://') || image.startsWith('data:')) {
+      return image;
+    }
+
+    const normalizedImage = this.normalizeImageValue(image);
+
+    if (!normalizedImage) {
+      return '';
+    }
+
+    if (normalizedImage.startsWith('User/')) {
+      return `${this.runtimeConfig.apiBaseUrl}/FileUpload/${normalizedImage}`;
+    }
+
+    if (normalizedImage.includes('/')) {
+      return `${this.runtimeConfig.apiBaseUrl}/FileUpload/${normalizedImage}`;
+    }
+
+    return `${this.runtimeConfig.apiBaseUrl}/FileUpload/User/${normalizedImage}`;
+  }
+
+  private getImageFileName(image: string): string {
+    if (!image) {
+      return '';
+    }
+
+    const parts = image.split(/[\\/]/);
+    return parts[parts.length - 1] ?? '';
+  }
+
+  private createUserFormData(payload: UserMaster): FormData {
+    const formData = new FormData();
+
+    formData.append('Id', String(payload.Id ?? 0));
+    formData.append('Code', payload.Code ?? '');
+    formData.append('Name', payload.Name ?? '');
+    formData.append('Remarks', payload.Remarks ?? '');
+    formData.append('IsAdmin', String(payload.IsAdmin ?? false));
+    formData.append('Email', payload.Email ?? '');
+    formData.append('Password', payload.Password ?? '');
+    formData.append('ContactNo', String(payload.ContactNo ?? 0));
+    formData.append('EmpCode', payload.EmpCode ?? '');
+    formData.append('OrgId', String(payload.OrgId ?? 0));
+    formData.append('Image', payload.Image ?? '');
+    formData.append('Gender', String(payload.Gender ?? 0));
+    formData.append('DOB', payload.DOB ?? '');
+    formData.append('Age', String(payload.Age ?? 0));
+    formData.append('Address1', payload.Address1 ?? '');
+    formData.append('Address2', payload.Address2 ?? '');
+    formData.append('City', String(payload.City ?? 0));
+    formData.append('State', String(payload.State ?? 0));
+    formData.append('Country', String(payload.Country ?? 0));
+    formData.append('PostalCode', payload.PostalCode ?? '');
+    formData.append('IsActive', String(payload.IsActive ?? true));
+    formData.append('CreatedBy', String(payload.CreatedBy ?? 0));
+    formData.append('CreatedDate', payload.CreatedDate ?? '');
+    formData.append('UpdatedBy', String(payload.UpdatedBy ?? 0));
+    formData.append('UpdatedDate', payload.UpdatedDate ?? '');
+    formData.append('IsDeleted', String(payload.IsDeleted ?? false));
+
+    if (payload.ImageFile) {
+      formData.append('ImageFile', payload.ImageFile, payload.ImageFile.name);
+    }
+
+    (payload.UserBranchMapping ?? []).forEach((branch, index) => {
+      formData.append(`UserBranchMapping[${index}].Id`, String(branch.Id ?? 0));
+      formData.append(`UserBranchMapping[${index}].UserId`, String(branch.UserId ?? 0));
+      formData.append(`UserBranchMapping[${index}].BranchId`, String(branch.BranchId ?? 0));
+      formData.append(`UserBranchMapping[${index}].IsActive`, String(branch.IsActive ?? true));
+      formData.append(`UserBranchMapping[${index}].CreatedBy`, String(branch.CreatedBy ?? 0));
+      formData.append(`UserBranchMapping[${index}].CreatedDate`, branch.CreatedDate ?? '');
+      formData.append(`UserBranchMapping[${index}].UpdatedBy`, String(branch.UpdatedBy ?? 0));
+      formData.append(`UserBranchMapping[${index}].UpdatedDate`, branch.UpdatedDate ?? '');
+      formData.append(`UserBranchMapping[${index}].IsDeleted`, String(branch.IsDeleted ?? false));
+    });
+
+    (payload.UserRoleMapping ?? []).forEach((role, index) => {
+      formData.append(`UserRoleMapping[${index}].Id`, String(role.Id ?? 0));
+      formData.append(`UserRoleMapping[${index}].UserId`, String(role.UserId ?? 0));
+      formData.append(`UserRoleMapping[${index}].RoleId`, String(role.RoleId ?? 0));
+      formData.append(`UserRoleMapping[${index}].IsActive`, String(role.IsActive ?? true));
+      formData.append(`UserRoleMapping[${index}].CreatedBy`, String(role.CreatedBy ?? 0));
+      formData.append(`UserRoleMapping[${index}].CreatedDate`, role.CreatedDate ?? '');
+      formData.append(`UserRoleMapping[${index}].UpdatedBy`, String(role.UpdatedBy ?? 0));
+      formData.append(`UserRoleMapping[${index}].UpdatedDate`, role.UpdatedDate ?? '');
+      formData.append(`UserRoleMapping[${index}].IsDeleted`, String(role.IsDeleted ?? false));
+    });
+
+    return formData;
   }
 
   private calculateAge(dateOfBirth: Date): number {
@@ -632,7 +758,7 @@ export class UsersComponent implements OnInit {
     return age;
   }
 
-  private getRowActionItems(row: UserRow): MenuItem[] {
+  private getRowActionItems(row: any): MenuItem[] {
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
@@ -672,7 +798,7 @@ export class UsersComponent implements OnInit {
     return areTextFieldsValid && areSelectFieldsValid && areMultiSelectFieldsValid && areDateFieldsValid;
   }
 
-  private resetDialogForm(): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
     this.dialogCode = '';
@@ -682,7 +808,9 @@ export class UsersComponent implements OnInit {
     this.dialogContactNumber = '';
     this.dialogEmpCode = '';
     this.dialogImageName = '';
+    this.dialogImage = '';
     this.dialogImageUrl = '';
+    this.dialogImageFile = null;
     this.dialogGender = null;
     this.dialogDateOfBirth = null;
     this.dialogAge = '';
@@ -695,5 +823,7 @@ export class UsersComponent implements OnInit {
     this.dialogPostalCode = '';
     this.dialogBranches = [];
     this.dialogRoles = [];
+    this.dialogUserBranchMappings = [];
+    this.dialogUserRoleMappings = [];
   }
 }
