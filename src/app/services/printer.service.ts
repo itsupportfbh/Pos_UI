@@ -11,6 +11,9 @@ export interface Printer {
   BranchId?: number;
   CounterId?: number;
   TerminalId?: number;
+  BranchName?: string;
+  CounterName?: string;
+  TerminalName?: string;
   Remarks?: string;
   OrgId?: number;
   IsActive?: boolean;
@@ -41,13 +44,22 @@ export class PrinterService {
   }
 
   getAll(orgId: number, branchId: number, counterId: number, terminalId: number): Observable<ApiListResponse<Printer>> {
+    const params = new HttpParams()
+      .set('orgId', orgId.toString())
+      .set('branchId', branchId.toString())
+      .set('counterId', counterId.toString())
+      .set('terminalId', terminalId.toString());
+
     return this.http.get<ApiListResponse<Printer>>(
-      `${this.baseUrl}/${this.controllerPath}/GetAllPrinter?orgId=${orgId}&branchId=${branchId}&counterId=${counterId}&terminalId=${terminalId}`
+      `${this.baseUrl}/${this.controllerPath}/GetAll`,
+      { params }
     );
   }
 
   getById(id: number | string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetPrinterbyId?id=${id}`);
+    const params = new HttpParams().set('id', id.toString());
+
+    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetPrinterbyId`, { params });
   }
 
   delete(id: number | string): Observable<any> {

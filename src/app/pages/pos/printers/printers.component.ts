@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -11,12 +11,18 @@ import { MenuModule } from 'primeng/menu';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import {
+  SharedTableCellTemplateDirective,
+  SharedTableColumn,
+  SharedTableComponent
+} from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { BranchService } from '../../../services/branch.service';
 import { CounterService } from '../../../services/counter.service';
 import { Printer, PrinterService } from '../../../services/printer.service';
 import { TerminalService } from '../../../services/terminal.service';
+
+type SelectOption = { label: string | number; value: string | number };
 
 type PrinterRow = Printer & {
   RowNumber: number;
@@ -25,10 +31,6 @@ type PrinterRow = Printer & {
   TerminalName: string;
   Status: string;
 };
-
-const BRANCH_OPTIONS: { label: string | number; value: string | number }[] = [];
-const COUNTER_OPTIONS: { label: string | number; value: string | number }[] = [];
-const TERMINAL_OPTIONS: { label: string | number; value: string | number }[] = [];
 
 const PRINTER_COLUMNS: SharedTableColumn<PrinterRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
@@ -39,6 +41,8 @@ const PRINTER_COLUMNS: SharedTableColumn<PrinterRow>[] = [
   { field: 'TerminalName', header: 'Terminal', sortable: true, width: '14rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
+
+
 
 @Component({
   selector: 'app-printers',
@@ -67,6 +71,7 @@ export class PrintersComponent implements OnInit {
   private readonly terminalService = inject(TerminalService);
   private readonly printerService = inject(PrinterService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -77,10 +82,14 @@ export class PrintersComponent implements OnInit {
   isLoading = false;
   dialogSubmitted = false;
   dialogSaving = false;
-
+  filterPrinterName = '';
   filterBranch: SelectFieldValue = null;
   filterCounter: SelectFieldValue = null;
   filterTerminal: SelectFieldValue = null;
+ OrgId = 0;
+    BranchId = 0;
+    counterId = 0;
+    terminalId=0;
   dialogId = 0;
   dialogPrinterCode = '';
   dialogPrinterName = '';
@@ -88,15 +97,19 @@ export class PrintersComponent implements OnInit {
   dialogCounter: SelectFieldValue = null;
   dialogTerminal: SelectFieldValue = null;
   dialogRemarks = '';
+  hiddenTableRow: PrinterRow[] = [];
 
   selectedRow: PrinterRow | null = null;
   rowActionItems: MenuItem[] = [];
   tableRows: PrinterRow[] = [];
   allRows: PrinterRow[] = [];
   userDetails: any = {};
-  branchOptions = BRANCH_OPTIONS;
-  counterOptions = COUNTER_OPTIONS;
-  terminalOptions = TERMINAL_OPTIONS;
+
+  branchOptions: SelectOption[] = [];
+  filterCounterOptions: SelectOption[] = [];
+  filterTerminalOptions: SelectOption[] = [];
+  dialogCounterOptions: SelectOption[] = [];
+  dialogTerminalOptions: SelectOption[] = [];
 
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Printers';
@@ -118,74 +131,32 @@ export class PrintersComponent implements OnInit {
   readonly rowActionHeader = 'Actions';
 
   ngOnInit(): void {
-    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    void this.loadBranches();
-    void this.loadCounters();
-    void this.loadTerminals();
+    const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+        console.log('User Details:', userDetails);
+        const userId = Number(userDetails.UserId || 0);
+        this.OrgId = Number(userDetails.OrgId || 0);
+        this.BranchId = Number(userDetails.BranchId || 0);
+     this.loadBranches();
     this.loadPrinters();
-  }
-
-  async loadBranches(): Promise<void> {
-    try {
-      const orgId = Number(this.userDetails?.OrgId || 0);
-      const response: any = await firstValueFrom(this.branchService.getAll(orgId));
-      const branchList = response?.result ?? [];
-
-      this.branchOptions = branchList.map((branch: any) => ({
-        label: branch.Name ?? '',
-        value: branch.Id ?? 0
-      }));
-    } catch {
-      this.branchOptions = [];
-      this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
-    }
-  }
-
-  async loadCounters(): Promise<void> {
-    try {
-      const orgId = Number(this.userDetails?.OrgId || 0);
-      const branchId = Number(this.dialogBranch || this.filterBranch || 0);
-      const response: any = await firstValueFrom(this.counterService.getAll(orgId, branchId));
-      const counterList = response?.result ?? [];
-
-      this.counterOptions = counterList.map((counter: any) => ({
-        label: counter.Name ?? '',
-        value: counter.Id ?? 0
-      }));
-    } catch {
-      this.counterOptions = [];
-      this.toast.error('Load Failed', 'Unable to load counters. Please check and try again.');
-    }
-  }
-
-  async loadTerminals(): Promise<void> {
-    try {
-      const orgId = Number(this.userDetails?.OrgId || 0);
-      const branchId = Number(this.dialogBranch || this.filterBranch || 0);
-      const counterId = Number(this.dialogCounter || this.filterCounter || 0);
-      const response: any = await firstValueFrom(this.terminalService.getAll(orgId, branchId, counterId));
-      const terminalList = response?.result ?? [];
-
-      this.terminalOptions = terminalList.map((terminal: any) => ({
-        label: terminal.Name ?? '',
-        value: terminal.Id ?? 0
-      }));
-    } catch {
-      this.terminalOptions = [];
-      this.toast.error('Load Failed', 'Unable to load terminals. Please check and try again.');
-    }
   }
 
   resetForm(): void {
+    this.filterPrinterName = '';
     this.filterBranch = null;
     this.filterCounter = null;
     this.filterTerminal = null;
-    this.loadPrinters();
+    this.filterCounterOptions = [];
+    this.filterTerminalOptions = [];
+    this.applyPrinterFilters();
   }
 
   searchPrinters(): void {
-    this.loadPrinters();
+    this.applyPrinterFilters();
   }
+
+
+
+
 
   openFilterSidebar(): void {
     this.showFilterSidebar = true;
@@ -197,6 +168,7 @@ export class PrintersComponent implements OnInit {
 
   openAddDialog(): void {
     this.resetDialogForm();
+    this.loadBranches(); 
     this.isEditMode = false;
     this.dialogTitle = 'Create Printer';
     this.dialogSubtitle = 'Create a new printer configuration for restaurant operations.';
@@ -204,48 +176,72 @@ export class PrintersComponent implements OnInit {
     this.showAddDialog = true;
   }
 
+  closeAddDialog(): void {
+    this.dialogSubmitted = false;
+    this.isEditMode = false;
+    this.showAddDialog = false;
+    this.resetDialogForm();
+    this.loadPrinters();
+  }
+
   async onFilterBranchChange(value: SelectFieldValue): Promise<void> {
     this.filterBranch = value;
     this.filterCounter = null;
     this.filterTerminal = null;
-    this.counterOptions = [];
-    this.terminalOptions = [];
-    await this.loadCounters();
-    await this.loadTerminals();
+    this.filterCounterOptions = [];
+    this.filterTerminalOptions = [];
+
+    const branchId = Number(value || 0);
+
+    if (branchId > 0) {
+      await this.loadFilterCounters(branchId);
+    }
   }
 
   async onFilterCounterChange(value: SelectFieldValue): Promise<void> {
     this.filterCounter = value;
     this.filterTerminal = null;
-    this.terminalOptions = [];
-    await this.loadTerminals();
+    this.filterTerminalOptions = [];
+
+    const branchId = Number(this.filterBranch || 0);
+    const counterId = Number(value || 0);
+
+    if (branchId > 0 && counterId > 0) {
+      await this.loadFilterTerminals(branchId, counterId);
+    }
   }
 
   async onDialogBranchChange(value: SelectFieldValue): Promise<void> {
+
     this.dialogBranch = value;
     this.dialogCounter = null;
     this.dialogTerminal = null;
-    this.counterOptions = [];
-    this.terminalOptions = [];
-    await this.loadCounters();
-    await this.loadTerminals();
+    this.dialogCounterOptions = [];
+    this.dialogTerminalOptions = [];
+
+    const branchId = Number(value || 0);
+
+    if (branchId > 0) {
+      await this.loadDialogCounters(branchId);
+    }
   }
 
   async onDialogCounterChange(value: SelectFieldValue): Promise<void> {
+   
     this.dialogCounter = value;
     this.dialogTerminal = null;
-    this.terminalOptions = [];
-    await this.loadTerminals();
-  }
+    this.dialogTerminalOptions = [];
 
-  closeAddDialog(): void {
-    this.loadPrinters();
-    this.dialogSubmitted = false;
-    this.isEditMode = false;
-    this.showAddDialog = false;
+    const branchId = Number(this.dialogBranch || 0);
+    const counterId = Number(value || 0);
+
+    if (branchId > 0 && counterId > 0) {
+      await this.loadDialogTerminals(branchId, counterId);
+    }
   }
 
   async submitAddDialog(): Promise<void> {
+    debugger
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
@@ -262,43 +258,33 @@ export class PrintersComponent implements OnInit {
       CounterId: Number(this.dialogCounter || 0),
       TerminalId: Number(this.dialogTerminal || 0),
       Remarks: this.dialogRemarks.trim(),
-      OrgId: Number(this.userDetails?.OrgId || 0),
+      OrgId: this.OrgId,
       IsActive: true,
-      CreatedBy: Number(this.userDetails?.UserId || 0),
+      CreatedBy: this.getUserId(),
       CreatedDate: new Date().toISOString(),
-      UpdatedBy: Number(this.userDetails?.UserId || 0),
+      UpdatedBy: this.getUserId(),
       UpdatedDate: this.dialogId ? new Date().toISOString() : null,
       IsDeleted: false
     };
 
     try {
-      let response: any;
+      const response: any = payload.Id
+        ? await firstValueFrom(this.printerService.update(payload))
+        : await firstValueFrom(this.printerService.create(payload));
 
-      if (!payload.Id) {
-        response = await firstValueFrom(this.printerService.create(payload));
-      } else {
-        response = await firstValueFrom(this.printerService.update(payload));
-      }
-
-      if (response.ErrorInfo.Message === true && response.result === 'AlreadyExists') {
+      if (this.isAlreadyExistsResponse(response)) {
         this.toast.warn('Already Exists', `${payload.Name || this.pageTitle} already exists. Please use a different name.`);
         this.dialogPrinterName = '';
         return;
       }
 
-      if (response.ErrorInfo.Message === true && !payload.Id) {
-        this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
+      if (this.isSuccessResponse(response)) {
+        this.toast.success(payload.Id ? 'Updated' : 'Saved', `${payload.Name || this.pageTitle} ${payload.Id ? 'updated' : 'saved'} successfully.`);
         this.closeAddDialog();
         return;
       }
 
-      if (response.ErrorInfo.Message === true && payload.Id) {
-        this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
-        this.closeAddDialog();
-        return;
-      }
-
-      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', response.ErrorInfo.Message || 'Unable to save printer.');
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', this.getErrorMessage(response, 'Unable to save printer.'));
     } catch {
       this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save printer.');
     } finally {
@@ -306,37 +292,49 @@ export class PrintersComponent implements OnInit {
     }
   }
 
-  loadPrinters(): void {
-    this.isLoading = true;
+ loadPrinters(): void {
+  this.isLoading = true;
 
-    const orgId = Number(this.userDetails?.OrgId || 0);
-    const branchId = Number(this.filterBranch || 0);
-    const counterId = Number(this.filterCounter || 0);
-    const terminalId = Number(this.filterTerminal || 0);
-
-    this.printerService.getAll(orgId, branchId, counterId, terminalId).subscribe({
+  this.printerService
+    .getAll(this.OrgId, this.BranchId, this.counterId, this.terminalId)
+    .subscribe({
       next: (response: any) => {
-        let rowNumber = 1;
+        const result = response?.result ?? response ?? [];
+        console.log('Printers loaded:', result);
 
-        this.allRows = (response.result ?? []).map((printer: any) => ({
-          ...printer,
-          BranchName: printer.BranchName ?? printer.Branch ?? '',
-          CounterName: printer.CounterName ?? printer.Counter ?? '',
-          TerminalName: printer.TerminalName ?? printer.Terminal ?? '',
-          RowNumber: rowNumber++,
-          Status: printer.IsActive ? 'Active' : 'Inactive'
+        let RowNumber = 1;
+
+        this.allRows = result.map((x: any) => ({
+          ...x,
+          Id: x.Id ?? x.id ?? 0,
+          BranchId: x.BranchId ?? x.branchId ?? 0,
+          CounterId: x.CounterId ?? x.counterId ?? 0,
+          TerminalId: x.TerminalId ?? x.terminalId ?? 0,
+          BranchName: x.BranchName ?? x.branchName ?? '',
+          CounterName: x.CounterName ?? x.counterName ?? '',
+          TerminalName: x.TerminalName ?? x.terminalName ?? '',
+          Code: x.Code ?? x.code ?? '',
+          Name: x.Name ?? x.name ?? '',
+          IsActive: x.IsActive ?? x.isActive ?? false,
+          RowNumber: RowNumber++,
+          Status: (x.IsActive ?? x.isActive) ? 'Active' : 'Inactive'
         }));
-
         this.tableRows = [...this.allRows];
+        this.hiddenTableRow = [...this.allRows];
+        this.applyPrinterFilters();
+        this.changeDetector.detectChanges();
       },
       error: () => {
-        this.toast.error('Load Failed', 'Unable to load printers. Please check API and try again.');
+        this.toast.error(
+          'Load Failed',
+          'Unable to load printers. Please check API and try again.'
+        );
       },
       complete: () => {
         this.isLoading = false;
       }
     });
-  }
+}
 
   async editRow(row: PrinterRow): Promise<void> {
     this.resetDialogForm();
@@ -347,21 +345,32 @@ export class PrintersComponent implements OnInit {
     this.showAddDialog = true;
 
     try {
+      await this.ensureBranchOptionsLoaded();
+
       const response: any = await firstValueFrom(this.printerService.getById(row.Id ?? 0));
-      const result = response.result ?? {};
+      const result = response?.result ?? {};
       const printer = Array.isArray(result) ? (result[0] ?? {}) : result;
 
       this.dialogId = printer.Id ?? 0;
       this.dialogPrinterCode = printer.Code ?? '';
       this.dialogPrinterName = printer.Name ?? '';
       this.dialogBranch = printer.BranchId ?? null;
-      await this.loadCounters();
+
+      if (this.dialogBranch) {
+        await this.loadDialogCounters(Number(this.dialogBranch));
+      }
+
       this.dialogCounter = printer.CounterId ?? null;
-      await this.loadTerminals();
+
+      if (this.dialogBranch && this.dialogCounter) {
+        await this.loadDialogTerminals(Number(this.dialogBranch), Number(this.dialogCounter));
+      }
+
       this.dialogTerminal = printer.TerminalId ?? null;
       this.dialogRemarks = printer.Remarks ?? '';
+      this.changeDetector.detectChanges();
     } catch {
-      this.toast.error('Load Failed', 'Unable to load printers. Please check and try again.');
+      this.toast.error('Load Failed', 'Unable to load printer details. Please check and try again.');
     }
   }
 
@@ -369,13 +378,13 @@ export class PrintersComponent implements OnInit {
     try {
       const response: any = await firstValueFrom(this.printerService.delete(row.Id ?? 0));
 
-      if (response.ErrorInfo.Message === true) {
+      if (this.isSuccessResponse(response)) {
         this.toast.success('Deleted', `${String(row.Name ?? row.Code ?? 'Record')} deleted successfully.`);
         this.loadPrinters();
         return;
       }
 
-      this.toast.error('Delete Failed', response.ErrorInfo.Message || `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+      this.toast.error('Delete Failed', this.getErrorMessage(response, `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`));
     } catch {
       this.toast.error('Delete Failed', `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
     }
@@ -385,13 +394,13 @@ export class PrintersComponent implements OnInit {
     try {
       const response: any = await firstValueFrom(this.printerService.activeInActive(row.Id ?? 0, true));
 
-      if (response.ErrorInfo.Message === true) {
+      if (this.isSuccessResponse(response)) {
         this.toast.success('Activated', `${String(row.Name ?? row.Code ?? 'Record')} activated successfully.`);
         this.loadPrinters();
         return;
       }
 
-      this.toast.error('Activation Failed', response.ErrorInfo.Message || `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+      this.toast.error('Activation Failed', this.getErrorMessage(response, `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`));
     } catch {
       this.toast.error('Activation Failed', `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
     }
@@ -401,13 +410,13 @@ export class PrintersComponent implements OnInit {
     try {
       const response: any = await firstValueFrom(this.printerService.activeInActive(row.Id ?? 0, false));
 
-      if (response.ErrorInfo.Message === true) {
+      if (this.isSuccessResponse(response)) {
         this.toast.success('Deactivated', `${String(row.Name ?? row.Code ?? 'Record')} deactivated successfully.`);
         this.loadPrinters();
         return;
       }
 
-      this.toast.error('Deactivation Failed', response.ErrorInfo.Message || `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+      this.toast.error('Deactivation Failed', this.getErrorMessage(response, `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`));
     } catch {
       this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
     }
@@ -430,7 +439,7 @@ export class PrintersComponent implements OnInit {
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
-        this.deleteRow(row);
+        void this.deleteRow(row);
       }
     });
   }
@@ -446,7 +455,7 @@ export class PrintersComponent implements OnInit {
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-success',
       accept: () => {
-        this.activateRow(row);
+        void this.activateRow(row);
       }
     });
   }
@@ -462,7 +471,7 @@ export class PrintersComponent implements OnInit {
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-warn',
       accept: () => {
-        this.deactivateRow(row);
+        void this.deactivateRow(row);
       }
     });
   }
@@ -477,6 +486,78 @@ export class PrintersComponent implements OnInit {
     this.dialogCounter = null;
     this.dialogTerminal = null;
     this.dialogRemarks = '';
+    this.dialogCounterOptions = [];
+    this.dialogTerminalOptions = [];
+  }
+
+  private async loadBranches(): Promise<void> {
+    try {
+    
+      const response: any = await firstValueFrom(this.branchService.getAll(this.OrgId));
+      const branchList = response?.result ?? [];
+      this.branchOptions = this.mapOptions(branchList);
+      this.changeDetector.detectChanges();
+    } catch {
+      this.branchOptions = [];
+      this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
+    }
+  }
+
+private async loadDialogCounters(branchId: number): Promise<void> {
+    try {
+      
+      const response: any = await firstValueFrom(this.counterService.getAll(this.OrgId, branchId));
+      this.dialogCounterOptions = this.mapOptions(response?.result ?? []);
+      this.changeDetector.detectChanges();
+    } catch {
+      this.dialogCounterOptions = [];
+      this.toast.error('Load Failed', 'Unable to load counters. Please check and try again.');
+    }
+  }
+ private async loadDialogTerminals(branchId: number, counterId: number): Promise<void> {
+    try {
+     
+      const response: any = await firstValueFrom(this.terminalService.getAll(this.OrgId, branchId, counterId));
+      this.dialogTerminalOptions = this.mapOptions(response?.result ?? []);
+      this.changeDetector.detectChanges();
+    } catch {
+      this.dialogTerminalOptions = [];
+      this.toast.error('Load Failed', 'Unable to load terminals. Please check and try again.');
+    }
+  }
+
+  private async loadFilterCounters(branchId: number): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.counterService.getAll(this.OrgId, branchId));
+      this.filterCounterOptions = this.mapOptions(response?.result ?? []);
+      this.changeDetector.detectChanges();
+    } catch {
+      this.filterCounterOptions = [];
+      this.toast.error('Load Failed', 'Unable to load counters. Please check and try again.');
+    }
+  }
+
+  
+
+  private async loadFilterTerminals(branchId: number, counterId: number): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.terminalService.getAll(this.getOrgId(), branchId, counterId));
+      this.filterTerminalOptions = this.mapOptions(response?.result ?? []);
+      this.changeDetector.detectChanges();
+    } catch {
+      this.filterTerminalOptions = [];
+      this.toast.error('Load Failed', 'Unable to load terminals. Please check and try again.');
+    }
+  }
+
+ 
+
+  private async ensureBranchOptionsLoaded(): Promise<void> {
+    if (this.branchOptions.length > 0) {
+      return;
+    }
+
+    await this.loadBranches();
   }
 
   private isDialogFormValid(): boolean {
@@ -486,12 +567,43 @@ export class PrintersComponent implements OnInit {
     return areTextFieldsValid && areSelectFieldsValid;
   }
 
+  private applyPrinterFilters(): void {
+    const searchText = this.filterPrinterName.trim().toLowerCase();
+    const branchId = Number(this.filterBranch || 0);
+    const counterId = Number(this.filterCounter || 0);
+    const terminalId = Number(this.filterTerminal || 0);
+
+    this.tableRows = this.allRows.filter((row) =>
+      (!branchId || Number(row.BranchId ?? 0) === branchId) &&
+      (!counterId || Number(row.CounterId ?? 0) === counterId) &&
+      (!terminalId || Number(row.TerminalId ?? 0) === terminalId) &&
+      (!searchText ||
+        String(row.Name ?? '').toLowerCase().includes(searchText) ||
+        String(row.Code ?? '').toLowerCase().includes(searchText) ||
+        String(row.BranchName ?? '').toLowerCase().includes(searchText) ||
+        String(row.CounterName ?? '').toLowerCase().includes(searchText) ||
+        String(row.TerminalName ?? '').toLowerCase().includes(searchText))
+    );
+
+    this.changeDetector.detectChanges();
+  }
+
+  private mapOptions(items: any[]): SelectOption[] {
+    return items
+      .filter((item: any) => item?.IsActive !== false && item?.isActive !== false)
+      .map((item: any) => ({
+        label: item.Name ?? item.name ?? '',
+        value: item.Id ?? item.id ?? 0
+      }));
+  }
+
   private getRowActionItems(row: PrinterRow): MenuItem[] {
+    
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
 
-    if (row.IsActive === true) {
+    if (this.isRowActive(row)) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
@@ -507,7 +619,7 @@ export class PrintersComponent implements OnInit {
     }
 
     if (action === 'edit') {
-      this.editRow(this.selectedRow);
+      void this.editRow(this.selectedRow);
     } else if (action === 'delete') {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
@@ -515,5 +627,30 @@ export class PrintersComponent implements OnInit {
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  private getOrgId(): number {
+    return Number(this.userDetails?.OrgId || 0);
+  }
+
+  private getUserId(): number {
+    return Number(this.userDetails?.UserId || 0);
+  }
+
+  private isSuccessResponse(response: any): boolean {
+    return response?.ErrorInfo?.Message === true;
+  }
+
+  private isAlreadyExistsResponse(response: any): boolean {
+    return this.isSuccessResponse(response) && response?.result === 'AlreadyExists';
+  }
+
+  private getErrorMessage(response: any, fallbackMessage: string): string {
+    const message = response?.ErrorInfo?.Message;
+    return typeof message === 'string' && message.trim() ? message : fallbackMessage;
+  }
+
+  private isRowActive(row: any): boolean {
+    return row?.IsActive === true || row?.isActive === true || row?.isactive === true;
   }
 }

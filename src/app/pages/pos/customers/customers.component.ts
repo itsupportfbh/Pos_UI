@@ -41,6 +41,8 @@ const CUSTOMER_COLUMNS: SharedTableColumn<CustomerRow>[] = [
   { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'MobileNo', header: 'Mobile', sortable: true, width: '12rem' },
   { field: 'EmailId', header: 'Email', sortable: true, width: '18rem' },
+  { field: 'OpeningBalance', header: 'OpeningBalance', sortable: true, width: '18rem' },
+  { field: 'IsMember', header: 'Membership', sortable: true, width: '18rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -102,7 +104,7 @@ export class CustomersComponent implements OnInit {
   dialogGender: SelectFieldValue = null;
   dialogMemberNo = '';
   dialogOpeningBalance = '';
-  dialogIsMember: SelectFieldValue = 0;
+  dialogIsMember: SelectFieldValue = null;
   dialogRemarks = '';
 
   cityOptions = cityOptions;
@@ -143,12 +145,30 @@ export class CustomersComponent implements OnInit {
     this.customerService.getAll(orgId).subscribe({
       next: (response: any) => {
         let rowNumber = 1;
-        this.allRows = (response.result ?? []).map((customer: any) => ({
-          ...customer,
-          RowNumber: rowNumber++,
-          Status: customer.IsActive ? 'Active' : 'Inactive',
-          GenderLabel: customer.Gender ?? ''
-        }));
+        this.allRows = (response.result ?? []).map((customer: any) => {
+          customer.Id = customer.Id ?? customer.id ?? 0;
+          customer.Code = customer.Code ?? customer.code ?? '';
+          customer.Name = customer.Name ?? customer.name ?? '';
+          customer.MobileNo = customer.MobileNo ?? customer.mobileNo ?? '';
+          customer.EmailId = customer.EmailId ?? customer.emailId ?? '';
+          customer.AddressLine1 = customer.AddressLine1 ?? customer.addressLine1 ?? '';
+          customer.CityId = customer.CityId ?? customer.cityId ?? null;
+          customer.StateId = customer.StateId ?? customer.stateId ?? null;
+          customer.CountryId = customer.CountryId ?? customer.countryId ?? null;
+          customer.Pincode = customer.Pincode ?? customer.pincode ?? '';
+          customer.DateOfBirth = customer.DateOfBirth ?? customer.dateOfBirth ?? null;
+          customer.Gender = customer.Gender ?? customer.gender ?? '';
+          customer.MemberNo = customer.MemberNo ?? customer.memberNo ?? '';
+          customer.OpeningBalance = customer.OpeningBalance ?? customer.openingBalance ?? 0;
+          customer.IsMember = customer.IsMember ?? customer.isMember ?? false;
+          customer.Remarks = customer.Remarks ?? customer.remarks ?? '';
+          customer.OrgId = customer.OrgId ?? customer.orgId ?? 0;
+          customer.IsActive = customer.IsActive ?? customer.isActive ?? false;
+          customer.RowNumber = rowNumber++;
+          customer.Status = customer.IsActive ? 'Active' : 'Inactive';
+          customer.GenderLabel = customer.Gender;
+          return customer;
+        });
 
         this.tableRows = [...this.allRows];
         this.changeDetector.detectChanges();
@@ -164,25 +184,26 @@ export class CustomersComponent implements OnInit {
 
   resetForm(): void {
     this.filterCustomerName = '';
-    this.loadCustomers();
+    this.applyCustomerFilters();
+    this.closeFilterSidebar();
   }
 
   searchCustomers(): void {
-    const searchText = this.filterCustomerName.trim().toLowerCase();
-
-    if (!searchText) {
-      this.loadCustomers();
-      return;
-    }
-
-    this.tableRows = this.allRows.filter((row) =>
-      String(row.Name ?? '').toLowerCase().includes(searchText) ||
-      String(row.Code ?? '').toLowerCase().includes(searchText) ||
-      String(row.MobileNo ?? '').toLowerCase().includes(searchText) ||
-      String(row.EmailId ?? '').toLowerCase().includes(searchText)
-    );
+    this.applyCustomerFilters();
+    this.closeFilterSidebar();
   }
 
+  onFilterCustomerNameChange(value: string): void {
+    this.filterCustomerName = value;
+  }
+
+  onMemberChange(value: SelectFieldValue): void {
+    this.dialogIsMember = Number(value || 0);
+
+    if (this.dialogIsMember !== 1) {
+      this.dialogMemberNo = '';
+    }
+  }
   openFilterSidebar(): void {
     this.showFilterSidebar = true;
   }
@@ -279,6 +300,10 @@ export class CustomersComponent implements OnInit {
     }
   }
 
+
+
+
+  
   async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
@@ -301,7 +326,7 @@ export class CustomersComponent implements OnInit {
       Pincode: this.dialogPincode.trim(),
       DateOfBirth: this.dialogDateOfBirth || null,
       Gender: String(this.dialogGender || ''),
-      MemberNo: this.dialogMemberNo.trim(),
+      MemberNo: Number(this.dialogIsMember || 0) === 1 ? this.dialogMemberNo.trim() : '',
       OpeningBalance: Number(this.dialogOpeningBalance || 0),
       IsMember: Number(this.dialogIsMember || 0) === 1,
       Remarks: this.dialogRemarks.trim(),
@@ -362,34 +387,36 @@ export class CustomersComponent implements OnInit {
       const result = response.result ?? {};
       const customer = Array.isArray(result) ? (result[0] ?? {}) : result;
 
-      this.dialogId = customer.Id ?? 0;
-      this.dialogCode = customer.Code ?? '';
-      this.dialogCustomerName = customer.Name ?? '';
-      this.dialogMobileNo = customer.MobileNo ?? '';
-      this.dialogEmailId = customer.EmailId ?? '';
-      this.dialogAddressLine1 = customer.AddressLine1 ?? '';
-      this.dialogPincode = customer.Pincode ?? '';
-      this.dialogDateOfBirth = customer.DateOfBirth ? String(customer.DateOfBirth).split('T')[0] : '';
-      this.dialogGender = customer.Gender ?? null;
-      this.dialogMemberNo = customer.MemberNo ?? '';
-      this.dialogOpeningBalance = customer.OpeningBalance != null ? String(customer.OpeningBalance) : '';
-      this.dialogIsMember = customer.IsMember ? 1 : 0;
-      this.dialogRemarks = customer.Remarks ?? '';
+      this.dialogId = customer.Id ?? customer.id ?? 0;
+      this.dialogCode = customer.Code ?? customer.code ?? '';
+      this.dialogCustomerName = customer.Name ?? customer.name ?? '';
+      this.dialogMobileNo = customer.MobileNo ?? customer.mobileNo ?? '';
+      this.dialogEmailId = customer.EmailId ?? customer.emailId ?? '';
+      this.dialogAddressLine1 = customer.AddressLine1 ?? customer.addressLine1 ?? '';
+      this.dialogPincode = customer.Pincode ?? customer.pincode ?? '';
+      const dateOfBirth = customer.DateOfBirth ?? customer.dateOfBirth ?? null;
+      this.dialogDateOfBirth = dateOfBirth ? String(dateOfBirth).split('T')[0] : '';
+      this.dialogGender = customer.Gender ?? customer.gender ?? null;
+      this.dialogMemberNo = customer.MemberNo ?? customer.memberNo ?? '';
+      const openingBalance = customer.OpeningBalance ?? customer.openingBalance;
+      this.dialogOpeningBalance = openingBalance != null ? String(openingBalance) : '';
+      this.dialogIsMember = (customer.IsMember ?? customer.isMember) ? 1 : 0;
+      this.dialogRemarks = customer.Remarks ?? customer.remarks ?? '';
 
       await this.loadCountries();
-      this.dialogCountry = customer.CountryId ?? null;
+      this.dialogCountry = customer.CountryId ?? customer.countryId ?? null;
 
       if (this.dialogCountry) {
         await this.loadStates(Number(this.dialogCountry));
       }
 
-      this.dialogState = customer.StateId ?? null;
+      this.dialogState = customer.StateId ?? customer.stateId ?? null;
 
       if (this.dialogState) {
         await this.loadCities(Number(this.dialogState));
       }
 
-      this.dialogCity = customer.CityId ?? null;
+      this.dialogCity = customer.CityId ?? customer.cityId ?? null;
     } catch {
       this.toast.error('Load Failed', 'Unable to load customers. Please check and try again.');
     }
@@ -514,7 +541,7 @@ export class CustomersComponent implements OnInit {
     this.dialogGender = null;
     this.dialogMemberNo = '';
     this.dialogOpeningBalance = '';
-    this.dialogIsMember = 0;
+    this.dialogIsMember = null;
     this.dialogRemarks = '';
   }
 
@@ -523,6 +550,27 @@ export class CustomersComponent implements OnInit {
     const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
 
     return areTextFieldsValid && areSelectFieldsValid;
+  }
+
+  private applyCustomerFilters(): void {
+    const searchText = this.filterCustomerName.trim().toLowerCase();
+
+    if (!searchText) {
+      this.tableRows = [...this.allRows];
+      this.changeDetector.detectChanges();
+      return;
+    }
+
+    this.tableRows = this.allRows.filter((row) =>
+      String(row.Name ?? '').toLowerCase().includes(searchText) ||
+      String(row.Code ?? '').toLowerCase().includes(searchText) ||
+      String(row.MobileNo ?? '').toLowerCase().includes(searchText) ||
+      String(row.EmailId ?? '').toLowerCase().includes(searchText) ||
+      String(row.MemberNo ?? '').toLowerCase().includes(searchText) ||
+      String(row.Status ?? '').toLowerCase().includes(searchText)
+    );
+
+    this.changeDetector.detectChanges();
   }
 
   private getRowActionItems(row: CustomerRow): MenuItem[] {
