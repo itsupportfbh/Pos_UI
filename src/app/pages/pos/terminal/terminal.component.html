@@ -1,6 +1,6 @@
 <section class="feature-page">
   <p-confirmDialog />
-  
+
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
@@ -40,9 +40,15 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Terminal Name" inputId="terminalName" placeholder="Enter terminal name" [model]="filterTerminalName"
-          (modelChange)="filterTerminalName = $event" />
+        <app-text-field label="Terminal Name" inputId="terminalName" placeholder="Enter terminal name"
+          [model]="filterTerminalName" (modelChange)="filterTerminalName = $event" />
       </section>
+
+      <app-multiselect-field label="Branch" inputId="counter-branch-filter" placeholder="Choose branches"
+        [options]="branchOptions" [model]="selectedBranchIds" (modelChange)="onfilterBranchChange($event)" />
+
+      <app-multiselect-field label="Counter" inputId="counter-filter" placeholder="Choose counters"
+        [options]="counterOptions" [model]="selectedCounterIds" (modelChange)="onfilterCounterChange($event)" />
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
         [showSecondary]="showSecondaryAction" (primaryClick)="searchTerminals()" (secondaryClick)="resetForm()" />
@@ -59,21 +65,24 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Terminal Code" [showRequiredMark]="true" inputId="dialog-terminalCode" placeholder="TERM-01"
+    <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-terminalCode" placeholder="TERM-01"
+      [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Code is required."
       [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
 
-    <app-text-field label="Terminal Name" [showRequiredMark]="true" inputId="dialog-terminalName" placeholder="T1"
+    <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-terminalName" placeholder="T1"
+      [required]="true" [maxlength]="200" [submitted]="dialogSubmitted" errorMessage="Name is required."
       [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
 
     <app-select-field label="Branch" [showRequiredMark]="true" inputId="dialog-branch" placeholder="Select branch"
-      [options]="branchOptions" [numberValue]="true" [model]="dialogModel.branchId ?? 0"
-      (modelChange)="dialogModel.branchId = $event" />
+      [options]="branchOptions" [required]="true" [submitted]="dialogSubmitted" errorMessage="Branch is required."
+      [numberValue]="true" [model]="dialogModel.branchId ?? 0" (modelChange)="onBranchChange($event)" />
 
     <app-select-field label="Counter" [showRequiredMark]="true" inputId="dialog-counter" placeholder="Select counter"
-      [options]="counterOptions" [numberValue]="true" [model]="dialogModel.counterId ?? 0"
-      (modelChange)="dialogModel.counterId = $event" />
+      [options]="counterOptions" [required]="true" [submitted]="dialogSubmitted" errorMessage="Counter is required."
+      [numberValue]="true" [model]="dialogModel.counterId ?? 0" (modelChange)="dialogModel.counterId = $event" />
 
     <app-text-field label="Device Name" [showRequiredMark]="true" inputId="dialog-deviceName" placeholder="Device1"
+      [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Device name is required."
       [model]="dialogModel.deviceName ?? ''" (modelChange)="dialogModel.deviceName = $event" />
 
   </section>

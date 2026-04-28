@@ -32,6 +32,12 @@
           {{ row.Status }}
         </span>
       </ng-template>
+
+      <ng-template appTableCellTemplate="IsMember" let-row>
+        <span class="status-badge" [class.member-yes]="row.IsMember === true" [class.member-no]="row.IsMember !== true">
+          {{ row.IsMember === true ? 'Member' : 'Non Member' }}
+        </span>
+      </ng-template>
     </app-shared-table>
   </p-card>
 </section>
@@ -49,7 +55,7 @@
 
       <section class="field-grid">
         <app-text-field label="Customer Name" inputId="customerName" placeholder="Enter customer name"
-          [model]="filterCustomerName" (modelChange)="filterCustomerName = $event" />
+          [model]="filterCustomerName" (modelChange)="onFilterCustomerNameChange($event)" />
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
@@ -110,15 +116,15 @@
     <app-select-field label="Gender" inputId="dialog-gender" placeholder="Choose gender" [options]="genderOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Gender is required."
       [model]="dialogGender" (modelChange)="dialogGender = $event" />
-
-    <app-text-field label="Member No" inputId="dialog-member-no" placeholder="Member No" [model]="dialogMemberNo"
-      (modelChange)="dialogMemberNo = $event" />
-
+ 
     <app-text-field label="Opening Balance" inputId="dialog-opening-balance" placeholder="0" [type]="'number'"
       [model]="dialogOpeningBalance" (modelChange)="dialogOpeningBalance = $event" />
 
     <app-select-field label="Is Member" inputId="dialog-is-member" placeholder="Choose option"
-      [options]="memberOptions" [model]="dialogIsMember" (modelChange)="dialogIsMember = $event" />
+      [options]="memberOptions" [model]="dialogIsMember" (modelChange)="onMemberChange($event)" />
+
+    <app-text-field label="Member No" inputId="dialog-member-no" placeholder="Member No" [model]="dialogMemberNo"
+      (modelChange)="dialogMemberNo = $event" [disabled]="dialogIsMember !== 1" />
 
     <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks" [model]="dialogRemarks"
       (modelChange)="dialogRemarks = $event" />

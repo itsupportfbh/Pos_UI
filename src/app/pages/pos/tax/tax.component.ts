@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, inject, ViewChildren } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -7,7 +7,7 @@ import { ActionButtonsComponent } from '../../../components/form/action-buttons.
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Tax, TaxService } from '../../../services/tax.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -44,7 +44,7 @@ const TAX_COLUMNS: SharedTableColumn<TaxRow>[] = [
 @Component({
     selector: 'app-taxes',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule],
+    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
     providers: [ConfirmationService],
     templateUrl: './tax.component.html',
     styleUrl: './tax.component.css'
@@ -55,13 +55,18 @@ export class TaxComponent {
     private readonly confirmationService = inject(ConfirmationService);
     private readonly changeDetector = inject(ChangeDetectorRef);
 
+    @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+    @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+
     showAddDialog = false;
     showFilterSidebar = false;
     isLoading = false;
     isEditMode = false;
+    dialogSubmitted = false;
     filterTaxName = '';
     dialogTaxCode = '';
     dialogTaxName = '';
+    rateErrorMessage = '';
     OrgId = 0;
 
     tableRows: TaxRow[] = [];
@@ -173,19 +178,13 @@ export class TaxComponent {
         this.loadTaxes();
         this.isEditMode = false;
         this.showAddDialog = false;
+        this.dialogSubmitted = false;
     }
 
     submitAddDialog(): void {
-        if (!this.dialogModel.code?.trim()) {
-            this.toast.warn('Validation', 'Tax code is required.');
-            return;
-        }
-        if (!this.dialogModel.name?.trim()) {
-            this.toast.warn('Validation', 'Tax name is required.');
-            return;
-        }
-        if (!this.dialogModel.percentage || this.dialogModel.percentage <= 0) {
-            this.toast.warn('Validation', 'Tax percentage is required.');
+        this.dialogSubmitted = true;
+
+        if (!this.isDialogFormValid()) {
             return;
         }
 
@@ -241,7 +240,15 @@ export class TaxComponent {
     }
 
     onRateChange(value: string): void {
-        this.dialogModel.percentage = value ? parseFloat(value) : 0;
+        const rate = value ? parseFloat(value) : 0;
+        this.dialogModel.percentage = rate;
+        
+        // Validate rate is greater than zero
+        if (this.dialogSubmitted && rate <= 0) {
+            this.rateErrorMessage = 'Rate must be greater than zero.';
+        } else {
+            this.rateErrorMessage = '';
+        }
     }
 
     editRow(row: TaxRow): void {
@@ -367,6 +374,18 @@ export class TaxComponent {
         menu.toggle(event);
     }
 
+    private isDialogFormValid(): boolean {
+        const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+        const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+        const isRateValid = this.dialogModel.percentage > 0;
+
+        if (!isRateValid) {
+            this.rateErrorMessage = 'Rate must be greater than zero.';
+        }
+
+        return areTextFieldsValid && areSelectFieldsValid && isRateValid;
+    }
+
     private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
         const items: MenuItem[] = [
             { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
@@ -399,6 +418,8 @@ export class TaxComponent {
     }
 
     private resetDialogForm(): void {
+        this.dialogSubmitted = false;
+        this.rateErrorMessage = '';
         this.dialogModel = {
             Id: 0,
             code: '',

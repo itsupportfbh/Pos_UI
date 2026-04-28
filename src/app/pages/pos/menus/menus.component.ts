@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, inject, ViewChildren } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -8,7 +8,7 @@ import { SelectFieldComponent } from '../../../components/form/select-field.comp
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Menu, MenuService } from '../../../services/FoodMenu.service';
 import { CategoryService } from '../../../services/Category.service';
@@ -46,7 +46,7 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
 @Component({
   selector: 'app-menus',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
   providers: [ConfirmationService],
   templateUrl: './menus.component.html',
   styleUrl: './menus.component.css'
@@ -58,6 +58,9 @@ export class MenusComponent {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
 
+  @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+
   showAddDialog = false;
   showFilterSidebar = false;
   isLoading = false;
@@ -65,6 +68,7 @@ export class MenusComponent {
   filterMenuName = '';
   dialogMenuCode = '';
   dialogMenuName = '';
+  dialogSubmitted = false;
   OrgId = 0;
 
   tableRows: MenuRow[] = [];
@@ -187,21 +191,13 @@ export class MenusComponent {
     this.loadMenus();
     this.isEditMode = false;
     this.showAddDialog = false;
+    this.dialogSubmitted = false;
   }
 
   submitAddDialog(): void {
-    if (!this.dialogModel.code?.trim()) {
-      this.toast.warn('Validation', 'Menu code is required.');
-      return;
-    }
+    this.dialogSubmitted = true;
 
-    if (!this.dialogModel.name?.trim()) {
-      this.toast.warn('Validation', 'Menu name is required.');
-      return;
-    }
-
-    if (!this.dialogModel.categoryId || this.dialogModel.categoryId <= 0) {
-      this.toast.warn('Validation', 'Category is required.');
+    if (!this.isDialogFormValid()) {
       return;
     }
 
@@ -381,15 +377,23 @@ export class MenusComponent {
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
-    
+
     if (row['isactive'] === true) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
     }
-   
+
     return items;
+  }
+
+  private isDialogFormValid(): boolean {
+    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+
+
+    return areTextFieldsValid && areSelectFieldsValid;
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {

@@ -58,6 +58,18 @@
   color: #991b1b;
 }
 
+.member-yes {
+  border: 1px solid #93c5fd;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.member-no {
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
 
 :host ::ng-deep .filter-drawer-dialog {
   margin: 0;

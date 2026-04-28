@@ -47,19 +47,19 @@ export class SelectFieldComponent {
 
   onModelChange(value: SelectFieldValue): void {
     if (this.numberValue) {
-      this.modelChange.emit(this.toNumberOrZero(value));
+      this.modelChange.emit(this.toNumberOrNull(value));
       return;
     }
 
     this.modelChange.emit(value);
   }
 
-  private toNumberOrZero(value: SelectFieldValue): number {
+  private toNumberOrNull(value: SelectFieldValue): number | null {
     if (value === null || value === '') {
-      return 0;
+      return null;
     }
 
     const numberValue = Number(value);
-    return Number.isNaN(numberValue) ? 0 : numberValue;
+    return Number.isNaN(numberValue) ? null : numberValue;
   }
 }
