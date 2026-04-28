@@ -67,7 +67,7 @@
 
     <app-select-field label="Branch" [showRequiredMark]="true" inputId="dialog-branch" placeholder="Select branch"
       [options]="branchOptions" [numberValue]="true" [model]="dialogModel.branchId ?? 0"
-      (modelChange)="dialogModel.branchId = $event" />
+      (modelChange)="onBranchChange($event)" />
 
     <app-select-field label="Counter" [showRequiredMark]="true" inputId="dialog-counter" placeholder="Select counter"
       [options]="counterOptions" [numberValue]="true" [model]="dialogModel.counterId ?? 0"

@@ -4,11 +4,11 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
-import { SelectFieldComponent } from '../../../components/form/select-field.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Terminal, TerminalService } from '../../../services/terminal.service';
 import { BranchService } from '../../../services/branch.service';
@@ -49,7 +49,7 @@ const TERMINAL_COLUMNS: SharedTableColumn<TerminalRow>[] = [
 @Component({
     selector: 'app-terminals',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule],
+    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
     providers: [ConfirmationService],
     templateUrl: './terminal.component.html',
     styleUrl: './terminal.component.css'
@@ -81,6 +81,7 @@ export class TerminalComponent {
     branchOptions: any[] = [];
     counterOptions: any[] = [];
     dialogCategory: number | null = null;
+    dialogBranch: SelectFieldValue = null;
 
     dialogModel: Terminal = {
         Id: 0,
@@ -122,7 +123,6 @@ export class TerminalComponent {
         this.BranchId = Number(userDetails.BranchId || 0);
         this.loadTerminals();
         this.loadBranches();
-        this.loadCounters();
     }
 
     loadBranches() {
@@ -134,8 +134,19 @@ export class TerminalComponent {
         });
     }
 
-    loadCounters() {
-        this.counterService.getAll(this.OrgId, this.BranchId).subscribe((res: any) => {
+    onBranchChange(value: SelectFieldValue): void {
+        this.dialogBranch = value;
+        this.counterOptions = [];
+
+        if (!value || Number(value) === 0) {
+            return;
+        }
+
+        void this.loadCounters(Number(value));
+    }
+
+    loadCounters(BranchId: number = this.BranchId): void {
+        this.counterService.getAll(this.OrgId, BranchId).subscribe((res: any) => {
             this.counterOptions = (res.result || []).map((item: any) => ({
                 label: item.Name,
                 value: item.Id
@@ -207,7 +218,6 @@ export class TerminalComponent {
 
     closeAddDialog(): void {
         this.resetDialogForm();
-        this.loadCounters();
         this.loadBranches();
         this.loadTerminals();
         this.isEditMode = false;

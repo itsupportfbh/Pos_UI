@@ -8,7 +8,7 @@ import { SelectFieldComponent } from '../../../components/form/select-field.comp
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Menu, MenuService } from '../../../services/FoodMenu.service';
 import { CategoryService } from '../../../services/Category.service';
@@ -46,7 +46,7 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
 @Component({
   selector: 'app-menus',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
   providers: [ConfirmationService],
   templateUrl: './menus.component.html',
   styleUrl: './menus.component.css'

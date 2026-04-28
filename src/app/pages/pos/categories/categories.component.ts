@@ -7,7 +7,7 @@ import { ActionButtonsComponent } from '../../../components/form/action-buttons.
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Category, CategoryService } from '../../../services/Category.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -42,7 +42,7 @@ const CATEGORY_COLUMNS: SharedTableColumn<CategoryRow>[] = [
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
   providers: [ConfirmationService],
   templateUrl: './categories.component.html',
   styleUrl: './categories.component.css'
