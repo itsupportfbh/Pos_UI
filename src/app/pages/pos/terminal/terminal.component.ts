@@ -14,13 +14,14 @@ import { Terminal, TerminalService } from '../../../services/terminal.service';
 import { BranchService } from '../../../services/branch.service';
 import { CounterService } from '../../../services/counter.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 
 type TerminalRow = {
     id: number;
     code: string;
     name: string;
-    branchId: number;
-    counterId: number;
+    branchid: number;
+    counterid: number;
     deviceName: string;
     orgId: number;
     isActive: boolean;
@@ -36,8 +37,11 @@ type TerminalRow = {
 const TERMINAL_COLUMNS: SharedTableColumn<TerminalRow>[] = [
     { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
     { field: 'code', header: 'Code', sortable: true, width: '10rem' },
-    { field: 'name', header: 'Name', sortable: true, width: '18rem' },
+    { field: 'name', header: 'Name', sortable: true, width: '10rem' },
+    { field: 'branchid', header: 'Branch ID', sortable: true, width: '10rem', hidden: true },
     { field: 'branchname', header: 'Branch', sortable: true, width: '10rem' },
+    { field: 'counterid', header: 'Counter ID', sortable: true, width: '10rem', hidden: true },
+    { field: 'countername', header: 'Counter', sortable: true, width: '10rem' },
     {
         field: 'Status',
         header: 'Status',
@@ -49,7 +53,7 @@ const TERMINAL_COLUMNS: SharedTableColumn<TerminalRow>[] = [
 @Component({
     selector: 'app-terminals',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
+    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, MultiSelectFieldComponent],
     providers: [ConfirmationService],
     templateUrl: './terminal.component.html',
     styleUrl: './terminal.component.css'
@@ -65,12 +69,19 @@ export class TerminalComponent {
 
     @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
     @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+    @ViewChildren(MultiSelectFieldComponent) private readonly multiSelectFields?: QueryList<MultiSelectFieldComponent>;
 
     showAddDialog = false;
     showFilterSidebar = false;
     isLoading = false;
     isEditMode = false;
     filterTerminalName = '';
+    selectedBranchId = 0;
+    selectedCounterId = 0;
+    selectedBranchIds: MultiSelectFieldValue = [];
+    selectedCounterIds: MultiSelectFieldValue = [];
+    dialogBranchIds: MultiSelectFieldValue = [];
+    dialogCounterIds: MultiSelectFieldValue = [];
     dialogSubmitted = false;
     dialogTerminalCode = '';
     dialogTerminalName = '';
@@ -79,6 +90,7 @@ export class TerminalComponent {
     counterId = 0;
 
     tableRows: TerminalRow[] = [];
+    allTerminals: TerminalRow[] = [];
     selectedRow: TerminalRow | null = null;
     editingTerminalId: number | null = null;
 
@@ -159,6 +171,15 @@ export class TerminalComponent {
         });
     }
 
+    loadMultiCounters(branchIds: number[] = []): void {
+        this.counterService.getMultiAll(this.OrgId, branchIds).subscribe((res: any) => {
+            this.counterOptions = (res.result || []).map((item: any) => ({
+                label: item.Name,
+                value: item.Id
+            }));
+        });
+    }
+
     loadTerminals(): void {
         this.isLoading = true;
 
@@ -167,11 +188,12 @@ export class TerminalComponent {
                 const result = response?.result ?? response ?? [];
                 console.log('Terminals loaded:', result);
                 let RowNumber = 1;
-                this.tableRows = (response.result ?? []).map((x: any) => {
+                this.allTerminals = (response.result ?? []).map((x: any) => {
                     x.RowNumber = RowNumber++;
                     x.Status = x.isactive ? 'Active' : 'Inactive';
                     return x;
                 });
+                this.tableRows = [...this.allTerminals];
                 this.changeDetector.detectChanges();
             },
             error: () => {
@@ -188,20 +210,48 @@ export class TerminalComponent {
 
     searchTerminals(): void {
         const searchText = this.filterTerminalName.trim().toLowerCase();
+        // const branchId = Number(this.selectedBranchId || 0);
+        // const counterId = Number(this.selectedCounterId || 0);      
 
-        if (!searchText) {
-            this.loadTerminals();
-            return;
-        }
+        // this.tableRows = (this.allTerminals || []).filter((row) => {
+        //     const matchesText = !searchText ||
+        //         row.name?.toLowerCase().includes(searchText) ||
+        //         row.code?.toLowerCase().includes(searchText);
+        //     const matchesBranch = !branchId || Number(row.branchid ?? 0) === branchId;
+        //     const matchesCounter = !counterId || Number(row.counterid ?? 0) === counterId;
+        //     return matchesText && matchesBranch && matchesCounter;
+        // });
+        const branchIds = this.selectedBranchIds.map((id) => Number(id));
+        const counterIds = this.selectedCounterIds.map((id) => Number(id));
 
-        this.tableRows = this.tableRows.filter((row) =>
-            row.name?.toLowerCase().includes(searchText) ||
-            row.code?.toLowerCase().includes(searchText)
-        );
+        this.tableRows = this.allTerminals.filter((row) => {
+            const matchesText = !searchText ||
+                row.name?.toLowerCase().includes(searchText) ||
+                row.code?.toLowerCase().includes(searchText);
+
+            const matchesBranch = !branchIds.length || branchIds.includes(Number(row.branchid ?? 0));
+            const matchesCounter = !counterIds.length || counterIds.includes(Number(row.counterid ?? 0));
+
+            return matchesText && matchesBranch && matchesCounter;
+        });
+
+    }
+
+    onfilterBranchChange(value: MultiSelectFieldValue): void {
+        const arr = Array.isArray(value) ? value : value ? [value] : [];
+        this.selectedBranchIds = arr.map(v => Number(v));
+        console.log('Selected Branch IDs:', this.selectedBranchIds);
+        void this.loadMultiCounters(this.selectedBranchIds.map((id) => Number(id)));
+    }
+
+    onfilterCounterChange(counterIds: MultiSelectFieldValue): void {
+        this.selectedCounterIds = counterIds.map(id => Number(id));
     }
 
     resetForm(): void {
         this.filterTerminalName = '';
+        this.selectedBranchIds = [];
+        this.selectedCounterIds = [];
         this.loadTerminals();
     }
 
@@ -231,7 +281,7 @@ export class TerminalComponent {
     }
 
     submitAddDialog(): void {
-       this.dialogSubmitted = true;
+        this.dialogSubmitted = true;
 
         if (!this.isDialogFormValid()) {
             return;
@@ -302,8 +352,8 @@ export class TerminalComponent {
                     Id: terminal?.id ?? terminal?.Id ?? row.id,
                     code: terminal?.code ?? terminal?.Code ?? row.code,
                     name: terminal?.name ?? terminal?.Name ?? row.name,
-                    branchId: terminal?.branchId ?? terminal?.BranchId ?? row.branchId,
-                    counterId: terminal?.counterId ?? terminal?.CounterId ?? row.counterId,
+                    branchId: terminal?.branchId ?? terminal?.BranchId ?? row.branchid,
+                    counterId: terminal?.counterId ?? terminal?.CounterId ?? row.counterid,
                     deviceName: terminal?.deviceName ?? terminal?.DeviceName ?? row.deviceName,
                     OrgId: terminal?.orgId ?? terminal?.OrgId ?? row.orgId,
                     IsActive: terminal?.isActive ?? terminal?.IsActive ?? row.isActive,
@@ -416,9 +466,9 @@ export class TerminalComponent {
     private isDialogFormValid(): boolean {
         const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
         const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
-         
+        const areMultiSelectFieldsValid = this.multiSelectFields?.toArray().every((field) => field.isValid) ?? true;
 
-        return areTextFieldsValid && areSelectFieldsValid;
+        return areTextFieldsValid && areSelectFieldsValid && areMultiSelectFieldsValid;
     }
 
     private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
@@ -454,6 +504,9 @@ export class TerminalComponent {
 
     private resetDialogForm(): void {
         this.dialogSubmitted = false;
+        this.dialogBranchIds = [];
+        this.dialogCounterIds = [];
+        this.counterOptions = [];
         this.dialogModel = {
             Id: 0,
             code: '',

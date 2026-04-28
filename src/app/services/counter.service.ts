@@ -34,7 +34,7 @@ export class CounterService {
   constructor(
     private readonly http: HttpClient,
     private readonly runtimeConfig: RuntimeConfigService
-  ) {}
+  ) { }
 
   create(payload: Counter): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/${this.controllerPath}/Create`, payload);
@@ -47,6 +47,18 @@ export class CounterService {
   getAll(orgId: number, branchId: number): Observable<ApiListResponse<Counter>> {
     return this.http.get<ApiListResponse<Counter>>(
       `${this.baseUrl}/${this.controllerPath}/GetAllCounter?orgId=${orgId}&branchId=${branchId}`
+    );
+  }
+
+  getMultiAll(orgId: number, branchIds: number[]): Observable<ApiListResponse<Counter>> {
+    let query = `orgId=${orgId}`;
+
+    if (branchIds?.length) {
+      query += '&' + branchIds.map(id => `branchIds=${id}`).join('&');
+    }
+
+    return this.http.get<ApiListResponse<Counter>>(
+      `${this.baseUrl}/${this.controllerPath}/GetAllCounter?${query}`
     );
   }
 
