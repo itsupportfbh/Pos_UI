@@ -172,6 +172,7 @@ export class TerminalComponent {
     }
 
     loadMultiCounters(branchIds: number[] = []): void {
+        console.log('Loading counters for multiple Branch IDs:', branchIds);
         this.counterService.getMultiAll(this.OrgId, branchIds).subscribe((res: any) => {
             this.counterOptions = (res.result || []).map((item: any) => ({
                 label: item.Name,
@@ -240,7 +241,7 @@ export class TerminalComponent {
     onfilterBranchChange(value: MultiSelectFieldValue): void {
         const arr = Array.isArray(value) ? value : value ? [value] : [];
         this.selectedBranchIds = arr.map(v => Number(v));
-        console.log('Selected Branch IDs:', this.selectedBranchIds);
+        
         void this.loadMultiCounters(this.selectedBranchIds.map((id) => Number(id)));
     }
 
