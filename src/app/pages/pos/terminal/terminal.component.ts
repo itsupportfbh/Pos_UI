@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, inject, ViewChildren } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -63,11 +63,15 @@ export class TerminalComponent {
     private readonly changeDetector = inject(ChangeDetectorRef);
     private readonly confirmationService = inject(ConfirmationService);
 
+    @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+    @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+
     showAddDialog = false;
     showFilterSidebar = false;
     isLoading = false;
     isEditMode = false;
     filterTerminalName = '';
+    dialogSubmitted = false;
     dialogTerminalCode = '';
     dialogTerminalName = '';
     OrgId = 0;
@@ -136,6 +140,7 @@ export class TerminalComponent {
 
     onBranchChange(value: SelectFieldValue): void {
         this.dialogBranch = value;
+        this.dialogModel.branchId = Number(value) || 0;
         this.counterOptions = [];
 
         if (!value || Number(value) === 0) {
@@ -222,32 +227,13 @@ export class TerminalComponent {
         this.loadTerminals();
         this.isEditMode = false;
         this.showAddDialog = false;
+        this.dialogSubmitted = false;
     }
 
     submitAddDialog(): void {
-        if (!this.dialogModel.code?.trim()) {
-            this.toast.warn('Validation', 'Terminal code is required.');
-            return;
-        }
+       this.dialogSubmitted = true;
 
-        if (!this.dialogModel.name?.trim()) {
-            this.toast.warn('Validation', 'Terminal name is required.');
-            return;
-        }
-
-        if (!this.dialogModel.branchId || this.dialogModel.branchId <= 0) {
-            this.toast.warn('Validation', 'Branch is required.');
-            return;
-        }
-
-        if (!this.dialogModel.counterId || this.dialogModel.counterId <= 0) {
-            //this.toast.warn('Validation', 'Counter is required.');
-            //return;
-            this.dialogModel.counterId = 2;
-        }
-
-        if (!this.dialogModel.deviceName?.trim()) {
-            this.toast.warn('Validation', 'Device name is required.');
+        if (!this.isDialogFormValid()) {
             return;
         }
 
@@ -427,6 +413,14 @@ export class TerminalComponent {
         menu.toggle(event);
     }
 
+    private isDialogFormValid(): boolean {
+        const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+        const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+         
+
+        return areTextFieldsValid && areSelectFieldsValid;
+    }
+
     private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
         const items: MenuItem[] = [
             { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
@@ -459,10 +453,14 @@ export class TerminalComponent {
     }
 
     private resetDialogForm(): void {
+        this.dialogSubmitted = false;
         this.dialogModel = {
             Id: 0,
             code: '',
             name: '',
+            branchId: 0,
+            counterId: 0,
+            deviceName: '',
             OrgId: this.OrgId,
             IsActive: true,
             CreatedBy: 1,

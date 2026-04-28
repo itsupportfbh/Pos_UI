@@ -60,11 +60,11 @@
 
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-categoryCode" placeholder="CAT-02"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogModel.code ?? ''"
+      [required]="true" [maxlength]="50" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogModel.code ?? ''"
       (modelChange)="dialogModel.code = $event" />
 
     <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-categoryName" placeholder="Starters"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."
+      [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Name is required."
       [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
   </section>
 
