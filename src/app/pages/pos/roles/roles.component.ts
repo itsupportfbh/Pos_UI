@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -11,6 +12,7 @@ import { ActionButtonsComponent } from '../../../components/form/action-buttons.
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { Role, RoleService } from '../../../services/role.service';
 
 type PagePermission = {
   pageName: string;
@@ -22,13 +24,9 @@ type PagePermission = {
   print: boolean;
 };
 
-type RoleRow = {
-  Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+type RoleRow = Role & {
+  RowNumber: number;
   Status: string;
-  IsActive: boolean;
 };
 
 const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
@@ -70,7 +68,9 @@ const PERMISSION_PAGES: PagePermission[] = [
 })
 export class RolesComponent {
   private readonly toast = inject(AppToastService);
+  private readonly roleService = inject(RoleService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -79,6 +79,7 @@ export class RolesComponent {
   showPermissionsDialog = false;
   isEditMode = false;
   dialogSubmitted = false;
+  dialogSaving = false;
   filterRoleName = '';
   permissionRoleName = '';
   permissionSearchText = '';
@@ -90,9 +91,9 @@ export class RolesComponent {
 
   selectedRow: RoleRow | null = null;
   rowActionItems: MenuItem[] = [];
-  allRows: RoleRow[] = [];
   tableRows: RoleRow[] = [];
   permissionPages: PagePermission[] = [];
+  userDetails: any = {};
 
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Roles';
@@ -117,6 +118,11 @@ export class RolesComponent {
     this.permissionPages = PERMISSION_PAGES.map((page) => ({ ...page }));
   }
 
+  ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.loadRoles();
+  }
+
   get filteredPermissionPages(): PagePermission[] {
     const searchText = this.permissionSearchText.trim().toLowerCase();
 
@@ -132,20 +138,20 @@ export class RolesComponent {
 
   resetForm(): void {
     this.filterRoleName = '';
-    this.tableRows = [...this.allRows];
+    this.loadRoles();
   }
 
   searchRoles(): void {
     const name = this.filterRoleName.trim().toLowerCase();
 
     if (!name) {
-      this.tableRows = [...this.allRows];
+      this.loadRoles();
       return;
     }
 
-    this.tableRows = this.allRows.filter((row) =>
-      row.Name.toLowerCase().includes(name) ||
-      row.Code.toLowerCase().includes(name)
+    this.tableRows = this.tableRows.filter((row) =>
+      String(row.Name ?? '').toLowerCase().includes(name) ||
+      String(row.Code ?? '').toLowerCase().includes(name)
     );
   }
 
@@ -167,70 +173,157 @@ export class RolesComponent {
   }
 
   closeAddDialog(): void {
+    this.loadRoles();
+    this.isEditMode = false;
     this.dialogSubmitted = false;
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
+  loadRoles(): void {
+    const orgId = Number(this.userDetails.OrgId || 0);
+
+    this.roleService.getAll(orgId).subscribe({
+      next: (response) => {
+        let RowNumber = 1;
+        this.tableRows = (response.result ?? []).map((x: any) => {
+          x.RowNumber = RowNumber++;
+          x.Status = x.IsActive ? 'Active' : 'Inactive';
+          return x;
+        });
+
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.toast.error('Load Failed', 'Unable to load roles. Please check API and try again.');
+      }
+    });
+  }
+
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
       return;
     }
 
-    const roleRow: RoleRow = {
-      Id: this.dialogId || Date.now(),
+    this.dialogSaving = true;
+
+    const payload: Role = {
+      Id: this.dialogId,
       Code: this.dialogCode,
       Name: this.dialogName,
       Remarks: this.dialogRemarks,
-      Status: 'Active',
-      IsActive: true
+      OrgId: Number(this.userDetails.OrgId || 0),
+      IsActive: true,
+      CreatedBy: Number(this.userDetails.UserId || 0),
+      CreatedDate: new Date().toISOString(),
+      UpdatedBy: Number(this.userDetails.UserId || 0),
+      UpdatedDate: null,
+      IsDeleted: false
     };
 
-    if (this.isEditMode) {
-      this.allRows = this.allRows.map((row) => row.Id === roleRow.Id ? { ...roleRow, Status: row.Status, IsActive: row.IsActive } : row);
-      this.toast.success('Updated', `${roleRow.Name || this.pageTitle} updated successfully.`);
-    } else {
-      this.allRows = [...this.allRows, roleRow];
-      this.toast.success('Saved', `${roleRow.Name || this.pageTitle} saved successfully.`);
-    }
+    try {
+      let response: any;
 
-    this.tableRows = [...this.allRows];
-    this.closeAddDialog();
+      if (!payload.Id) {
+        response = await firstValueFrom(this.roleService.create(payload));
+      } else {
+        response = await firstValueFrom(this.roleService.update(payload));
+      }
+
+      if (response.ErrorInfo.Message === true && response.result === 'AlreadyExists') {
+        this.toast.warn('Already Exists', `${payload.Name || this.pageTitle} already exists. Please use a different name.`);
+        this.dialogName = '';
+        return;
+      }
+
+      if (response.ErrorInfo.Message === true && !payload.Id) {
+        this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      if (response.ErrorInfo.Message === true && payload.Id) {
+        this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', response.ErrorInfo.Message || 'Unable to save role.');
+    } catch {
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save role.');
+    } finally {
+      this.dialogSaving = false;
+    }
   }
 
-  editRow(row: RoleRow): void {
-    this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
+  async editRow(row: RoleRow): Promise<void> {
+    this.resetDialogForm();
     this.isEditMode = true;
     this.dialogTitle = 'Edit Role';
     this.dialogSubtitle = 'Update the selected role template.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
+
+    try {
+      const response: any = await firstValueFrom(this.roleService.getById(row.Id ?? 0));
+      const role = response.result ?? {};
+
+      this.dialogId = role.Id ?? 0;
+      this.dialogCode = role.Code ?? '';
+      this.dialogName = role.Name ?? '';
+      this.dialogRemarks = role.Remarks ?? '';
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load role details. Please check and try again.');
+    }
   }
 
-  deleteRow(row: RoleRow): void {
-    this.allRows = this.allRows.filter((x) => x.Id !== row.Id);
-    this.tableRows = [...this.allRows];
-    this.toast.success('Deleted', `${row.Name || 'Role'} deleted successfully.`);
+  async deleteRow(row: RoleRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.roleService.delete(row.Id ?? 0));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deleted', `${String(row.Name ?? row.Code ?? 'Record')} deleted successfully.`);
+        this.loadRoles();
+        return;
+      }
+
+      this.toast.error('Delete Failed', response.ErrorInfo.Message || `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Delete Failed', `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
   }
 
-  activateRow(row: RoleRow): void {
-    this.allRows = this.allRows.map((x) =>
-      x.Id === row.Id ? { ...x, IsActive: true, Status: 'Active' } : x
-    );
-    this.tableRows = [...this.allRows];
-    this.toast.success('Activated', `${row.Name || 'Role'} activated successfully.`);
+  async activateRow(row: RoleRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.roleService.activeInActive(row.Id ?? 0, true));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Activated', `${String(row.Name ?? row.Code ?? 'Record')} activated successfully.`);
+        this.loadRoles();
+        return;
+      }
+
+      this.toast.error('Activation Failed', response.ErrorInfo.Message || `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Activation Failed', `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
   }
 
-  deactivateRow(row: RoleRow): void {
-    this.allRows = this.allRows.map((x) =>
-      x.Id === row.Id ? { ...x, IsActive: false, Status: 'Inactive' } : x
-    );
-    this.tableRows = [...this.allRows];
-    this.toast.success('Deactivated', `${row.Name || 'Role'} deactivated successfully.`);
+  async deactivateRow(row: RoleRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.roleService.activeInActive(row.Id ?? 0, false));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deactivated', `${String(row.Name ?? row.Code ?? 'Record')} deactivated successfully.`);
+        this.loadRoles();
+        return;
+      }
+
+      this.toast.error('Deactivation Failed', response.ErrorInfo.Message || `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
   }
 
   openPermissionsDialog(row: RoleRow): void {
@@ -272,14 +365,15 @@ export class RolesComponent {
   }
 
   confirmDeleteRow(row: RoleRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this role');
+
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: `Are you sure you want to delete ${row.Name || 'this role'}?`,
+      message: `Are you sure you want to delete ${name}?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-danger',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.deleteRow(row);
       }
@@ -287,14 +381,15 @@ export class RolesComponent {
   }
 
   confirmActivateRow(row: RoleRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this role');
+
     this.confirmationService.confirm({
       header: 'Activate Confirmation',
-      message: `Are you sure you want to activate ${row.Name || 'this role'}?`,
+      message: `Are you sure you want to activate ${name}?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-success',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.activateRow(row);
       }
@@ -302,14 +397,15 @@ export class RolesComponent {
   }
 
   confirmDeactivateRow(row: RoleRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this role');
+
     this.confirmationService.confirm({
       header: 'Deactivate Confirmation',
-      message: `Are you sure you want to deactivate ${row.Name || 'this role'}?`,
+      message: `Are you sure you want to deactivate ${name}?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-warn',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.deactivateRow(row);
       }
@@ -356,6 +452,7 @@ export class RolesComponent {
 
   private resetDialogForm(): void {
     this.dialogSubmitted = false;
+    this.dialogSaving = false;
     this.dialogId = 0;
     this.dialogCode = '';
     this.dialogName = '';

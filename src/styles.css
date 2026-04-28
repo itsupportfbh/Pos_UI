@@ -341,9 +341,17 @@ label {
   border-radius: 999px;
 }
 
-.p-dialog .p-dialog-content,
 .p-card .p-card-body {
   overflow: visible;
+}
+
+.p-dialog:not(.filter-drawer-dialog) {
+  max-height: calc(100dvh - 2rem) !important;
+}
+
+.p-dialog:not(.filter-drawer-dialog) .p-dialog-content {
+  overflow: auto !important;
+  max-height: calc(100dvh - 11rem);
 }
 
 .p-select-overlay,

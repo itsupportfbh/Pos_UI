@@ -8,21 +8,49 @@ export interface UserMaster {
   Id?: number;
   Code?: string;
   Name?: string;
+  Remarks?: string;
+  IsAdmin?: boolean;
   EmpCode?: string;
   Email?: string;
-  ContactNumber?: string;
+  Password?: string;
+  ContactNo?: number;
+  OrgId?: number;
+  Image?: string;
   Gender?: number;
-  DateOfBirth?: string | null;
+  DOB?: string | null;
   Age?: number;
-  IsAdmin?: boolean;
   Address1?: string;
   Address2?: string;
-  Country?: number;
-  State?: number;
   City?: number;
+  State?: number;
+  Country?: number;
   PostalCode?: string;
-  Image?: string;
-  Remarks?: string;
+  UserBranchMapping?: UserBranchMapping[];
+  UserRoleMapping?: UserRoleMapping[];
+  IsActive?: boolean;
+  CreatedBy?: number | null;
+  CreatedDate?: string;
+  UpdatedBy?: number | null;
+  UpdatedDate?: string | null;
+  IsDeleted?: boolean;
+}
+
+export interface UserBranchMapping {
+  Id?: number;
+  UserId?: number;
+  BranchId?: number;
+  IsActive?: boolean;
+  CreatedBy?: number | null;
+  CreatedDate?: string;
+  UpdatedBy?: number | null;
+  UpdatedDate?: string | null;
+  IsDeleted?: boolean;
+}
+
+export interface UserRoleMapping {
+  Id?: number;
+  UserId?: number;
+  RoleId?: number;
   IsActive?: boolean;
   CreatedBy?: number | null;
   CreatedDate?: string;
@@ -50,8 +78,8 @@ export class UserMasterService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(): Observable<ApiListResponse<UserMaster>> {
-    return this.http.get<ApiListResponse<UserMaster>>(`${this.baseUrl}/${this.controllerPath}/GetAll`);
+  getAll(OrgId: number): Observable<ApiListResponse<UserMaster>> {
+    return this.http.get<ApiListResponse<UserMaster>>(`${this.baseUrl}/${this.controllerPath}/GetAllUsers?OrgId=${OrgId}`);
   }
 
   getById(id: number | string): Observable<any> {

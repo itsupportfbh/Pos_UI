@@ -70,7 +70,7 @@
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" inputId="dialog-code" placeholder="Branch Code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required."
-      [textWithNumbersOnly]="true" formatErrorMessage="Code allows text and numbers only." [disabled]="true" [model]="dialogCode"
+      [textWithNumbersOnly]="true" formatErrorMessage="Code allows text and numbers only." [model]="dialogCode"
       (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Name" inputId="dialog-name" placeholder="Branch Name" [required]="true"

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -10,11 +10,15 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { DateFieldComponent } from '../../../components/form/date-field.component';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { RadioFieldComponent } from '../../../components/form/radio-field.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
+import { RoleService } from '../../../services/role.service';
+import { UserMaster, UserMasterService } from '../../../services/usermaster.service';
 
 type UserRow = {
   Id: number;
@@ -37,6 +41,8 @@ type UserRow = {
   State: number;
   City: number;
   PostalCode: string;
+  BranchNames: string[];
+  RoleNames: string[];
   RoleName: string;
   OrganizationName: string;
   Status: string;
@@ -58,113 +64,6 @@ const IS_ADMIN_OPTIONS = [
   { label: 'No', value: 'No' }
 ];
 
-const SAMPLE_USERS: UserRow[] = [
-  {
-    Id: 1,
-    Code: 'USR001',
-    Name: 'Antony Raj',
-    Remarks: 'Main admin user',
-    Email: 'antony@unityworkpos.com',
-    ContactNumber: '9876543210',
-    EmpCode: 'EMP001',
-    ImageName: '',
-    ImageUrl: '',
-    Gender: '1',
-    GenderName: 'Male',
-    DateOfBirth: new Date('1994-06-12'),
-    Age: 31,
-    IsAdmin: 'Yes',
-    Address1: '12 Lake View Road',
-    Address2: 'Anna Nagar',
-    Country: 1,
-    State: 1,
-    City: 1,
-    PostalCode: '600040',
-    RoleName: 'Administrator',
-    OrganizationName: 'Unity Work POS',
-    Status: 'Active',
-    IsActive: true
-  },
-  {
-    Id: 2,
-    Code: 'USR002',
-    Name: 'Priya Devi',
-    Remarks: 'Billing supervisor',
-    Email: 'priya@unityworkpos.com',
-    ContactNumber: '9123456780',
-    EmpCode: 'EMP002',
-    ImageName: '',
-    ImageUrl: '',
-    Gender: '2',
-    GenderName: 'Female',
-    DateOfBirth: new Date('1997-02-18'),
-    Age: 29,
-    IsAdmin: 'No',
-    Address1: '25 Market Street',
-    Address2: 'T Nagar',
-    Country: 1,
-    State: 1,
-    City: 1,
-    PostalCode: '600017',
-    RoleName: 'Cashier',
-    OrganizationName: 'Unity Work POS',
-    Status: 'Active',
-    IsActive: true
-  },
-  {
-    Id: 3,
-    Code: 'USR003',
-    Name: 'Rahul Kumar',
-    Remarks: 'Kitchen operations user',
-    Email: 'rahul@unityworkpos.com',
-    ContactNumber: '9012345678',
-    EmpCode: 'EMP003',
-    ImageName: '',
-    ImageUrl: '',
-    Gender: '1',
-    GenderName: 'Male',
-    DateOfBirth: new Date('1995-10-05'),
-    Age: 30,
-    IsAdmin: 'No',
-    Address1: '8 MG Road',
-    Address2: 'Velachery',
-    Country: 1,
-    State: 1,
-    City: 1,
-    PostalCode: '600042',
-    RoleName: 'Manager',
-    OrganizationName: 'Unity Work POS',
-    Status: 'Inactive',
-    IsActive: false
-  },
-  {
-    Id: 4,
-    Code: 'USR004',
-    Name: 'Meena Joseph',
-    Remarks: 'Front office user',
-    Email: 'meena@unityworkpos.com',
-    ContactNumber: '9988776655',
-    EmpCode: 'EMP004',
-    ImageName: '',
-    ImageUrl: '',
-    Gender: '2',
-    GenderName: 'Female',
-    DateOfBirth: new Date('1998-11-23'),
-    Age: 27,
-    IsAdmin: 'No',
-    Address1: '41 Beach Road',
-    Address2: 'Adyar',
-    Country: 1,
-    State: 1,
-    City: 1,
-    PostalCode: '600020',
-    RoleName: 'Reception',
-    OrganizationName: 'Unity Work POS',
-    Status: 'Active',
-    IsActive: true
-  }
-];
-
 @Component({
   selector: 'app-users',
   standalone: true,
@@ -176,6 +75,7 @@ const SAMPLE_USERS: UserRow[] = [
     DialogModule,
     TextFieldComponent,
     SelectFieldComponent,
+    MultiSelectFieldComponent,
     DateFieldComponent,
     RadioFieldComponent,
     ActionButtonsComponent,
@@ -185,12 +85,17 @@ const SAMPLE_USERS: UserRow[] = [
   templateUrl: './users.component.html',
   styleUrl: './users.component.css'
 })
-export class UsersComponent {
+export class UsersComponent implements OnInit {
   private readonly toast = inject(AppToastService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly branchService = inject(BranchService);
+  private readonly roleService = inject(RoleService);
+  private readonly userMasterService = inject(UserMasterService);
   private readonly commonService = inject(CommonService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+  @ViewChildren(MultiSelectFieldComponent) private readonly multiSelectFields?: QueryList<MultiSelectFieldComponent>;
   @ViewChildren(DateFieldComponent) private readonly dateFields?: QueryList<DateFieldComponent>;
 
   showAddDialog = false;
@@ -219,8 +124,8 @@ export class UsersComponent {
   dialogState: SelectFieldValue = null;
   dialogCity: SelectFieldValue = null;
   dialogPostalCode = '';
-  dialogRoleName = '';
-  dialogOrganizationName = '';
+  dialogBranches: MultiSelectFieldValue = [];
+  dialogRoles: MultiSelectFieldValue = [];
 
   selectedRow: UserRow | null = null;
   rowActionItems: MenuItem[] = [];
@@ -229,6 +134,9 @@ export class UsersComponent {
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
+  branchOptions: any[] = [];
+  roleOptions: any[] = [];
+  userDetails: any = {};
 
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Users';
@@ -247,15 +155,16 @@ export class UsersComponent {
   readonly addNewButtonLabel = 'Add New';
   readonly showFilterButton = true;
 
-  constructor() {
-    this.allRows = [...SAMPLE_USERS];
-    this.tableRows = [...SAMPLE_USERS];
+
+  ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.loadUsers();
   }
 
   resetForm(): void {
     this.filterName = '';
     this.filterEmail = '';
-    this.tableRows = [...this.allRows];
+    this.loadUsers();
   }
 
   searchUsers(): void {
@@ -263,6 +172,7 @@ export class UsersComponent {
     const email = this.filterEmail.trim().toLowerCase();
 
     if (!name && !email) {
+      this.loadUsers();
       return;
     }
 
@@ -288,15 +198,85 @@ export class UsersComponent {
     this.dialogSubtitle = 'Create a new user profile.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+    void this.loadBranches();
+    void this.loadRoles();
     void this.loadCountries();
   }
 
   closeAddDialog(): void {
+    this.loadUsers();
     this.dialogSubmitted = false;
     this.showAddDialog = false;
   }
 
-  async loadCountries(): Promise<void> {
+  loadUsers(): void {
+    this.userMasterService.getAll(Number(this.userDetails.OrgId || 0)).subscribe({
+      next: (response) => {
+        this.tableRows = (response.result ?? []).map((x: any) => {
+          x.ContactNumber = x.ContactNo ? String(x.ContactNo) : '';
+          x.ImageUrl = x.Image ?? '';
+          x.DateOfBirth = x.DOB ? new Date(x.DOB) : null;
+          x.IsAdmin = x.IsAdmin === true ? 'Yes' : 'No';
+          x.Status = x.IsActive ? 'Active' : 'Inactive';
+          return x;
+        });
+
+        this.allRows = this.tableRows;
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.allRows = [];
+        this.tableRows = [];
+        this.toast.error('Load Failed', 'Unable to load users. Please check API and try again.');
+      }
+    });
+  }
+
+  async loadBranches(): Promise<void> {
+    const orgId = Number(this.userDetails.OrgId || 0);
+
+    if (!orgId) {
+      this.branchOptions = [];
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.branchService.getAll(orgId));
+      const branches = response?.result ?? [];
+
+      this.branchOptions = branches.map((branch: any) => ({
+        label: branch.Name ?? '',
+        value: branch.Id ?? 0
+      }));
+    } catch {
+      this.branchOptions = [];
+      this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
+    }
+  }
+
+  async loadRoles(): Promise<void> {
+    const orgId = Number(this.userDetails.OrgId || 0);
+
+    if (!orgId) {
+      this.roleOptions = [];
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.roleService.getAll(orgId));
+      const roles = response?.result ?? [];
+
+      this.roleOptions = roles.map((role: any) => ({
+        label: role.Name ?? '',
+        value: role.Id ?? 0
+      }));
+    } catch {
+      this.roleOptions = [];
+      this.toast.error('Load Failed', 'Unable to load roles. Please check and try again.');
+    }
+  }
+
+    async loadCountries(): Promise<void> {
     try {
       const response: any = await firstValueFrom(this.commonService.GetCountry());
       const countries = response?.result ?? [];
@@ -367,113 +347,193 @@ export class UsersComponent {
     }
   }
 
-  submitAddDialog(): void {
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
       return;
     }
 
-    const userRow: UserRow = {
-      Id: this.dialogId || Date.now(),
+    const payload: UserMaster = {
+      Id: this.dialogId,
       Code: this.dialogCode,
       Name: this.dialogName,
       Remarks: this.dialogRemarks,
+      IsAdmin: this.dialogIsAdmin === 'Yes',
       Email: this.dialogEmail,
-      ContactNumber: this.dialogContactNumber,
+      ContactNo: Number(this.dialogContactNumber || 0),
+      OrgId: Number(this.userDetails.OrgId || 0),
+      Image: this.dialogImageUrl,
       EmpCode: this.dialogEmpCode,
-      ImageName: this.dialogImageName,
-      ImageUrl: this.dialogImageUrl,
-      Gender: this.dialogGender ?? '',
-      GenderName: this.getGenderName(this.dialogGender),
-      DateOfBirth: this.dialogDateOfBirth,
+      Gender: Number(this.dialogGender || 0),
+      DOB: this.dialogDateOfBirth ? this.dialogDateOfBirth.toISOString() : null,
       Age: Number(this.dialogAge || 0),
-      IsAdmin: this.dialogIsAdmin ?? 'No',
       Address1: this.dialogAddress1,
       Address2: this.dialogAddress2,
       Country: Number(this.dialogCountry || 0),
       State: Number(this.dialogState || 0),
       City: Number(this.dialogCity || 0),
       PostalCode: this.dialogPostalCode,
-      RoleName: this.dialogRoleName,
-      OrganizationName: this.dialogOrganizationName,
-      Status: 'Active',
-      IsActive: true
+      UserBranchMapping: this.dialogBranches.map((branchId) => ({
+        Id: 0,
+        UserId: this.dialogId  ||0,
+        BranchId: Number(branchId || 0),
+        IsActive: true,
+        CreatedBy: Number(this.userDetails.UserId || 0),
+        CreatedDate: new Date().toISOString(),
+        UpdatedBy: Number(this.userDetails.UserId || 0),
+        UpdatedDate: null,
+        IsDeleted: false
+      })),
+      UserRoleMapping: this.dialogRoles.map((roleId) => ({
+        Id: 0,
+        UserId: this.dialogId ||0,
+        RoleId: Number(roleId || 0),
+        IsActive: true,
+        CreatedBy: Number(this.userDetails.UserId || 0),
+        CreatedDate: new Date().toISOString(),
+        UpdatedBy: Number(this.userDetails.UserId || 0),
+        UpdatedDate: null,
+        IsDeleted: false
+      })),
+      IsActive: true,
+      CreatedBy: Number(this.userDetails.UserId || 0),
+      CreatedDate: new Date().toISOString(),
+      UpdatedBy: Number(this.userDetails.UserId || 0),
+      UpdatedDate: null,
+      IsDeleted: false
     };
 
-    if (this.isEditMode) {
-      this.allRows = this.allRows.map((row) => row.Id === userRow.Id ? { ...userRow, Status: row.Status, IsActive: row.IsActive } : row);
-      this.toast.success('Updated', `${userRow.Name || this.pageTitle} updated successfully.`);
-    } else {
-      this.allRows = [...this.allRows, userRow];
-      this.toast.success('Saved', `${userRow.Name || this.pageTitle} saved successfully.`);
-    }
+    try {
+      let response: any;
 
-    this.tableRows = [...this.allRows];
-    this.closeAddDialog();
+      if (!payload.Id) {
+        response = await firstValueFrom(this.userMasterService.create(payload));
+      } else {
+        response = await firstValueFrom(this.userMasterService.update(payload));
+      }
+
+      if (response.ErrorInfo.Message === true && response.result === 'AlreadyExists') {
+        this.toast.warn('Already Exists', `${payload.Name || this.pageTitle} already exists. Please use a different name.`);
+        this.dialogName = '';
+        return;
+      }
+
+      if (response.ErrorInfo.Message === true && !payload.Id) {
+        this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      if (response.ErrorInfo.Message === true && payload.Id) {
+        this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', response.ErrorInfo.Message || 'Unable to save user.');
+    } catch {
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save user.');
+    }
   }
 
   async editRow(row: UserRow): Promise<void> {
-    this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogEmail = row.Email;
-    this.dialogContactNumber = row.ContactNumber;
-    this.dialogEmpCode = row.EmpCode;
-    this.dialogImageName = row.ImageName;
-    this.dialogImageUrl = row.ImageUrl;
-    this.dialogGender = row.Gender;
-    this.dialogDateOfBirth = row.DateOfBirth ? new Date(row.DateOfBirth) : null;
-    this.dialogAge = String(row.Age || '');
-    this.dialogIsAdmin = row.IsAdmin;
-    this.dialogAddress1 = row.Address1;
-    this.dialogAddress2 = row.Address2;
-    this.dialogPostalCode = row.PostalCode;
-    this.dialogRoleName = row.RoleName;
-    this.dialogOrganizationName = row.OrganizationName;
     this.isEditMode = true;
     this.dialogTitle = 'Edit User';
     this.dialogSubtitle = 'Update the selected user profile.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
 
-    await this.loadCountries();
-    this.dialogCountry = row.Country || null;
+    try {
+      const response: any = await firstValueFrom(this.userMasterService.getById(row.Id ?? 0));
+      const user = response.result ?? {};
 
-    if (this.dialogCountry) {
-      await this.loadStates(Number(this.dialogCountry));
+      this.dialogId = user.Id ?? 0;
+      this.dialogCode = user.Code ?? '';
+      this.dialogName = user.Name ?? '';
+      this.dialogRemarks = user.Remarks ?? '';
+      this.dialogEmail = user.Email ?? '';
+      this.dialogContactNumber = user.ContactNo ? String(user.ContactNo) : '';
+      this.dialogEmpCode = user.EmpCode ?? '';
+      this.dialogImageName = '';
+      this.dialogImageUrl = user.Image ?? '';
+      this.dialogGender = user.Gender ? String(user.Gender) : null;
+      this.dialogDateOfBirth = user.DOB ? new Date(user.DOB) : null;
+      this.dialogAge = String(user.Age || '');
+      this.dialogIsAdmin = user.IsAdmin === true ? 'Yes' : 'No';
+      this.dialogAddress1 = user.Address1 ?? '';
+      this.dialogAddress2 = user.Address2 ?? '';
+      this.dialogPostalCode = user.PostalCode ?? '';
+      this.dialogBranches = (user.UserBranchMapping ?? []).map((branch: any) => Number(branch.BranchId || 0));
+      this.dialogRoles = (user.UserRoleMapping ?? []).map((role: any) => Number(role.RoleId || 0));
+
+      await this.loadBranches();
+      await this.loadRoles();
+      await this.loadCountries();
+      this.dialogCountry = user.Country || null;
+
+      if (this.dialogCountry) {
+        await this.loadStates(Number(this.dialogCountry));
+      }
+
+      this.dialogState = user.State || null;
+
+      if (this.dialogState) {
+        await this.loadCities(Number(this.dialogState));
+      }
+
+      this.dialogCity = user.City || null;
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load user details. Please check and try again.');
     }
+  }
 
-    this.dialogState = row.State || null;
+  async deleteRow(row: UserRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.userMasterService.delete(row.Id ?? 0));
 
-    if (this.dialogState) {
-      await this.loadCities(Number(this.dialogState));
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deleted', `${String(row.Name ?? row.Code ?? 'Record')} deleted successfully.`);
+        this.loadUsers();
+        return;
+      }
+
+      this.toast.error('Delete Failed', response.ErrorInfo.Message || `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Delete Failed', `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
     }
-
-    this.dialogCity = row.City || null;
   }
 
-  deleteRow(row: UserRow): void {
-    this.allRows = this.allRows.filter((x) => x.Id !== row.Id);
-    this.tableRows = [...this.allRows];
-    this.toast.success('Deleted', `${row.Name || 'User'} deleted successfully.`);
+  async activateRow(row: UserRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.userMasterService.activeInActive(row.Id ?? 0, true));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Activated', `${String(row.Name ?? row.Code ?? 'Record')} activated successfully.`);
+        this.loadUsers();
+        return;
+      }
+
+      this.toast.error('Activation Failed', response.ErrorInfo.Message || `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Activation Failed', `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
   }
 
-  activateRow(row: UserRow): void {
-    this.allRows = this.allRows.map((x) =>
-      x.Id === row.Id ? { ...x, IsActive: true, Status: 'Active' } : x
-    );
-    this.tableRows = [...this.allRows];
-    this.toast.success('Activated', `${row.Name || 'User'} activated successfully.`);
-  }
+  async deactivateRow(row: UserRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.userMasterService.activeInActive(row.Id ?? 0, false));
 
-  deactivateRow(row: UserRow): void {
-    this.allRows = this.allRows.map((x) =>
-      x.Id === row.Id ? { ...x, IsActive: false, Status: 'Inactive' } : x
-    );
-    this.tableRows = [...this.allRows];
-    this.toast.success('Deactivated', `${row.Name || 'User'} deactivated successfully.`);
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deactivated', `${String(row.Name ?? row.Code ?? 'Record')} deactivated successfully.`);
+        this.loadUsers();
+        return;
+      }
+
+      this.toast.error('Deactivation Failed', response.ErrorInfo.Message || `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
   }
 
   openRowActions(menu: any, event: Event, row: UserRow): void {
@@ -490,7 +550,6 @@ export class UsersComponent {
       acceptLabel: 'Yes',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-danger',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.deleteRow(row);
       }
@@ -505,7 +564,6 @@ export class UsersComponent {
       acceptLabel: 'Yes',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-success',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.activateRow(row);
       }
@@ -520,7 +578,6 @@ export class UsersComponent {
       acceptLabel: 'Yes',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-warn',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.deactivateRow(row);
       }
@@ -609,9 +666,10 @@ export class UsersComponent {
   private isDialogFormValid(): boolean {
     const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
     const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+    const areMultiSelectFieldsValid = this.multiSelectFields?.toArray().every((field) => field.isValid) ?? true;
     const areDateFieldsValid = this.dateFields?.toArray().every((field) => field.isValid) ?? true;
 
-    return areTextFieldsValid && areSelectFieldsValid && areDateFieldsValid;
+    return areTextFieldsValid && areSelectFieldsValid && areMultiSelectFieldsValid && areDateFieldsValid;
   }
 
   private resetDialogForm(): void {
@@ -635,7 +693,7 @@ export class UsersComponent {
     this.dialogState = null;
     this.dialogCity = null;
     this.dialogPostalCode = '';
-    this.dialogRoleName = '';
-    this.dialogOrganizationName = '';
+    this.dialogBranches = [];
+    this.dialogRoles = [];
   }
 }

@@ -32,8 +32,7 @@
             <img class="user-card-avatar" [src]="getUserImage(row)" [alt]="row.Name" />
             <div class="user-card-copy">
               <h3>{{ row.Name || '-' }}</h3>
-              <p>{{ row.RoleName || 'User Role' }}</p>
-              <span>{{ row.OrganizationName || 'Organization' }}</span>
+              <span>{{ row.OrganizationName || '' }}</span>
             </div>
             <div class="user-card-menu">
               <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
@@ -96,7 +95,7 @@
 
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" inputId="dialog-code" placeholder="User Code" [required]="true"
-      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." 
       [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Name" inputId="dialog-name" placeholder="User Name" [required]="true"
@@ -107,11 +106,13 @@
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Emp Code is required."
       [model]="dialogEmpCode" (modelChange)="dialogEmpCode = $event" />
 
-    <app-text-field label="Role Name" inputId="dialog-role-name" placeholder="Role Name"
-      [model]="dialogRoleName" (modelChange)="dialogRoleName = $event" />
+    <app-multiselect-field label="Branch" inputId="dialog-branches" placeholder="Choose branches"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Branch is required."
+      [options]="branchOptions" [model]="dialogBranches" (modelChange)="dialogBranches = $event" />
 
-    <app-text-field label="Organization Name" inputId="dialog-organization-name" placeholder="Organization Name"
-      [model]="dialogOrganizationName" (modelChange)="dialogOrganizationName = $event" />
+    <app-multiselect-field label="Role" inputId="dialog-roles" placeholder="Choose roles"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Role is required."
+      [options]="roleOptions" [model]="dialogRoles" (modelChange)="dialogRoles = $event" />
 
     <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [emailOnly]="true"
       [showFormatErrorWhileTyping]="true" formatErrorMessage="Enter a valid Email."

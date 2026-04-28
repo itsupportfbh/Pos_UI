@@ -1,0 +1,27 @@
+<div class="field-block">
+  <label class="field-label" [for]="inputId">
+    {{ label }}
+    @if (showRequiredMark) {
+      <span class="required-mark">*</span>
+    }
+  </label>
+  <p-multiselect
+    class="field-input"
+    [class.field-invalid]="showRequiredError"
+    [inputId]="inputId"
+    [options]="options"
+    [optionLabel]="optionLabel"
+    [optionValue]="optionValue"
+    [placeholder]="placeholder"
+    [filter]="filter"
+    [appendTo]="appendTo"
+    [display]="display"
+    [ngModel]="model"
+    (ngModelChange)="onModelChange($event)"
+  />
+  @if (showRequiredError) {
+    <small class="field-error">{{ requiredErrorMessage }}</small>
+  } @else if (helperText) {
+    <small class="field-help">{{ helperText }}</small>
+  }
+</div>
