@@ -1,5 +1,5 @@
 <section class="feature-page">
- <p-confirmDialog />
+  <p-confirmDialog />
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
@@ -39,7 +39,7 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Category Name" inputId="categoryName" placeholder="Enter category name"
+        <app-text-field label="SubCategory Name" inputId="subcategoryName" placeholder="Enter subcategory name"
           [model]="filterSubCategoryName" (modelChange)="filterSubCategoryName = $event" />
       </section>
 
@@ -58,18 +58,21 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="SubCategory Code" [showRequiredMark]="true" inputId="dialog-subcategoryCode" placeholder="SUBCAT-01"
-      [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
+    <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-subcategoryCode" placeholder="SUBCAT-01"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogModel.code ?? ''"
+      (modelChange)="dialogModel.code = $event" />
 
-    <app-text-field label="SubCategory Name" [showRequiredMark]="true" inputId="dialog-subcategoryName" placeholder="Soups"
-      [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
-      
-      <app-select-field label="Category" [showRequiredMark]="true" inputId="dialog-category" placeholder="Select category"
-    [options]="categoryOptions" [numberValue]="true" [model]="dialogModel.categoryId ?? 0" (modelChange)="dialogModel.categoryId = $event" />
-  
+    <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-subcategoryName" placeholder="Soups"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [model]="dialogModel.name ?? ''"
+      (modelChange)="dialogModel.name = $event" />
+
+    <app-select-field label="Category" [showRequiredMark]="true" inputId="dialog-category" placeholder="Select category"
+      [options]="categoryOptions" [numberValue]="true" [required]="true" [submitted]="dialogSubmitted" errorMessage="Category is required." [model]="dialogModel.categoryId ?? 0"
+      (modelChange)="dialogModel.categoryId = $event" />
+
   </section>
 
-  
+
 
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, inject, ViewChildren } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -53,10 +53,13 @@ export class CategoriesComponent {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
 
+  @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+
   showAddDialog = false;
   showFilterSidebar = false;
   isLoading = false;
   isEditMode = false;
+  dialogSubmitted = false;
   filterCategoryName = '';
   dialogCategoryCode = '';
   dialogCategoryName = '';
@@ -173,18 +176,16 @@ export class CategoriesComponent {
     this.loadCategories();
     this.isEditMode = false;
     this.showAddDialog = false;
+    this.dialogSubmitted = false;
   }
 
   submitAddDialog(): void {
-    if (!this.dialogModel.code?.trim()) {
-      this.toast.warn('Validation', 'Category code is required.');
+    this.dialogSubmitted = true;
+
+    if (!this.isDialogFormValid()) {
       return;
     }
 
-    if (!this.dialogModel.name?.trim()) {
-      this.toast.warn('Validation', 'Category name is required.');
-      return;
-    }
     debugger;
 
     const payload: Category = {
@@ -371,8 +372,14 @@ export class CategoriesComponent {
     } else {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
     }
-   
+
     return items;
+  }
+
+  private isDialogFormValid(): boolean {
+    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+
+    return areTextFieldsValid;
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
@@ -382,7 +389,7 @@ export class CategoriesComponent {
 
     if (action === 'edit') {
       this.editRow(this.selectedRow);
-    } else if (action === 'delete') {       
+    } else if (action === 'delete') {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
@@ -392,6 +399,7 @@ export class CategoriesComponent {
   }
 
   private resetDialogForm(): void {
+    this.dialogSubmitted = false;
     this.dialogModel = {
       Id: 0,
       code: '',

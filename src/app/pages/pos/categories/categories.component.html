@@ -1,42 +1,22 @@
 <section class="feature-page">
   <p-confirmDialog />
-  
+
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
-        <h2>{{ tableTitle }}</h2></div>
+        <h2>{{ tableTitle }}</h2>
+      </div>
     </div>
 
-     <app-shared-table
-      [showFilterButton]="showFilterButton"
-      (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption"
-      [columns]="tableColumns"
-      [value]="tableRows"
-      [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel"
-      [showRowActions]="showRowActions"
-      [rowActionHeader]="rowActionHeader"
-      (toolbarButtonClick)="openAddDialog()"
-    >
+    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
+      (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
-        <p-menu
-          #rowMenu
-          [model]="rowActionItems"
-          [popup]="true"
-          appendTo="body"
-          styleClass="row-action-menu"
-        ></p-menu>
+        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
 
-        <button
-          pButton
-          type="button"
-          icon="pi pi-ellipsis-v"
-          [text]="true"
-          [rounded]="true"
-          class="row-action-trigger"
-          (click)="openRowActions(rowMenu, $event, row)"
-        ></button>
+        <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
+          (click)="openRowActions(rowMenu, $event, row)"></button>
       </ng-template>
       <ng-template appTableCellTemplate="Status" let-row>
         <span class="status-badge" [class.status-active]="row.Status === 'Active'"
@@ -79,17 +59,19 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Category Code" [showRequiredMark]="true" inputId="dialog-categoryCode" placeholder="CAT-02"
-      [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
+    <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-categoryCode" placeholder="CAT-02"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogModel.code ?? ''"
+      (modelChange)="dialogModel.code = $event" />
 
-    <app-text-field label="Category Name" [showRequiredMark]="true" inputId="dialog-categoryName" placeholder="Starters"
+    <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-categoryName" placeholder="Starters"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."
       [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
   </section>
 
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false" (primaryClick)="submitAddDialog()"
-      (secondaryClick)="closeAddDialog()" />     
+      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitAddDialog()" (secondaryClick)="closeAddDialog()" />
   </div>
 </p-dialog>
 }
