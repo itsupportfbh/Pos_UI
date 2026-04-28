@@ -84,3 +84,9 @@
   background: #fee2e2;
   color: #991b1b;
 }
+
+.required-mark {
+  color: red;
+  margin-left: 4px;
+  font-weight: 600;
+}

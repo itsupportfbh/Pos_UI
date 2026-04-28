@@ -4,12 +4,13 @@ import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
 import { RuntimeConfigService } from './runtime-config.service';
 
-export interface Counter {
+export interface Printer {
   Id?: number;
   Code?: string;
   Name?: string;
-  Phone?: string;
   BranchId?: number;
+  CounterId?: number;
+  TerminalId?: number;
   Remarks?: string;
   OrgId?: number;
   IsActive?: boolean;
@@ -20,43 +21,39 @@ export interface Counter {
   IsDeleted?: boolean;
 }
 
-export interface CounterStatusRequest {
-  id: number | string;
-  isActive: boolean;
-}
-
 @Injectable({
   providedIn: 'root'
 })
-export class CounterService {
-  private readonly controllerPath = 'Counter';
+export class PrinterService {
+  private readonly controllerPath = 'Printer';
 
   constructor(
     private readonly http: HttpClient,
     private readonly runtimeConfig: RuntimeConfigService
   ) {}
 
-  create(payload: Counter): Observable<any> {
+  create(payload: Printer): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/${this.controllerPath}/Create`, payload);
   }
 
-  update(payload: Counter): Observable<any> {
+  update(payload: Printer): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(orgId: number, branchId: number): Observable<ApiListResponse<Counter>> {
-    return this.http.get<ApiListResponse<Counter>>(
-      `${this.baseUrl}/${this.controllerPath}/GetAllCounter?orgId=${orgId}&branchId=${branchId}`
+  getAll(orgId: number, branchId: number, counterId: number, terminalId: number): Observable<ApiListResponse<Printer>> {
+    return this.http.get<ApiListResponse<Printer>>(
+      `${this.baseUrl}/${this.controllerPath}/GetAllPrinter?orgId=${orgId}&branchId=${branchId}&counterId=${counterId}&terminalId=${terminalId}`
     );
   }
 
   getById(id: number | string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetCounterbyId?id=${id}`);
+    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetPrinterbyId?id=${id}`);
   }
 
   delete(id: number | string): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/Delete?id=${id}`);
+    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`);
   }
+
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
     const params = new HttpParams()
       .set('Id', id.toString())

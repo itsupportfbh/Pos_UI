@@ -6,12 +6,13 @@ import { DialogModule } from 'primeng/dialog';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { MenuItem } from 'primeng/api';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Menu, MenuService } from '../../../services/FoodMenu.service';
-import { Category, CategoryService } from '../../../services/Category.service';
+import { CategoryService } from '../../../services/Category.service';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 type MenuRow = {
   id: number;
@@ -33,7 +34,7 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem' },
+  { field: 'categoryname', header: 'Category', sortable: true, width: '10rem' },
   {
     field: 'Status',
     header: 'Status',
@@ -45,7 +46,8 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
 @Component({
   selector: 'app-menus',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule],
+  providers: [ConfirmationService],
   templateUrl: './menus.component.html',
   styleUrl: './menus.component.css'
 })
@@ -54,6 +56,7 @@ export class MenusComponent {
   private readonly menuService = inject(MenuService);
   private readonly categoryService = inject(CategoryService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly confirmationService = inject(ConfirmationService);
 
   showAddDialog = false;
   showFilterSidebar = false;
@@ -89,8 +92,8 @@ export class MenusComponent {
   readonly primaryActionLabel = `Search ${'Menus'}`;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  readonly dialogTitle = 'Create Menu';
-  readonly dialogPrimaryActionLabel = 'Save';
+  dialogTitle = 'Create Menu';
+  dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Menus';
   readonly tableCaption = 'Menus';
   readonly tableColumns = MENU_COLUMNS;
@@ -99,12 +102,7 @@ export class MenusComponent {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-  readonly rowActionItems: MenuItem[] = [
-    { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
-    { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
-    { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
-    { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
-  ];
+  rowActionItems: MenuItem[] = [];
 
   ngOnInit(): void {
     const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -180,24 +178,32 @@ export class MenusComponent {
     this.editingMenuId = null;
     this.resetDialogForm();
     this.showAddDialog = true;
+    this.dialogTitle = 'Create Menu';
+    this.dialogPrimaryActionLabel = 'Save';
   }
 
   closeAddDialog(): void {
     this.resetDialogForm();
-    //this.showAddDialog = false;
+    this.loadMenus();
+    this.isEditMode = false;
+    this.showAddDialog = false;
   }
 
   submitAddDialog(): void {
     if (!this.dialogModel.code?.trim()) {
-      this.toast.warn('Validation', 'Sub Category code is required.');
+      this.toast.warn('Validation', 'Menu code is required.');
       return;
     }
 
     if (!this.dialogModel.name?.trim()) {
-      this.toast.warn('Validation', 'Sub Category name is required.');
+      this.toast.warn('Validation', 'Menu name is required.');
       return;
     }
-    
+
+    if (!this.dialogModel.categoryId || this.dialogModel.categoryId <= 0) {
+      this.toast.warn('Validation', 'Category is required.');
+      return;
+    }
 
     const payload: Menu = {
       ...this.dialogModel,
@@ -251,6 +257,8 @@ export class MenusComponent {
   editRow(row: MenuRow): void {
     this.isEditMode = true;
     this.editingMenuId = row.id;
+    this.dialogTitle = 'Edit Menu';
+    this.dialogPrimaryActionLabel = 'Update';
 
     this.menuService.getById(row.id).subscribe({
       next: (response: any) => {
@@ -315,9 +323,73 @@ export class MenusComponent {
     });
   }
 
+  confirmDeleteRow(row: MenuRow): void {
+    const name = row.name ?? row.code ?? 'this Category';
+
+    this.confirmationService.confirm({
+      header: 'Delete Confirmation',
+      message: `Are you sure you want to delete ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.deleteRow(row);
+      }
+    });
+  }
+
+  confirmActivateRow(row: MenuRow): void {
+    const name = row.name ?? row.code ?? 'this Category';
+
+    this.confirmationService.confirm({
+      header: 'Activate Confirmation',
+      message: `Are you sure you want to activate ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-success',
+      accept: () => {
+        this.activateRow(row);
+      }
+    });
+  }
+
+  confirmDeactivateRow(row: MenuRow): void {
+    const name = row.name ?? row.code ?? 'this category';
+
+    this.confirmationService.confirm({
+      header: 'Inactive Confirmation',
+      message: `Are you sure you want to inactive ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-warn',
+      accept: () => {
+        this.deactivateRow(row);
+      }
+    });
+  }
+
   openRowActions(menu: any, event: Event, row: MenuRow): void {
     this.selectedRow = row;
+    this.rowActionItems = this.getRowActionItems(row);
     menu.toggle(event);
+  }
+
+  private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
+    const items: MenuItem[] = [
+      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+    ];
+    
+    if (row['isactive'] === true) {
+      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+    } else {
+      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+   
+    return items;
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
@@ -328,11 +400,11 @@ export class MenusComponent {
     if (action === 'edit') {
       this.editRow(this.selectedRow);
     } else if (action === 'delete') {
-      this.deleteRow(this.selectedRow);
+      this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
-      this.activateRow(this.selectedRow);
+      this.confirmActivateRow(this.selectedRow);
     } else {
-      this.deactivateRow(this.selectedRow);
+      this.confirmDeactivateRow(this.selectedRow);
     }
   }
 
