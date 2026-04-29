@@ -48,7 +48,7 @@
         [options]="branchOptions" [model]="selectedBranchIds" (modelChange)="onfilterBranchChange($event)" />
 
       <app-multiselect-field label="Counter" inputId="counter-filter" placeholder="Choose counters"
-        [options]="counterOptions" [model]="selectedCounterIds" (modelChange)="onfilterCounterChange($event)" />
+        [options]="counterfilterOptions" [model]="selectedCounterIds" (modelChange)="onfilterCounterChange($event)" />
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
         [showSecondary]="showSecondaryAction" (primaryClick)="searchTerminals()" (secondaryClick)="resetForm()" />
