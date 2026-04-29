@@ -213,6 +213,7 @@ export class UsersComponent implements OnInit {
           x.Image = this.normalizeImageValue(x.Image ?? '');
           x.ImageUrl = this.getImagePreviewUrl(x.Image ?? '');
           x.DateOfBirth = x.DOB ? new Date(x.DOB) : null;
+          x.OrganizationName = x.OrganizationName ?? x.OrgName ?? '';
           x.IsAdmin = x.IsAdmin === true ? 'Yes' : 'No';
           x.GenderName = this.getGenderName(x.Gender ? String(x.Gender) : null);
           x.Status = x.IsActive ? 'Active' : 'Inactive';
