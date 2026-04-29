@@ -23,8 +23,12 @@ export class CommonService {
     return this.http.get(`${this.baseUrl}/${this.controllerPath}/GetStateByCountryId?CountryId=${CountryId}`);
   }
 
-GetCityByStateId(StateId: number | string) {
+  GetCityByStateId(StateId: number | string) {
     return this.http.get(`${this.baseUrl}/${this.controllerPath}/GetCityByStateId?StateId=${StateId}`);
+  }
+
+  GetBranchByUserId(UserId: number | string) {
+    return this.http.get(`${this.baseUrl}/${this.controllerPath}/GetBranchByUserId?UserId=${UserId}`);
   }
 
 

@@ -43,26 +43,24 @@
         </div>
 
         <section class="field-grid">
-          <app-text-field
+        <!-- <app-text-field
             label="Counter Name"
             inputId="CounterName"
             placeholder="Main Billing Counter"
             [model]="filterCounterName"
             (modelChange)="filterCounterName = $event"
-          />
+          />--> 
         </section>
-        <!-- Branch dropdown starts -->
+  <!-- Branch dropdown starts -->
   <div class="mb-3" style="max-width: 280px;">
-    <app-select-field
+    <app-multiselect-field
       label="Branch"
       inputId="counter-branch-filter"
-      placeholder="Choose branch"
+      placeholder="Choose branches"
       [options]="branchOptions"
-      [numberValue]="true"
-      [model]="selectedBranchId"
+      [model]="selectedBranchIds"
       (modelChange)="onBranchChange($event)"
-     >
-    </app-select-field>
+     />
   </div>
   <!-- Branch dropdown ends -->
 
@@ -162,4 +160,3 @@
     </div>
   </p-dialog>
 }
-

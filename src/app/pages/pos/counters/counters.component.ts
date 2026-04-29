@@ -9,6 +9,7 @@ import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
@@ -42,6 +43,7 @@ const COUNTER_COLUMNS: SharedTableColumn<CounterRow>[] = [
     CardModule,
     DialogModule,
     TextFieldComponent,
+    MultiSelectFieldComponent,
     SelectFieldComponent,
     ActionButtonsComponent,
     MenuModule,
@@ -71,6 +73,7 @@ export class CountersComponent implements OnInit {
 
   filterCounterName = '';
   selectedBranchId = 0;
+  selectedBranchIds: MultiSelectFieldValue = [];
 
   dialogId = 0;
   dialogCounterCode = '';
@@ -116,6 +119,7 @@ export class CountersComponent implements OnInit {
   resetForm(): void {
     this.filterCounterName = '';
     this.selectedBranchId = 0;
+    this.selectedBranchIds = [];
     this.loadCounter();
   }
 
@@ -203,15 +207,17 @@ export class CountersComponent implements OnInit {
     }
   }
 
-  onBranchChange(branchId: SelectFieldValue): void {
-    this.selectedBranchId = Number(branchId || 0);
+  onBranchChange(branchIds: MultiSelectFieldValue): void {
+    this.selectedBranchIds = Array.isArray(branchIds) ? branchIds.map((id) => Number(id)) : [];
+    this.selectedBranchId = this.selectedBranchIds.length === 1 ? Number(this.selectedBranchIds[0] || 0) : 0;
   }
 
   searchCounters(): void {
     const searchText = this.filterCounterName.trim().toLowerCase();
+    const selectedBranchIds = this.selectedBranchIds.map((id) => Number(id));
 
     this.tableRows = this.hiddenTableRow.filter((row) =>
-      (!this.selectedBranchId || Number(row.BranchId ?? 0) === this.selectedBranchId) &&
+      (!selectedBranchIds.length || selectedBranchIds.includes(Number(row.BranchId ?? 0))) &&
       (!searchText ||
         String(row.Name ?? '').toLowerCase().includes(searchText) ||
         String(row.Code ?? '').toLowerCase().includes(searchText))

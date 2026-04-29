@@ -9,6 +9,7 @@ import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import {
@@ -54,6 +55,7 @@ const PRINTER_COLUMNS: SharedTableColumn<PrinterRow>[] = [
     CardModule,
     DialogModule,
     TextFieldComponent,
+    MultiSelectFieldComponent,
     SelectFieldComponent,
     ActionButtonsComponent,
     MenuModule,
@@ -83,9 +85,9 @@ export class PrintersComponent implements OnInit {
   dialogSubmitted = false;
   dialogSaving = false;
   filterPrinterName = '';
-  filterBranch: SelectFieldValue = null;
-  filterCounter: SelectFieldValue = null;
-  filterTerminal: SelectFieldValue = null;
+  filterBranch: MultiSelectFieldValue = [];
+  filterCounter: MultiSelectFieldValue = [];
+  filterTerminal: MultiSelectFieldValue = [];
  OrgId = 0;
     BranchId = 0;
     counterId = 0;
@@ -142,11 +144,12 @@ export class PrintersComponent implements OnInit {
 
   resetForm(): void {
     this.filterPrinterName = '';
-    this.filterBranch = null;
-    this.filterCounter = null;
-    this.filterTerminal = null;
+    this.filterBranch = [];
+    this.filterCounter = [];
+    this.filterTerminal = [];
     this.filterCounterOptions = [];
     this.filterTerminalOptions = [];
+    void this.loadFilterCounters([]);
     this.applyPrinterFilters();
   }
 
@@ -166,14 +169,15 @@ export class PrintersComponent implements OnInit {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
-    this.loadBranches(); 
+    await this.ensureBranchOptionsLoaded();
     this.isEditMode = false;
     this.dialogTitle = 'Create Printer';
     this.dialogSubtitle = 'Create a new printer configuration for restaurant operations.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+    this.changeDetector.detectChanges();
   }
 
   closeAddDialog(): void {
@@ -184,35 +188,27 @@ export class PrintersComponent implements OnInit {
     this.loadPrinters();
   }
 
-  async onFilterBranchChange(value: SelectFieldValue): Promise<void> {
-    this.filterBranch = value;
-    this.filterCounter = null;
-    this.filterTerminal = null;
+  async onFilterBranchChange(value: MultiSelectFieldValue): Promise<void> {
+    this.filterBranch = this.toNumberArray(value);
+    this.filterCounter = [];
+    this.filterTerminal = [];
     this.filterCounterOptions = [];
     this.filterTerminalOptions = [];
 
-    const branchId = Number(value || 0);
-
-    if (branchId > 0) {
-      await this.loadFilterCounters(branchId);
-    }
+    await this.loadFilterCounters(this.filterBranch.map((id) => Number(id)));
   }
 
-  async onFilterCounterChange(value: SelectFieldValue): Promise<void> {
-    this.filterCounter = value;
-    this.filterTerminal = null;
-    this.filterTerminalOptions = [];
+  onFilterCounterChange(value: MultiSelectFieldValue): void {
+    this.filterCounter = this.toNumberArray(value);
+    this.filterTerminal = [];
+    this.syncFilterTerminalOptions();
+  }
 
-    const branchId = Number(this.filterBranch || 0);
-    const counterId = Number(value || 0);
-
-    if (branchId > 0 && counterId > 0) {
-      await this.loadFilterTerminals(branchId, counterId);
-    }
+  onFilterTerminalChange(value: MultiSelectFieldValue): void {
+    this.filterTerminal = this.toNumberArray(value);
   }
 
   async onDialogBranchChange(value: SelectFieldValue): Promise<void> {
-
     this.dialogBranch = value;
     this.dialogCounter = null;
     this.dialogTerminal = null;
@@ -224,10 +220,11 @@ export class PrintersComponent implements OnInit {
     if (branchId > 0) {
       await this.loadDialogCounters(branchId);
     }
+
+    this.changeDetector.detectChanges();
   }
 
   async onDialogCounterChange(value: SelectFieldValue): Promise<void> {
-   
     this.dialogCounter = value;
     this.dialogTerminal = null;
     this.dialogTerminalOptions = [];
@@ -238,6 +235,8 @@ export class PrintersComponent implements OnInit {
     if (branchId > 0 && counterId > 0) {
       await this.loadDialogTerminals(branchId, counterId);
     }
+
+    this.changeDetector.detectChanges();
   }
 
   async submitAddDialog(): Promise<void> {
@@ -321,6 +320,8 @@ export class PrintersComponent implements OnInit {
         }));
         this.tableRows = [...this.allRows];
         this.hiddenTableRow = [...this.allRows];
+        void this.loadFilterCounters(this.toNumberArray(this.filterBranch));
+        this.syncFilterTerminalOptions();
         this.applyPrinterFilters();
         this.changeDetector.detectChanges();
       },
@@ -503,9 +504,13 @@ export class PrintersComponent implements OnInit {
     }
   }
 
+
+
+
+
+  
 private async loadDialogCounters(branchId: number): Promise<void> {
     try {
-      
       const response: any = await firstValueFrom(this.counterService.getAll(this.OrgId, branchId));
       this.dialogCounterOptions = this.mapOptions(response?.result ?? []);
       this.changeDetector.detectChanges();
@@ -526,31 +531,18 @@ private async loadDialogCounters(branchId: number): Promise<void> {
     }
   }
 
-  private async loadFilterCounters(branchId: number): Promise<void> {
+  private async loadFilterCounters(branchIds: number[]): Promise<void> {
     try {
-      const response: any = await firstValueFrom(this.counterService.getAll(this.OrgId, branchId));
+      const response: any = await firstValueFrom(this.counterService.getMultiAll(this.OrgId, branchIds));
       this.filterCounterOptions = this.mapOptions(response?.result ?? []);
+      this.syncFilterTerminalOptions();
       this.changeDetector.detectChanges();
     } catch {
       this.filterCounterOptions = [];
+      this.filterTerminalOptions = [];
       this.toast.error('Load Failed', 'Unable to load counters. Please check and try again.');
     }
   }
-
-  
-
-  private async loadFilterTerminals(branchId: number, counterId: number): Promise<void> {
-    try {
-      const response: any = await firstValueFrom(this.terminalService.getAll(this.getOrgId(), branchId, counterId));
-      this.filterTerminalOptions = this.mapOptions(response?.result ?? []);
-      this.changeDetector.detectChanges();
-    } catch {
-      this.filterTerminalOptions = [];
-      this.toast.error('Load Failed', 'Unable to load terminals. Please check and try again.');
-    }
-  }
-
- 
 
   private async ensureBranchOptionsLoaded(): Promise<void> {
     if (this.branchOptions.length > 0) {
@@ -569,14 +561,14 @@ private async loadDialogCounters(branchId: number): Promise<void> {
 
   private applyPrinterFilters(): void {
     const searchText = this.filterPrinterName.trim().toLowerCase();
-    const branchId = Number(this.filterBranch || 0);
-    const counterId = Number(this.filterCounter || 0);
-    const terminalId = Number(this.filterTerminal || 0);
+    const branchIds = this.toNumberArray(this.filterBranch);
+    const counterIds = this.toNumberArray(this.filterCounter);
+    const terminalIds = this.toNumberArray(this.filterTerminal);
 
     this.tableRows = this.allRows.filter((row) =>
-      (!branchId || Number(row.BranchId ?? 0) === branchId) &&
-      (!counterId || Number(row.CounterId ?? 0) === counterId) &&
-      (!terminalId || Number(row.TerminalId ?? 0) === terminalId) &&
+      (!branchIds.length || branchIds.includes(Number(row.BranchId ?? 0))) &&
+      (!counterIds.length || counterIds.includes(Number(row.CounterId ?? 0))) &&
+      (!terminalIds.length || terminalIds.includes(Number(row.TerminalId ?? 0))) &&
       (!searchText ||
         String(row.Name ?? '').toLowerCase().includes(searchText) ||
         String(row.Code ?? '').toLowerCase().includes(searchText) ||
@@ -586,6 +578,52 @@ private async loadDialogCounters(branchId: number): Promise<void> {
     );
 
     this.changeDetector.detectChanges();
+  }
+
+  private syncFilterTerminalOptions(): void {
+    const branchIds = this.toNumberArray(this.filterBranch);
+    const counterIds = this.toNumberArray(this.filterCounter);
+
+    const terminalMap = new Map<number, SelectOption>();
+
+    for (const row of this.allRows) {
+      const branchId = Number(row.BranchId ?? 0);
+      const counterId = Number(row.CounterId ?? 0);
+      const terminalId = Number(row.TerminalId ?? 0);
+
+      if (branchIds.length && !branchIds.includes(branchId)) {
+        continue;
+      }
+
+      if (counterIds.length && !counterIds.includes(counterId)) {
+        continue;
+      }
+
+      if (!terminalId || terminalMap.has(terminalId)) {
+        continue;
+      }
+
+      terminalMap.set(terminalId, {
+        label: row.TerminalName ?? terminalId,
+        value: terminalId
+      });
+    }
+
+    this.filterTerminalOptions = Array.from(terminalMap.values()).sort((left, right) =>
+      String(left.label).localeCompare(String(right.label))
+    );
+
+    this.filterTerminal = this.toNumberArray(this.filterTerminal).filter((id) =>
+      this.filterTerminalOptions.some((option) => Number(option.value) === id)
+    );
+  }
+
+  private toNumberArray(value: MultiSelectFieldValue | SelectFieldValue): number[] {
+    const values = Array.isArray(value) ? value : value === null || value === '' ? [] : [value];
+
+    return values
+      .map((item) => Number(item))
+      .filter((item) => !Number.isNaN(item) && item > 0);
   }
 
   private mapOptions(items: any[]): SelectOption[] {

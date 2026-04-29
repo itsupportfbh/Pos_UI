@@ -11,7 +11,7 @@ import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Terminal, TerminalService } from '../../../services/terminal.service';
-import { BranchService } from '../../../services/branch.service';
+import { CommonService } from '../../../services/common.service';
 import { CounterService } from '../../../services/counter.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
@@ -62,7 +62,7 @@ const TERMINAL_COLUMNS: SharedTableColumn<TerminalRow>[] = [
 export class TerminalComponent {
     private readonly toast = inject(AppToastService);
     private readonly TerminalService = inject(TerminalService);
-    private readonly branchService = inject(BranchService);
+    private readonly CommonService = inject(CommonService);
     private readonly counterService = inject(CounterService);
     private readonly changeDetector = inject(ChangeDetectorRef);
     private readonly confirmationService = inject(ConfirmationService);
@@ -88,6 +88,7 @@ export class TerminalComponent {
     OrgId = 0;
     BranchId = 0;
     counterId = 0;
+    UserId = 0;
 
     tableRows: TerminalRow[] = [];
     allTerminals: TerminalRow[] = [];
@@ -96,6 +97,7 @@ export class TerminalComponent {
 
     branchOptions: any[] = [];
     counterOptions: any[] = [];
+    counterfilterOptions: any[] = [];
     dialogCategory: number | null = null;
     dialogBranch: SelectFieldValue = null;
 
@@ -134,15 +136,16 @@ export class TerminalComponent {
     ngOnInit(): void {
         const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
         console.log('User Details:', userDetails);
-        const userId = Number(userDetails.UserId || 0);
+        this.UserId = Number(userDetails.UserId || 0);
         this.OrgId = Number(userDetails.OrgId || 0);
         this.BranchId = Number(userDetails.BranchId || 0);
         this.loadTerminals();
         this.loadBranches();
+        this.loadMultiCounters(this.BranchId);
     }
 
     loadBranches() {
-        this.branchService.getAll(this.OrgId).subscribe((res: any) => {
+        this.CommonService.GetBranchByUserId(this.UserId).subscribe((res: any) => {
             this.branchOptions = (res.result || []).map((item: any) => ({
                 label: item.Name,
                 value: item.Id
@@ -171,10 +174,9 @@ export class TerminalComponent {
         });
     }
 
-    loadMultiCounters(branchIds: number[] = []): void {
-        console.log('Loading counters for multiple Branch IDs:', branchIds);
-        this.counterService.getMultiAll(this.OrgId, branchIds).subscribe((res: any) => {
-            this.counterOptions = (res.result || []).map((item: any) => ({
+    loadMultiCounters(BranchId: number = this.BranchId): void { 
+        this.counterService.getAll(this.OrgId, BranchId).subscribe((res: any) => {
+            this.counterfilterOptions = (res.result || []).map((item: any) => ({
                 label: item.Name,
                 value: item.Id
             }));
@@ -239,10 +241,16 @@ export class TerminalComponent {
     }
 
     onfilterBranchChange(value: MultiSelectFieldValue): void {
+        debugger;
         const arr = Array.isArray(value) ? value : value ? [value] : [];
         this.selectedBranchIds = arr.map(v => Number(v));
+        // if(this.selectedBranchIds.length > 0) {
+        //     void this.loadMultiCounters(this.selectedBranchIds.map((id) => Number(id)));
+        // }
+        // else{
+        //     this.counterOptions = [];
+        // }
         
-        void this.loadMultiCounters(this.selectedBranchIds.map((id) => Number(id)));
     }
 
     onfilterCounterChange(counterIds: MultiSelectFieldValue): void {
