@@ -39,8 +39,8 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="SubCategory Name" inputId="subcategoryName" placeholder="Enter subcategory name"
-          [model]="filterSubCategoryName" (modelChange)="filterSubCategoryName = $event" />
+       <app-multiselect-field label="Category" inputId="counter-branch-filter" placeholder="Choose categories"
+        [options]="categoryfilterOptions" [model]="selectedCategoryIds" (modelChange)="onfilterCategoryChange($event)" />
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"

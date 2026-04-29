@@ -357,6 +357,9 @@ export class TerminalComponent {
             next: (response: any) => {
                 const terminal = response?.result?.[0] ?? response?.result ?? response;
 
+                this.dialogModel.branchId = terminal?.branchId ?? terminal?.BranchId ?? row.branchid;
+                void this.loadCounters(Number(this.dialogModel.branchId));
+
                 this.dialogModel = {
                     Id: terminal?.id ?? terminal?.Id ?? row.id,
                     code: terminal?.code ?? terminal?.Code ?? row.code,

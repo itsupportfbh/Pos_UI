@@ -13,6 +13,7 @@ import { AppToastService } from '../../../services/app-toast.service';
 import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
 import { CategoryService } from '../../../services/Category.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 
 type SubCategoryRow = {
   id: number;
@@ -34,6 +35,7 @@ const SUBCATEGORY_COLUMNS: SharedTableColumn<SubCategoryRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
+  { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem', hidden: true },
   { field: 'categoryname', header: 'Category', sortable: true, width: '10rem' },
   {
     field: 'Status',
@@ -46,7 +48,7 @@ const SUBCATEGORY_COLUMNS: SharedTableColumn<SubCategoryRow>[] = [
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, MultiSelectFieldComponent],
   providers: [ConfirmationService],
   templateUrl: './subcategory.component.html',
   styleUrl: './subcategory.component.css'
@@ -60,6 +62,7 @@ export class SubCategoryComponent {
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+  @ViewChildren(MultiSelectFieldComponent) private readonly multiSelectFields?: QueryList<MultiSelectFieldComponent>;
 
   showAddDialog = false;
   showFilterSidebar = false;
@@ -74,9 +77,12 @@ export class SubCategoryComponent {
   tableRows: SubCategoryRow[] = [];
   selectedRow: SubCategoryRow | null = null;
   editingSubCategoryId: number | null = null;
+  allSubCategories: SubCategoryRow[] = [];
 
   categoryOptions: any[] = [];
+  categoryfilterOptions: any[] = [];
   dialogCategory: number | null = null;
+  selectedCategoryIds: MultiSelectFieldValue = [];
 
   dialogModel: subCategory = {
     Id: 0,
@@ -114,6 +120,7 @@ export class SubCategoryComponent {
     this.OrgId = Number(userDetails.OrgId || 0);
     this.loadSubCategories();
     this.loadCategories();
+    this.loadFilterCategories();
   }
 
   loadCategories() {
@@ -125,6 +132,20 @@ export class SubCategoryComponent {
     });
   }
 
+  loadFilterCategories() {
+    this.categoryService.getAll(this.OrgId).subscribe((res: any) => {
+      this.categoryfilterOptions = (res.result || []).map((item: any) => ({
+        label: item.name,
+        value: item.id
+      }));
+    });
+  }
+
+  onfilterCategoryChange(value: MultiSelectFieldValue): void {
+    const arr = Array.isArray(value) ? value : value ? [value] : [];
+    this.selectedCategoryIds = arr.map(v => Number(v));
+  }
+
   loadSubCategories(): void {
     this.isLoading = true;
 
@@ -132,11 +153,12 @@ export class SubCategoryComponent {
       next: (response: any) => {
         const result = response?.result ?? response ?? [];
         let RowNumber = 1;
-        this.tableRows = (response.result ?? []).map((x: any) => {
+        this.allSubCategories = (response.result ?? []).map((x: any) => {
           x.RowNumber = RowNumber++;
           x.Status = x.isactive ? 'Active' : 'Inactive';
           return x;
         });
+        this.tableRows = [...this.allSubCategories];
         this.changeDetector.detectChanges();
       },
       error: () => {
@@ -153,16 +175,16 @@ export class SubCategoryComponent {
 
   searchSubCategories(): void {
     const searchText = this.filterSubCategoryName.trim().toLowerCase();
+    const CategoryIds = this.selectedCategoryIds.map((id) => Number(id)); 
 
-    if (!searchText) {
-      this.loadSubCategories();
-      return;
-    }
+    this.tableRows = this.allSubCategories.filter((row) => {
+      const matchesText = !searchText ||
+        row.name?.toLowerCase().includes(searchText) ||
+        row.code?.toLowerCase().includes(searchText);
 
-    this.tableRows = this.tableRows.filter((row) =>
-      row.name?.toLowerCase().includes(searchText) ||
-      row.code?.toLowerCase().includes(searchText)
-    );
+      const matchesCategory = !CategoryIds.length || CategoryIds.includes(Number(row.categoryId ?? 0));
+      return matchesText && matchesCategory;
+    });
   }
 
   resetForm(): void {

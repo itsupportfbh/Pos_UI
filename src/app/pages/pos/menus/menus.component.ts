@@ -13,6 +13,7 @@ import { AppToastService } from '../../../services/app-toast.service';
 import { Menu, MenuService } from '../../../services/FoodMenu.service';
 import { CategoryService } from '../../../services/Category.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 
 type MenuRow = {
   id: number;
@@ -34,6 +35,7 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
+  { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem', hidden: true },
   { field: 'categoryname', header: 'Category', sortable: true, width: '10rem' },
   {
     field: 'Status',
@@ -46,7 +48,7 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
 @Component({
   selector: 'app-menus',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, MultiSelectFieldComponent],
   providers: [ConfirmationService],
   templateUrl: './menus.component.html',
   styleUrl: './menus.component.css'
@@ -60,6 +62,7 @@ export class MenusComponent {
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+  @ViewChildren(MultiSelectFieldComponent) private readonly multiSelectFields?: QueryList<MultiSelectFieldComponent>;
 
   showAddDialog = false;
   showFilterSidebar = false;
@@ -76,7 +79,11 @@ export class MenusComponent {
   editingMenuId: number | null = null;
 
   categoryOptions: any[] = [];
+  categoryfilterOptions: any[] = [];
   dialogCategory: number | null = null;
+
+  allmenus: MenuRow[] = [];
+  selectedCategoryIds: MultiSelectFieldValue = [];
 
   dialogModel: Menu = {
     Id: 0,
@@ -114,6 +121,7 @@ export class MenusComponent {
     this.OrgId = Number(userDetails.OrgId || 0);
     this.loadMenus();
     this.loadCategories();
+    this.loadFilterCategories();
   }
 
   loadCategories() {
@@ -125,6 +133,20 @@ export class MenusComponent {
     });
   }
 
+   loadFilterCategories() {
+    this.categoryService.getAll(this.OrgId).subscribe((res: any) => {
+      this.categoryfilterOptions = (res.result || []).map((item: any) => ({
+        label: item.name,
+        value: item.id
+      }));
+    });
+  }
+
+  onfilterCategoryChange(value: MultiSelectFieldValue): void {
+    const arr = Array.isArray(value) ? value : value ? [value] : [];
+    this.selectedCategoryIds = arr.map(v => Number(v));
+  }
+
   loadMenus(): void {
     this.isLoading = true;
 
@@ -132,11 +154,12 @@ export class MenusComponent {
       next: (response: any) => {
         const result = response?.result ?? response ?? [];
         let RowNumber = 1;
-        this.tableRows = (response.result ?? []).map((x: any) => {
+        this.allmenus = (response.result ?? []).map((x: any) => {
           x.RowNumber = RowNumber++;
           x.Status = x.isactive ? 'Active' : 'Inactive';
           return x;
         });
+        this.tableRows = [...this.allmenus];
         this.changeDetector.detectChanges();
       },
       error: () => {
@@ -153,16 +176,16 @@ export class MenusComponent {
 
   searchMenus(): void {
     const searchText = this.filterMenuName.trim().toLowerCase();
+    const CategoryIds = this.selectedCategoryIds.map((id) => Number(id));
 
-    if (!searchText) {
-      this.loadMenus();
-      return;
-    }
+    this.tableRows = this.allmenus.filter((row) => {
+      const matchesText = !searchText ||
+        row.name?.toLowerCase().includes(searchText) ||
+        row.code?.toLowerCase().includes(searchText);
 
-    this.tableRows = this.tableRows.filter((row) =>
-      row.name?.toLowerCase().includes(searchText) ||
-      row.code?.toLowerCase().includes(searchText)
-    );
+      const matchesCategory = !CategoryIds.length || CategoryIds.includes(Number(row.categoryId ?? 0));
+      return matchesText && matchesCategory;
+    });
   }
 
   resetForm(): void {
