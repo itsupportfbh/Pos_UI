@@ -115,6 +115,9 @@ export class TerminalComponent {
         IsDeleted: false
     };
 
+    readonly pageEyebrow = 'Terminal Management';
+    readonly pageTitle = 'Terminals';
+    readonly pageSubtitle = 'Manage your POS terminals here.';
     readonly filterTitle = `${'Terminals'} Filters`;
     readonly filterDescription = `API data will be loaded for ${'Terminals'.toLowerCase()}.`;
     readonly fields: any[] = [{ key: 'TerminalName', label: 'Terminal Name', type: 'text', placeholder: 'Enter terminal name' }];
@@ -122,6 +125,7 @@ export class TerminalComponent {
     readonly secondaryActionLabel = 'Clear Filters';
     readonly showSecondaryAction = true;
     dialogTitle = 'Create Terminal';
+    dialogSubtitle = 'Add a new terminal and assign it to a branch and counter.';
     dialogPrimaryActionLabel = 'Save';
     readonly tableTitle = 'Terminals';
     readonly tableCaption = 'Terminals';
@@ -174,7 +178,7 @@ export class TerminalComponent {
         });
     }
 
-    loadMultiCounters(BranchId: number = this.BranchId): void { 
+    loadMultiCounters(BranchId: number = this.BranchId): void {
         this.counterService.getAll(this.OrgId, BranchId).subscribe((res: any) => {
             this.counterfilterOptions = (res.result || []).map((item: any) => ({
                 label: item.Name,
@@ -257,7 +261,7 @@ export class TerminalComponent {
         // else{
         //     this.counterOptions = [];
         // }
-        
+
     }
 
     onfilterCounterChange(counterIds: MultiSelectFieldValue): void {
@@ -284,6 +288,7 @@ export class TerminalComponent {
         this.resetDialogForm();
         this.showAddDialog = true;
         this.dialogTitle = 'Create Terminal';
+        this.dialogSubtitle = 'Add a new terminal and assign it to a branch and counter.';
         this.dialogPrimaryActionLabel = 'Save';
     }
 
@@ -358,6 +363,7 @@ export class TerminalComponent {
         this.isEditMode = true;
         this.editingTerminalId = row.id;
         this.dialogTitle = 'Edit Terminal';
+        this.dialogSubtitle = 'Update the selected Terminal details.';
         this.dialogPrimaryActionLabel = 'Update';
 
         this.TerminalService.getById(row.id).subscribe({
@@ -384,7 +390,7 @@ export class TerminalComponent {
                 };
 
                 this.showAddDialog = true;
-                this.toast.info('Edit Mode', `Editing ${row.name}.`);
+                //this.toast.info('Edit Mode', `Editing ${row.name}.`);
             },
             error: () => {
                 this.toast.error('Load Failed', 'Unable to load terminal details.');

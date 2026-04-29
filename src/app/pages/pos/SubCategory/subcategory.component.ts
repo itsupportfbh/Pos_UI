@@ -96,6 +96,9 @@ export class SubCategoryComponent {
     IsDeleted: false
   };
 
+  readonly pageEyebrow = 'SubCategory Management';
+  readonly pageTitle = 'SubCategories';
+  readonly pageSubtitle = 'Manage your subcategories here.';
   readonly filterTitle = `${'SubCategories'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'SubCategories'.toLowerCase()}.`;
   readonly fields: any[] = [{ key: 'SubcategoryName', label: 'SubCategory Name', type: 'text', placeholder: 'Enter subcategory name' }];
@@ -103,6 +106,7 @@ export class SubCategoryComponent {
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
   dialogTitle = 'Create SubCategory';
+  dialogSubtitle = 'Create a new subcategory.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'SubCategories';
   readonly tableCaption = 'SubCategories';
@@ -175,7 +179,7 @@ export class SubCategoryComponent {
 
   searchSubCategories(): void {
     const searchText = this.filterSubCategoryName.trim().toLowerCase();
-    const CategoryIds = this.selectedCategoryIds.map((id) => Number(id)); 
+    const CategoryIds = this.selectedCategoryIds.map((id) => Number(id));
 
     this.tableRows = this.allSubCategories.filter((row) => {
       const matchesText = !searchText ||
@@ -206,6 +210,7 @@ export class SubCategoryComponent {
     this.resetDialogForm();
     this.showAddDialog = true;
     this.dialogTitle = 'Create SubCategory';
+    this.dialogSubtitle = 'Create a new subcategory.';
     this.dialogPrimaryActionLabel = 'Save';
   }
 
@@ -277,12 +282,13 @@ export class SubCategoryComponent {
     this.isEditMode = true;
     this.editingSubCategoryId = row.id;
     this.dialogTitle = 'Edit SubCategory';
+    this.dialogSubtitle = 'Update the selected SubCategory details.';
     this.dialogPrimaryActionLabel = 'Update';
 
     this.SubcategoryService.getById(row.id).subscribe({
       next: (response: any) => {
         const subcategory = response?.result?.[0] ?? response?.result ?? response;
-
+ 
         this.dialogModel = {
           Id: subcategory?.id ?? subcategory?.Id ?? row.id,
           code: subcategory?.code ?? subcategory?.Code ?? row.code,
@@ -298,7 +304,7 @@ export class SubCategoryComponent {
         };
 
         this.showAddDialog = true;
-        this.toast.info('Edit Mode', `Editing ${row.name}.`);
+        //this.toast.info('Edit Mode', `Editing ${row.name}.`);
       },
       error: () => {
         this.toast.error('Load Failed', 'Unable to load subcategory details.');
