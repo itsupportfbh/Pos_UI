@@ -48,8 +48,8 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Branch Name" inputId="branchName" placeholder="Enter branch name"
-          [model]="filterBranchName" (modelChange)="filterBranchName = $event" />
+        <app-multiselect-field label="Organization" inputId="filter-organizations" placeholder="Choose organizations"
+          [options]="organizationOptions" [model]="filterOrganizations" (modelChange)="filterOrganizations = $event" />
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
@@ -68,6 +68,13 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
+    @if (userDetails.RoleId === 1) {
+      <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
+        [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+        errorMessage="Organization is required." [numberValue]="true" [model]="dialogOrganization"
+        (modelChange)="dialogOrganization = $event" />
+    }
+
     <app-text-field label="Code" inputId="dialog-code" placeholder="Branch Code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required."
       [textWithNumbersOnly]="true" formatErrorMessage="Code allows text and numbers only." [model]="dialogCode"

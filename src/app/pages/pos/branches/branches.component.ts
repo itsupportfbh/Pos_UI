@@ -9,12 +9,14 @@ import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Branch, BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
+import { OrganizationService } from '../../../services/organization.service';
 
 type BranchRow = Branch & {
   RowNumber: number;
@@ -27,6 +29,7 @@ const countryOptions: any[] = [];
 
 const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
+  { field: 'OrganizationName', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
   { field: 'Code', header: 'Code', sortable: true, width: '9rem' },
   { field: 'Name', header: 'Name', sortable: true, width: '20rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
@@ -42,6 +45,7 @@ const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
     CardModule,
     DialogModule,
     TextFieldComponent,
+    MultiSelectFieldComponent,
     SelectFieldComponent,
     ActionButtonsComponent,
     MenuModule,
@@ -56,6 +60,7 @@ export class BranchesComponent implements OnInit {
   private readonly toast = inject(AppToastService);
   private readonly branchService = inject(BranchService);
   private readonly commonService = inject(CommonService);
+  private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
 
@@ -67,11 +72,12 @@ export class BranchesComponent implements OnInit {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
-  filterBranchName = '';
+  filterOrganizations: MultiSelectFieldValue = [];
 
   dialogId = 0;
   dialogCode = '';
   dialogName = '';
+  dialogOrganization: SelectFieldValue = null;
   dialogPhone = '';
   dialogEmail = '';
   dialogContactPerson = '';
@@ -87,11 +93,13 @@ export class BranchesComponent implements OnInit {
 
   selectedRow: BranchRow | null = null;
   rowActionItems: MenuItem[] = [];
+  allRows: BranchRow[] = [];
   tableRows: BranchRow[] = [];
   userDetails: any = {};
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
+  organizationOptions: any[] = [];
 
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Branches';
@@ -105,29 +113,42 @@ export class BranchesComponent implements OnInit {
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Branches';
   readonly tableCaption = 'Branches';
-  readonly tableColumns = BRANCH_COLUMNS;
+  tableColumns = BRANCH_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
+  showFilterButton = false;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.showFilterButton = this.userDetails.RoleId === 1;
+
+    this.tableColumns = BRANCH_COLUMNS.map((x: any) => {
+      if (x.field === 'OrganizationName') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+
     this.loadBranches();
   }
 
   loadBranches(): void {
-    const orgId = Number(this.userDetails.OrgId || 0);
+    const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
 
     this.branchService.getAll(orgId).subscribe({
       next: (response) => {
         let RowNumber = 1;
+
         this.tableRows = (response.result ?? []).map((x: any) => {
           x.RowNumber = RowNumber++;
+          x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
           x.Status = x.IsActive ? 'Active' : 'Inactive';
           return x;
         });
+        this.allRows = [...this.tableRows];
 
         this.changeDetector.detectChanges();
       },
@@ -138,27 +159,25 @@ export class BranchesComponent implements OnInit {
   }
 
   resetForm(): void {
-    this.filterBranchName = '';
-    this.loadBranches();
+    this.filterOrganizations = [];
+    this.tableRows = [...this.allRows];
   }
 
   searchBranches(): void {
-    const searchText = this.filterBranchName.trim().toLowerCase();
-
-    if (!searchText) {
-      this.loadBranches();
+    if (!this.filterOrganizations.length) {
+      this.tableRows = [...this.allRows];
       return;
     }
 
-    this.tableRows = this.tableRows.filter((row) =>
-      String(row.Name ?? '').toLowerCase().includes(searchText) ||
-      String(row.Code ?? '').toLowerCase().includes(searchText) ||
-      String(row.Phone ?? '').toLowerCase().includes(searchText) ||
-      String(row.Email ?? '').toLowerCase().includes(searchText)
+    this.tableRows = this.allRows.filter((row) =>
+      this.filterOrganizations.includes(Number(row.OrgId || 0))
     );
   }
 
   openFilterSidebar(): void {
+    if (!this.organizationOptions.length) {
+      this.loadOrganizations();
+    }
     this.showFilterSidebar = true;
   }
 
@@ -173,7 +192,10 @@ export class BranchesComponent implements OnInit {
     this.dialogSubtitle = 'Create a new branch for the organization.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
-    void this.loadCountries();
+    if (this.userDetails.RoleId === 1) {
+      this.loadOrganizations();
+    }
+     this.loadCountries();
   }
 
   closeAddDialog(): void {
@@ -198,6 +220,21 @@ export class BranchesComponent implements OnInit {
     }
   }
 
+  async loadOrganizations(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.organizationService.getAll());
+      const organizations = response?.result ?? [];
+
+      this.organizationOptions = organizations.map((organization: any) => ({
+        label: organization.Name ?? '',
+        value: organization.Id ?? 0
+      }));
+    } catch {
+      this.organizationOptions = [];
+      this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+    }
+  }
+
   onCountryChange(value: SelectFieldValue): void {
     this.dialogCountry = value;
     this.dialogState = null;
@@ -209,7 +246,7 @@ export class BranchesComponent implements OnInit {
       return;
     }
 
-    void this.loadStates(Number(value));
+    this.loadStates(Number(value));
   }
 
   async loadStates(countryId: number): Promise<void> {
@@ -236,7 +273,7 @@ export class BranchesComponent implements OnInit {
       return;
     }
 
-    void this.loadCities(Number(value));
+    this.loadCities(Number(value));
   }
 
   async loadCities(stateId: number): Promise<void> {
@@ -279,7 +316,9 @@ export class BranchesComponent implements OnInit {
       Country: Number(this.dialogCountry || 0),
       PostalCode: Number(this.dialogPostalCode || 0),
       Remarks: this.dialogRemarks,
-      OrgId: Number(this.userDetails.OrgId || 0),
+      OrgId: this.userDetails.RoleId === 1
+        ? Number(this.dialogOrganization || 0)
+        : Number(this.userDetails.OrgId || 0),
       IsActive: true,
       CreatedBy: Number(this.userDetails.UserId || 0),
       CreatedDate: new Date().toISOString(),
@@ -336,6 +375,7 @@ export class BranchesComponent implements OnInit {
       const branch = response.result ?? {};
 
       this.dialogId = branch.Id ?? 0;
+      this.dialogOrganization = branch.OrgId ?? null;
       this.dialogCode = branch.Code ?? '';
       this.dialogName = branch.Name ?? '';
       this.dialogPhone = branch.Phone ?? '';
@@ -347,6 +387,10 @@ export class BranchesComponent implements OnInit {
       this.dialogAddress2 = branch.Address2 ?? '';
       this.dialogPostalCode = branch.PostalCode ? String(branch.PostalCode) : '';
       this.dialogRemarks = branch.Remarks ?? '';
+
+      if (this.userDetails.RoleId === 1) {
+        await this.loadOrganizations();
+      }
 
       await this.loadCountries();
       this.dialogCountry = branch.Country ?? null;
@@ -473,7 +517,8 @@ export class BranchesComponent implements OnInit {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
-    this.dialogCode = '';
+    this.dialogOrganization = null;
+    // this.dialogCode = '';
     this.dialogName = '';
     this.dialogPhone = '';
     this.dialogEmail = '';
@@ -487,6 +532,11 @@ export class BranchesComponent implements OnInit {
     this.dialogCountry = null;
     this.dialogPostalCode = '';
     this.dialogRemarks = '';
+  }
+
+  private getOrganizationName(orgId: number | string | undefined): string {
+    const organization = this.organizationOptions.find((x: any) => Number(x.value || 0) === Number(orgId || 0));
+    return organization?.label ?? '';
   }
 
   private isDialogFormValid(): boolean {

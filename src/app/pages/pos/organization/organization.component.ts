@@ -38,8 +38,7 @@ export class OrganizationComponent implements OnInit {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
-  showFilterSidebar = false;
-  filterCompanyName = '';
+  cardSearchText = '';
 
   dialogId = 0;
   dialogCode = '';
@@ -66,26 +65,21 @@ export class OrganizationComponent implements OnInit {
   configFontSize = '14';
 
   selectedRow: any = null;
-  readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Organization';
   readonly pageSubtitle = 'Maintain restaurant organization identity details.';
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
-  readonly filterTitle = 'Organization Filters';
-  readonly primaryActionLabel = 'Search Organization';
-  readonly secondaryActionLabel = 'Clear Filters';
-  readonly showSecondaryAction = true;
   dialogTitle = 'Create Organization';
   dialogSubtitle = 'Create a new restaurant organization profile.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Organization';
+  allRows: any[] = [];
   tableRows: any[] = [];
   userDetails: any = {};
 
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
   rowActionItems: MenuItem[] = [];
 
   ngOnInit(): void {
@@ -93,16 +87,9 @@ export class OrganizationComponent implements OnInit {
     this.loadOrganizations();
   }
 
-  resetForm(): void {
-    this.filterCompanyName = '';
-  }
-
-  openFilterSidebar(): void {
-    this.showFilterSidebar = true;
-  }
-
-  closeFilterSidebar(): void {
-    this.showFilterSidebar = false;
+  onCardSearchChange(value: string): void {
+    this.cardSearchText = value;
+    this.applyCardSearch();
   }
   openAddDialog(): void {
     this.resetDialogForm();
@@ -196,7 +183,6 @@ export class OrganizationComponent implements OnInit {
   }
 
   async submitAddDialog(): Promise<void> {
-    debugger;
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
@@ -238,8 +224,6 @@ export class OrganizationComponent implements OnInit {
       } else {
         response = await firstValueFrom(this.organizationService.update(payload));
       }
-      debugger;
-
       if (response.ErrorInfo.Message == true && response.result == "AlreadyExists") {
         this.toast.warn('Already Exists', `${payload.Name || this.pageTitle} already exists. Please use a different name.`);
         this.dialogCompanyName = '';
@@ -270,7 +254,11 @@ export class OrganizationComponent implements OnInit {
     this.organizationService.getAll().subscribe({
       next: (response) => {
         let RowNumber = 1;
-        this.tableRows = (response.result ?? []).map((x: any) => {
+        const organizations = Number(this.userDetails.RoleId || 0) === 1
+          ? (response.result ?? [])
+          : (response.result ?? []).filter((x: any) => x.Id === Number(this.userDetails.OrgId));
+
+        this.tableRows = organizations.map((x: any) => {
           x.RowNumber = RowNumber++;
           x.Phone = x.Phone ?? x.phone ?? x.MobileNo ?? x.mobileNo ?? '';
           x.Email = x.Email ?? x.email ?? '';
@@ -278,6 +266,10 @@ export class OrganizationComponent implements OnInit {
           x.Status = x.IsActive ? 'Active' : 'Inactive';
           return x;
         });
+
+
+        this.allRows = [...this.tableRows];
+        this.applyCardSearch();
         this.changeDetector.detectChanges();
       },
       error: () => {
@@ -500,6 +492,23 @@ export class OrganizationComponent implements OnInit {
     this.configImageName = '';
     this.configThemeColor = '#2f7d57';
     this.configFontSize = '14';
+  }
+
+  private applyCardSearch(): void {
+    const searchText = this.cardSearchText.trim().toLowerCase();
+
+    if (!searchText) {
+      this.tableRows = [...this.allRows];
+      return;
+    }
+
+    this.tableRows = this.allRows.filter((row) => {
+      return String(row.Name ?? '').toLowerCase().includes(searchText)
+        || String(row.Code ?? '').toLowerCase().includes(searchText)
+        || String(row.Email ?? '').toLowerCase().includes(searchText)
+        || String(row.Phone ?? '').toLowerCase().includes(searchText)
+        || String(row.Website ?? '').toLowerCase().includes(searchText);
+    });
   }
 
   private getRowActionItems(row: any): MenuItem[] {

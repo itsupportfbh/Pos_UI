@@ -19,6 +19,11 @@
           <button pButton type="button" icon="pi pi-filter" label="Filter" severity="secondary" outlined="true"
             (click)="openFilterSidebar()"></button>
         }
+        <label class="card-search-field" for="user-card-search">
+          <i class="pi pi-search"></i>
+          <input id="user-card-search" type="text" placeholder="Search users"
+            [value]="cardSearchText" (input)="onCardSearchChange($any($event.target).value)" />
+        </label>
         @if (showAddNewButton) {
           <button pButton type="button" icon="pi pi-plus" [label]="addNewButtonLabel" (click)="openAddDialog()"></button>
         }
@@ -108,11 +113,8 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Name" inputId="filter-name" placeholder="Enter user name"
-          [model]="filterName" (modelChange)="filterName = $event" />
-
-        <app-text-field label="Email" inputId="filter-email" placeholder="Enter email"
-          [model]="filterEmail" (modelChange)="filterEmail = $event" />
+        <app-multiselect-field label="Organization" inputId="filter-organizations" placeholder="Choose organizations"
+          [options]="organizationOptions" [model]="filterOrganizations" (modelChange)="filterOrganizations = $event" />
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
@@ -131,6 +133,13 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
+    @if (userDetails.RoleId === 1) {
+      <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
+        [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+        errorMessage="Organization is required." [numberValue]="true" [model]="dialogOrganization"
+        (modelChange)="onOrganizationChange($event)" />
+    }
+
     <app-text-field label="Code" inputId="dialog-code" placeholder="User Code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." 
       [model]="dialogCode" (modelChange)="dialogCode = $event" />

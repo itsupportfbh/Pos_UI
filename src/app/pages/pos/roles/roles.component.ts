@@ -9,9 +9,12 @@ import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { OrganizationService } from '../../../services/organization.service';
 import { Role, RoleService } from '../../../services/role.service';
 
 type PagePermission = {
@@ -30,6 +33,8 @@ type RoleRow = Role & {
 };
 
 const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
+  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
+  { field: 'OrganizationName', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
   { field: 'Code', header: 'Code', sortable: true, width: '9rem' },
   { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'Remarks', header: 'Remarks', sortable: true, width: '18rem' },
@@ -61,7 +66,7 @@ const PERMISSION_PAGES: PagePermission[] = [
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [CommonModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
+  imports: [CommonModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, MultiSelectFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
   providers: [ConfirmationService],
   templateUrl: './roles.component.html',
   styleUrl: './roles.component.css'
@@ -69,10 +74,12 @@ const PERMISSION_PAGES: PagePermission[] = [
 export class RolesComponent {
   private readonly toast = inject(AppToastService);
   private readonly roleService = inject(RoleService);
+  private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
 
   showAddDialog = false;
   showFilterSidebar = false;
@@ -80,19 +87,22 @@ export class RolesComponent {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
-  filterRoleName = '';
+  filterOrganizations: MultiSelectFieldValue = [];
   permissionRoleName = '';
   permissionSearchText = '';
 
   dialogId = 0;
+  dialogOrganization: SelectFieldValue = null;
   dialogCode = '';
   dialogName = '';
   dialogRemarks = '';
 
   selectedRow: RoleRow | null = null;
   rowActionItems: MenuItem[] = [];
+  allRows: RoleRow[] = [];
   tableRows: RoleRow[] = [];
   permissionPages: PagePermission[] = [];
+  organizationOptions: any[] = [];
   userDetails: any = {};
 
   readonly pageEyebrow = 'Users & Roles';
@@ -107,10 +117,10 @@ export class RolesComponent {
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Roles';
   readonly tableCaption = 'Roles';
-  readonly tableColumns = ROLE_COLUMNS;
+  tableColumns = ROLE_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
+  showFilterButton = false;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
 
@@ -120,6 +130,16 @@ export class RolesComponent {
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.showFilterButton = this.userDetails.RoleId === 1;
+
+    this.tableColumns = ROLE_COLUMNS.map((x: any) => {
+      if (x.field === 'OrganizationName') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+
     this.loadRoles();
   }
 
@@ -137,25 +157,25 @@ export class RolesComponent {
   }
 
   resetForm(): void {
-    this.filterRoleName = '';
-    this.loadRoles();
+    this.filterOrganizations = [];
+    this.tableRows = [...this.allRows];
   }
 
   searchRoles(): void {
-    const name = this.filterRoleName.trim().toLowerCase();
-
-    if (!name) {
-      this.loadRoles();
+    if (!this.filterOrganizations.length) {
+      this.tableRows = [...this.allRows];
       return;
     }
 
-    this.tableRows = this.tableRows.filter((row) =>
-      String(row.Name ?? '').toLowerCase().includes(name) ||
-      String(row.Code ?? '').toLowerCase().includes(name)
+    this.tableRows = this.allRows.filter((row) =>
+      this.filterOrganizations.includes(Number(row.OrgId || 0))
     );
   }
 
   openFilterSidebar(): void {
+    if (!this.organizationOptions.length) {
+      this.loadOrganizations();
+    }
     this.showFilterSidebar = true;
   }
 
@@ -170,6 +190,9 @@ export class RolesComponent {
     this.dialogSubtitle = 'Create a new role template.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+    if (this.userDetails.RoleId === 1) {
+      this.loadOrganizations();
+    }
   }
 
   closeAddDialog(): void {
@@ -180,16 +203,19 @@ export class RolesComponent {
   }
 
   loadRoles(): void {
-    const orgId = Number(this.userDetails.OrgId || 0);
+    const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
 
     this.roleService.getAll(orgId).subscribe({
       next: (response) => {
         let RowNumber = 1;
+
         this.tableRows = (response.result ?? []).map((x: any) => {
+          x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
           x.RowNumber = RowNumber++;
           x.Status = x.IsActive ? 'Active' : 'Inactive';
           return x;
         });
+        this.allRows = [...this.tableRows];
 
         this.changeDetector.detectChanges();
       },
@@ -197,6 +223,21 @@ export class RolesComponent {
         this.toast.error('Load Failed', 'Unable to load roles. Please check API and try again.');
       }
     });
+  }
+
+  async loadOrganizations(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.organizationService.getAll());
+      const organizations = response?.result ?? [];
+
+      this.organizationOptions = organizations.map((organization: any) => ({
+        label: organization.Name ?? '',
+        value: organization.Id ?? 0
+      }));
+    } catch {
+      this.organizationOptions = [];
+      this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+    }
   }
 
   async submitAddDialog(): Promise<void> {
@@ -213,7 +254,9 @@ export class RolesComponent {
       Code: this.dialogCode,
       Name: this.dialogName,
       Remarks: this.dialogRemarks,
-      OrgId: Number(this.userDetails.OrgId || 0),
+      OrgId: this.userDetails.RoleId === 1
+        ? Number(this.dialogOrganization || 0)
+        : Number(this.userDetails.OrgId || 0),
       IsActive: true,
       CreatedBy: Number(this.userDetails.UserId || 0),
       CreatedDate: new Date().toISOString(),
@@ -266,10 +309,15 @@ export class RolesComponent {
     this.showAddDialog = true;
 
     try {
+      if (this.userDetails.RoleId === 1) {
+        await this.loadOrganizations();
+      }
+
       const response: any = await firstValueFrom(this.roleService.getById(row.Id ?? 0));
       const role = response.result ?? {};
 
       this.dialogId = role.Id ?? 0;
+      this.dialogOrganization = role.OrgId ?? null;
       this.dialogCode = role.Code ?? '';
       this.dialogName = role.Name ?? '';
       this.dialogRemarks = role.Remarks ?? '';
@@ -447,14 +495,23 @@ export class RolesComponent {
   }
 
   private isDialogFormValid(): boolean {
-    return this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+
+    return areTextFieldsValid && areSelectFieldsValid;
+  }
+
+  private getOrganizationName(orgId: number | string | undefined): string {
+    const organization = this.organizationOptions.find((x: any) => Number(x.value || 0) === Number(orgId || 0));
+    return organization?.label ?? '';
   }
 
   resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
-    this.dialogCode = '';
+    this.dialogOrganization = null;
+    // this.dialogCode = '';
     this.dialogName = '';
     this.dialogRemarks = '';
   }

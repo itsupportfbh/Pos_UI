@@ -16,10 +16,11 @@
         <h2>{{ tableTitle }}</h2>
       </div>
       <div class="organization-card-actions">
-        @if (showFilterButton) {
-          <button pButton type="button" icon="pi pi-filter" label="Filter" severity="secondary" outlined="true"
-            (click)="openFilterSidebar()"></button>
-        }
+        <label class="card-search-field" for="organization-card-search">
+          <i class="pi pi-search"></i>
+          <input id="organization-card-search" type="text" placeholder="Search organizations"
+            [value]="cardSearchText" (input)="onCardSearchChange($any($event.target).value)" />
+        </label>
         @if (showAddNewButton) {
           <button pButton type="button" icon="pi pi-plus" [label]="addNewButtonLabel" (click)="openAddDialog()"></button>
         }
@@ -78,28 +79,6 @@
     </section>
   </p-card>
 </section>
-
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
-  [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
-  [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
-  <p-card class="feature-card filter-drawer-card">
-    <section class="filter-panel filter-panel-compact">
-      <div class="filter-panel-header">
-        <div>
-          <h2>{{ filterTitle }}</h2>
-        </div>
-      </div>
-
-      <section class="field-grid">
-        <app-text-field label="Organization Name" inputId="companyName" placeholder="Unity Work Restaurants"
-          [model]="filterCompanyName" (modelChange)="filterCompanyName = $event" />
-      </section>
-
-      <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (secondaryClick)="resetForm()" />
-    </section>
-  </p-card>
-</p-dialog>
 <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '70rem', maxWidth: '100vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">

@@ -17,6 +17,7 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { AppToastService } from '../../../services/app-toast.service';
 import { BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
+import { OrganizationService } from '../../../services/organization.service';
 import { RoleService } from '../../../services/role.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
 import { UserBranchMapping, UserMaster, UserMasterService, UserRoleMapping } from '../../../services/usermaster.service';
@@ -64,6 +65,7 @@ export class UsersComponent implements OnInit {
   private readonly roleService = inject(RoleService);
   private readonly userMasterService = inject(UserMasterService);
   private readonly commonService = inject(CommonService);
+  private readonly organizationService = inject(OrganizationService);
   private readonly runtimeConfig = inject(RuntimeConfigService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
@@ -75,10 +77,11 @@ export class UsersComponent implements OnInit {
   showFilterSidebar = false;
   isEditMode = false;
   dialogSubmitted = false;
-  filterName = '';
-  filterEmail = '';
+  filterOrganizations: MultiSelectFieldValue = [];
+  cardSearchText = '';
 
   dialogId = 0;
+  dialogOrganization: SelectFieldValue = null;
   dialogCode = '';
   dialogName = '';
   dialogRemarks = '';
@@ -106,11 +109,13 @@ export class UsersComponent implements OnInit {
 
   selectedRow: any = null;
   rowActionItems: MenuItem[] = [];
+  masterRows: any[] = [];
   allRows: any[] = [];
   tableRows: any[] = [];
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
+  organizationOptions: any[] = [];
   branchOptions: any[] = [];
   roleOptions: any[] = [];
   userDetails: any = {};
@@ -130,37 +135,44 @@ export class UsersComponent implements OnInit {
   readonly tableTitle = 'Users';
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
+  showFilterButton = false;
 
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.showFilterButton = this.userDetails.RoleId === 1;
     this.loadUsers();
   }
 
   resetForm(): void {
-    this.filterName = '';
-    this.filterEmail = '';
-    this.loadUsers();
+    this.filterOrganizations = [];
+    this.allRows = [...this.masterRows];
+    this.applyCardSearch();
+  }
+
+  onCardSearchChange(value: string): void {
+    this.cardSearchText = value;
+    this.applyCardSearch();
   }
 
   searchUsers(): void {
-    const name = this.filterName.trim().toLowerCase();
-    const email = this.filterEmail.trim().toLowerCase();
-
-    if (!name && !email) {
-      this.loadUsers();
+    if (!this.filterOrganizations.length) {
+      this.allRows = [...this.masterRows];
+      this.applyCardSearch();
       return;
     }
 
-    this.tableRows = this.allRows.filter((row) => {
-      const matchesName = !name || row.Name.toLowerCase().includes(name);
-      const matchesEmail = !email || row.Email.toLowerCase().includes(email);
-      return matchesName && matchesEmail;
-    });
+    this.allRows = this.masterRows.filter((row) =>
+      this.filterOrganizations.includes(Number(row.OrgId || 0))
+    );
+
+    this.applyCardSearch();
   }
 
   openFilterSidebar(): void {
+    if (!this.organizationOptions.length) {
+      this.loadOrganizations();
+    }
     this.showFilterSidebar = true;
   }
 
@@ -175,9 +187,13 @@ export class UsersComponent implements OnInit {
     this.dialogSubtitle = 'Create a new user profile.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
-    void this.loadBranches();
-    void this.loadRoles();
-    void this.loadCountries();
+    if (this.userDetails.RoleId === 1) {
+      this.loadOrganizations();
+    } else {
+      this.loadBranches();
+      this.loadRoles();
+    }
+    this.loadCountries();
   }
 
   closeAddDialog(): void {
@@ -187,8 +203,11 @@ export class UsersComponent implements OnInit {
   }
 
   loadUsers(): void {
-    this.userMasterService.getAll(Number(this.userDetails.OrgId || 0)).subscribe({
+    const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+
+    this.userMasterService.getAll(orgId).subscribe({
       next: (response) => {
+
         this.tableRows = (response.result ?? []).map((x: any) => {
           x.ContactNumber = x.ContactNo ? String(x.ContactNo) : '';
           x.Image = this.normalizeImageValue(x.Image ?? '');
@@ -200,7 +219,9 @@ export class UsersComponent implements OnInit {
           return x;
         });
 
-        this.allRows = this.tableRows;
+        this.masterRows = [...this.tableRows];
+        this.allRows = [...this.masterRows];
+        this.applyCardSearch();
         this.changeDetector.detectChanges();
       },
       error: () => {
@@ -211,16 +232,31 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  async loadBranches(): Promise<void> {
-    const orgId = Number(this.userDetails.OrgId || 0);
+  async loadOrganizations(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.organizationService.getAll());
+      const organizations = response?.result ?? [];
 
-    if (!orgId) {
+      this.organizationOptions = organizations.map((organization: any) => ({
+        label: organization.Name ?? '',
+        value: organization.Id ?? 0
+      }));
+    } catch {
+      this.organizationOptions = [];
+      this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+    }
+  }
+
+  async loadBranches(orgId?: number): Promise<void> {
+    const selectedOrgId = Number(orgId || this.userDetails.OrgId || 0);
+
+    if (!selectedOrgId) {
       this.branchOptions = [];
       return;
     }
 
     try {
-      const response: any = await firstValueFrom(this.branchService.getAll(orgId));
+      const response: any = await firstValueFrom(this.branchService.getAll(selectedOrgId));
       const branches = response?.result ?? [];
 
       this.branchOptions = branches.map((branch: any) => ({
@@ -233,16 +269,16 @@ export class UsersComponent implements OnInit {
     }
   }
 
-  async loadRoles(): Promise<void> {
-    const orgId = Number(this.userDetails.OrgId || 0);
+  async loadRoles(orgId?: number): Promise<void> {
+    const selectedOrgId = Number(orgId || this.userDetails.OrgId || 0);
 
-    if (!orgId) {
+    if (!selectedOrgId) {
       this.roleOptions = [];
       return;
     }
 
     try {
-      const response: any = await firstValueFrom(this.roleService.getAll(orgId));
+      const response: any = await firstValueFrom(this.roleService.getAll(selectedOrgId));
       const roles = response?.result ?? [];
 
       this.roleOptions = roles.map((role: any) => ({
@@ -281,7 +317,22 @@ export class UsersComponent implements OnInit {
       return;
     }
 
-    void this.loadStates(Number(value));
+    this.loadStates(Number(value));
+  }
+
+  onOrganizationChange(value: SelectFieldValue): void {
+    this.dialogOrganization = value;
+    this.dialogBranches = [];
+    this.dialogRoles = [];
+    this.branchOptions = [];
+    this.roleOptions = [];
+
+    if (!value || Number(value) === 0) {
+      return;
+    }
+
+    this.loadBranches(Number(value));
+    this.loadRoles(Number(value));
   }
 
   async loadStates(countryId: number): Promise<void> {
@@ -308,7 +359,7 @@ export class UsersComponent implements OnInit {
       return;
     }
 
-    void this.loadCities(Number(value));
+    this.loadCities(Number(value));
   }
 
   async loadCities(stateId: number): Promise<void> {
@@ -341,7 +392,9 @@ export class UsersComponent implements OnInit {
       IsAdmin: this.dialogIsAdmin === 'Yes',
       Email: this.dialogEmail,
       ContactNo: Number(this.dialogContactNumber || 0),
-      OrgId: Number(this.userDetails.OrgId || 0),
+      OrgId: this.userDetails.RoleId === 1
+        ? Number(this.dialogOrganization || 0)
+        : Number(this.userDetails.OrgId || 0),
       Image: this.dialogImage,
       ImageFile: this.dialogImageFile,
       EmpCode: this.dialogEmpCode,
@@ -428,10 +481,15 @@ export class UsersComponent implements OnInit {
     this.dialogPrimaryActionLabel = 'Update';
 
     try {
+      if (this.userDetails.RoleId === 1) {
+        await this.loadOrganizations();
+      }
+
       const response: any = await firstValueFrom(this.userMasterService.getById(row.Id ?? 0));
       const user = response.result ?? {};
 
       this.dialogId = user.Id ?? 0;
+      this.dialogOrganization = user.OrgId || null;
       this.dialogCode = user.Code ?? '';
       this.dialogName = user.Name ?? '';
       this.dialogRemarks = user.Remarks ?? '';
@@ -450,8 +508,8 @@ export class UsersComponent implements OnInit {
       this.dialogAddress2 = user.Address2 ?? '';
       this.dialogPostalCode = user.PostalCode ?? '';
 
-      await this.loadBranches();
-      await this.loadRoles();
+      await this.loadBranches(Number(this.dialogOrganization || this.userDetails.OrgId || 0));
+      await this.loadRoles(Number(this.dialogOrganization || this.userDetails.OrgId || 0));
 
       const userBranchResponse: any = await firstValueFrom(this.userMasterService.getuserBranchesByUserId(row.Id ?? 0));
       const userRoleResponse: any = await firstValueFrom(this.userMasterService.getuserRolesByUserId(row.Id ?? 0));
@@ -619,6 +677,22 @@ export class UsersComponent implements OnInit {
 
   private getGenderName(gender: string | null): string {
     return this.genderOptions.find((x) => x.value === gender)?.label ?? '';
+  }
+
+  private applyCardSearch(): void {
+    const searchText = this.cardSearchText.trim().toLowerCase();
+
+    if (!searchText) {
+      this.tableRows = [...this.allRows];
+      return;
+    }
+
+    this.tableRows = this.allRows.filter((row) => {
+      return String(row.Name ?? '').toLowerCase().includes(searchText)
+        || String(row.Email ?? '').toLowerCase().includes(searchText)
+        || String(row.ContactNumber ?? '').toLowerCase().includes(searchText)
+        || String(row.EmpCode ?? row.Code ?? '').toLowerCase().includes(searchText);
+    });
   }
 
   private normalizeImageValue(image: string): string {
@@ -801,7 +875,8 @@ export class UsersComponent implements OnInit {
   resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-    this.dialogCode = '';
+    this.dialogOrganization = null;
+    // this.dialogCode = '';
     this.dialogName = '';
     this.dialogRemarks = '';
     this.dialogEmail = '';
