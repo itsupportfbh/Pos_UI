@@ -261,10 +261,13 @@ export class CountersComponent implements OnInit {
   loadCounter(): void {
     this.isLoading = true;
 
-    const orgId = Number(this.userDetails.OrgId || 0);
-    const branchId = Number(this.selectedBranchId || 0);
+   
+        const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
 
-    this.counterService.getAll(orgId, branchId).subscribe({
+        const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+
+
+    this.counterService.getAll(OrgId, BranchId).subscribe({
       next: (response: any) => {
         let rowNumber = 1;
 

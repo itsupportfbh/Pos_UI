@@ -88,10 +88,7 @@ export class PrintersComponent implements OnInit {
   filterBranch: MultiSelectFieldValue = [];
   filterCounter: MultiSelectFieldValue = [];
   filterTerminal: MultiSelectFieldValue = [];
- OrgId = 0;
-    BranchId = 0;
-    counterId = 0;
-    terminalId=0;
+
   dialogId = 0;
   dialogPrinterCode = '';
   dialogPrinterName = '';
@@ -133,12 +130,8 @@ export class PrintersComponent implements OnInit {
   readonly rowActionHeader = 'Actions';
 
   ngOnInit(): void {
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-        console.log('User Details:', userDetails);
-        const userId = Number(userDetails.UserId || 0);
-        this.OrgId = Number(userDetails.OrgId || 0);
-        this.BranchId = Number(userDetails.BranchId || 0);
-     this.loadBranches();
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+
     this.loadPrinters();
   }
 
@@ -156,12 +149,10 @@ export class PrintersComponent implements OnInit {
   searchPrinters(): void {
     this.applyPrinterFilters();
   }
-
-
-
-
-
   openFilterSidebar(): void {
+    if (!this.branchOptions.length) {
+      this.loadBranches();
+    }
     this.showFilterSidebar = true;
   }
 
@@ -257,7 +248,7 @@ export class PrintersComponent implements OnInit {
       CounterId: Number(this.dialogCounter || 0),
       TerminalId: Number(this.dialogTerminal || 0),
       Remarks: this.dialogRemarks.trim(),
-      OrgId: this.OrgId,
+      OrgId: this.userDetails.OrgId,
       IsActive: true,
       CreatedBy: this.getUserId(),
       CreatedDate: new Date().toISOString(),
@@ -291,51 +282,55 @@ export class PrintersComponent implements OnInit {
     }
   }
 
- loadPrinters(): void {
-  this.isLoading = true;
+  loadPrinters(): void {
+    this.isLoading = true;
 
-  this.printerService
-    .getAll(this.OrgId, this.BranchId, this.counterId, this.terminalId)
-    .subscribe({
-      next: (response: any) => {
-        const result = response?.result ?? response ?? [];
-        console.log('Printers loaded:', result);
+    const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
 
-        let RowNumber = 1;
+    const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
 
-        this.allRows = result.map((x: any) => ({
-          ...x,
-          Id: x.Id ?? x.id ?? 0,
-          BranchId: x.BranchId ?? x.branchId ?? 0,
-          CounterId: x.CounterId ?? x.counterId ?? 0,
-          TerminalId: x.TerminalId ?? x.terminalId ?? 0,
-          BranchName: x.BranchName ?? x.branchName ?? '',
-          CounterName: x.CounterName ?? x.counterName ?? '',
-          TerminalName: x.TerminalName ?? x.terminalName ?? '',
-          Code: x.Code ?? x.code ?? '',
-          Name: x.Name ?? x.name ?? '',
-          IsActive: x.IsActive ?? x.isActive ?? false,
-          RowNumber: RowNumber++,
-          Status: (x.IsActive ?? x.isActive) ? 'Active' : 'Inactive'
-        }));
-        this.tableRows = [...this.allRows];
-        this.hiddenTableRow = [...this.allRows];
-        void this.loadFilterCounters(this.toNumberArray(this.filterBranch));
-        this.syncFilterTerminalOptions();
-        this.applyPrinterFilters();
-        this.changeDetector.detectChanges();
-      },
-      error: () => {
-        this.toast.error(
-          'Load Failed',
-          'Unable to load printers. Please check API and try again.'
-        );
-      },
-      complete: () => {
-        this.isLoading = false;
-      }
-    });
-}
+    this.printerService
+      .getAll(OrgId, BranchId, 0, 0)
+      .subscribe({
+        next: (response: any) => {
+          const result = response?.result ?? response ?? [];
+          console.log('Printers loaded:', result);
+
+          let RowNumber = 1;
+
+          this.allRows = result.map((x: any) => ({
+            ...x,
+            Id: x.Id ?? x.id ?? 0,
+            BranchId: x.BranchId ?? x.branchId ?? 0,
+            CounterId: x.CounterId ?? x.counterId ?? 0,
+            TerminalId: x.TerminalId ?? x.terminalId ?? 0,
+            BranchName: x.BranchName ?? x.branchName ?? '',
+            CounterName: x.CounterName ?? x.counterName ?? '',
+            TerminalName: x.TerminalName ?? x.terminalName ?? '',
+            Code: x.Code ?? x.code ?? '',
+            Name: x.Name ?? x.name ?? '',
+            IsActive: x.IsActive ?? x.isActive ?? false,
+            RowNumber: RowNumber++,
+            Status: (x.IsActive ?? x.isActive) ? 'Active' : 'Inactive'
+          }));
+          this.tableRows = [...this.allRows];
+          this.hiddenTableRow = [...this.allRows];
+          void this.loadFilterCounters(this.toNumberArray(this.filterBranch));
+          this.syncFilterTerminalOptions();
+          this.applyPrinterFilters();
+          this.changeDetector.detectChanges();
+        },
+        error: () => {
+          this.toast.error(
+            'Load Failed',
+            'Unable to load printers. Please check API and try again.'
+          );
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
+  }
 
   async editRow(row: PrinterRow): Promise<void> {
     this.resetDialogForm();
@@ -493,8 +488,8 @@ export class PrintersComponent implements OnInit {
 
   private async loadBranches(): Promise<void> {
     try {
-    
-      const response: any = await firstValueFrom(this.branchService.getAll(this.OrgId));
+
+      const response: any = await firstValueFrom(this.branchService.getAll(this.userDetails.OrgId));
       const branchList = response?.result ?? [];
       this.branchOptions = this.mapOptions(branchList);
       this.changeDetector.detectChanges();
@@ -505,13 +500,9 @@ export class PrintersComponent implements OnInit {
   }
 
 
-
-
-
-  
-private async loadDialogCounters(branchId: number): Promise<void> {
+  private async loadDialogCounters(branchId: number): Promise<void> {
     try {
-      const response: any = await firstValueFrom(this.counterService.getAll(this.OrgId, branchId));
+      const response: any = await firstValueFrom(this.counterService.getAll(this.userDetails.OrgId, branchId));
       this.dialogCounterOptions = this.mapOptions(response?.result ?? []);
       this.changeDetector.detectChanges();
     } catch {
@@ -519,10 +510,10 @@ private async loadDialogCounters(branchId: number): Promise<void> {
       this.toast.error('Load Failed', 'Unable to load counters. Please check and try again.');
     }
   }
- private async loadDialogTerminals(branchId: number, counterId: number): Promise<void> {
+  private async loadDialogTerminals(branchId: number, counterId: number): Promise<void> {
     try {
-     
-      const response: any = await firstValueFrom(this.terminalService.getAll(this.OrgId, branchId, counterId));
+
+      const response: any = await firstValueFrom(this.terminalService.getAll(this.userDetails.OrgId, branchId, counterId));
       this.dialogTerminalOptions = this.mapOptions(response?.result ?? []);
       this.changeDetector.detectChanges();
     } catch {
@@ -533,7 +524,7 @@ private async loadDialogCounters(branchId: number): Promise<void> {
 
   private async loadFilterCounters(branchIds: number[]): Promise<void> {
     try {
-      const response: any = await firstValueFrom(this.counterService.getMultiAll(this.OrgId, branchIds));
+      const response: any = await firstValueFrom(this.counterService.getMultiAll(this.userDetails.OrgId, branchIds));
       this.filterCounterOptions = this.mapOptions(response?.result ?? []);
       this.syncFilterTerminalOptions();
       this.changeDetector.detectChanges();
@@ -636,7 +627,7 @@ private async loadDialogCounters(branchId: number): Promise<void> {
   }
 
   private getRowActionItems(row: PrinterRow): MenuItem[] {
-    
+
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
@@ -667,9 +658,6 @@ private async loadDialogCounters(branchId: number): Promise<void> {
     }
   }
 
-  private getOrgId(): number {
-    return Number(this.userDetails?.OrgId || 0);
-  }
 
   private getUserId(): number {
     return Number(this.userDetails?.UserId || 0);

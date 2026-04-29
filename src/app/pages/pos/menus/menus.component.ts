@@ -97,6 +97,9 @@ export class MenusComponent {
     IsDeleted: false
   };
 
+  readonly pageEyebrow = 'Menu Management';
+  readonly pageTitle = 'Menus';
+  readonly pageSubtitle = 'Manage your menus here.';
   readonly filterTitle = `${'Menus'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'Menus'.toLowerCase()}.`;
   readonly fields: any[] = [{ key: 'MenuName', label: 'Menu Name', type: 'text', placeholder: 'Enter menu name' }];
@@ -104,6 +107,7 @@ export class MenusComponent {
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
   dialogTitle = 'Create Menu';
+  dialogSubtitle = 'Create a new menu.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Menus';
   readonly tableCaption = 'Menus';
@@ -133,7 +137,7 @@ export class MenusComponent {
     });
   }
 
-   loadFilterCategories() {
+  loadFilterCategories() {
     this.categoryService.getAll(this.OrgId).subscribe((res: any) => {
       this.categoryfilterOptions = (res.result || []).map((item: any) => ({
         label: item.name,
@@ -206,6 +210,7 @@ export class MenusComponent {
     this.resetDialogForm();
     this.showAddDialog = true;
     this.dialogTitle = 'Create Menu';
+    this.dialogSubtitle = 'Create a new menu.';
     this.dialogPrimaryActionLabel = 'Save';
   }
 
@@ -277,6 +282,7 @@ export class MenusComponent {
     this.isEditMode = true;
     this.editingMenuId = row.id;
     this.dialogTitle = 'Edit Menu';
+    this.dialogSubtitle = 'Update the selected menu details.';
     this.dialogPrimaryActionLabel = 'Update';
 
     this.menuService.getById(row.id).subscribe({
@@ -298,7 +304,7 @@ export class MenusComponent {
         };
 
         this.showAddDialog = true;
-        this.toast.info('Edit Mode', `Editing ${row.name}.`);
+        //this.toast.info('Edit Mode', `Editing ${row.name}.`);
       },
       error: () => {
         this.toast.error('Load Failed', 'Unable to load menu details.');
