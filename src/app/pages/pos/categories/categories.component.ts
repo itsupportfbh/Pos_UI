@@ -80,6 +80,9 @@ export class CategoriesComponent {
     IsDeleted: false
   };
 
+  readonly pageEyebrow = 'Category Management';
+  readonly pageTitle = 'Categories';
+  readonly pageSubtitle = 'Manage your categories here.';
   readonly filterTitle = `${'Categories'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'Categories'.toLowerCase()}.`;
   readonly fields: any[] = [{ key: 'categoryName', label: 'Category Name', type: 'text', placeholder: 'Enter category name' }];
@@ -87,6 +90,7 @@ export class CategoriesComponent {
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
   dialogTitle = 'Create Category';
+  dialogSubtitle = 'Create a new category.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Categories';
   readonly tableCaption = 'Categories';
@@ -168,6 +172,7 @@ export class CategoriesComponent {
     this.resetDialogForm();
     this.showAddDialog = true;
     this.dialogTitle = 'Create Category';
+    this.dialogSubtitle = 'Create a new category.';
     this.dialogPrimaryActionLabel = 'Save';
   }
 
@@ -243,6 +248,7 @@ export class CategoriesComponent {
     this.isEditMode = true;
     this.editingCategoryId = row.id;
     this.dialogTitle = 'Edit Category';
+    this.dialogSubtitle = 'Update the selected Category details.';
     this.dialogPrimaryActionLabel = 'Update';
 
     this.categoryService.getById(row.id).subscribe({

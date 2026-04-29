@@ -1,5 +1,12 @@
 <section class="feature-page">
   <p-confirmDialog />
+  <header class="page-header hero-panel">
+    <div>
+      <p class="eyebrow">{{ pageEyebrow }}</p>
+      <h1>{{ pageTitle }}</h1>
+      <p class="page-subtitle">{{ pageSubtitle }}</p>
+    </div>
+  </header>
 
   <p-card class="feature-card">
     <div class="section-heading">
@@ -56,6 +63,7 @@
   <ng-template pTemplate="header">
     <div class="dialog-copy">
       <h3>{{ dialogTitle }}</h3>
+      <p>{{ dialogSubtitle }}</p>
     </div>
   </ng-template>
 
@@ -74,7 +82,8 @@
 
     <app-select-field label="Counter" [showRequiredMark]="true" inputId="dialog-counter" placeholder="Select counter"
       [options]="counterOptions" [required]="true" [submitted]="dialogSubmitted" errorMessage="Counter is required."
-      [numberValue]="true" [disabled]="!dialogModel.branchId || counterOptions.length === 0" [model]="dialogModel.counterId ?? 0" (modelChange)="dialogModel.counterId = $event" />
+      [numberValue]="true" [disabled]="!dialogModel.branchId || counterOptions.length === 0"
+      [model]="dialogModel.counterId ?? 0" (modelChange)="dialogModel.counterId = $event" />
 
     <app-text-field label="Device Name" [showRequiredMark]="true" inputId="dialog-deviceName" placeholder="Device1"
       [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Device name is required."

@@ -88,6 +88,9 @@ export class TaxComponent {
         IsDeleted: false
     };
 
+    readonly pageEyebrow = 'Tax Management';
+    readonly pageTitle = 'Taxes';
+    readonly pageSubtitle = 'Manage your tax rates here.';
     readonly filterTitle = `${'Taxes'} Filters`;
     readonly filterDescription = `API data will be loaded for ${'Taxes'.toLowerCase()}.`;
     readonly fields: any[] = [{ key: 'TaxName', label: 'Tax Name', type: 'text', placeholder: 'Enter tax name' }];
@@ -95,6 +98,7 @@ export class TaxComponent {
     readonly secondaryActionLabel = 'Clear Filters';
     readonly showSecondaryAction = true;
     dialogTitle = 'Create Tax';
+    dialogSubtitle = 'Create a new tax rate.';
     dialogPrimaryActionLabel = 'Save';
     readonly tableTitle = 'Taxes';
     readonly tableCaption = 'Taxes';
@@ -171,6 +175,7 @@ export class TaxComponent {
         this.resetDialogForm();
         this.showAddDialog = true;
         this.dialogTitle = 'Create Tax';
+        this.dialogSubtitle = 'Create a new tax rate.';
         this.dialogPrimaryActionLabel = 'Save';
     }
 
@@ -243,7 +248,7 @@ export class TaxComponent {
     onRateChange(value: string): void {
         const rate = value ? parseFloat(value) : 0;
         this.dialogModel.percentage = rate;
-        
+
         // Validate rate is greater than zero
         if (this.dialogSubmitted && rate <= 0) {
             this.rateErrorMessage = 'Rate must be greater than zero.';
@@ -256,6 +261,7 @@ export class TaxComponent {
         this.isEditMode = true;
         this.editingTaxId = row.id;
         this.dialogTitle = 'Edit Tax';
+        this.dialogSubtitle = 'Update the selected Tax details.';
         this.dialogPrimaryActionLabel = 'Update';
 
         this.TaxService.getById(row.id).subscribe({
