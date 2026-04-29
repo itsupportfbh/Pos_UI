@@ -383,7 +383,7 @@ export class TerminalComponent {
                 };
 
                 this.showAddDialog = true;
-                this.toast.info('Edit Mode', `Editing ${row.name}.`);
+                //this.toast.info('Edit Mode', `Editing ${row.name}.`);
             },
             error: () => {
                 this.toast.error('Load Failed', 'Unable to load terminal details.');
