@@ -89,7 +89,7 @@ export class TerminalComponent {
     BranchId = 0;
     counterId = 0;
     UserId = 0;
-
+    userDetails: any = {};
     tableRows: TerminalRow[] = [];
     allTerminals: TerminalRow[] = [];
     selectedRow: TerminalRow | null = null;
@@ -134,11 +134,11 @@ export class TerminalComponent {
     rowActionItems: MenuItem[] = [];
 
     ngOnInit(): void {
-        const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-        console.log('User Details:', userDetails);
-        this.UserId = Number(userDetails.UserId || 0);
-        this.OrgId = Number(userDetails.OrgId || 0);
-        this.BranchId = Number(userDetails.BranchId || 0);
+        this. userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+        console.log('User Details:', this. userDetails);
+        this.UserId = Number(this. userDetails.UserId || 0);
+        this.OrgId = Number(this. userDetails.OrgId || 0);
+        this.BranchId = Number(this. userDetails.BranchId || 0);
         this.loadTerminals();
         this.loadBranches();
         this.loadMultiCounters(this.BranchId);
@@ -186,7 +186,14 @@ export class TerminalComponent {
     loadTerminals(): void {
         this.isLoading = true;
 
-        this.TerminalService.getAll(this.OrgId, this.BranchId, this.counterId).subscribe({
+
+        
+        const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+
+        const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+
+
+        this.TerminalService.getAll(OrgId, BranchId, this.counterId).subscribe({
             next: (response: any) => {
                 const result = response?.result ?? response ?? [];
                 console.log('Terminals loaded:', result);
