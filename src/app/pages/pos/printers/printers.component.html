@@ -50,21 +50,21 @@
 
       <section class="field-grid">
 
-        <app-text-field
+      <!-- <app-text-field
             label="Printer Name"
             inputId="PrinterName"
             placeholder="Kitchen Printer"
             [model]="filterPrinterName"
             (modelChange)="filterPrinterName = $event"
-          />
-        <app-select-field label="Branch" inputId="branch" placeholder="Choose branch" [options]="branchOptions"
-          [numberValue]="true" [model]="filterBranch" (modelChange)="onFilterBranchChange($event)" />
+          />--> 
+        <app-multiselect-field label="Branch" inputId="branch" placeholder="Choose branch" [options]="branchOptions"
+          [model]="filterBranch" (modelChange)="onFilterBranchChange($event)" />
 
-        <app-select-field label="Counter" inputId="counter" placeholder="Choose counter" [options]="filterCounterOptions"
-          [numberValue]="true" [model]="filterCounter" (modelChange)="onFilterCounterChange($event)" />
+        <app-multiselect-field label="Counter" inputId="counter" placeholder="Choose counter" [options]="filterCounterOptions"
+          [model]="filterCounter" (modelChange)="onFilterCounterChange($event)" />
 
-        <app-select-field label="Terminal" inputId="terminal" placeholder="Choose terminal" [options]="filterTerminalOptions"
-          [numberValue]="true" [model]="filterTerminal" (modelChange)="filterTerminal = $event" />
+        <app-multiselect-field label="Terminal" inputId="terminal" placeholder="Choose terminal" [options]="filterTerminalOptions"
+          [model]="filterTerminal" (modelChange)="onFilterTerminalChange($event)" />
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
@@ -101,11 +101,13 @@
 
     <app-select-field label="Counter" inputId="dialog-counter" placeholder="Choose counter" [options]="dialogCounterOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Counter is required."
-      [numberValue]="true" [model]="dialogCounter" (modelChange)="onDialogCounterChange($event)" />
+      [numberValue]="true" [disabled]="!dialogBranch || dialogCounterOptions.length === 0"
+      [model]="dialogCounter" (modelChange)="onDialogCounterChange($event)" />
 
     <app-select-field label="Terminal" inputId="dialog-terminal" placeholder="Choose terminal" [options]="dialogTerminalOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Terminal is required."
-      [numberValue]="true" [model]="dialogTerminal" (modelChange)="dialogTerminal = $event" />
+      [numberValue]="true" [disabled]="!dialogCounter || dialogTerminalOptions.length === 0"
+      [model]="dialogTerminal" (modelChange)="dialogTerminal = $event" />
 
     <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks" [model]="dialogRemarks"
       (modelChange)="dialogRemarks = $event" />
