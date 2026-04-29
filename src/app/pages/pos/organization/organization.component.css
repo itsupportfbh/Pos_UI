@@ -52,6 +52,10 @@
   color: var(--app-primary);
 }
 
+:host ::ng-deep .row-action-menu .row-action-view .p-menu-item-icon {
+  color: #0f766e;
+}
+
 :host ::ng-deep .row-action-menu .row-action-delete .p-menu-item-icon {
   color: #dc2626;
 }
@@ -295,6 +299,41 @@
   background: #fff;
 }
 
+.organization-view-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.organization-view-item {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid #edf2f7;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.organization-view-item span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.organization-view-item strong {
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.organization-view-item-wide {
+  grid-column: 1 / -1;
+}
+
 .config-dialog-grid {
   align-items: end;
 }
@@ -405,5 +444,13 @@
 
   .organization-card-subline {
     flex-wrap: wrap;
+  }
+
+  .organization-view-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .organization-view-item-wide {
+    grid-column: auto;
   }
 }

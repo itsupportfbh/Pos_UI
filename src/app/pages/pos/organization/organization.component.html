@@ -79,6 +79,86 @@
     </section>
   </p-card>
 </section>
+
+<p-dialog [(visible)]="showViewSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+  [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
+  [style]="{ width: '34rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeViewSidebar()">
+  <p-card class="feature-card filter-drawer-card">
+    <section class="filter-panel filter-panel-compact">
+      <div class="filter-panel-header">
+        <div>
+          <h2>Organization Details</h2>
+        </div>
+      </div>
+
+      @if (viewOrganization) {
+        <section class="organization-view-grid">
+          <div class="organization-view-item">
+            <span>Code</span>
+            <strong>{{ viewOrganization.Code || '-' }}</strong>
+          </div>
+          <div class="organization-view-item">
+            <span>Name</span>
+            <strong>{{ viewOrganization.Name || '-' }}</strong>
+          </div>
+          <div class="organization-view-item">
+            <span>Status</span>
+            <strong>
+              <span class="status-badge" [class.status-active]="viewOrganization.Status === 'Active'"
+                [class.status-inactive]="viewOrganization.Status === 'Inactive'">
+                {{ viewOrganization.Status || '-' }}
+              </span>
+            </strong>
+          </div>
+          <div class="organization-view-item">
+            <span>Phone</span>
+            <strong>{{ viewOrganization.Phone || '-' }}</strong>
+          </div>
+          <div class="organization-view-item organization-view-item-wide">
+            <span>Email</span>
+            <strong>{{ viewOrganization.Email || '-' }}</strong>
+          </div>
+          <div class="organization-view-item organization-view-item-wide">
+            <span>Website</span>
+            <strong>
+              @if (viewOrganization.Website) {
+                <a class="website-link" [href]="getWebsiteUrl(viewOrganization.Website)" target="_blank" rel="noopener noreferrer">
+                  {{ viewOrganization.Website }}
+                </a>
+              } @else {
+                -
+              }
+            </strong>
+          </div>
+          <div class="organization-view-item">
+            <span>GST Number</span>
+            <strong>{{ viewOrganization.GSTNo || '-' }}</strong>
+          </div>
+          <div class="organization-view-item">
+            <span>Registration Number</span>
+            <strong>{{ viewOrganization.RegistrationNo || '-' }}</strong>
+          </div>
+          <div class="organization-view-item">
+            <span>Contact Person</span>
+            <strong>{{ viewOrganization.ContactPerson || '-' }}</strong>
+          </div>
+          <div class="organization-view-item">
+            <span>Contact Phone</span>
+            <strong>{{ viewOrganization.ContactMobileNo || '-' }}</strong>
+          </div>
+          <div class="organization-view-item organization-view-item-wide">
+            <span>Contact Email</span>
+            <strong>{{ viewOrganization.ContactEmail || '-' }}</strong>
+          </div>
+          <div class="organization-view-item organization-view-item-wide">
+            <span>Remarks</span>
+            <strong>{{ viewOrganization.Remarks || '-' }}</strong>
+          </div>
+        </section>
+      }
+    </section>
+  </p-card>
+</p-dialog>
 <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '70rem', maxWidth: '100vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">

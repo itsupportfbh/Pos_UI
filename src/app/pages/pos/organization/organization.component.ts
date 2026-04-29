@@ -59,10 +59,12 @@ export class OrganizationComponent implements OnInit {
   dialogPostalCode = '';
   dialogRemarks = '';
   showConfigDialog = false;
+  showViewSidebar = false;
   configOrganizationName = '';
   configImageName = '';
   configThemeColor = '#2f7d57';
   configFontSize = '14';
+  viewOrganization: any = null;
 
   selectedRow: any = null;
   readonly pageTitle = 'Organization';
@@ -78,12 +80,13 @@ export class OrganizationComponent implements OnInit {
   tableRows: any[] = [];
   userDetails: any = {};
 
-  readonly showAddNewButton = true;
+  showAddNewButton = false;
   readonly addNewButtonLabel = 'Add New';
   rowActionItems: MenuItem[] = [];
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.showAddNewButton = this.userDetails.RoleId === 1;
     this.loadOrganizations();
   }
 
@@ -287,6 +290,7 @@ export class OrganizationComponent implements OnInit {
   }
 
   async editRow(row: any): Promise<void> {
+    debugger;
     this.resetDialogForm();
     this.isEditMode = true;
     this.dialogTitle = 'Edit Organization';
@@ -341,6 +345,11 @@ export class OrganizationComponent implements OnInit {
 
   closeConfigDialog(): void {
     this.showConfigDialog = false;
+  }
+
+  closeViewSidebar(): void {
+    this.showViewSidebar = false;
+    this.viewOrganization = null;
   }
 
   submitConfigDialog(): void {
@@ -401,6 +410,32 @@ export class OrganizationComponent implements OnInit {
 
     } catch {
       this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row['name'] ?? row['code'] ?? 'record')}. Please try again.`);
+    }
+  }
+
+  async viewRow(row: any): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.organizationService.getById(row['Id']));
+      const organization = response.result ?? {};
+
+      this.viewOrganization = {
+        Code: organization.Code ?? '',
+        Name: organization.Name ?? '',
+        GSTNo: organization.GSTNo ?? '',
+        RegistrationNo: organization.RegistrationNo ?? '',
+        Phone: organization.Phone ?? '',
+        Email: organization.Email ?? '',
+        Website: organization.Website ?? '',
+        ContactPerson: organization.ContactPerson ?? '',
+        ContactMobileNo: organization.ContactMobileNo ?? '',
+        ContactEmail: organization.ContactEmail ?? '',
+        Remarks: organization.Remarks ?? '',
+        Status: organization.IsActive ? 'Active' : 'Inactive'
+      };
+
+      this.showViewSidebar = true;
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load organization details. Please check and try again.');
     }
   }
 
@@ -513,27 +548,44 @@ export class OrganizationComponent implements OnInit {
 
   private getRowActionItems(row: any): MenuItem[] {
     const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+      { label: 'View', icon: 'pi pi-eye', styleClass: 'row-action-view', command: () => this.handleRowAction('view') }
     ];
 
-    if (row['IsActive'] === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.userDetails.RoleId === 1) {
+      if (row['IsActive'] === true) {
+        items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+
+      items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+      return items;
     }
 
-    items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+    if (this.userDetails.IsAdmin === true) {
+      if (row['IsActive'] === true) {
+        items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+
+      items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+    }
 
     return items;
   }
 
-  private handleRowAction(action: 'config' | 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'view' | 'config' | 'edit' | 'delete' | 'activate' | 'deactivate'): void {
     if (!this.selectedRow) {
       return;
     }
 
-    if (action === 'config') {
+    if (action === 'view') {
+      this.viewRow(this.selectedRow);
+    } else if (action === 'config') {
       this.openConfigDialog(this.selectedRow);
     } else if (action === 'edit') {
       this.editRow(this.selectedRow);
