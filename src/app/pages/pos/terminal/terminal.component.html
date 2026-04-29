@@ -39,11 +39,6 @@
         </div>
       </div>
 
-      <section class="field-grid">
-        <app-text-field label="Terminal Name" inputId="terminalName" placeholder="Enter terminal name"
-          [model]="filterTerminalName" (modelChange)="filterTerminalName = $event" />
-      </section>
-
       <app-multiselect-field label="Branch" inputId="counter-branch-filter" placeholder="Choose branches"
         [options]="branchOptions" [model]="selectedBranchIds" (modelChange)="onfilterBranchChange($event)" />
 
@@ -79,7 +74,7 @@
 
     <app-select-field label="Counter" [showRequiredMark]="true" inputId="dialog-counter" placeholder="Select counter"
       [options]="counterOptions" [required]="true" [submitted]="dialogSubmitted" errorMessage="Counter is required."
-      [numberValue]="true" [model]="dialogModel.counterId ?? 0" (modelChange)="dialogModel.counterId = $event" />
+      [numberValue]="true" [disabled]="!dialogModel.branchId || counterOptions.length === 0" [model]="dialogModel.counterId ?? 0" (modelChange)="dialogModel.counterId = $event" />
 
     <app-text-field label="Device Name" [showRequiredMark]="true" inputId="dialog-deviceName" placeholder="Device1"
       [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Device name is required."
