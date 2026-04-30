@@ -415,6 +415,8 @@ export class OrganizationComponent implements OnInit {
 
   async viewRow(row: any): Promise<void> {
     try {
+      this.showViewSidebar = true;
+
       const response: any = await firstValueFrom(this.organizationService.getById(row['Id']));
       const organization = response.result ?? {};
 
@@ -433,7 +435,6 @@ export class OrganizationComponent implements OnInit {
         Status: organization.IsActive ? 'Active' : 'Inactive'
       };
 
-      this.showViewSidebar = true;
     } catch {
       this.toast.error('Load Failed', 'Unable to load organization details. Please check and try again.');
     }

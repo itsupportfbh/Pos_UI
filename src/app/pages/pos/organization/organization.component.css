@@ -299,19 +299,90 @@
   background: #fff;
 }
 
+.organization-view-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.organization-view-hero {
+  display: flex;
+  gap:.95rem;
+  padding:1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1.1rem;
+  background:
+    radial-gradient(circle at top right, rgba(148, 163, 184, 0.14), transparent 32%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.organization-view-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.15rem;
+  height: 3.15rem;
+  border-radius: 0.95rem;
+  background: #eef2ff;
+  color: #334155;
+  font-size: 1.2rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.organization-view-copy {
+  display: grid;
+}
+
+.organization-view-copy p {
+  margin: 0;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.organization-view-copy h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.08rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.organization-view-subline {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.organization-view-code {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+}
+
 .organization-view-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
 }
 
-.organization-view-item {
-  display: grid;
-  gap: 0.22rem;
-  padding: 0.85rem 0.9rem;
+.organization-view-item,
+.organization-view-note {
   border: 1px solid #edf2f7;
   border-radius: 0.9rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.organization-view-item {
+  display: grid;
+  gap: 0.28rem;
+  padding: 0.85rem 0.9rem;
 }
 
 .organization-view-item span {
@@ -319,19 +390,23 @@
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .organization-view-item strong {
   color: #0f172a;
-  font-size: 0.9rem;
-  font-weight: 600;
   line-height: 1.4;
   word-break: break-word;
 }
 
 .organization-view-item-wide {
   grid-column: 1 / -1;
+}
+
+.organization-view-note {
+  padding: 0.9rem 1rem;
+  color: #0f172a;
+  line-height: 1.55;
+  word-break: break-word;
 }
 
 .config-dialog-grid {
@@ -444,6 +519,10 @@
 
   .organization-card-subline {
     flex-wrap: wrap;
+  }
+
+  .organization-view-hero {
+    align-items: flex-start;
   }
 
   .organization-view-grid {

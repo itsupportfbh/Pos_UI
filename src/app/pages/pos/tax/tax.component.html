@@ -8,7 +8,7 @@
       <p class="page-subtitle">{{ pageSubtitle }}</p>
     </div>
   </header>
-  
+
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
@@ -16,7 +16,7 @@
       </div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+    <app-shared-table
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">

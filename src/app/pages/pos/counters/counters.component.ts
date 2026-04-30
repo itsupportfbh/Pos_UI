@@ -27,6 +27,7 @@ const BRANCH_OPTIONS: any[] = [];
 
 const COUNTER_COLUMNS: SharedTableColumn<CounterRow>[] = [
   { field: 'RowNumber', header: '#', sortable: false, width: '5rem' },
+  { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
   { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'BranchName', header: 'Branch', sortable: true, width: '16rem' },
@@ -103,7 +104,7 @@ export class CountersComponent implements OnInit {
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Counters';
   readonly tableCaption = 'Counters';
-  readonly tableColumns = COUNTER_COLUMNS;
+  tableColumns = COUNTER_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
   readonly showFilterButton = true;
@@ -112,6 +113,14 @@ export class CountersComponent implements OnInit {
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.tableColumns = COUNTER_COLUMNS.map((x: any) => {
+      if (x.field === 'organizationname') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+
     this.loadBranches();
     this.loadCounter();
   }
@@ -231,7 +240,7 @@ export class CountersComponent implements OnInit {
       next: (response: any) => {
         const branchList = response?.result ?? [];
 
-        this.branchOptions = branchList.filter((x:any) => x.IsActive == true).map((branch: any) => ({
+        this.branchOptions = branchList.filter((x: any) => x.IsActive == true).map((branch: any) => ({
           label: branch.Name ?? '',
           value: branch.Id ?? 0
         }));
@@ -261,10 +270,10 @@ export class CountersComponent implements OnInit {
   loadCounter(): void {
     this.isLoading = true;
 
-   
-        const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
 
-        const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+    const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+
+    const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
 
 
     this.counterService.getAll(OrgId, BranchId).subscribe({

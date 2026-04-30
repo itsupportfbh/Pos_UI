@@ -33,6 +33,7 @@ type MenuRow = {
 
 const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
+  { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem', hidden: true },
@@ -73,6 +74,8 @@ export class MenusComponent {
   dialogMenuName = '';
   dialogSubmitted = false;
   OrgId = 0;
+  BranchId = 0;
+  userDetails: any = {};
 
   tableRows: MenuRow[] = [];
   selectedRow: MenuRow | null = null;
@@ -111,7 +114,7 @@ export class MenusComponent {
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Menus';
   readonly tableCaption = 'Menus';
-  readonly tableColumns = MENU_COLUMNS;
+  tableColumns = MENU_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
   readonly showFilterButton = true;
@@ -120,10 +123,17 @@ export class MenusComponent {
   rowActionItems: MenuItem[] = [];
 
   ngOnInit(): void {
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    const userId = Number(userDetails.UserId || 0);
-    this.OrgId = Number(userDetails.OrgId || 0);
-    this.loadMenus();
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    const userId = Number(this.userDetails.UserId || 0);
+    this.OrgId = Number(this.userDetails.OrgId || 0); this.loadMenus();
+    this.tableColumns = MENU_COLUMNS.map((x: any) => {
+      if (x.field === 'organizationname') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+
     this.loadCategories();
     this.loadFilterCategories();
   }
@@ -153,6 +163,9 @@ export class MenusComponent {
 
   loadMenus(): void {
     this.isLoading = true;
+    this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+    this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+
 
     this.menuService.getAll(this.OrgId).subscribe({
       next: (response: any) => {

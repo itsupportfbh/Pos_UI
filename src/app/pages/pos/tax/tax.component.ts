@@ -31,6 +31,7 @@ type TaxRow = {
 
 const TAX_COLUMNS: SharedTableColumn<TaxRow>[] = [
     { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
+    { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
     { field: 'code', header: 'Code', sortable: true, width: '10rem' },
     { field: 'name', header: 'Name', sortable: true, width: '18rem' },
     { field: 'rate', header: 'Tax', sortable: true, width: '10rem' },
@@ -69,6 +70,7 @@ export class TaxComponent {
     dialogTaxName = '';
     rateErrorMessage = '';
     OrgId = 0;
+    userDetails: any = {};
 
     tableRows: TaxRow[] = [];
     selectedRow: TaxRow | null = null;
@@ -102,7 +104,7 @@ export class TaxComponent {
     dialogPrimaryActionLabel = 'Save';
     readonly tableTitle = 'Taxes';
     readonly tableCaption = 'Taxes';
-    readonly tableColumns = TAX_COLUMNS;
+    tableColumns = TAX_COLUMNS;
     readonly showAddNewButton = true;
     readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
     readonly showFilterButton = true;
@@ -111,14 +113,25 @@ export class TaxComponent {
     rowActionItems: MenuItem[] = [];
 
     ngOnInit(): void {
-        const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-        const userId = Number(userDetails.UserId || 0);
-        this.OrgId = Number(userDetails.OrgId || 0);
+        this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+        const userId = Number(this.userDetails.UserId || 0);
+        this.tableColumns = TAX_COLUMNS.map((x: any) => {
+            if (x.field === 'organizationname') {
+                x.hidden = this.userDetails.RoleId !== 1;
+            }
+
+            return x;
+        });
+
         this.loadTaxes();
     }
 
     loadTaxes(): void {
         this.isLoading = true;
+        this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+
+        const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+
 
         this.TaxService.getAll(this.OrgId).subscribe({
             next: (response: any) => {

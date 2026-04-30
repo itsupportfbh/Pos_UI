@@ -92,67 +92,95 @@
       </div>
 
       @if (viewOrganization) {
-        <section class="organization-view-grid">
-          <div class="organization-view-item">
-            <span>Code</span>
-            <strong>{{ viewOrganization.Code || '-' }}</strong>
+        <section class="organization-view-shell">
+          <div class="organization-view-hero">
+            <div class="organization-view-mark">
+              {{ (viewOrganization.Name || 'O').charAt(0).toUpperCase() }}
+            </div>
+            <div class="organization-view-copy">
+              <p>Organization</p>
+              <h3 [title]="viewOrganization.Name || '-'">{{ viewOrganization.Name || '-' }}</h3>
+              <div class="organization-view-subline">
+                <span class="organization-view-code">{{ viewOrganization.Code || '-' }}</span>
+                <span class="status-badge" [class.status-active]="viewOrganization.Status === 'Active'"
+                  [class.status-inactive]="viewOrganization.Status === 'Inactive'">
+                  {{ viewOrganization.Status || '-' }}
+                </span>
+              </div>
+            </div>
           </div>
-          <div class="organization-view-item">
-            <span>Name</span>
-            <strong>{{ viewOrganization.Name || '-' }}</strong>
+
+          <div class="organization-view-section">
+            <div class="organization-view-section-head">
+              <h3>Primary Details</h3>
+            </div>
+            <div class="organization-view-grid">
+              <div class="organization-view-item organization-view-item-wide">
+                <span>Email</span>
+                <strong [title]="viewOrganization.Email || '-'">{{ viewOrganization.Email || '-' }}</strong>
+              </div>
+              <div class="organization-view-item">
+                <span>Phone</span>
+                <strong>{{ viewOrganization.Phone || '-' }}</strong>
+              </div>
+              <div class="organization-view-item">
+                <span>Website</span>
+                <strong>
+                  @if (viewOrganization.Website) {
+                    <a class="website-link" [href]="getWebsiteUrl(viewOrganization.Website)" target="_blank" rel="noopener noreferrer">
+                      {{ viewOrganization.Website }}
+                    </a>
+                  } @else {
+                    -
+                  }
+                </strong>
+              </div>
+            </div>
           </div>
-          <div class="organization-view-item">
-            <span>Status</span>
-            <strong>
-              <span class="status-badge" [class.status-active]="viewOrganization.Status === 'Active'"
-                [class.status-inactive]="viewOrganization.Status === 'Inactive'">
-                {{ viewOrganization.Status || '-' }}
-              </span>
-            </strong>
+
+          <div class="organization-view-section">
+            <div class="organization-view-section-head">
+              <h3>Registration Details</h3>
+            </div>
+            <div class="organization-view-grid">
+              <div class="organization-view-item">
+                <span>GST Number</span>
+                <strong>{{ viewOrganization.GSTNo || '-' }}</strong>
+              </div>
+              <div class="organization-view-item">
+                <span>Registration Number</span>
+                <strong>{{ viewOrganization.RegistrationNo || '-' }}</strong>
+              </div>
+            </div>
           </div>
-          <div class="organization-view-item">
-            <span>Phone</span>
-            <strong>{{ viewOrganization.Phone || '-' }}</strong>
+
+          <div class="organization-view-section">
+            <div class="organization-view-section-head">
+              <h3>Contact Details</h3>
+            </div>
+            <div class="organization-view-grid">
+              <div class="organization-view-item">
+                <span>Contact Person</span>
+                <strong>{{ viewOrganization.ContactPerson || '-' }}</strong>
+              </div>
+              <div class="organization-view-item">
+                <span>Contact Phone</span>
+                <strong>{{ viewOrganization.ContactMobileNo || '-' }}</strong>
+              </div>
+              <div class="organization-view-item organization-view-item-wide">
+                <span>Contact Email</span>
+                <strong [title]="viewOrganization.ContactEmail || '-'">{{ viewOrganization.ContactEmail || '-' }}</strong>
+              </div>
+            </div>
           </div>
-          <div class="organization-view-item organization-view-item-wide">
-            <span>Email</span>
-            <strong>{{ viewOrganization.Email || '-' }}</strong>
-          </div>
-          <div class="organization-view-item organization-view-item-wide">
-            <span>Website</span>
-            <strong>
-              @if (viewOrganization.Website) {
-                <a class="website-link" [href]="getWebsiteUrl(viewOrganization.Website)" target="_blank" rel="noopener noreferrer">
-                  {{ viewOrganization.Website }}
-                </a>
-              } @else {
-                -
-              }
-            </strong>
-          </div>
-          <div class="organization-view-item">
-            <span>GST Number</span>
-            <strong>{{ viewOrganization.GSTNo || '-' }}</strong>
-          </div>
-          <div class="organization-view-item">
-            <span>Registration Number</span>
-            <strong>{{ viewOrganization.RegistrationNo || '-' }}</strong>
-          </div>
-          <div class="organization-view-item">
-            <span>Contact Person</span>
-            <strong>{{ viewOrganization.ContactPerson || '-' }}</strong>
-          </div>
-          <div class="organization-view-item">
-            <span>Contact Phone</span>
-            <strong>{{ viewOrganization.ContactMobileNo || '-' }}</strong>
-          </div>
-          <div class="organization-view-item organization-view-item-wide">
-            <span>Contact Email</span>
-            <strong>{{ viewOrganization.ContactEmail || '-' }}</strong>
-          </div>
-          <div class="organization-view-item organization-view-item-wide">
-            <span>Remarks</span>
-            <strong>{{ viewOrganization.Remarks || '-' }}</strong>
+
+          <div class="organization-view-section">
+            <div class="organization-view-section-head">
+              <h3>Remarks</h3>
+            </div>
+            <div class="organization-view-note">
+              {{ viewOrganization.Remarks || '-' }}
+            </div>
           </div>
         </section>
       }
@@ -189,7 +217,7 @@
 
     <app-text-field label="Phone Number" inputId="dialog-phoneNumber" placeholder="Phone Number" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Phone Number is required."
-      [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only." [model]="dialogPhoneNumber"
+      [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only." [model]="dialogPhoneNumber" [minlength]="10" [maxlength]="13"
       (modelChange)="dialogPhoneNumber = $event" />
 
     <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [required]="true"
@@ -208,11 +236,12 @@
     <app-text-field label="Contact Person Phone" inputId="dialog-contactPersonPhone" placeholder="Contact Person Phone"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
       errorMessage="Contact Person Phone is required." [numbersOnly]="true"
-      formatErrorMessage="Contact Person Phone allows numbers only." [model]="dialogContactPersonPhone"
+      formatErrorMessage="Contact Person Phone allows numbers only." [model]="dialogContactPersonPhone" [minlength]="10" [maxlength]="13"
       (modelChange)="dialogContactPersonPhone = $event" />
 
     <app-text-field label="Contact Person Email" inputId="dialog-contactPersonEmail" placeholder="Contact Person Email"
-      [submitted]="dialogSubmitted" [emailOnly]="true" formatErrorMessage="Enter a valid Contact Person Email."
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Contact Person Email is required."
+      [emailOnly]="true" formatErrorMessage="Enter a valid Contact Person Email."
       [model]="dialogContactPersonEmail" (modelChange)="dialogContactPersonEmail = $event" />
 
     <app-text-field label="Address Line 1" inputId="dialog-addressLine1" placeholder="Address Line 1"

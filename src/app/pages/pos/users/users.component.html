@@ -64,6 +64,13 @@
           </div>
 
           <div class="user-card-body">
+            @if (userDetails.RoleId === 1) {
+              <div class="user-card-meta-row user-card-meta-wide">
+                <span class="user-card-meta-label">Organization</span>
+                <strong [title]="row.OrganizationName || '-'">{{ row.OrganizationName || '-' }}</strong>
+              </div>
+            }
+
             <div class="user-card-meta-row user-card-meta-wide">
               <span class="user-card-meta-label">Email</span>
               <strong class="user-card-email" [title]="row.Email || '-'">{{ row.Email || '-' }}</strong>
@@ -77,16 +84,6 @@
             <div class="user-card-meta-row">
               <span class="user-card-meta-label">Gender</span>
               <strong>{{ row.GenderName || '-' }}</strong>
-            </div>
-
-            <div class="user-card-meta-row">
-              <span class="user-card-meta-label">Age</span>
-              <strong>{{ row.Age || '-' }}</strong>
-            </div>
-
-            <div class="user-card-meta-row">
-              <span class="user-card-meta-label">DOB</span>
-              <strong>{{ row.DateOfBirth ? (row.DateOfBirth | date:'dd/MM/yyyy') : '-' }}</strong>
             </div>
           </div>
         </article>
@@ -160,13 +157,14 @@
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Role is required."
       [options]="roleOptions" [model]="dialogRoles" (modelChange)="dialogRoles = $event" />
 
-    <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [emailOnly]="true"
-      [showFormatErrorWhileTyping]="true" formatErrorMessage="Enter a valid Email."
+    <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Email is required." [emailOnly]="true"
+      [showFormatErrorWhileTyping]="true" formatErrorMessage="Enter a valid Email." 
       [model]="dialogEmail" (modelChange)="dialogEmail = $event" />
 
     <app-text-field label="Contact Number" inputId="dialog-contact-number" placeholder="Contact Number" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Contact Number is required."
-      [numbersOnly]="true" [showFormatErrorWhileTyping]="true" formatErrorMessage="Contact Number allows numbers only."
+      [numbersOnly]="true" [showFormatErrorWhileTyping]="true" formatErrorMessage="Contact Number allows numbers only." [minlength]="10" [maxlength]="13"
       [model]="dialogContactNumber" (modelChange)="dialogContactNumber = $event" />
 
     <app-select-field label="Gender" inputId="dialog-gender" placeholder="Choose gender"
