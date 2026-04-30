@@ -33,6 +33,7 @@ type SubCategoryRow = {
 
 const SUBCATEGORY_COLUMNS: SharedTableColumn<SubCategoryRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
+  { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem', hidden: true },
@@ -73,6 +74,8 @@ export class SubCategoryComponent {
   dialogSubCategoryCode = '';
   dialogSubCategoryName = '';
   OrgId = 0;
+  BranchId = 0;
+  userDetails: any = {};
 
   tableRows: SubCategoryRow[] = [];
   selectedRow: SubCategoryRow | null = null;
@@ -110,7 +113,7 @@ export class SubCategoryComponent {
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'SubCategories';
   readonly tableCaption = 'SubCategories';
-  readonly tableColumns = SUBCATEGORY_COLUMNS;
+  tableColumns = SUBCATEGORY_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
   readonly showFilterButton = true;
@@ -118,10 +121,18 @@ export class SubCategoryComponent {
   readonly rowActionHeader = 'Actions';
   rowActionItems: MenuItem[] = [];
 
-  ngOnInit(): void {
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    const userId = Number(userDetails.UserId || 0);
-    this.OrgId = Number(userDetails.OrgId || 0);
+  ngOnInit(): void { 
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    const userId = Number(this.userDetails.UserId || 0);
+    this.OrgId = Number(this.userDetails.OrgId || 0);
+    this.tableColumns = SUBCATEGORY_COLUMNS.map((x: any) => {
+      if (x.field === 'organizationname') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+    
     this.loadSubCategories();
     this.loadCategories();
     this.loadFilterCategories();
@@ -152,6 +163,9 @@ export class SubCategoryComponent {
 
   loadSubCategories(): void {
     this.isLoading = true;
+
+    this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+    this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
 
     this.SubcategoryService.getAll(this.OrgId).subscribe({
       next: (response: any) => {
@@ -288,7 +302,7 @@ export class SubCategoryComponent {
     this.SubcategoryService.getById(row.id).subscribe({
       next: (response: any) => {
         const subcategory = response?.result?.[0] ?? response?.result ?? response;
- 
+
         this.dialogModel = {
           Id: subcategory?.id ?? subcategory?.Id ?? row.id,
           code: subcategory?.code ?? subcategory?.Code ?? row.code,

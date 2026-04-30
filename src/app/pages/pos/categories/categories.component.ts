@@ -29,6 +29,7 @@ type CategoryRow = {
 
 const CATEGORY_COLUMNS: SharedTableColumn<CategoryRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
+  { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   {
@@ -64,6 +65,8 @@ export class CategoriesComponent {
   dialogCategoryCode = '';
   dialogCategoryName = '';
   OrgId = 0;
+  BranchId = 0;
+  userDetails: any = {};
 
   tableRows: CategoryRow[] = [];
   selectedRow: CategoryRow | null = null;
@@ -94,7 +97,7 @@ export class CategoriesComponent {
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Categories';
   readonly tableCaption = 'Categories';
-  readonly tableColumns = CATEGORY_COLUMNS;
+  tableColumns = CATEGORY_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
   readonly showFilterButton = true;
@@ -108,14 +111,24 @@ export class CategoriesComponent {
   ];
 
   ngOnInit(): void {
-    const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    const userId = Number(userDetails.UserId || 0);
-    this.OrgId = Number(userDetails.OrgId || 0);
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    const userId = Number(this.userDetails.UserId || 0);
+    this.OrgId = Number(this.userDetails.OrgId || 0);
+    this.tableColumns = CATEGORY_COLUMNS.map((x: any) => {
+      if (x.field === 'organizationname') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+
     this.loadCategories();
   }
 
   loadCategories(): void {
     this.isLoading = true;
+    this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+    this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
 
     this.categoryService.getAll(this.OrgId).subscribe({
       next: (response: any) => {
