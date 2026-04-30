@@ -46,10 +46,11 @@
         </div>
       </div>
 
-      <app-multiselect-field label="Branch" inputId="counter-branch-filter" placeholder="Choose branches"
-        [options]="branchOptions" [model]="selectedBranchIds" (modelChange)="onfilterBranchChange($event)" />
+      <app-multiselect-field label="Branch" inputId="counter-branch-filter" placeholder="Select branches"
+        [options]="branchOptions" [disabled]="isBranchSelectionLocked" [model]="selectedBranchIds"
+        (modelChange)="onfilterBranchChange($event)" />
 
-      <app-multiselect-field label="Counter" inputId="counter-filter" placeholder="Choose counters"
+      <app-multiselect-field label="Counter" inputId="counter-filter" placeholder="Select counters"
         [options]="counterfilterOptions" [model]="selectedCounterIds" (modelChange)="onfilterCounterChange($event)" />
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
@@ -68,24 +69,25 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-terminalCode" placeholder="TERM-01"
+    <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-terminalCode" placeholder="Enter terminal code"
       [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Code is required."
       [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
 
-    <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-terminalName" placeholder="T1"
+    <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-terminalName" placeholder="Enter terminal name"
       [required]="true" [maxlength]="200" [submitted]="dialogSubmitted" errorMessage="Name is required."
       [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
 
-    <app-select-field label="Branch" [showRequiredMark]="true" inputId="dialog-branch" placeholder="Select branch"
+    <app-select-field label="Branch" [showRequiredMark]="true" inputId="dialog-branch" placeholder="Choose branch"
       [options]="branchOptions" [required]="true" [submitted]="dialogSubmitted" errorMessage="Branch is required."
-      [numberValue]="true" [model]="dialogModel.branchId ?? 0" (modelChange)="onBranchChange($event)" />
+      [disabled]="isBranchSelectionLocked" [numberValue]="true" [model]="dialogModel.branchId ?? 0"
+      (modelChange)="onBranchChange($event)" />
 
-    <app-select-field label="Counter" [showRequiredMark]="true" inputId="dialog-counter" placeholder="Select counter"
+    <app-select-field label="Counter" [showRequiredMark]="true" inputId="dialog-counter" placeholder="Choose counter"
       [options]="counterOptions" [required]="true" [submitted]="dialogSubmitted" errorMessage="Counter is required."
-      [numberValue]="true" [disabled]="!dialogModel.branchId || counterOptions.length === 0"
+      [numberValue]="true" 
       [model]="dialogModel.counterId ?? 0" (modelChange)="dialogModel.counterId = $event" />
 
-    <app-text-field label="Device Name" [showRequiredMark]="true" inputId="dialog-deviceName" placeholder="Device1"
+    <app-text-field label="Device Name" [showRequiredMark]="true" inputId="dialog-deviceName" placeholder="Enter device name"
       [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Device name is required."
       [model]="dialogModel.deviceName ?? ''" (modelChange)="dialogModel.deviceName = $event" />
 
@@ -96,7 +98,7 @@
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
       secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="closeAddDialog()" />
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)" />
   </div>
 </p-dialog>
 }

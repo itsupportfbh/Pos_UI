@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, QueryList, inject, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, QueryList, inject, ViewChildren } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -11,7 +12,7 @@ import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { Terminal, TerminalService } from '../../../services/terminal.service';
-import { CommonService } from '../../../services/common.service';
+import { BranchService } from '../../../services/branch.service';
 import { CounterService } from '../../../services/counter.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
@@ -60,10 +61,10 @@ const TERMINAL_COLUMNS: SharedTableColumn<TerminalRow>[] = [
     styleUrl: './terminal.component.css'
 })
 
-export class TerminalComponent {
+export class TerminalComponent implements OnInit {
     private readonly toast = inject(AppToastService);
     private readonly TerminalService = inject(TerminalService);
-    private readonly CommonService = inject(CommonService);
+    private readonly branchService = inject(BranchService);
     private readonly counterService = inject(CounterService);
     private readonly changeDetector = inject(ChangeDetectorRef);
     private readonly confirmationService = inject(ConfirmationService);
@@ -74,23 +75,17 @@ export class TerminalComponent {
 
     showAddDialog = false;
     showFilterSidebar = false;
-    isLoading = false;
     isEditMode = false;
-    filterTerminalName = '';
-    selectedBranchId = 0;
-    selectedCounterId = 0;
     selectedBranchIds: MultiSelectFieldValue = [];
     selectedCounterIds: MultiSelectFieldValue = [];
-    dialogBranchIds: MultiSelectFieldValue = [];
-    dialogCounterIds: MultiSelectFieldValue = [];
     dialogSubmitted = false;
-    dialogTerminalCode = '';
-    dialogTerminalName = '';
     OrgId = 0;
     BranchId = 0;
     counterId = 0;
     UserId = 0;
     userDetails: any = {};
+    isAdmin = false;
+    isBranchSelectionLocked = false;
     tableRows: TerminalRow[] = [];
     allTerminals: TerminalRow[] = [];
     selectedRow: TerminalRow | null = null;
@@ -99,7 +94,6 @@ export class TerminalComponent {
     branchOptions: any[] = [];
     counterOptions: any[] = [];
     counterfilterOptions: any[] = [];
-    dialogCategory: number | null = null;
     dialogBranch: SelectFieldValue = null;
 
     dialogModel: Terminal = {
@@ -111,8 +105,8 @@ export class TerminalComponent {
         deviceName: '',
         OrgId: this.OrgId,
         IsActive: true,
-        CreatedBy: 1,
-        UpdatedBy: 1,
+        CreatedBy: 0,
+        UpdatedBy: 0,
         IsDeleted: false
     };
 
@@ -120,8 +114,6 @@ export class TerminalComponent {
     readonly pageTitle = 'Terminals';
     readonly pageSubtitle = 'Manage your POS terminals here.';
     readonly filterTitle = `${'Terminals'} Filters`;
-    readonly filterDescription = `API data will be loaded for ${'Terminals'.toLowerCase()}.`;
-    readonly fields: any[] = [{ key: 'TerminalName', label: 'Terminal Name', type: 'text', placeholder: 'Enter terminal name' }];
     readonly primaryActionLabel = `Search ${'Terminals'}`;
     readonly secondaryActionLabel = 'Clear Filters';
     readonly showSecondaryAction = true;
@@ -140,10 +132,12 @@ export class TerminalComponent {
 
     ngOnInit(): void {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-        console.log('User Details:', this.userDetails);
         this.UserId = Number(this.userDetails.UserId || 0);
         this.OrgId = Number(this.userDetails.OrgId || 0);
         this.BranchId = Number(this.userDetails.BranchId || 0);
+        this.isAdmin = this.userDetails.IsAdmin == true || this.userDetails.IsAdmin == 1;
+        this.isBranchSelectionLocked = !this.isAdmin;
+        
         this.tableColumns = TERMINAL_COLUMNS.map((x: any) => {
             if (x.field === 'organizationname') {
                 x.hidden = this.userDetails.RoleId !== 1;
@@ -152,123 +146,118 @@ export class TerminalComponent {
             return x;
         });
 
-        this.loadTerminals();
-        this.loadBranches();
-        this.loadMultiCounters(this.BranchId);
+        void this.loadTerminals();
     }
 
-    loadBranches() {
-        this.CommonService.GetBranchByUserId(this.UserId).subscribe((res: any) => {
-            this.branchOptions = (res.result || []).map((item: any) => ({
-                label: item.Name,
-                value: item.Id
+    async loadBranches(): Promise<void> {
+        try {
+            const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+            const response: any = await firstValueFrom(this.branchService.getAll(orgId));
+            const branchList = response?.result ?? [];
+
+            this.branchOptions = branchList.filter((x: any) => x.IsActive === true).map((branch: any) => ({
+                label: branch.Name ?? '',
+                value: branch.Id ?? 0
             }));
-        });
+        } catch {
+            this.branchOptions = [];
+            this.toast.error('Load Failed', 'Unable to load branches. Please check API and try again.');
+        }
     }
 
     onBranchChange(value: SelectFieldValue): void {
         this.dialogBranch = value;
         this.dialogModel.branchId = Number(value) || 0;
+        this.dialogModel.counterId = 0;
         this.counterOptions = [];
 
         if (!value || Number(value) === 0) {
             return;
         }
 
-        void this.loadCounters(Number(value));
+        void this.loadDialogCounters(Number(value));
     }
 
-    loadCounters(BranchId: number = this.BranchId): void {
-        this.counterService.getAll(this.OrgId, BranchId).subscribe((res: any) => {
-            this.counterOptions = (res.result || []).map((item: any) => ({
-                label: item.Name,
-                value: item.Id
+    async loadDialogCounters(BranchId: number = this.BranchId): Promise<void> {
+        try {
+            const response: any = await firstValueFrom(this.counterService.getAll(this.OrgId, BranchId));
+            const counterList = response?.result ?? [];
+
+            this.counterOptions = counterList.filter((item: any) => item.IsActive === true).map((item: any) => ({
+                label: item.Name ?? '',
+                value: item.Id ?? 0
             }));
-        });
+        } catch {
+            this.counterOptions = [];
+            this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
+        }
     }
 
-    loadMultiCounters(BranchId: number = this.BranchId): void {
-        this.counterService.getAll(this.OrgId, BranchId).subscribe((res: any) => {
-            this.counterfilterOptions = (res.result || []).map((item: any) => ({
-                label: item.Name,
-                value: item.Id
+    async loadCounters(branchId: number | string = this.BranchId): Promise<void> {
+        try {
+            const response: any = await firstValueFrom(this.counterService.getAll(this.OrgId, branchId));
+            const counterList = response?.result ?? [];
+
+            this.counterfilterOptions = counterList.filter((item: any) => item.IsActive === true).map((item: any) => ({
+                label: this.isAdmin
+                    ? `${item.Name ?? ''}${item.BranchName ? ` - (Branch: ${item.BranchName})` : ''}`
+                    : item.Name ?? '',
+                value: item.Id ?? 0
             }));
-        });
+        } catch {
+            this.counterfilterOptions = [];
+            this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
+        }
     }
 
-    loadTerminals(): void {
-        this.isLoading = true;
+    async loadTerminals(): Promise<void> {
+        try {
+            this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+            this.BranchId = this.isAdmin
+                ? 0
+                : Number(this.userDetails.RoleId || 0) === 1
+                    ? 0
+                    : Number(this.userDetails.BranchId);
 
-        this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+            const response: any = await firstValueFrom(this.TerminalService.getAll(this.OrgId, this.BranchId, this.counterId));
 
-        this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
-
-
-        this.TerminalService.getAll(this.OrgId, this.BranchId, this.counterId).subscribe({
-            next: (response: any) => {
-                const result = response?.result ?? response ?? [];
-                console.log('Terminals loaded:', result);
-                let RowNumber = 1;
-                this.allTerminals = (response.result ?? []).map((x: any) => {
-                    x.RowNumber = RowNumber++;
-                    x.Status = x.isactive ? 'Active' : 'Inactive';
-                    return x;
-                });
-                this.tableRows = [...this.allTerminals];
-                this.changeDetector.detectChanges();
-            },
-            error: () => {
-                this.toast.error(
-                    'Load Failed',
-                    'Unable to load terminals. Please check API and try again.'
-                );
-            },
-            complete: () => {
-                this.isLoading = false;
-            }
-        });
+            let RowNumber = 1;
+            this.allTerminals = (response.result ?? []).map((x: any) => {
+                x.RowNumber = RowNumber++;
+                x.Status = x.isactive ? 'Active' : 'Inactive';
+                return x;
+            });
+            this.tableRows = [...this.allTerminals];
+            this.changeDetector.detectChanges();
+        } catch {
+            this.toast.error('Load Failed', 'Unable to load terminals. Please check API and try again.');
+        }
     }
 
     searchTerminals(): void {
-        const searchText = this.filterTerminalName.trim().toLowerCase();
-        // const branchId = Number(this.selectedBranchId || 0);
-        // const counterId = Number(this.selectedCounterId || 0);      
-
-        // this.tableRows = (this.allTerminals || []).filter((row) => {
-        //     const matchesText = !searchText ||
-        //         row.name?.toLowerCase().includes(searchText) ||
-        //         row.code?.toLowerCase().includes(searchText);
-        //     const matchesBranch = !branchId || Number(row.branchid ?? 0) === branchId;
-        //     const matchesCounter = !counterId || Number(row.counterid ?? 0) === counterId;
-        //     return matchesText && matchesBranch && matchesCounter;
-        // });
         const branchIds = this.selectedBranchIds.map((id) => Number(id));
         const counterIds = this.selectedCounterIds.map((id) => Number(id));
 
         this.tableRows = this.allTerminals.filter((row) => {
-            const matchesText = !searchText ||
-                row.name?.toLowerCase().includes(searchText) ||
-                row.code?.toLowerCase().includes(searchText);
-
             const matchesBranch = !branchIds.length || branchIds.includes(Number(row.branchid ?? 0));
             const matchesCounter = !counterIds.length || counterIds.includes(Number(row.counterid ?? 0));
 
-            return matchesText && matchesBranch && matchesCounter;
+            return matchesBranch && matchesCounter;
         });
 
     }
 
     onfilterBranchChange(value: MultiSelectFieldValue): void {
-        debugger;
         const arr = Array.isArray(value) ? value : value ? [value] : [];
         this.selectedBranchIds = arr.map(v => Number(v));
-        // if(this.selectedBranchIds.length > 0) {
-        //     void this.loadMultiCounters(this.selectedBranchIds.map((id) => Number(id)));
-        // }
-        // else{
-        //     this.counterOptions = [];
-        // }
+        this.selectedCounterIds = [];
 
+        if (!this.selectedBranchIds.length) {
+            void this.loadCounters(this.BranchId);
+            return;
+        }
+
+        void this.loadCounters(this.selectedBranchIds.join(','));
     }
 
     onfilterCounterChange(counterIds: MultiSelectFieldValue): void {
@@ -276,13 +265,27 @@ export class TerminalComponent {
     }
 
     resetForm(): void {
-        this.filterTerminalName = '';
-        this.selectedBranchIds = [];
+        this.selectedBranchIds = this.isBranchSelectionLocked && Number(this.BranchId || 0) > 0
+            ? [Number(this.BranchId)]
+            : [];
         this.selectedCounterIds = [];
-        this.loadTerminals();
+        const branchId = this.selectedBranchIds.length ? this.selectedBranchIds.join(',') : this.BranchId;
+        void this.loadCounters(branchId);
+        void this.loadTerminals();
     }
 
     openFilterSidebar(): void {
+        this.resetForm();
+        if (!this.branchOptions.length) {
+            void this.loadBranches();
+        }
+
+        if (!this.selectedBranchIds.length) {
+            void this.loadCounters(this.BranchId);
+        } else {
+            void this.loadCounters(this.selectedBranchIds.join(','));
+        }
+
         this.showFilterSidebar = true;
     }
 
@@ -293,22 +296,29 @@ export class TerminalComponent {
         this.isEditMode = false;
         this.editingTerminalId = null;
         this.resetDialogForm();
-        this.showAddDialog = true;
         this.dialogTitle = 'Create Terminal';
         this.dialogSubtitle = 'Add a new terminal and assign it to a branch and counter.';
         this.dialogPrimaryActionLabel = 'Save';
+
+        void this.loadBranches();
+
+        if (this.isBranchSelectionLocked && Number(this.BranchId || 0) > 0) {
+            this.dialogBranch = Number(this.BranchId);
+            this.dialogModel.branchId = Number(this.BranchId);
+            void this.loadDialogCounters(Number(this.BranchId));
+        }
+
+        this.showAddDialog = true;
     }
 
     closeAddDialog(): void {
         this.resetDialogForm();
-        this.loadBranches();
-        this.loadTerminals();
         this.isEditMode = false;
         this.showAddDialog = false;
         this.dialogSubmitted = false;
     }
 
-    submitAddDialog(): void {
+    async submitAddDialog(): Promise<void> {
         this.dialogSubmitted = true;
 
         if (!this.isDialogFormValid()) {
@@ -322,123 +332,98 @@ export class TerminalComponent {
             IsDeleted: false
         };
 
-        console.log(payload);
+        try {
+            let response: any;
 
-        if (this.isEditMode && this.editingTerminalId) {
-            payload.Id = this.editingTerminalId;
-            payload.UpdatedBy = 1;
+            if (this.isEditMode && this.editingTerminalId) {
+                payload.Id = this.editingTerminalId;
+                payload.UpdatedBy = Number(this.userDetails.UserId || 0);
+                response = await firstValueFrom(this.TerminalService.update(payload));
+            } else {
+                payload.CreatedBy = Number(this.userDetails.UserId || 0);
+                response = await firstValueFrom(this.TerminalService.create(payload));
+            }
 
-            this.TerminalService.update(payload).subscribe({
-                next: (response: any) => {
-                    if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-                        this.toast.warn('Duplicate', 'Terminal already exists.');
-                        return;
-                    }
+            if (response === 'AlreadyExists' || response?.message === 'AlreadyExists' || response?.result === 'AlreadyExists') {
+                this.toast.warn('Duplicate', 'Terminal already exists.');
+                return;
+            }
 
-                    this.toast.success('Updated', 'Terminal updated successfully.');
-                    this.closeAddDialog();
-                    this.loadTerminals();
-                },
-                error: () => {
-                    this.toast.error('Update Failed', 'Unable to update terminal.');
-                }
-            });
-
-            return;
+            this.toast.success(this.isEditMode ? 'Updated' : 'Saved', this.isEditMode ? 'Terminal updated successfully.' : 'Terminal saved successfully.');
+            this.closeAddDialog();
+            await this.loadTerminals();
+        } catch {
+            this.toast.error(this.isEditMode ? 'Update Failed' : 'Save Failed', this.isEditMode ? 'Unable to update terminal.' : 'Unable to save terminal.');
         }
-
-        payload.CreatedBy = 1;
-
-        this.TerminalService.create(payload).subscribe({
-            next: (response: any) => {
-                if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-                    this.toast.warn('Duplicate', 'Terminal already exists.');
-                    return;
-                }
-
-                this.toast.success('Saved', 'Terminal saved successfully.');
-                this.closeAddDialog();
-                this.loadTerminals();
-            },
-            error: () => {
-                this.toast.error('Save Failed', 'Unable to save terminal.');
-            }
-        });
     }
 
-    editRow(row: TerminalRow): void {
-        this.isEditMode = true;
-        this.editingTerminalId = row.id;
-        this.dialogTitle = 'Edit Terminal';
-        this.dialogSubtitle = 'Update the selected Terminal details.';
-        this.dialogPrimaryActionLabel = 'Update';
+    async editRow(row: TerminalRow): Promise<void> {
+        try {
+            this.resetDialogForm();
+            this.isEditMode = true;
+            this.editingTerminalId = row.id;
+            this.dialogTitle = 'Edit Terminal';
+            this.dialogSubtitle = 'Update the selected Terminal details.';
+            this.dialogPrimaryActionLabel = 'Update';
+            await this.loadBranches();
 
-        this.TerminalService.getById(row.id).subscribe({
-            next: (response: any) => {
-                const terminal = response?.result?.[0] ?? response?.result ?? response;
+            const response: any = await firstValueFrom(this.TerminalService.getById(row.id));
+            const terminal = response?.result?.[0] ?? response?.result ?? response;
 
-                this.dialogModel.branchId = terminal?.branchId ?? terminal?.BranchId ?? row.branchid;
-                void this.loadCounters(Number(this.dialogModel.branchId));
+            this.dialogModel.branchId = terminal?.branchId ?? terminal?.BranchId ?? row.branchid;
+            await this.loadDialogCounters(Number(this.dialogModel.branchId));
 
-                this.dialogModel = {
-                    Id: terminal?.id ?? terminal?.Id ?? row.id,
-                    code: terminal?.code ?? terminal?.Code ?? row.code,
-                    name: terminal?.name ?? terminal?.Name ?? row.name,
-                    branchId: terminal?.branchId ?? terminal?.BranchId ?? row.branchid,
-                    counterId: terminal?.counterId ?? terminal?.CounterId ?? row.counterid,
-                    deviceName: terminal?.deviceName ?? terminal?.DeviceName ?? row.deviceName,
-                    OrgId: terminal?.orgId ?? terminal?.OrgId ?? row.orgId,
-                    IsActive: terminal?.isActive ?? terminal?.IsActive ?? row.isActive,
-                    CreatedBy: terminal?.createdBy ?? terminal?.CreatedBy ?? 1,
-                    CreatedDate: terminal?.createdDate ?? terminal?.CreatedDate,
-                    UpdatedBy: terminal?.updatedBy ?? terminal?.UpdatedBy ?? 1,
-                    UpdatedDate: terminal?.updatedDate ?? terminal?.UpdatedDate,
-                    IsDeleted: terminal?.isDeleted ?? terminal?.IsDeleted ?? false
-                };
+            this.dialogModel = {
+                Id: terminal?.id ?? terminal?.Id ?? row.id,
+                code: terminal?.code ?? terminal?.Code ?? row.code,
+                name: terminal?.name ?? terminal?.Name ?? row.name,
+                branchId: terminal?.branchId ?? terminal?.BranchId ?? row.branchid,
+                counterId: terminal?.counterId ?? terminal?.CounterId ?? row.counterid,
+                deviceName: terminal?.deviceName ?? terminal?.DeviceName ?? row.deviceName,
+                OrgId: terminal?.orgId ?? terminal?.OrgId ?? row.orgId,
+                IsActive: terminal?.isActive ?? terminal?.IsActive ?? row.isActive,
+                CreatedBy: terminal?.createdBy ?? terminal?.CreatedBy ?? 1,
+                CreatedDate: terminal?.createdDate ?? terminal?.CreatedDate,
+                UpdatedBy: terminal?.updatedBy ?? terminal?.UpdatedBy ?? 1,
+                UpdatedDate: terminal?.updatedDate ?? terminal?.UpdatedDate,
+                IsDeleted: terminal?.isDeleted ?? terminal?.IsDeleted ?? false
+            };
 
-                this.showAddDialog = true;
-                //this.toast.info('Edit Mode', `Editing ${row.name}.`);
-            },
-            error: () => {
-                this.toast.error('Load Failed', 'Unable to load terminal details.');
-            }
-        });
+            this.dialogBranch = this.dialogModel.branchId ?? null;
+            this.showAddDialog = true;
+        } catch {
+            this.toast.error('Load Failed', 'Unable to load terminal details.');
+        }
     }
 
-    deleteRow(row: TerminalRow): void {
-        this.TerminalService.delete(row.id).subscribe({
-            next: () => {
-                this.toast.warn('Deleted', `${row.name} removed successfully.`);
-                this.loadTerminals();
-            },
-            error: () => {
-                this.toast.error('Delete Failed', 'Unable to delete terminal.');
-            }
-        });
+    async deleteRow(row: TerminalRow): Promise<void> {
+        try {
+            await firstValueFrom(this.TerminalService.delete(row.id));
+            this.toast.warn('Deleted', `${row.name} removed successfully.`);
+            await this.loadTerminals();
+        } catch {
+            this.toast.error('Delete Failed', 'Unable to delete terminal.');
+        }
     }
 
-    activateRow(row: TerminalRow): void {
-        this.TerminalService.activeInActive(row.id, true).subscribe({
-            next: () => {
-                this.toast.success('Status Updated', `${row.name} marked as active.`);
-                this.loadTerminals();
-            },
-            error: () => {
-                this.toast.error('Update Failed', 'Unable to activate terminal.');
-            }
-        });
+    async activateRow(row: TerminalRow): Promise<void> {
+        try {
+            await firstValueFrom(this.TerminalService.activeInActive(row.id, true));
+            this.toast.success('Status Updated', `${row.name} marked as active.`);
+            await this.loadTerminals();
+        } catch {
+            this.toast.error('Update Failed', 'Unable to activate terminal.');
+        }
     }
 
-    deactivateRow(row: TerminalRow): void {
-        this.TerminalService.activeInActive(row.id, false).subscribe({
-            next: () => {
-                this.toast.info('Status Updated', `${row.name} marked as inactive.`);
-                this.loadTerminals();
-            },
-            error: () => {
-                this.toast.error('Update Failed', 'Unable to deactivate terminal.');
-            }
-        });
+    async deactivateRow(row: TerminalRow): Promise<void> {
+        try {
+            await firstValueFrom(this.TerminalService.activeInActive(row.id, false));
+            this.toast.info('Status Updated', `${row.name} marked as inactive.`);
+            await this.loadTerminals();
+        } catch {
+            this.toast.error('Update Failed', 'Unable to deactivate terminal.');
+        }
     }
 
     confirmDeleteRow(row: TerminalRow): void {
@@ -534,14 +519,13 @@ export class TerminalComponent {
         }
     }
 
-    private resetDialogForm(): void {
+    resetDialogForm(keepCode: boolean = false): void {
         this.dialogSubmitted = false;
-        this.dialogBranchIds = [];
-        this.dialogCounterIds = [];
         this.counterOptions = [];
+        const code = keepCode ? this.dialogModel.code ?? '' : '';
         this.dialogModel = {
             Id: 0,
-            code: '',
+            code,
             name: '',
             branchId: 0,
             counterId: 0,
@@ -552,5 +536,6 @@ export class TerminalComponent {
             UpdatedBy: 1,
             IsDeleted: false
         };
+        this.dialogBranch = this.isBranchSelectionLocked && Number(this.BranchId || 0) > 0 ? Number(this.BranchId) : null;
     }
 }

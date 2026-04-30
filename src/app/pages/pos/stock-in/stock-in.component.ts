@@ -94,6 +94,7 @@ export class StockInComponent {  readonly formState: Record<string, string | Dat
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 

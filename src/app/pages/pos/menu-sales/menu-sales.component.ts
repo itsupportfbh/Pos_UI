@@ -78,6 +78,7 @@ export class MenuSalesComponent {  readonly formState: Record<string, string | D
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 

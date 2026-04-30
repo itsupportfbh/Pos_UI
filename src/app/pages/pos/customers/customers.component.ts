@@ -205,6 +205,7 @@ export class CustomersComponent implements OnInit {
     }
   }
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 
@@ -524,11 +525,13 @@ export class CustomersComponent implements OnInit {
     });
   }
 
-  resetDialogForm(): void {
+  resetDialogForm(keepCode: boolean = false): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
-    this.dialogCode = '';
+    if (!keepCode) {
+      this.dialogCode = '';
+    }
     this.dialogCustomerName = '';
     this.dialogMobileNo = '';
     this.dialogEmailId = '';

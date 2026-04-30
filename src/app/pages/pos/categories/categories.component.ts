@@ -173,6 +173,7 @@ export class CategoriesComponent {
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 
@@ -417,11 +418,12 @@ export class CategoriesComponent {
     }
   }
 
-  private resetDialogForm(): void {
+  resetDialogForm(keepCode: boolean = false): void {
     this.dialogSubmitted = false;
+    const code = keepCode ? this.dialogModel.code ?? '' : '';
     this.dialogModel = {
       Id: 0,
-      code: '',
+      code,
       name: '',
       OrgId: this.OrgId,
       IsActive: true,

@@ -89,6 +89,7 @@ export class PendingPaymentsComponent {  readonly formState: Record<string, stri
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 

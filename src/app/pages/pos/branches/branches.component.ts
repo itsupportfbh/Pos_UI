@@ -175,6 +175,7 @@ export class BranchesComponent implements OnInit {
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     if (!this.organizationOptions.length) {
       this.loadOrganizations();
     }
@@ -225,7 +226,7 @@ export class BranchesComponent implements OnInit {
       const response: any = await firstValueFrom(this.organizationService.getAll());
       const organizations = response?.result ?? [];
 
-      this.organizationOptions = organizations.map((organization: any) => ({
+      this.organizationOptions = organizations.filter((org: any) => org.IsActive).map((organization: any) => ({
         label: organization.Name ?? '',
         value: organization.Id ?? 0
       }));
@@ -513,12 +514,14 @@ export class BranchesComponent implements OnInit {
     });
   }
 
-  resetDialogForm(): void {
+  resetDialogForm(keepCode: boolean = false): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
     this.dialogOrganization = null;
-    // this.dialogCode = '';
+    if (!keepCode) {
+      this.dialogCode = '';
+    }
     this.dialogName = '';
     this.dialogPhone = '';
     this.dialogEmail = '';

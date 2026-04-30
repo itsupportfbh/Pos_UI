@@ -85,6 +85,7 @@ export class StockOutComponent {  readonly formState: Record<string, string | Da
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 

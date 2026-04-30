@@ -89,6 +89,7 @@ export class CustomerHistoryComponent {  readonly formState: Record<string, stri
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 

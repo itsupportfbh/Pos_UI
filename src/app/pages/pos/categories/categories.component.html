@@ -80,7 +80,7 @@
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
       secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="closeAddDialog()" />
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)" />
   </div>
 </p-dialog>
 }

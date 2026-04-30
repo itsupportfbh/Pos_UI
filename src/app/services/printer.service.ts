@@ -36,34 +36,35 @@ export class PrinterService {
   ) {}
 
   create(payload: Printer): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/${this.controllerPath}/Create`, payload);
+    return this.http.post<any>(
+      `${this.baseUrl}/${this.controllerPath}/Create`,
+      payload
+    );
   }
 
   update(payload: Printer): Observable<any> {
-    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
+    return this.http.put<any>(
+      `${this.baseUrl}/${this.controllerPath}/Update`,
+      payload
+    );
   }
 
   getAll(orgId: number, branchId: number, counterId: number, terminalId: number): Observable<ApiListResponse<Printer>> {
-    const params = new HttpParams()
-      .set('orgId', orgId.toString())
-      .set('branchId', branchId.toString())
-      .set('counterId', counterId.toString())
-      .set('terminalId', terminalId.toString());
-
     return this.http.get<ApiListResponse<Printer>>(
-      `${this.baseUrl}/${this.controllerPath}/GetAll`,
-      { params }
+      `${this.baseUrl}/${this.controllerPath}/GetAll?orgId=${orgId}&branchId=${branchId}&counterId=${counterId}&terminalId=${terminalId}`
     );
   }
 
   getById(id: number | string): Observable<any> {
-    const params = new HttpParams().set('id', id.toString());
-
-    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetPrinterbyId`, { params });
+    return this.http.get<any>(
+      `${this.baseUrl}/${this.controllerPath}/GetById?id=${id}`
+    );
   }
 
   delete(id: number | string): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`);
+    return this.http.delete<any>(
+      `${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`
+    );
   }
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {

@@ -170,6 +170,7 @@ export class UsersComponent implements OnInit {
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     if (!this.organizationOptions.length) {
       this.loadOrganizations();
     }
@@ -238,7 +239,7 @@ export class UsersComponent implements OnInit {
       const response: any = await firstValueFrom(this.organizationService.getAll());
       const organizations = response?.result ?? [];
 
-      this.organizationOptions = organizations.map((organization: any) => ({
+      this.organizationOptions = organizations.filter((org: any) => org.IsActive).map((organization: any) => ({
         label: organization.Name ?? '',
         value: organization.Id ?? 0
       }));
@@ -873,11 +874,13 @@ export class UsersComponent implements OnInit {
     return areTextFieldsValid && areSelectFieldsValid && areMultiSelectFieldsValid && areDateFieldsValid;
   }
 
-  resetDialogForm(): void {
+  resetDialogForm(keepCode: boolean = false): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
     this.dialogOrganization = null;
-    // this.dialogCode = '';
+    if (!keepCode) {
+      this.dialogCode = '';
+    }
     this.dialogName = '';
     this.dialogRemarks = '';
     this.dialogEmail = '';

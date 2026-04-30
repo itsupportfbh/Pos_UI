@@ -211,6 +211,7 @@ export class MenusComponent {
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 
@@ -454,10 +455,11 @@ export class MenusComponent {
     }
   }
 
-  private resetDialogForm(): void {
+  resetDialogForm(keepCode: boolean = false): void {
+    const code = keepCode ? this.dialogModel.code ?? '' : '';
     this.dialogModel = {
       Id: 0,
-      code: '',
+      code,
       name: '',
       categoryId: 0,
       OrgId: this.OrgId,

@@ -176,6 +176,7 @@ export class TaxComponent {
     }
 
     openFilterSidebar(): void {
+        this.resetForm();
         this.showFilterSidebar = true;
     }
 
@@ -262,9 +263,8 @@ export class TaxComponent {
         const rate = value ? parseFloat(value) : 0;
         this.dialogModel.percentage = rate;
 
-        // Validate rate is greater than zero
         if (this.dialogSubmitted && rate <= 0) {
-            this.rateErrorMessage = 'Rate must be greater than zero.';
+            this.rateErrorMessage = 'Tax Percentage must be greater than zero.';
         } else {
             this.rateErrorMessage = '';
         }
@@ -400,7 +400,7 @@ export class TaxComponent {
         const isRateValid = this.dialogModel.percentage > 0;
 
         if (!isRateValid) {
-            this.rateErrorMessage = 'Rate must be greater than zero.';
+            this.rateErrorMessage = 'Tax Percentage must be greater than zero.';
         }
 
         return areTextFieldsValid && areSelectFieldsValid && isRateValid;
@@ -437,12 +437,13 @@ export class TaxComponent {
         }
     }
 
-    private resetDialogForm(): void {
+    resetDialogForm(keepCode: boolean = false): void {
         this.dialogSubmitted = false;
         this.rateErrorMessage = '';
+        const code = keepCode ? this.dialogModel.code ?? '' : '';
         this.dialogModel = {
             Id: 0,
-            code: '',
+            code,
             name: '',
             percentage: 0,
             OrgId: this.OrgId,

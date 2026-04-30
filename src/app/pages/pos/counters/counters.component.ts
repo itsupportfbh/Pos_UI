@@ -27,7 +27,7 @@ const BRANCH_OPTIONS: any[] = [];
 
 const COUNTER_COLUMNS: SharedTableColumn<CounterRow>[] = [
   { field: 'RowNumber', header: '#', sortable: false, width: '5rem' },
-  { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
+  { field: 'OrganizationName', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
   { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'BranchName', header: 'Branch', sortable: true, width: '16rem' },
@@ -68,12 +68,9 @@ export class CountersComponent implements OnInit {
   showAddDialog = false;
   showFilterSidebar = false;
   isEditMode = false;
-  isLoading = false;
   dialogSubmitted = false;
   dialogSaving = false;
 
-  filterCounterName = '';
-  selectedBranchId = 0;
   selectedBranchIds: MultiSelectFieldValue = [];
 
   dialogId = 0;
@@ -94,8 +91,6 @@ export class CountersComponent implements OnInit {
   readonly pageTitle = 'Counters';
   readonly pageSubtitle = 'Maintain restaurant billing and service counters.';
   readonly filterTitle = 'Counters Filters';
-  readonly filterDescription = 'API data will be loaded for counters.';
-  readonly fields: any[] = [{ key: 'CounterName', label: 'Counter Name', type: 'text', placeholder: 'Main Billing Counter' }];
   readonly primaryActionLabel = 'Search Counters';
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
@@ -114,25 +109,28 @@ export class CountersComponent implements OnInit {
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.tableColumns = COUNTER_COLUMNS.map((x: any) => {
-      if (x.field === 'organizationname') {
+      if (x.field === 'OrganizationName') {
         x.hidden = this.userDetails.RoleId !== 1;
       }
 
       return x;
     });
 
-    this.loadBranches();
+
     this.loadCounter();
   }
 
   resetForm(): void {
-    this.filterCounterName = '';
-    this.selectedBranchId = 0;
+
     this.selectedBranchIds = [];
     this.loadCounter();
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
+    if (!this.branchOptions.length) {
+      this.loadBranches();
+    }
     this.showFilterSidebar = true;
   }
 
@@ -147,6 +145,7 @@ export class CountersComponent implements OnInit {
     this.dialogSubtitle = 'Create a new Counter for the Branch.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+    this.loadBranches();
   }
 
   closeAddDialog(): void {
@@ -218,18 +217,13 @@ export class CountersComponent implements OnInit {
 
   onBranchChange(branchIds: MultiSelectFieldValue): void {
     this.selectedBranchIds = Array.isArray(branchIds) ? branchIds.map((id) => Number(id)) : [];
-    this.selectedBranchId = this.selectedBranchIds.length === 1 ? Number(this.selectedBranchIds[0] || 0) : 0;
   }
 
   searchCounters(): void {
-    const searchText = this.filterCounterName.trim().toLowerCase();
     const selectedBranchIds = this.selectedBranchIds.map((id) => Number(id));
 
     this.tableRows = this.hiddenTableRow.filter((row) =>
-      (!selectedBranchIds.length || selectedBranchIds.includes(Number(row.BranchId ?? 0))) &&
-      (!searchText ||
-        String(row.Name ?? '').toLowerCase().includes(searchText) ||
-        String(row.Code ?? '').toLowerCase().includes(searchText))
+      !selectedBranchIds.length || selectedBranchIds.includes(Number(row.BranchId ?? 0))
     );
   }
 
@@ -268,33 +262,26 @@ export class CountersComponent implements OnInit {
   }
 
   loadCounter(): void {
-    this.isLoading = true;
-
-
     const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
 
-    const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
-
+    const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
 
     this.counterService.getAll(OrgId, BranchId).subscribe({
       next: (response: any) => {
-        let rowNumber = 1;
+        let RowNumber = 1;
 
-        this.tableRows = (response.result ?? []).map((counter: any) => ({
-          ...counter,
-          BranchName: counter.BranchName ?? counter.Branch ?? counter.branchName ?? '',
-          RowNumber: rowNumber++,
-          Status: counter.IsActive ? 'Active' : 'Inactive'
-        }));
+        this.tableRows = (response.result ?? []).map((x: any) => {
+          x.RowNumber = RowNumber++;
+          x.BranchName = x.BranchName ?? x.Branch ?? x.branchName ?? '';
+          x.Status = x.IsActive ? 'Active' : 'Inactive';
+          return x;
+        });
 
         this.hiddenTableRow = [...this.tableRows];
         this.changeDetector.detectChanges();
       },
       error: () => {
         this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
-      },
-      complete: () => {
-        this.isLoading = false;
       }
     });
   }
@@ -456,11 +443,13 @@ export class CountersComponent implements OnInit {
     });
   }
 
-  resetDialogForm(): void {
+  resetDialogForm(keepCode: boolean = false): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
-    this.dialogCounterCode = '';
+    if (!keepCode) {
+      this.dialogCounterCode = '';
+    }
     this.dialogCounterName = '';
     this.dialogPhone = '';
     this.dialogBranch = null;

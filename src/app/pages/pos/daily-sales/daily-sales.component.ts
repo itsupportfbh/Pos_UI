@@ -77,6 +77,7 @@ export class DailySalesComponent {  readonly formState: Record<string, string | 
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 

@@ -48,7 +48,7 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Tax Name" inputId="taxName" placeholder="Enter tax name" [model]="filterTaxName"
+        <app-text-field label="Tax Name" inputId="taxName" placeholder="Search tax name" [model]="filterTaxName"
           (modelChange)="filterTaxName = $event" />
       </section>
 
@@ -68,16 +68,17 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Tax Code" inputId="dialog-taxCode" [showRequiredMark]="true" placeholder="TAX-01"
+    <app-text-field label="Tax Code" inputId="dialog-taxCode" [showRequiredMark]="true" placeholder="Enter tax code"
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
       [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
 
-    <app-text-field label="Tax Name" inputId="dialog-taxName" [showRequiredMark]="true" placeholder="Tax9.00"
+    <app-text-field label="Tax Name" inputId="dialog-taxName" [showRequiredMark]="true" placeholder="Enter tax name"
       [required]="true" [maxlength]="200" [submitted]="dialogSubmitted" errorMessage="Name is required."
       [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
 
-    <app-text-field label="Tax Rate" inputId="dialog-taxRate" [showRequiredMark]="true" type="number" [required]="true"
-      [submitted]="dialogSubmitted" errorMessage="{{ rateErrorMessage }}"
+    <app-text-field label="Tax Percentage" inputId="dialog-taxRate" [showRequiredMark]="true" placeholder="Enter tax percentage" type="number" [required]="true"
+      [submitted]="dialogSubmitted" [percentageOnly]="true" [showFormatErrorWhileTyping]="true"
+      formatErrorMessage="Tax Percentage should be between 0 and 100." errorMessage="{{ rateErrorMessage }}"
       [model]="dialogModel.percentage?.toString() ?? ''" (modelChange)="onRateChange($event)" />
 
   </section>
@@ -87,7 +88,7 @@
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
       secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="closeAddDialog()" />
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)" />
   </div>
 </p-dialog>
 }

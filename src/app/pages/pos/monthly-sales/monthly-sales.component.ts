@@ -78,6 +78,7 @@ export class MonthlySalesComponent {  readonly formState: Record<string, string 
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 

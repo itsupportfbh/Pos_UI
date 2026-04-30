@@ -89,6 +89,7 @@ export class CreditTrackingComponent {  readonly formState: Record<string, strin
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 

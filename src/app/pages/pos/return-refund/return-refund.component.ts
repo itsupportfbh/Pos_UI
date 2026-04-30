@@ -84,6 +84,7 @@ export class ReturnRefundComponent {  readonly formState: Record<string, string 
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 

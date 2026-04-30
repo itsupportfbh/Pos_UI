@@ -211,6 +211,7 @@ export class SubCategoryComponent {
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 
@@ -454,11 +455,12 @@ export class SubCategoryComponent {
     }
   }
 
-  private resetDialogForm(): void {
+  resetDialogForm(keepCode: boolean = false): void {
     this.dialogSubmitted = false;
+    const code = keepCode ? this.dialogModel.code ?? '' : '';
     this.dialogModel = {
       Id: 0,
-      code: '',
+      code,
       name: '',
       categoryId: 0,
       OrgId: this.OrgId,

@@ -44,21 +44,17 @@ export class CounterService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(orgId: number, branchId: number): Observable<ApiListResponse<Counter>> {
+  getAll(orgId: number, branchId: number | string): Observable<ApiListResponse<Counter>> {
     return this.http.get<ApiListResponse<Counter>>(
       `${this.baseUrl}/${this.controllerPath}/GetAllCounter?orgId=${orgId}&branchId=${branchId}`
     );
   }
 
   getMultiAll(orgId: number, branchIds: number[]): Observable<ApiListResponse<Counter>> {
-    let query = `orgId=${orgId}`;
-
-    if (branchIds?.length) {
-      query += '&' + branchIds.map(id => `branchIds=${id}`).join('&');
-    }
+    const branchId = branchIds?.length ? branchIds.join(',') : 0;
 
     return this.http.get<ApiListResponse<Counter>>(
-      `${this.baseUrl}/${this.controllerPath}/GetAllCounter?${query}`
+      `${this.baseUrl}/${this.controllerPath}/GetAllCounter?orgId=${orgId}&branchId=${branchId}`
     );
   }
 

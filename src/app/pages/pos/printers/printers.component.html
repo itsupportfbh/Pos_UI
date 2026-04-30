@@ -46,24 +46,16 @@
           <h2>{{ filterTitle }}</h2>
         </div>
       </div>
-
-
       <section class="field-grid">
-
-      <!-- <app-text-field
-            label="Printer Name"
-            inputId="PrinterName"
-            placeholder="Kitchen Printer"
-            [model]="filterPrinterName"
-            (modelChange)="filterPrinterName = $event"
-          />--> 
-        <app-multiselect-field label="Branch" inputId="branch" placeholder="Choose branch" [options]="branchOptions"
+  
+        <app-multiselect-field label="Branch" inputId="branch" placeholder="Select branches" [options]="branchOptions"
+          [disabled]="isBranchSelectionLocked"
           [model]="filterBranch" (modelChange)="onFilterBranchChange($event)" />
 
-        <app-multiselect-field label="Counter" inputId="counter" placeholder="Choose counter" [options]="filterCounterOptions"
+        <app-multiselect-field label="Counter" inputId="counter" placeholder="Select counters" [options]="filterCounterOptions"
           [model]="filterCounter" (modelChange)="onFilterCounterChange($event)" />
 
-        <app-multiselect-field label="Terminal" inputId="terminal" placeholder="Choose terminal" [options]="filterTerminalOptions"
+        <app-multiselect-field label="Terminal" inputId="terminal" placeholder="Select terminals" [options]="filterTerminalOptions"
           [model]="filterTerminal" (modelChange)="onFilterTerminalChange($event)" />
       </section>
 
@@ -85,31 +77,31 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Printer Code" inputId="dialog-printerCode" placeholder="PRN001" [required]="true"
+    <app-text-field label="Printer Code" inputId="dialog-printerCode" placeholder="Enter printer code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Printer Code is required."
       [textWithNumbersOnly]="true" formatErrorMessage="Printer Code allows text and numbers only."
       [model]="dialogPrinterCode" (modelChange)="dialogPrinterCode = $event" />
 
-    <app-text-field label="Printer Name" inputId="dialog-printerName" placeholder="Kitchen Printer" [required]="true"
+    <app-text-field label="Printer Name" inputId="dialog-printerName" placeholder="Enter printer name" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Printer Name is required."
-      [textWithNumbersOnly]="true" formatErrorMessage="Printer Name allows text and numbers only."
+     
       [model]="dialogPrinterName" (modelChange)="dialogPrinterName = $event" />
 
-    <app-select-field label="Branch" inputId="dialog-branch" placeholder="Choose branch" [options]="branchOptions"
+    <app-select-field label="Branch" inputId="dialog-branch" placeholder="Select branch" [options]="branchOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Branch is required."
-      [numberValue]="true" [model]="dialogBranch" (modelChange)="onDialogBranchChange($event)" />
+      [disabled]="isBranchSelectionLocked" [numberValue]="true" [model]="dialogBranch" (modelChange)="onDialogBranchChange($event)" />
 
-    <app-select-field label="Counter" inputId="dialog-counter" placeholder="Choose counter" [options]="dialogCounterOptions"
+    <app-select-field label="Counter" inputId="dialog-counter" placeholder="Select counter" [options]="dialogCounterOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Counter is required."
-      [numberValue]="true" [disabled]="!dialogBranch || dialogCounterOptions.length === 0"
+      [numberValue]="true"
       [model]="dialogCounter" (modelChange)="onDialogCounterChange($event)" />
 
-    <app-select-field label="Terminal" inputId="dialog-terminal" placeholder="Choose terminal" [options]="dialogTerminalOptions"
+    <app-select-field label="Terminal" inputId="dialog-terminal" placeholder="Select terminal" [options]="dialogTerminalOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Terminal is required."
-      [numberValue]="true" [disabled]="!dialogCounter || dialogTerminalOptions.length === 0"
+      [numberValue]="true"
       [model]="dialogTerminal" (modelChange)="dialogTerminal = $event" />
 
-    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks" [model]="dialogRemarks"
+    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Enter printer remarks" [model]="dialogRemarks"
       (modelChange)="dialogRemarks = $event" />
   </section>
 
@@ -117,7 +109,7 @@
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
       secondaryIcon="pi pi-refresh" [primaryLoading]="dialogSaving" [primaryDisabled]="dialogSaving"
       [secondaryDisabled]="dialogSaving" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()" />
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)" />
   </div>
 </p-dialog>
 }

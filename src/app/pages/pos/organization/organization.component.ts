@@ -494,11 +494,13 @@ export class OrganizationComponent implements OnInit {
     });
   }
 
-  resetDialogForm(): void {
+  resetDialogForm(keepCode: boolean = false): void {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
-    // this.dialogCode = '';
+    if (!keepCode) {
+      this.dialogCode = '';
+    }
     this.dialogCompanyName = '';
     this.dialogGstNumber = '';
     this.dialogRegistrationNumber = '';
