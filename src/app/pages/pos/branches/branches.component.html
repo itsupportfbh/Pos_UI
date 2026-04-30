@@ -87,7 +87,7 @@
 
     <app-text-field label="Phone Number" inputId="dialog-phone" placeholder="Phone Number" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Phone Number is required."
-      [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only." [model]="dialogPhone"
+      [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only." [model]="dialogPhone" [minlength]="10" [maxlength]="13"
       (modelChange)="dialogPhone = $event" />
 
     <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [required]="true"
@@ -103,7 +103,7 @@
     <app-text-field label="Contact Person Phone" inputId="dialog-contact-phone" placeholder="Contact Person Phone"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
       errorMessage="Contact Person Phone is required." [numbersOnly]="true"
-      formatErrorMessage="Contact Person Phone allows numbers only." [model]="dialogContactMobileNo"
+      formatErrorMessage="Contact Person Phone allows numbers only." [model]="dialogContactMobileNo" [minlength]="10" [maxlength]="13"
       (modelChange)="dialogContactMobileNo = $event" />
 
     <app-text-field label="Contact Person Email" inputId="dialog-contact-email" placeholder="Contact Person Email"

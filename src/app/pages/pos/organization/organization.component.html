@@ -203,7 +203,6 @@
 
     <app-text-field label="Name" inputId="dialog-companyName" placeholder="Organization Name" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."
-      [textWithNumbersOnly]="true" formatErrorMessage="Company name allows text and numbers only."
       [model]="dialogCompanyName" (modelChange)="dialogCompanyName = $event" />
 
     <app-text-field label="GST Number" inputId="dialog-gstNumber" placeholder="GST Number" [submitted]="dialogSubmitted"
