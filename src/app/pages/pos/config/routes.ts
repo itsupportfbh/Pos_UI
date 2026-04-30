@@ -28,6 +28,7 @@ const printersPage = () => import('../printers/printers.component').then((module
 const TaxPage = () => import('../tax/tax.component').then((module) => module.TaxComponent);
 const usersPage = () => import('../users/users.component').then((module) => module.UsersComponent);
 const rolesPage = () => import('../roles/roles.component').then((module) => module.RolesComponent);
+const floorPage = () => import('../Floor/floor.component').then((module) => module.FloorComponent);
 
 export const POS_ROUTES: Routes = [
   {
@@ -46,6 +47,7 @@ export const POS_ROUTES: Routes = [
       { path: 'current-stock', loadComponent: currentStockPage },
       { path: 'low-stock', loadComponent: lowStockPage },
       { path: 'customers', loadComponent: customersPage },
+      { path: 'Floor', loadComponent: floorPage },
       { path: 'customer-history', loadComponent: customerHistoryPage },
       { path: 'credit-tracking', loadComponent: creditTrackingPage },
       { path: 'return-refund', loadComponent: returnRefundPage },
