@@ -36,6 +36,7 @@ type TerminalRow = {
 
 const TERMINAL_COLUMNS: SharedTableColumn<TerminalRow>[] = [
     { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
+    { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
     { field: 'code', header: 'Code', sortable: true, width: '10rem' },
     { field: 'name', header: 'Name', sortable: true, width: '10rem' },
     { field: 'branchid', header: 'Branch ID', sortable: true, width: '10rem', hidden: true },
@@ -129,7 +130,7 @@ export class TerminalComponent {
     dialogPrimaryActionLabel = 'Save';
     readonly tableTitle = 'Terminals';
     readonly tableCaption = 'Terminals';
-    readonly tableColumns = TERMINAL_COLUMNS;
+    tableColumns = TERMINAL_COLUMNS;
     readonly showAddNewButton = true;
     readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
     readonly showFilterButton = true;
@@ -138,11 +139,19 @@ export class TerminalComponent {
     rowActionItems: MenuItem[] = [];
 
     ngOnInit(): void {
-        this. userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-        console.log('User Details:', this. userDetails);
-        this.UserId = Number(this. userDetails.UserId || 0);
-        this.OrgId = Number(this. userDetails.OrgId || 0);
-        this.BranchId = Number(this. userDetails.BranchId || 0);
+        this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+        console.log('User Details:', this.userDetails);
+        this.UserId = Number(this.userDetails.UserId || 0);
+        this.OrgId = Number(this.userDetails.OrgId || 0);
+        this.BranchId = Number(this.userDetails.BranchId || 0);
+        this.tableColumns = TERMINAL_COLUMNS.map((x: any) => {
+            if (x.field === 'organizationname') {
+                x.hidden = this.userDetails.RoleId !== 1;
+            }
+
+            return x;
+        });
+
         this.loadTerminals();
         this.loadBranches();
         this.loadMultiCounters(this.BranchId);
@@ -190,14 +199,12 @@ export class TerminalComponent {
     loadTerminals(): void {
         this.isLoading = true;
 
+        this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
 
-        
-        const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
-
-        const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+        this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
 
 
-        this.TerminalService.getAll(OrgId, BranchId, this.counterId).subscribe({
+        this.TerminalService.getAll(this.OrgId, this.BranchId, this.counterId).subscribe({
             next: (response: any) => {
                 const result = response?.result ?? response ?? [];
                 console.log('Terminals loaded:', result);
