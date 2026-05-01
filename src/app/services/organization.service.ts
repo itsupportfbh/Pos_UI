@@ -65,11 +65,19 @@ export class OrganizationService {
     return this.http.delete<void>(`${this.baseUrl}/${this.controllerPath}/Delete?Id=${id}`);
   }
 
-  activeInActive(id: number | string, isActive: boolean): Observable<void> {
-    return this.http.put<void>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
+  activeInActive(id: number | string, isActive: boolean): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
   }
 
   private get baseUrl(): string {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
+
+
+
+
+
+
+
+

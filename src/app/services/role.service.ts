@@ -62,13 +62,19 @@ export class RoleService {
   }
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
-    return this.http.put<any>(
-      `${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`,
-      {}
-    );
+    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
   }
 
   private get baseUrl(): string {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
+
+
+
+
+
+
+
+
+

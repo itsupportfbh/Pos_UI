@@ -112,7 +112,6 @@ export class CategoriesComponent {
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    const userId = Number(this.userDetails.UserId || 0);
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.tableColumns = CATEGORY_COLUMNS.map((x: any) => {
       if (x.field === 'organizationname') {
@@ -132,7 +131,6 @@ export class CategoriesComponent {
 
     this.categoryService.getAll(this.OrgId).subscribe({
       next: (response: any) => {
-        const result = response?.result ?? response ?? [];
         let RowNumber = 1;
         this.tableRows = (response.result ?? []).map((x: any) => {
           x.RowNumber = RowNumber++;
@@ -205,16 +203,12 @@ export class CategoriesComponent {
       return;
     }
 
-    debugger;
-
     const payload: Category = {
       ...this.dialogModel,
       OrgId: this.OrgId,
       IsActive: this.dialogModel.IsActive ?? true,
       IsDeleted: false
     };
-
-    console.log('Submitting category:', payload);
 
     if (this.isEditMode && this.editingCategoryId) {
       payload.Id = this.editingCategoryId;
@@ -385,7 +379,7 @@ export class CategoriesComponent {
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
-    debugger;
+
     if (row['isactive'] === true) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });

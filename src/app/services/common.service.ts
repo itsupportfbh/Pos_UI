@@ -37,3 +37,12 @@ export class CommonService {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
+
+
+
+
+
+
+
+
+

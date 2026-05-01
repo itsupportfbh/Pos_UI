@@ -73,18 +73,19 @@ export class MenuService {
     }
 
     activeInActive(id: number | string, isActive: boolean): Observable<any> {
-        const params = new HttpParams()
-            .set('Id', id.toString())
-            .set('IsActive', isActive.toString());
-
-        return this.http.put<any>(
-            `${this.baseUrl}/${this.controllerPath}/ActiveInActive`,
-            {},
-            { params }
-        );
-    }
+    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
+  }
 
     private get baseUrl(): string {
         return this.runtimeConfig.apiBaseUrl;
     }
 }
+
+
+
+
+
+
+
+
+

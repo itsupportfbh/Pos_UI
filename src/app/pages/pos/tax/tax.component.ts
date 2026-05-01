@@ -11,7 +11,6 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 import { AppToastService } from '../../../services/app-toast.service';
 import { Tax, TaxService } from '../../../services/tax.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { SelectFieldComponent } from '../../../components/form/select-field.component';
 
 type TaxRow = {
     id: number;
@@ -46,7 +45,7 @@ const TAX_COLUMNS: SharedTableColumn<TaxRow>[] = [
 @Component({
     selector: 'app-taxes',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
+    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
     providers: [ConfirmationService],
     templateUrl: './tax.component.html',
     styleUrl: './tax.component.css'
@@ -58,7 +57,6 @@ export class TaxComponent {
     private readonly changeDetector = inject(ChangeDetectorRef);
 
     @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
-    @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
 
     showAddDialog = false;
     showFilterSidebar = false;
@@ -114,7 +112,6 @@ export class TaxComponent {
 
     ngOnInit(): void {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-        const userId = Number(this.userDetails.UserId || 0);
         this.tableColumns = TAX_COLUMNS.map((x: any) => {
             if (x.field === 'organizationname') {
                 x.hidden = this.userDetails.RoleId !== 1;
@@ -130,12 +127,8 @@ export class TaxComponent {
         this.isLoading = true;
         this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
 
-        const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
-
-
         this.TaxService.getAll(this.OrgId).subscribe({
             next: (response: any) => {
-                const result = response?.result ?? response ?? [];
                 let RowNumber = 1;
                 this.tableRows = (response.result ?? []).map((x: any) => {
                     x.RowNumber = RowNumber++;
@@ -214,8 +207,6 @@ export class TaxComponent {
             IsActive: this.dialogModel.IsActive ?? true,
             IsDeleted: false
         };
-
-        console.log(payload);
 
         if (this.isEditMode && this.editingTaxId) {
             payload.Id = this.editingTaxId;
@@ -396,14 +387,13 @@ export class TaxComponent {
 
     private isDialogFormValid(): boolean {
         const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
-        const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
         const isRateValid = this.dialogModel.percentage > 0;
 
         if (!isRateValid) {
             this.rateErrorMessage = 'Tax Percentage must be greater than zero.';
         }
 
-        return areTextFieldsValid && areSelectFieldsValid && isRateValid;
+        return areTextFieldsValid && isRateValid;
     }
 
     private getRowActionItems(row: Record<string, unknown>): MenuItem[] {

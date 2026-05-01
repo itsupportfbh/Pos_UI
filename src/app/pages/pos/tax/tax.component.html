@@ -79,7 +79,7 @@
     <app-text-field label="Tax Percentage" inputId="dialog-taxRate" [showRequiredMark]="true" placeholder="Enter tax percentage" type="number" [required]="true"
       [submitted]="dialogSubmitted" [percentageOnly]="true" [showFormatErrorWhileTyping]="true"
       formatErrorMessage="Tax Percentage should be between 0 and 100." errorMessage="{{ rateErrorMessage }}"
-      [model]="dialogModel.percentage?.toString() ?? ''" (modelChange)="onRateChange($event)" />
+      [model]="dialogModel.percentage.toString()" (modelChange)="onRateChange($event)" />
 
   </section>
 

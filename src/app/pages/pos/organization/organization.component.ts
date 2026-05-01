@@ -290,7 +290,6 @@ export class OrganizationComponent implements OnInit {
   }
 
   async editRow(row: any): Promise<void> {
-    debugger;
     this.resetDialogForm();
     this.isEditMode = true;
     this.dialogTitle = 'Edit Organization';
@@ -601,16 +600,5 @@ export class OrganizationComponent implements OnInit {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
 
 

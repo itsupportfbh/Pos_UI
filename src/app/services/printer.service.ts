@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
@@ -68,18 +68,19 @@ export class PrinterService {
   }
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
-    const params = new HttpParams()
-      .set('Id', id.toString())
-      .set('IsActive', isActive.toString());
-
-    return this.http.put<any>(
-      `${this.baseUrl}/${this.controllerPath}/ActiveInActive`,
-      {},
-      { params }
-    );
+    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
   }
 
   private get baseUrl(): string {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
+
+
+
+
+
+
+
+
+

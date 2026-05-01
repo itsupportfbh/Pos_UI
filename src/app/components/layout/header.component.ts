@@ -1,5 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Component, EventEmitter, HostListener, Inject, Input, Output, PLATFORM_ID } from '@angular/core';
+import { Component, EventEmitter, HostListener, Inject, Input, OnChanges, OnInit, Output, PLATFORM_ID, SimpleChanges } from '@angular/core';
 import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 
@@ -15,16 +15,29 @@ type HeaderUser = {
   templateUrl: './header.component.html',
   styleUrl: './header.component.css'
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit, OnChanges {
   @Input({ required: true }) appName = '';
   @Input({ required: true }) user!: HeaderUser;
   @Output() menuToggle = new EventEmitter<void>();
   @Output() logoutClick = new EventEmitter<void>();
   isOnline = true;
+  initials = '';
+  connectionLabel = 'Online';
 
   constructor(@Inject(PLATFORM_ID) private readonly platformId: object) {
     if (isPlatformBrowser(this.platformId)) {
       this.isOnline = navigator.onLine;
+    }
+  }
+
+  ngOnInit(): void {
+    this.updateInitials();
+    this.updateConnectionLabel();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['user']) {
+      this.updateInitials();
     }
   }
 
@@ -39,23 +52,23 @@ export class HeaderComponent {
   @HostListener('window:online')
   onOnline(): void {
     this.isOnline = true;
+    this.updateConnectionLabel();
   }
 
   @HostListener('window:offline')
   onOffline(): void {
     this.isOnline = false;
+    this.updateConnectionLabel();
   }
 
-  get initials(): string {
-    return this.user.name
-      .split(' ')
-      .map((part) => part[0] ?? '')
-      .join('')
-      .slice(0, 2)
-      .toUpperCase();
+  private updateInitials(): void {
+    const nameParts = (this.user?.name ?? '').split(' ');
+    const firstLetter = nameParts[0]?.[0] ?? '';
+    const secondLetter = nameParts[1]?.[0] ?? '';
+    this.initials = `${firstLetter}${secondLetter}`.toUpperCase();
   }
 
-  get connectionLabel(): string {
-    return this.isOnline ? 'Online' : 'Offline';
+  private updateConnectionLabel(): void {
+    this.connectionLabel = this.isOnline ? 'Online' : 'Offline';
   }
 }

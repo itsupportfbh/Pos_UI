@@ -16,6 +16,7 @@ export interface ApiSubMenu {
 export interface ApiMenu {
   MenuId: number;
   MenuName: string;
+  MenuIcon?: string;
   IsActive: boolean;
   SubMenus: ApiSubMenu[];
 }
@@ -43,3 +44,12 @@ export class MenuService {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
+
+
+
+
+
+
+
+
+

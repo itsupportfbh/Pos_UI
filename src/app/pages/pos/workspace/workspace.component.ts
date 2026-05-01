@@ -1,6 +1,8 @@
 import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ShellComponent } from '../../../components/layout/shell.component';
 import { MenuGroup } from '../../../components/layout/menu.model';
 import { ApiMenu, MenuService } from '../../../services/menu.service';
@@ -11,12 +13,14 @@ const USER_DETAILS_KEY = 'userDetails';
 @Component({
   selector: 'app-pos-workspace',
   standalone: true,
-  imports: [RouterOutlet, ShellComponent],
+  imports: [RouterOutlet, ShellComponent, ConfirmDialogModule],
+  providers: [ConfirmationService],
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.component.css'
 })
 export class WorkspaceComponent implements OnInit {
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly userDetails = this.getUserDetails();
   readonly appName = 'Unity work POS';
   readonly currentUser = {
@@ -56,9 +60,19 @@ export class WorkspaceComponent implements OnInit {
   }
 
   logout(): void {
-    localStorage.removeItem(LOGIN_SESSION_KEY);
-    localStorage.removeItem(USER_DETAILS_KEY);
-    this.router.navigate(['/login']);
+    this.confirmationService.confirm({
+      header: 'Logout Confirmation',
+      message: 'Are you sure you want to logout?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        localStorage.removeItem(LOGIN_SESSION_KEY);
+        localStorage.removeItem(USER_DETAILS_KEY);
+        this.router.navigate(['/login']);
+      }
+    });
   }
 
   toggleSidebar(): void { this.sidebarOpen = !this.sidebarOpen; }
@@ -79,7 +93,7 @@ export class WorkspaceComponent implements OnInit {
       .map((menu) => ({
         key: String(menu.MenuId),
         label: menu.MenuName,
-        icon: this.getMenuIcon(menu.MenuName),
+        icon: menu.MenuIcon ?? 'pi pi-circle',
         items: (menu.SubMenus ?? [])
           // .filter((subMenu) => subMenu.IsActive)
           .map((subMenu) => ({
@@ -89,21 +103,6 @@ export class WorkspaceComponent implements OnInit {
             route: subMenu.Route
           }))
       }));
-  }
-
-  private getMenuIcon(menuName: string): string {
-    if (menuName === 'Dashboard') return 'pi pi-home';
-    if (menuName === 'Organization') return 'pi pi-building';
-    if (menuName === 'Users & Roles') return 'pi pi-users';
-    if (menuName === 'Food Menu') return 'pi pi-box';
-    if (menuName === 'Customers') return 'pi pi-id-card';
-    if (menuName === 'Billing') return 'pi pi-shopping-cart';
-    if (menuName === 'Orders') return 'pi pi-receipt';
-    if (menuName === 'Reports') return 'pi pi-chart-line';
-    if (menuName === 'Inventory') return 'pi pi-warehouse';
-    if (menuName === 'Payments') return 'pi pi-credit-card';
-
-    return 'pi pi-circle';
   }
 
   private getUserDetails(): any {
