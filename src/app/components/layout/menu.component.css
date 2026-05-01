@@ -39,6 +39,30 @@
   background: var(--app-scrollbar);
 }
 
+.menu-search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.menu-search i {
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+}
+
+.menu-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 0.8rem;
+}
+
 .menu-group {
   padding: 0.5rem;
   border: 1px solid var(--app-border);
@@ -125,6 +149,16 @@
   box-shadow: 0 6px 12px rgba(34, 91, 63, 0.08);
   background: rgba(231, 243, 237, 0.95);
   transform: translateY(-1px);
+}
+
+.menu-empty-state {
+  padding: 1rem 0.8rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 0.75rem;
+  text-align: center;
+  color: var(--app-text-muted);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
 }
 
 @media (max-width: 768px) {

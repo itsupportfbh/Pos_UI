@@ -1,7 +1,17 @@
 @if (sidebarOpen) {
   <aside class="sidebar sidebar-open">
     <nav class="menu-list">
-      @for (group of menuItems; track group.key) {
+      <section class="menu-search">
+        <i class="pi pi-search"></i>
+        <input
+          type="text"
+          placeholder="Search menu"
+          [value]="menuSearchText"
+          (input)="onMenuSearchChange($any($event.target).value)"
+        />
+      </section>
+
+      @for (group of filteredMenuItems; track group.key) {
         <section class="menu-group">
           <button type="button" class="menu-group-header" (click)="toggleGroup(group.key)">
             <i [class]="group.icon"></i>
@@ -28,6 +38,12 @@
               }
             </div>
           }
+        </section>
+      }
+
+      @if (!filteredMenuItems.length) {
+        <section class="menu-empty-state">
+          <span>No menus found.</span>
         </section>
       }
     </nav>
