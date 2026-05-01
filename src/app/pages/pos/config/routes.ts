@@ -71,6 +71,7 @@ const callerIdPage = () => import('../caller-id/caller-id.component').then((modu
 const currencyDecimalFormatPage = () => import('../currency-decimal-format/currency-decimal-format.component').then((module) => module.CurrencyDecimalFormatComponent);
 const languagePage = () => import('../language/language.component').then((module) => module.LanguageComponent);
 const paymodePage = () => import('../paymode/paymode.component').then((module) => module.PaymodeComponent);
+const floorPage = () => import('../Floor/floor.component').then((module) => module.FloorComponent);
 
 export const POS_ROUTES: Routes = [
   {
@@ -89,6 +90,7 @@ export const POS_ROUTES: Routes = [
       { path: 'current-stock', loadComponent: currentStockPage },
       { path: 'low-stock', loadComponent: lowStockPage },
       { path: 'customers', loadComponent: customersPage },
+      { path: 'Floor', loadComponent: floorPage },
       { path: 'customer-history', loadComponent: customerHistoryPage },
       { path: 'credit-tracking', loadComponent: creditTrackingPage },
       { path: 'return-refund', loadComponent: returnRefundPage },
