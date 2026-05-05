@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -11,13 +12,10 @@ import { ActionButtonsComponent } from '../../../components/form/action-buttons.
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { Paymode, PaymodeService } from '../../../services/paymode.service';
 
-type PaymodeRow = {
-  Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
-  IsActive: boolean;
+type PaymodeRow = Paymode & {
+  Type: string;
   Status: string;
   RowNumber: number;
 };
@@ -25,8 +23,8 @@ type PaymodeRow = {
 const PAYMODE_COLUMNS: SharedTableColumn<PaymodeRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
   { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'Type', header: 'Type', sortable: true, width: '18rem' },
+  { field: 'Organization', header: 'Organization', sortable: true, width: '18rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -49,9 +47,11 @@ const PAYMODE_COLUMNS: SharedTableColumn<PaymodeRow>[] = [
   templateUrl: './paymode.component.html',
   styleUrl: './paymode.component.css'
 })
-export class PaymodeComponent {
+export class PaymodeComponent implements OnInit {
   private readonly toast = inject(AppToastService);
+  private readonly paymodeService = inject(PaymodeService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -59,15 +59,18 @@ export class PaymodeComponent {
   showFilterSidebar = false;
   isEditMode = false;
   dialogSubmitted = false;
+  dialogSaving = false;
+  isLoading = false;
   selectedRow: PaymodeRow | null = null;
   rowActionItems: MenuItem[] = [];
   allRows: PaymodeRow[] = [];
   tableRows: PaymodeRow[] = [];
+  userDetails: any = {};
 
   filterSearchText = '';
   dialogId = 0;
   dialogCode = '';
-  dialogName = '';
+  dialogType = '';
   dialogRemarks = '';
 
   readonly pageEyebrow = 'POS';
@@ -85,16 +88,53 @@ export class PaymodeComponent {
   tableColumns = PAYMODE_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
 
   ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.tableColumns = PAYMODE_COLUMNS.map((x: any) => {
+      if (x.field === 'OrganizationName') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+
     this.loadRows();
   }
+
   loadRows(): void {
-    this.allRows = [];
-    this.tableRows = [];
+    this.isLoading = true;
+
+
+     const orgId = Number(this.userDetails?.OrgId || 0);
+
+    this.paymodeService.getAll(orgId).subscribe({
+      next: (response: any) => {
+        let rowNumber = 1;
+
+        this.allRows = (response.result ?? []).map((paymode: any) => ({
+          ...paymode,
+          Id: paymode.Id ?? paymode.id ?? 0,
+          Code: paymode.Code ?? paymode.code ?? '',
+          Type: paymode.Type ?? paymode.type ?? '',
+          Organization: paymode.OrganizationName,
+          IsActive: paymode.IsActive ?? paymode.isActive ?? paymode.isactive ?? false,
+          RowNumber: rowNumber++,
+          Status: (paymode.IsActive ?? paymode.isActive ?? paymode.isactive) ? 'Active' : 'Inactive'
+        }));
+
+        this.tableRows = [...this.allRows];
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.toast.error('Load Failed', 'Unable to load paymodes. Please check API and try again.');
+      },
+      complete: () => {
+        this.isLoading = false;
+      }
+    });
   }
 
   searchRows(): void {
@@ -106,9 +146,10 @@ export class PaymodeComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      String(row.Code ?? '').toLowerCase().includes(searchText) ||
+      String(row.Type ?? '').toLowerCase().includes(searchText) ||
+      String(row.Remarks ?? '').toLowerCase().includes(searchText) ||
+      String(row.Status ?? '').toLowerCase().includes(searchText)
     );
   }
 
@@ -136,93 +177,143 @@ export class PaymodeComponent {
   }
 
   closeAddDialog(): void {
-    this.resetDialogForm();
+    this.loadRows();
     this.isEditMode = false;
     this.dialogSubmitted = false;
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
       return;
     }
 
-    if (this.isEditMode && this.dialogId) {
-      this.allRows = this.allRows.map((row) => {
-        if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
-        }
+    const type = this.dialogType.trim();
 
-        return row;
-      });
-
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
-    } else {
-      this.allRows.unshift({
-        Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
-        IsActive: true,
-        Status: 'Active',
-        RowNumber: 0
-      });
-
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
+    if (!type) {
+      return;
     }
 
-    this.refreshRows();
-    this.closeAddDialog();
+    this.dialogSaving = true;
+
+
+
+
+    const payload: Paymode = {
+      Id: this.dialogId,
+      Code: this.dialogCode.trim(),
+      Type: type,
+      Remarks: this.dialogRemarks.trim(),
+      OrgId: Number(this.userDetails?.OrgId || 0),
+      IsActive: true,
+      CreatedBy: Number(this.userDetails?.UserId || 0),
+      CreatedDate: new Date().toISOString(),
+      UpdatedBy: Number(this.userDetails?.UserId || 0),
+      UpdatedDate: this.dialogId ? new Date().toISOString() : null,
+      IsDeleted: false
+    };
+
+    try {
+      const response: any = payload.Id
+        ? await firstValueFrom(this.paymodeService.update(payload))
+        : await firstValueFrom(this.paymodeService.create(payload));
+
+      if (this.isAlreadyExistsResponse(response)) {
+        this.toast.warn('Already Exists', `${payload.Type || this.pageTitle} already exists. Please use a different name.`);
+        this.dialogType = '';
+        return;
+      }
+
+      if (this.isSuccessResponse(response)) {
+        this.toast.success(payload.Id ? 'Updated' : 'Saved', `${payload.Type|| this.pageTitle} ${payload.Id ? 'updated' : 'saved'} successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', this.getResponseMessage(response) || 'Unable to save paymode.');
+    } catch {
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save paymode.');
+    } finally {
+      this.dialogSaving = false;
+    }
   }
 
-  editRow(row: PaymodeRow): void {
+  async editRow(row: PaymodeRow): Promise<void> {
+    this.resetDialogForm();
     this.isEditMode = true;
-    this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
     this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
+
+    try {
+      const response: any = await firstValueFrom(this.paymodeService.getById(row.Id ?? 0));
+      const result = response.result ?? response;
+      const paymode = Array.isArray(result) ? (result[0] ?? {}) : result;
+
+      this.dialogId = paymode.Id ?? paymode.id ?? row.Id ?? 0;
+      this.dialogCode = paymode.Code ?? paymode.code ?? row.Code ?? '';
+      this.dialogType = paymode.Type ?? paymode.type ?? paymode.Name ?? paymode.name ?? row.Type ?? '';
+      this.dialogRemarks = paymode.Remarks ?? paymode.remarks ?? row.Remarks ?? '';
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load paymode details. Please check and try again.');
+    }
   }
 
-  deleteRow(row: PaymodeRow): void {
-    this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
-    this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
-  }
+  async deleteRow(row: PaymodeRow): Promise<void> {
+    const name = this.getRowName(row);
 
-  activateRow(row: PaymodeRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = true;
-        item.Status = 'Active';
+    try {
+      const response: any = await firstValueFrom(this.paymodeService.delete(row.Id ?? 0));
+
+      if (this.isSuccessResponse(response)) {
+        this.toast.success('Deleted', `${name} deleted successfully.`);
+        this.loadRows();
+        return;
       }
 
-      return item;
-    });
-
-    this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+      this.toast.error('Delete Failed', this.getResponseMessage(response) || `Unable to delete ${name}. Please try again.`);
+    } catch {
+      this.toast.error('Delete Failed', `Unable to delete ${name}. Please try again.`);
+    }
   }
 
-  deactivateRow(row: PaymodeRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = false;
-        item.Status = 'Inactive';
+  async activateRow(row: PaymodeRow): Promise<void> {
+    const name = this.getRowName(row);
+
+    try {
+      const response: any = await firstValueFrom(this.paymodeService.activeInActive(row.Id ?? 0, true));
+
+      if (this.isSuccessResponse(response)) {
+        this.toast.success('Activated', `${name} activated successfully.`);
+        this.loadRows();
+        return;
       }
 
-      return item;
-    });
+      this.toast.error('Activation Failed', this.getResponseMessage(response) || `Unable to activate ${name}. Please try again.`);
+    } catch {
+      this.toast.error('Activation Failed', `Unable to activate ${name}. Please try again.`);
+    }
+  }
 
-    this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+  async deactivateRow(row: PaymodeRow): Promise<void> {
+    const name = this.getRowName(row);
+
+    try {
+      const response: any = await firstValueFrom(this.paymodeService.activeInActive(row.Id ?? 0, false));
+
+      if (this.isSuccessResponse(response)) {
+        this.toast.success('Deactivated', `${name} deactivated successfully.`);
+        this.loadRows();
+        return;
+      }
+
+      this.toast.error('Deactivation Failed', this.getResponseMessage(response) || `Unable to deactivate ${name}. Please try again.`);
+    } catch {
+      this.toast.error('Deactivation Failed', `Unable to deactivate ${name}. Please try again.`);
+    }
   }
 
   openRowActions(menu: any, event: Event, row: PaymodeRow): void {
@@ -232,14 +323,15 @@ export class PaymodeComponent {
   }
 
   confirmDeleteRow(row: PaymodeRow): void {
+    const name = this.getRowName(row);
+
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: `Are you sure you want to delete ${name}?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-danger',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.deleteRow(row);
       }
@@ -247,14 +339,15 @@ export class PaymodeComponent {
   }
 
   confirmActivateRow(row: PaymodeRow): void {
+    const name = this.getRowName(row);
+
     this.confirmationService.confirm({
       header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      message: `Are you sure you want to activate ${name}?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-success',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.activateRow(row);
       }
@@ -262,14 +355,15 @@ export class PaymodeComponent {
   }
 
   confirmDeactivateRow(row: PaymodeRow): void {
+    const name = this.getRowName(row);
+
     this.confirmationService.confirm({
       header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      message: `Are you sure you want to deactivate ${name}?`,
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-warn',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.deactivateRow(row);
       }
@@ -278,28 +372,44 @@ export class PaymodeComponent {
 
   resetDialogForm(keepCode: boolean = false): void {
     this.dialogSubmitted = false;
+    this.dialogSaving = false;
     this.dialogId = 0;
 
     if (!keepCode) {
       this.dialogCode = '';
     }
 
-    this.dialogName = '';
+    this.dialogType = '';
     this.dialogRemarks = '';
-  }
-
-  private refreshRows(): void {
-    this.allRows = this.allRows.map((row, index) => {
-      row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
-      return row;
-    });
-
-    this.searchRows();
   }
 
   private isDialogFormValid(): boolean {
     return this.textFields?.toArray().every((field) => field.isValid) ?? true;
+  }
+
+  private getRowName(row: PaymodeRow): string {
+    return String(row.Type ?? row.Code ?? 'this paymode');
+  }
+
+  private isAlreadyExistsResponse(response: any): boolean {
+    return response === 'AlreadyExists' ||
+      response?.result === 'AlreadyExists' ||
+      response?.message === 'AlreadyExists' ||
+      response?.ErrorInfo?.Message === 'AlreadyExists';
+  }
+
+  private isSuccessResponse(response: any): boolean {
+    return response == null ||
+      response?.ErrorInfo?.Message === true ||
+      response?.message === true ||
+      response === true ||
+      response?.success === true;
+  }
+
+  private getResponseMessage(response: any): string {
+    return typeof response?.ErrorInfo?.Message === 'string'
+      ? response.ErrorInfo.Message
+      : response?.message ?? '';
   }
 
   private getRowActionItems(row: PaymodeRow): MenuItem[] {
@@ -307,7 +417,7 @@ export class PaymodeComponent {
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
 
-    if (row.IsActive) {
+    if (row.IsActive === true) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
@@ -333,4 +443,3 @@ export class PaymodeComponent {
     }
   }
 }
-

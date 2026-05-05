@@ -16,16 +16,24 @@
       </div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+    <app-shared-table [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
+     
+     
       <ng-template #rowActions let-row>
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
 
         <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
           (click)="openRowActions(rowMenu, $event, row)"></button>
+
+
+          
       </ng-template>
+
+
+
+
 
       <ng-template appTableCellTemplate="Status" let-row>
         <span class="status-badge" [class.status-active]="row.Status === 'Active'"
@@ -49,7 +57,7 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Search" inputId="filter-search" placeholder="Search code or name" [model]="filterSearchText"
+        <app-text-field label="Search" inputId="filter-search" placeholder="Search code or type" [model]="filterSearchText"
           (modelChange)="filterSearchText = $event"></app-text-field>
       </section>
 
@@ -74,9 +82,9 @@
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
       [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
 
-    <app-text-field label="Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter name"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="200"
-      [model]="dialogName" (modelChange)="dialogName = $event"></app-text-field>
+    <app-text-field label="Type" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter type"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Type is required." [maxlength]="200"
+      [model]="dialogType" (modelChange)="dialogType = $event"></app-text-field>
 
     <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Enter remarks" [maxlength]="250"
       [model]="dialogRemarks" (modelChange)="dialogRemarks = $event"></app-text-field>
@@ -84,7 +92,8 @@
 
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
+      secondaryIcon="pi pi-refresh" [primaryLoading]="dialogSaving" [primaryDisabled]="dialogSaving"
+      [secondaryDisabled]="dialogSaving" [secondaryText]="true" [secondaryOutlined]="false"
       (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)"></app-action-buttons>
   </div>
 </p-dialog>

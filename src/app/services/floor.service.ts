@@ -49,7 +49,7 @@ export class FloorService {
   }
 
   delete(id: number | string): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`);
+    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/Delete?id=${id}`);
   }
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
