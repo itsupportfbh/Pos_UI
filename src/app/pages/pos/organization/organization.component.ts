@@ -12,7 +12,8 @@ import { MenuModule } from 'primeng/menu';
 import { firstValueFrom } from 'rxjs';
 import { AppToastService } from '../../../services/app-toast.service';
 import { CommonService } from '../../../services/common.service';
-import { Organization, OrganizationService } from '../../../services/organization.service';
+import { Organization, OrganizationConfig, OrganizationService } from '../../../services/organization.service';
+import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
 const cityOptions: any[] = [];
 const stateOptions: any[] = [];
@@ -32,6 +33,7 @@ export class OrganizationComponent implements OnInit {
   private readonly commonService = inject(CommonService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly runtimeConfig = inject(RuntimeConfigService);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
   showAddDialog = false;
@@ -60,10 +62,16 @@ export class OrganizationComponent implements OnInit {
   dialogRemarks = '';
   showConfigDialog = false;
   showViewSidebar = false;
+  configId = 0;
+  configOrganizationId = 0;
   configOrganizationName = '';
+  configImage = '';
   configImageName = '';
+  configImageUrl = '';
+  configImageFile: File | null = null;
   configThemeColor = '#2f7d57';
   configFontSize = '14';
+  configSaving = false;
   viewOrganization: any = null;
 
   selectedRow: any = null;
@@ -253,32 +261,32 @@ export class OrganizationComponent implements OnInit {
     }
   }
 
-  loadOrganizations(): void {
-    this.organizationService.getAll().subscribe({
-      next: (response) => {
-        let RowNumber = 1;
-        const organizations = Number(this.userDetails.RoleId || 0) === 1
-          ? (response.result ?? [])
-          : (response.result ?? []).filter((x: any) => x.Id === Number(this.userDetails.OrgId));
+  async loadOrganizations(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.organizationService.getAll());
+      let RowNumber = 1;
 
-        this.tableRows = organizations.map((x: any) => {
-          x.RowNumber = RowNumber++;
-          x.Phone = x.Phone ?? x.phone ?? x.MobileNo ?? x.mobileNo ?? '';
-          x.Email = x.Email ?? x.email ?? '';
-          x.Website = x.Website ?? x.website ?? '';
-          x.Status = x.IsActive ? 'Active' : 'Inactive';
-          return x;
-        });
+      const organizations = Number(this.userDetails.RoleId || 0) === 1
+        ? (response.result ?? [])
+        : (response.result ?? []).filter((x: any) => x.Id === Number(this.userDetails.OrgId));
 
+      this.tableRows = organizations.map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        x.ImageUrl = '';
+        return x;
+      });
 
-        this.allRows = [...this.tableRows];
-        this.applyCardSearch();
-        this.changeDetector.detectChanges();
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+      for (const row of this.tableRows) {
+        row.ImageUrl = await this.getOrganizationConfigImageUrl(Number(row.Id || 0));
       }
-    });
+
+      this.allRows = [...this.tableRows];
+      this.applyCardSearch();
+      this.changeDetector.detectChanges();
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+    }
   }
 
   getWebsiteUrl(website: string): string {
@@ -336,10 +344,36 @@ export class OrganizationComponent implements OnInit {
     }
   }
 
-  openConfigDialog(row: any): void {
+  async openConfigDialog(row: any): Promise<void> {
     this.resetConfigForm();
-    this.configOrganizationName = String(row['name'] ?? row['companyName'] ?? row['code'] ?? this.pageTitle);
     this.showConfigDialog = true;
+
+    this.configOrganizationId = Number(row['Id'] ?? 0);
+    this.configOrganizationName = String(row['Name'] ?? row['name'] ?? row['companyName'] ?? row['Code'] ?? row['code'] ?? this.pageTitle);
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetOrganizationConfigByOrgId(this.configOrganizationId));
+      const config = response?.result?.[0] ?? response?.result ?? response ?? {};
+
+      if (config && config.Id ) {
+        this.configId = Number(config.Id ?? config.id ?? 0);
+        this.configImage = this.normalizeConfigImageValue(String(config.Image ?? ''));
+        this.configImageName = this.getConfigImageFileName(this.configImage);
+        this.configImageUrl = this.getConfigImagePreviewUrl(this.configImage);
+        this.configImageFile = null;
+        this.configThemeColor = String(config.ThemeColor ?? config.themeColor ?? '#2f7d57');
+        this.configFontSize = String(config.FontSize ?? config.fontSize ?? '14');
+      }
+    } catch {
+      this.configId = 0;
+      this.configImage = '';
+      this.configImageName = '';
+      this.configImageUrl = '';
+      this.configImageFile = null;
+      this.configThemeColor = '#2f7d57';
+      this.configFontSize = '14';
+    }
+
   }
 
   closeConfigDialog(): void {
@@ -351,14 +385,69 @@ export class OrganizationComponent implements OnInit {
     this.viewOrganization = null;
   }
 
-  submitConfigDialog(): void {
-    this.toast.success('Config Saved', `${this.configOrganizationName || this.pageTitle} configuration saved successfully.`);
-    this.closeConfigDialog();
+  async submitConfigDialog(): Promise<void> {
+    this.configSaving = true;
+
+    const payload: OrganizationConfig = {
+      Id: this.configId,
+      Image: this.configImage,
+      ImageFile: this.configImageFile,
+      ThemeColor: this.configThemeColor,
+      FontSize: Number(this.configFontSize || 14),
+      OrgId: this.configOrganizationId,
+      IsActive: true,
+      CreatedBy: Number(this.userDetails.UserId || 0),
+      CreatedDate: new Date().toISOString(),
+      UpdatedBy: Number(this.userDetails.UserId || 0),
+      UpdatedDate: new Date().toISOString(),
+      IsDeleted: false,
+    };
+
+    try {
+      const formData = this.createOrganizationConfigFormData(payload);
+      const response: any = await firstValueFrom(this.organizationService.CreateUpdateOrganizationConfig(formData));
+      if (response.ErrorInfo.Message === true ) {
+        this.toast.success('Config Saved', `${this.configOrganizationName || this.pageTitle} configuration saved successfully.`);
+        this.closeConfigDialog();
+        setTimeout(() => {
+          window.location.reload();
+        }, 300);
+        return;
+      }
+      else
+      {
+        this.toast.error('Save Failed', response.ErrorInfo.Message || 'Unable to save organization configuration.');
+      }
+
+
+      this.toast.error('Save Failed', response?.ErrorInfo?.Message || 'Unable to save organization configuration.');
+    } catch {
+      this.toast.error('Save Failed', 'Unable to save organization configuration.');
+    } finally {
+      this.configSaving = false;
+    }
   }
 
   onConfigImageSelect(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.configImageName = input.files?.[0]?.name ?? '';
+    const file = input.files?.[0];
+
+    if (!file) {
+      this.configImageName = this.getConfigImageFileName(this.configImage);
+      this.configImageFile = null;
+      return;
+    }
+
+    this.configImage = file.name;
+    this.configImageName = file.name;
+    this.configImageFile = file;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.configImageUrl = String(reader.result ?? '');
+      this.changeDetector.detectChanges();
+    };
+    reader.readAsDataURL(file);
   }
 
   async deleteRow(row: any): Promise<void> {
@@ -418,10 +507,12 @@ export class OrganizationComponent implements OnInit {
 
       const response: any = await firstValueFrom(this.organizationService.getById(row['Id']));
       const organization = response.result ?? {};
+      const imageUrl = await this.getOrganizationConfigImageUrl(Number(row['Id'] ?? 0));
 
       this.viewOrganization = {
         Code: organization.Code ?? '',
         Name: organization.Name ?? '',
+        ImageUrl: imageUrl,
         GSTNo: organization.GSTNo ?? '',
         RegistrationNo: organization.RegistrationNo ?? '',
         Phone: organization.Phone ?? '',
@@ -526,9 +617,123 @@ export class OrganizationComponent implements OnInit {
   }
 
   private resetConfigForm(): void {
+    this.configId = 0;
+    this.configOrganizationId = 0;
+    this.configImage = '';
     this.configImageName = '';
+    this.configImageUrl = '';
+    this.configImageFile = null;
     this.configThemeColor = '#2f7d57';
     this.configFontSize = '14';
+    this.configSaving = false;
+  }
+
+  private createOrganizationConfigFormData(payload: OrganizationConfig): FormData {
+    const formData = new FormData();
+
+    formData.append('Id', String(payload.Id ?? 0));
+    formData.append('Image', payload.Image ?? '');
+    formData.append('ThemeColor', payload.ThemeColor ?? '');
+    formData.append('FontSize', String(payload.FontSize ?? 14));
+    formData.append('OrgId', String(payload.OrgId ?? 0));
+    formData.append('IsActive', String(payload.IsActive ?? true));
+    formData.append('CreatedBy', String(payload.CreatedBy ?? 0));
+    formData.append('CreatedDate', payload.CreatedDate ?? '');
+    formData.append('UpdatedBy', String(payload.UpdatedBy ?? 0));
+    formData.append('UpdatedDate', payload.UpdatedDate ?? '');
+    formData.append('IsDeleted', String(payload.IsDeleted ?? false));
+
+    if (payload.ImageFile) {
+      formData.append('ImageFile', payload.ImageFile, payload.ImageFile.name);
+    }
+
+    return formData;
+  }
+
+  private normalizeConfigImageValue(image: string): string {
+    let normalizedImage = image.trim();
+
+    if (!normalizedImage) {
+      return '';
+    }
+
+    if (normalizedImage.startsWith('data:')) {
+      return normalizedImage;
+    }
+
+    const marker = '/FileUpload/';
+    const markerIndex = normalizedImage.indexOf(marker);
+
+    if (markerIndex >= 0) {
+      normalizedImage = normalizedImage.substring(markerIndex + marker.length);
+    }
+
+    normalizedImage = normalizedImage.replace(/^\/+/, '');
+
+    while (normalizedImage.startsWith('FileUpload/')) {
+      normalizedImage = normalizedImage.substring('FileUpload/'.length);
+    }
+
+    while (normalizedImage.startsWith('Organization/')) {
+      normalizedImage = normalizedImage.substring('Organization/'.length);
+    }
+
+    return this.getConfigImageFileName(normalizedImage);
+  }
+
+  private async getOrganizationConfigImageUrl(orgId: number): Promise<string> {
+    if (!orgId) {
+      return '';
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetOrganizationConfigByOrgId(orgId));
+      const config = response?.result?.[0] ?? response?.result ?? response ?? {};
+      const image = String(config.Image ?? config.image ?? '');
+
+      if (!image) {
+        return '';
+      }
+
+      return this.getConfigImagePreviewUrl(image);
+    } catch {
+      return '';
+    }
+  }
+
+  private getConfigImagePreviewUrl(image: string): string {
+    if (!image) {
+      return '';
+    }
+
+    if (image.startsWith('http://') || image.startsWith('https://') || image.startsWith('data:')) {
+      return image;
+    }
+
+    const normalizedImage = this.normalizeConfigImageValue(image);
+
+    if (!normalizedImage) {
+      return '';
+    }
+
+    if (normalizedImage.startsWith('Organization/')) {
+      return `${this.runtimeConfig.apiBaseUrl}/FileUpload/${normalizedImage}`;
+    }
+
+    if (normalizedImage.includes('/')) {
+      return `${this.runtimeConfig.apiBaseUrl}/FileUpload/${normalizedImage}`;
+    }
+
+    return `${this.runtimeConfig.apiBaseUrl}/FileUpload/Organization/${normalizedImage}`;
+  }
+
+  private getConfigImageFileName(image: string): string {
+    if (!image) {
+      return '';
+    }
+
+    const parts = image.split(/[\\/]/);
+    return parts[parts.length - 1] ?? '';
   }
 
   private applyCardSearch(): void {

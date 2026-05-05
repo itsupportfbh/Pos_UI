@@ -129,7 +129,7 @@
     </div>
   </ng-template>
 
-  <section class="field-grid dialog-grid">
+  <section class="field-grid dialog-grid user-dialog-grid">
     @if (userDetails.RoleId === 1) {
       <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
         [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
@@ -205,16 +205,21 @@
       [numbersOnly]="true" [showFormatErrorWhileTyping]="true" formatErrorMessage="Postal Code allows numbers only."
       [model]="dialogPostalCode" (modelChange)="dialogPostalCode = $event" />
 
-    <label class="upload-field" for="dialog-image">
+    <div class="upload-field user-upload-field">
       <span class="field-label">Image</span>
-      <input id="dialog-image" type="file" accept="image/*" (change)="onImageSelect($event)" />
-      <small>{{ dialogImageName || 'Choose user image' }}</small>
-      @if (dialogImageUrl) {
-        <img class="image-preview" [src]="dialogImageUrl" alt="User Preview" />
-      }
-    </label>
+      <div class="user-upload-shell">
+        <div class="user-upload-copy">
+          <input id="dialog-image" type="file" accept="image/*" (change)="onImageSelect($event)" />
+          <small>{{ dialogImageName || 'Choose user image' }}</small>
+        </div>
 
-    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks"
+        @if (dialogImageUrl) {
+          <img class="image-preview user-image-preview" [src]="dialogImageUrl" alt="User Preview" />
+        }
+      </div>
+    </div>
+
+    <app-text-field class="user-remarks-field" label="Remarks" inputId="dialog-remarks" placeholder="Remarks"
       [model]="dialogRemarks" (modelChange)="dialogRemarks = $event" />
   </section>
 

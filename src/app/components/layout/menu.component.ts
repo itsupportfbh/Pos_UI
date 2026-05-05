@@ -10,6 +10,8 @@ import { MenuGroup } from './menu.model';
   styleUrl: './menu.component.css'
 })
 export class MenuComponent {
+  @Input() appName = '';
+  @Input() appLogoUrl = '';
   @Input() sidebarOpen = false;
   @Input() activeMenuKey = '';
   @Input() menuItems: MenuGroup[] = [];

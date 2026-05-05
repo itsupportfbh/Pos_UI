@@ -18,11 +18,6 @@ export interface Tax {
     IsDeleted?: boolean;
 }
 
-export interface TaxStatusRequest {
-    id: number | string;
-    isActive: boolean;
-}
-
 @Injectable({
     providedIn: 'root'
 })
@@ -80,12 +75,4 @@ export class TaxService {
         return this.runtimeConfig.apiBaseUrl;
     }
 }
-
-
-
-
-
-
-
-
 

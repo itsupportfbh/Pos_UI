@@ -19,6 +19,7 @@ type ShellUser = {
 })
 export class ShellComponent {
   @Input({ required: true }) appName = '';
+  @Input() appLogoUrl = '';
   @Input({ required: true }) user!: ShellUser;
   @Input() footerDescription = '';
   @Input() sidebarOpen = false;

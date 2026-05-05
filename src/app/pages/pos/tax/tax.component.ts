@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, QueryList, inject, ViewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, QueryList, inject, ViewChildren } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
@@ -11,29 +12,15 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 import { AppToastService } from '../../../services/app-toast.service';
 import { Tax, TaxService } from '../../../services/tax.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { OrganizationService } from '../../../services/organization.service';
+import { firstValueFrom } from 'rxjs';
 
-type TaxRow = {
-    id: number;
-    code: string;
-    name: string;
-    rate: number;
-    orgId: number;
-    isActive: boolean;
-    createdBy?: number | null;
-    createdDate?: string;
-    updatedBy?: number | null;
-    updatedDate?: string | null;
-    isDeleted?: boolean;
-    status: string;
-    rowNumber: number;
-};
-
-const TAX_COLUMNS: SharedTableColumn<TaxRow>[] = [
+const TAX_COLUMNS: SharedTableColumn<any>[] = [
     { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
-    { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
-    { field: 'code', header: 'Code', sortable: true, width: '10rem' },
-    { field: 'name', header: 'Name', sortable: true, width: '18rem' },
-    { field: 'rate', header: 'Tax', sortable: true, width: '10rem' },
+    { field: 'OrganizationName', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
+    { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
+    { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
+    { field: 'Percentage', header: 'Tax', sortable: true, width: '10rem' },
     {
         field: 'Status',
         header: 'Status',
@@ -45,58 +32,41 @@ const TAX_COLUMNS: SharedTableColumn<TaxRow>[] = [
 @Component({
     selector: 'app-taxes',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
+    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
     providers: [ConfirmationService],
     templateUrl: './tax.component.html',
     styleUrl: './tax.component.css'
 })
-export class TaxComponent {
+export class TaxComponent implements OnInit {
     private readonly toast = inject(AppToastService);
     private readonly TaxService = inject(TaxService);
+    private readonly organizationService = inject(OrganizationService);
     private readonly confirmationService = inject(ConfirmationService);
     private readonly changeDetector = inject(ChangeDetectorRef);
 
     @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+    @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
 
     showAddDialog = false;
-    showFilterSidebar = false;
-    isLoading = false;
     isEditMode = false;
     dialogSubmitted = false;
-    filterTaxName = '';
+    dialogSaving = false;
+    dialogId = 0;
+    dialogOrganization: SelectFieldValue = null;
     dialogTaxCode = '';
     dialogTaxName = '';
+    dialogPercentage = '';
     rateErrorMessage = '';
-    OrgId = 0;
     userDetails: any = {};
+    organizationOptions: any[] = [];
 
-    tableRows: TaxRow[] = [];
-    selectedRow: TaxRow | null = null;
-    editingTaxId: number | null = null;
-
-    dialogCategory: number | null = null;
-
-    dialogModel: Tax = {
-        Id: 0,
-        code: '',
-        name: '',
-        percentage: 0,
-        OrgId: this.OrgId,
-        IsActive: true,
-        CreatedBy: 1,
-        UpdatedBy: 1,
-        IsDeleted: false
-    };
+    allRows: any[] = [];
+    tableRows: any[] = [];
+    selectedRow: any = null;
 
     readonly pageEyebrow = 'Tax Management';
     readonly pageTitle = 'Taxes';
     readonly pageSubtitle = 'Manage your tax rates here.';
-    readonly filterTitle = `${'Taxes'} Filters`;
-    readonly filterDescription = `API data will be loaded for ${'Taxes'.toLowerCase()}.`;
-    readonly fields: any[] = [{ key: 'TaxName', label: 'Tax Name', type: 'text', placeholder: 'Enter tax name' }];
-    readonly primaryActionLabel = `Search ${'Taxes'}`;
-    readonly secondaryActionLabel = 'Clear Filters';
-    readonly showSecondaryAction = true;
     dialogTitle = 'Create Tax';
     dialogSubtitle = 'Create a new tax rate.';
     dialogPrimaryActionLabel = 'Save';
@@ -113,7 +83,7 @@ export class TaxComponent {
     ngOnInit(): void {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
         this.tableColumns = TAX_COLUMNS.map((x: any) => {
-            if (x.field === 'organizationname') {
+            if (x.field === 'OrganizationName') {
                 x.hidden = this.userDetails.RoleId !== 1;
             }
 
@@ -124,17 +94,19 @@ export class TaxComponent {
     }
 
     loadTaxes(): void {
-        this.isLoading = true;
-        this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+        const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
 
-        this.TaxService.getAll(this.OrgId).subscribe({
+        this.TaxService.getAll(orgId).subscribe({
             next: (response: any) => {
                 let RowNumber = 1;
+
                 this.tableRows = (response.result ?? []).map((x: any) => {
                     x.RowNumber = RowNumber++;
-                    x.Status = x.isactive ? 'Active' : 'Inactive';
+                    x.Status = x.IsActive ? 'Active' : 'Inactive';
                     return x;
                 });
+
+                this.allRows = [...this.tableRows];
                 this.changeDetector.detectChanges();
             },
             error: () => {
@@ -142,48 +114,21 @@ export class TaxComponent {
                     'Load Failed',
                     'Unable to load taxes. Please check API and try again.'
                 );
-            },
-            complete: () => {
-                this.isLoading = false;
             }
         });
     }
 
-    searchTaxes(): void {
-        const searchText = this.filterTaxName.trim().toLowerCase();
-
-        if (!searchText) {
-            this.loadTaxes();
-            return;
-        }
-
-        this.tableRows = this.tableRows.filter((row) =>
-            row.name?.toLowerCase().includes(searchText) ||
-            row.code?.toLowerCase().includes(searchText)
-        );
-    }
-
-    resetForm(): void {
-        this.filterTaxName = '';
-        this.loadTaxes();
-    }
-
-    openFilterSidebar(): void {
-        this.resetForm();
-        this.showFilterSidebar = true;
-    }
-
-    closeFilterSidebar(): void {
-        this.showFilterSidebar = false;
-    }
     openAddDialog(): void {
         this.isEditMode = false;
-        this.editingTaxId = null;
         this.resetDialogForm();
-        this.showAddDialog = true;
         this.dialogTitle = 'Create Tax';
         this.dialogSubtitle = 'Create a new tax rate.';
         this.dialogPrimaryActionLabel = 'Save';
+        this.showAddDialog = true;
+
+        if (this.userDetails.RoleId === 1) {
+            this.loadOrganizations();
+        }
     }
 
     closeAddDialog(): void {
@@ -194,65 +139,78 @@ export class TaxComponent {
         this.dialogSubmitted = false;
     }
 
-    submitAddDialog(): void {
+    async loadOrganizations(): Promise<void> {
+        try {
+            const response: any = await firstValueFrom(this.organizationService.getAll());
+            const organizations = response?.result ?? [];
+
+            this.organizationOptions = organizations.filter((org: any) => (org.IsActive ?? org.isActive) === true).map((organization: any) => ({
+                label: organization.Name ?? '',
+                value: organization.Id ?? 0
+            }));
+        } catch {
+            this.organizationOptions = [];
+            this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+        }
+    }
+
+    async submitAddDialog(): Promise<void> {
         this.dialogSubmitted = true;
 
         if (!this.isDialogFormValid()) {
             return;
         }
 
+        this.dialogSaving = true;
+
         const payload: Tax = {
-            ...this.dialogModel,
-            OrgId: this.OrgId,
-            IsActive: this.dialogModel.IsActive ?? true,
+            Id: this.dialogId,
+            code: this.dialogTaxCode,
+            name: this.dialogTaxName,
+            percentage: Number(this.dialogPercentage || 0),
+            OrgId: this.userDetails.RoleId === 1
+                ? Number(this.dialogOrganization || 0)
+                : Number(this.userDetails.OrgId || 0),
+            IsActive: true,
+            CreatedBy: Number(this.userDetails.UserId || 0),
+            CreatedDate: new Date().toISOString(),
+            UpdatedBy: Number(this.userDetails.UserId || 0),
+            UpdatedDate: null,
             IsDeleted: false
         };
 
-        if (this.isEditMode && this.editingTaxId) {
-            payload.Id = this.editingTaxId;
-            payload.UpdatedBy = 1;
+        try {
+            let response: any;
 
-            this.TaxService.update(payload).subscribe({
-                next: (response: any) => {
-                    if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-                        this.toast.warn('Duplicate', 'Tax already exists.');
-                        return;
-                    }
-
-                    this.toast.success('Updated', 'Tax updated successfully.');
-                    this.closeAddDialog();
-                    this.loadTaxes();
-                },
-                error: () => {
-                    this.toast.error('Update Failed', 'Unable to update tax.');
-                }
-            });
-
-            return;
-        }
-
-        payload.CreatedBy = 1;
-
-        this.TaxService.create(payload).subscribe({
-            next: (response: any) => {
-                if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-                    this.toast.warn('Duplicate', 'Tax already exists.');
-                    return;
-                }
-
-                this.toast.success('Saved', 'Tax saved successfully.');
-                this.closeAddDialog();
-                this.loadTaxes();
-            },
-            error: () => {
-                this.toast.error('Save Failed', 'Unable to save tax.');
+            if (!payload.Id) {
+                response = await firstValueFrom(this.TaxService.create(payload));
+            } else {
+                response = await firstValueFrom(this.TaxService.update(payload));
             }
-        });
+
+            if (response === 'AlreadyExists' || response?.result === 'AlreadyExists' || response?.message === 'AlreadyExists') {
+                this.toast.warn('Already Exists', `${payload.name || this.pageTitle} already exists. Please use a different name.`);
+                this.dialogTaxName = '';
+                return;
+            }
+
+            if (!payload.Id) {
+                this.toast.success('Saved', `${payload.name || this.pageTitle} saved successfully.`);
+            } else {
+                this.toast.success('Updated', `${payload.name || this.pageTitle} updated successfully.`);
+            }
+
+            this.closeAddDialog();
+        } catch {
+            this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', `Unable to save ${this.pageTitle.toLowerCase()}.`);
+        } finally {
+            this.dialogSaving = false;
+        }
     }
 
     onRateChange(value: string): void {
         const rate = value ? parseFloat(value) : 0;
-        this.dialogModel.percentage = rate;
+        this.dialogPercentage = value;
 
         if (this.dialogSubmitted && rate <= 0) {
             this.rateErrorMessage = 'Tax Percentage must be greater than zero.';
@@ -261,44 +219,38 @@ export class TaxComponent {
         }
     }
 
-    editRow(row: TaxRow): void {
+    async editRow(row: any): Promise<void> {
         this.isEditMode = true;
-        this.editingTaxId = row.id;
         this.dialogTitle = 'Edit Tax';
         this.dialogSubtitle = 'Update the selected Tax details.';
         this.dialogPrimaryActionLabel = 'Update';
 
-        this.TaxService.getById(row.id).subscribe({
-            next: (response: any) => {
-                const tax = response?.result?.[0] ?? response?.result ?? response;
+        this.resetDialogForm();
 
-                this.dialogModel = {
-                    Id: tax?.id ?? tax?.Id ?? row.id,
-                    code: tax?.code ?? tax?.Code ?? row.code,
-                    name: tax?.name ?? tax?.Name ?? row.name,
-                    percentage: tax?.rate ?? tax?.Rate ?? row.rate,
-                    OrgId: tax?.orgId ?? tax?.OrgId ?? row.orgId,
-                    IsActive: tax?.isActive ?? tax?.IsActive ?? row.isActive,
-                    CreatedBy: tax?.createdBy ?? tax?.CreatedBy ?? 1,
-                    CreatedDate: tax?.createdDate ?? tax?.CreatedDate,
-                    UpdatedBy: tax?.updatedBy ?? tax?.UpdatedBy ?? 1,
-                    UpdatedDate: tax?.updatedDate ?? tax?.UpdatedDate,
-                    IsDeleted: tax?.isDeleted ?? tax?.IsDeleted ?? false
-                };
+        try {
+            const response: any = await firstValueFrom(this.TaxService.getById(row.Id));
+            const tax = response?.result?.[0] ?? response?.result ?? response;
 
-                this.showAddDialog = true;
-                //this.toast.info('Edit Mode', `Editing ${row.name}.`);
-            },
-            error: () => {
-                this.toast.error('Load Failed', 'Unable to load tax details.');
+            this.dialogId = tax?.Id;
+            this.dialogOrganization = tax?.OrgId;
+            this.dialogTaxCode = tax?.Code;
+            this.dialogTaxName = tax?.Name;
+            this.dialogPercentage = row.Percentage;
+
+            if (this.userDetails.RoleId === 1) {
+                await this.loadOrganizations();
             }
-        });
+
+            this.showAddDialog = true;
+        } catch {
+            this.toast.error('Load Failed', 'Unable to load tax details.');
+        }
     }
 
-    deleteRow(row: TaxRow): void {
-        this.TaxService.delete(row.id).subscribe({
+    deleteRow(row: any): void {
+        this.TaxService.delete(row.Id).subscribe({
             next: () => {
-                this.toast.warn('Deleted', `${row.name} removed successfully.`);
+                this.toast.warn('Deleted', `${row.Name} removed successfully.`);
                 this.loadTaxes();
             },
             error: () => {
@@ -307,10 +259,10 @@ export class TaxComponent {
         });
     }
 
-    activateRow(row: TaxRow): void {
-        this.TaxService.activeInActive(row.id, true).subscribe({
+    activateRow(row: any): void {
+        this.TaxService.activeInActive(row.Id, true).subscribe({
             next: () => {
-                this.toast.success('Status Updated', `${row.name} marked as active.`);
+                this.toast.success('Status Updated', `${row.Name} marked as active.`);
                 this.loadTaxes();
             },
             error: () => {
@@ -319,10 +271,10 @@ export class TaxComponent {
         });
     }
 
-    deactivateRow(row: TaxRow): void {
-        this.TaxService.activeInActive(row.id, false).subscribe({
+    deactivateRow(row: any): void {
+        this.TaxService.activeInActive(row.Id, false).subscribe({
             next: () => {
-                this.toast.info('Status Updated', `${row.name} marked as inactive.`);
+                this.toast.info('Status Updated', `${row.Name} marked as inactive.`);
                 this.loadTaxes();
             },
             error: () => {
@@ -331,8 +283,8 @@ export class TaxComponent {
         });
     }
 
-    confirmDeleteRow(row: TaxRow): void {
-        const name = row.name ?? row.code ?? 'this Category';
+    confirmDeleteRow(row: any): void {
+        const name = row.Name ?? row.Code ?? 'this Category';
 
         this.confirmationService.confirm({
             header: 'Delete Confirmation',
@@ -347,8 +299,8 @@ export class TaxComponent {
         });
     }
 
-    confirmActivateRow(row: TaxRow): void {
-        const name = row.name ?? row.code ?? 'this Category';
+    confirmActivateRow(row: any): void {
+        const name = row.Name ?? row.Code ?? 'this Category';
 
         this.confirmationService.confirm({
             header: 'Activate Confirmation',
@@ -363,8 +315,8 @@ export class TaxComponent {
         });
     }
 
-    confirmDeactivateRow(row: TaxRow): void {
-        const name = row.name ?? row.code ?? 'this category';
+    confirmDeactivateRow(row: any): void {
+        const name = row.Name ?? row.Code ?? 'this category';
 
         this.confirmationService.confirm({
             header: 'Inactive Confirmation',
@@ -379,7 +331,7 @@ export class TaxComponent {
         });
     }
 
-    openRowActions(menu: any, event: Event, row: TaxRow): void {
+    openRowActions(menu: any, event: Event, row: any): void {
         this.selectedRow = row;
         this.rowActionItems = this.getRowActionItems(row);
         menu.toggle(event);
@@ -387,13 +339,14 @@ export class TaxComponent {
 
     private isDialogFormValid(): boolean {
         const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
-        const isRateValid = this.dialogModel.percentage > 0;
+        const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+        const isRateValid = Number(this.dialogPercentage || 0) > 0;
 
         if (!isRateValid) {
             this.rateErrorMessage = 'Tax Percentage must be greater than zero.';
         }
 
-        return areTextFieldsValid && isRateValid;
+        return areTextFieldsValid && areSelectFieldsValid && isRateValid;
     }
 
     private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
@@ -401,7 +354,7 @@ export class TaxComponent {
             { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
         ];
 
-        if (row['isactive'] === true) {
+        if (row['IsActive'] === true) {
             items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
             items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
         } else {
@@ -430,17 +383,10 @@ export class TaxComponent {
     resetDialogForm(keepCode: boolean = false): void {
         this.dialogSubmitted = false;
         this.rateErrorMessage = '';
-        const code = keepCode ? this.dialogModel.code ?? '' : '';
-        this.dialogModel = {
-            Id: 0,
-            code,
-            name: '',
-            percentage: 0,
-            OrgId: this.OrgId,
-            IsActive: true,
-            CreatedBy: 1,
-            UpdatedBy: 1,
-            IsDeleted: false
-        };
+        this.dialogId = 0;
+        this.dialogOrganization = null;
+        this.dialogTaxCode = keepCode ? this.dialogTaxCode : '';
+        this.dialogTaxName = '';
+        this.dialogPercentage = '';
     }
 }

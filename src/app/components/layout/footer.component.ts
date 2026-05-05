@@ -8,5 +8,6 @@ import { Component, Input } from '@angular/core';
 })
 export class FooterComponent {
   @Input({ required: true }) appName = '';
+  @Input() appLogoUrl = '';
   @Input() description = '';
 }

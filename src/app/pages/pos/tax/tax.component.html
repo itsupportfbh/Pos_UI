@@ -35,28 +35,6 @@
     </app-shared-table>
   </p-card>
 </section>
-
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
-  [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
-  [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
-  <p-card class="feature-card filter-drawer-card">
-    <section class="filter-panel filter-panel-compact">
-      <div class="filter-panel-header">
-        <div>
-          <h2>{{ filterTitle }}</h2>
-        </div>
-      </div>
-
-      <section class="field-grid">
-        <app-text-field label="Tax Name" inputId="taxName" placeholder="Search tax name" [model]="filterTaxName"
-          (modelChange)="filterTaxName = $event" />
-      </section>
-
-      <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (primaryClick)="searchTaxes()" (secondaryClick)="resetForm()" />
-    </section>
-  </p-card>
-</p-dialog>
 @if (showAddNewButton) {
 <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
@@ -68,18 +46,25 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
+    @if (userDetails.RoleId === 1) {
+      <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
+        [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+        errorMessage="Organization is required." [numberValue]="true" [model]="dialogOrganization"
+        (modelChange)="dialogOrganization = $event" />
+    }
+
     <app-text-field label="Tax Code" inputId="dialog-taxCode" [showRequiredMark]="true" placeholder="Enter tax code"
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
-      [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
+      [model]="dialogTaxCode" (modelChange)="dialogTaxCode = $event" />
 
     <app-text-field label="Tax Name" inputId="dialog-taxName" [showRequiredMark]="true" placeholder="Enter tax name"
       [required]="true" [maxlength]="200" [submitted]="dialogSubmitted" errorMessage="Name is required."
-      [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
+      [model]="dialogTaxName" (modelChange)="dialogTaxName = $event" />
 
     <app-text-field label="Tax Percentage" inputId="dialog-taxRate" [showRequiredMark]="true" placeholder="Enter tax percentage" type="number" [required]="true"
       [submitted]="dialogSubmitted" [percentageOnly]="true" [showFormatErrorWhileTyping]="true"
       formatErrorMessage="Tax Percentage should be between 0 and 100." errorMessage="{{ rateErrorMessage }}"
-      [model]="dialogModel.percentage.toString()" (modelChange)="onRateChange($event)" />
+      [model]="dialogPercentage" (modelChange)="onRateChange($event)" />
 
   </section>
 

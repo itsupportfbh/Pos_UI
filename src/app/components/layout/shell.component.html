@@ -1,8 +1,10 @@
 <section class="shell-frame">
-  <app-header [appName]="appName" [user]="user" (menuToggle)="onMenuToggle()" (logoutClick)="onLogoutClick()" />
+  <app-header [appName]="appName" [appLogoUrl]="appLogoUrl" [user]="user" (menuToggle)="onMenuToggle()" (logoutClick)="onLogoutClick()" />
 
   <section class="workspace" [class.sidebar-visible]="sidebarOpen">
     <app-menu
+      [appName]="appName"
+      [appLogoUrl]="appLogoUrl"
       [sidebarOpen]="sidebarOpen"
       [activeMenuKey]="activeMenuKey"
       [menuItems]="menuItems"
@@ -16,5 +18,5 @@
     </section>
   </section>
 
-  <app-footer [appName]="appName" [description]="footerDescription" />
+  <app-footer [appName]="appName" [appLogoUrl]="appLogoUrl" [description]="footerDescription" />
 </section>

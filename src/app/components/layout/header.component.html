@@ -11,7 +11,11 @@
     ></button>
 
     <div class="brand-mark">
-      <span class="brand-icon">A</span>
+      @if (appLogoUrl) {
+        <img class="brand-logo" [src]="appLogoUrl" [alt]="appName" />
+      } @else {
+        <span class="brand-icon">{{ (appName || 'A').charAt(0).toUpperCase() }}</span>
+      }
       <div>
         <strong>{{ appName }}</strong>
         <p>POS operations workspace</p>
@@ -24,6 +28,16 @@
       <i class="pi pi-circle-fill"></i>
       <span>{{ connectionLabel }}</span>
     </div>
+    <button
+      pButton
+      type="button"
+      class="theme-toggle"
+      severity="secondary"
+      [icon]="themeButtonIcon"
+      [label]="themeButtonLabel"
+      text="true"
+      (click)="onThemeToggle()"
+    ></button>
     <p-avatar [label]="initials" shape="circle" size="large"></p-avatar>
     <div class="header-user-details">
       <strong>{{ user.name }}</strong>

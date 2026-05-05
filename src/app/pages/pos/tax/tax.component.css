@@ -35,32 +35,6 @@
 }
 
 
-:host ::ng-deep .filter-drawer-dialog {
-  margin: 0;
-}
-
-:host ::ng-deep .filter-drawer-dialog .p-dialog {
-  margin: 0;
-  max-height: 100vh;
-  height: 100vh;
-  border-radius: 0;
-}
-
-:host ::ng-deep .filter-drawer-dialog .p-dialog-content {
-  padding: 1rem;
-  overflow: auto;
-}
-
-.filter-drawer-card {
-  border: 0;
-  box-shadow: none;
-  background: transparent;
-}
-
-:host ::ng-deep .filter-drawer-card .p-card-body {
-  padding: 0;
-}
-
 .status-badge {
   display: inline-flex;
   align-items: center;

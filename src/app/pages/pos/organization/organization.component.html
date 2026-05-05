@@ -31,16 +31,26 @@
       @for (row of tableRows; track row.Id) {
         <article class="organization-card">
           <div class="organization-card-head">
-            <div class="organization-card-copy">
-              <h3 [title]="row.Name || '-'">{{ row.Name || '-' }}</h3>
-              <div class="organization-card-subline">
-                <span class="organization-card-code">{{ row.Code || '-' }}</span>
-                @if (row.Website) {
-                  <span class="organization-card-dot"></span>
-                  <a class="organization-card-website" [href]="getWebsiteUrl(row.Website)" target="_blank" rel="noopener noreferrer">
-                    {{ row.Website }}
-                  </a>
-                }
+            <div class="organization-card-top">
+              @if (row.ImageUrl) {
+                <img class="organization-card-image" [src]="row.ImageUrl" [alt]="row.Name || 'Organization'" />
+              } @else {
+                <div class="organization-card-mark">
+                  {{ (row.Name || 'O').charAt(0).toUpperCase() }}
+                </div>
+              }
+
+              <div class="organization-card-copy">
+                <h3 [title]="row.Name || '-'">{{ row.Name || '-' }}</h3>
+                <div class="organization-card-subline">
+                  <span class="organization-card-code">{{ row.Code || '-' }}</span>
+                  @if (row.Website) {
+                    <span class="organization-card-dot"></span>
+                    <a class="organization-card-website" [href]="getWebsiteUrl(row.Website)" target="_blank" rel="noopener noreferrer">
+                      {{ row.Website }}
+                    </a>
+                  }
+                </div>
               </div>
             </div>
             <div class="organization-card-menu">
@@ -48,13 +58,6 @@
         <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
           (click)="openRowActions(rowMenu, $event, row)"></button>
             </div>
-          </div>
-
-          <div class="organization-card-tags">
-            <span class="status-badge" [class.status-active]="row.Status === 'Active'"
-              [class.status-inactive]="row.Status === 'Inactive'">
-              {{ row.Status }}
-            </span>
           </div>
 
           <div class="organization-card-body">
@@ -66,6 +69,14 @@
             <div class="organization-card-meta-row">
               <span class="organization-card-meta-label">Phone</span>
               <strong>{{ row.Phone || '-' }}</strong>
+            </div>
+
+            <div class="organization-card-meta-row organization-card-status-row">
+              <span class="organization-card-meta-label">Status</span>
+              <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+                [class.status-inactive]="row.Status === 'Inactive'">
+                {{ row.Status }}
+              </span>
             </div>
           </div>
         </article>
@@ -94,9 +105,13 @@
       @if (viewOrganization) {
         <section class="organization-view-shell">
           <div class="organization-view-hero">
-            <div class="organization-view-mark">
-              {{ (viewOrganization.Name || 'O').charAt(0).toUpperCase() }}
-            </div>
+            @if (viewOrganization.ImageUrl) {
+              <img class="organization-view-image" [src]="viewOrganization.ImageUrl" [alt]="viewOrganization.Name || 'Organization'" />
+            } @else {
+              <div class="organization-view-mark">
+                {{ (viewOrganization.Name || 'O').charAt(0).toUpperCase() }}
+              </div>
+            }
             <div class="organization-view-copy">
               <p>Organization</p>
               <h3 [title]="viewOrganization.Name || '-'">{{ viewOrganization.Name || '-' }}</h3>
@@ -293,6 +308,9 @@
       <span>Image Upload</span>
       <input id="dialog-config-image" type="file" accept="image/*" (change)="onConfigImageSelect($event)" />
       <small>{{ configImageName || 'Choose organization logo or brand image' }}</small>
+      @if (configImageUrl) {
+        <img class="image-preview" [src]="configImageUrl" alt="Organization Preview" />
+      }
     </label>
 
     <label class="color-field" for="dialog-theme-color">
@@ -314,7 +332,8 @@
 
   <div class="dialog-actions">
     <app-action-buttons primaryLabel="Save Config" secondaryLabel="Cancel" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times" [secondaryText]="true" [secondaryOutlined]="false"
+      secondaryIcon="pi pi-times" [primaryLoading]="configSaving" [primaryDisabled]="configSaving"
+      [secondaryDisabled]="configSaving" [secondaryText]="true" [secondaryOutlined]="false"
       (primaryClick)="submitConfigDialog()" (secondaryClick)="closeConfigDialog()" />
   </div>
 </p-dialog>

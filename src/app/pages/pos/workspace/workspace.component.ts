@@ -1,11 +1,14 @@
-import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, Inject, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, firstValueFrom } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ShellComponent } from '../../../components/layout/shell.component';
 import { MenuGroup } from '../../../components/layout/menu.model';
 import { ApiMenu, MenuService } from '../../../services/menu.service';
+import { OrganizationService } from '../../../services/organization.service';
+import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
 const LOGIN_SESSION_KEY = 'loginSession';
 const USER_DETAILS_KEY = 'userDetails';
@@ -22,7 +25,8 @@ export class WorkspaceComponent implements OnInit {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly userDetails = this.getUserDetails();
-  readonly appName = 'Unity work POS';
+  appName = this.userDetails.OrganizationName ?? 'Unity work POS';
+  brandLogoUrl = '';
   readonly currentUser = {
     name: this.userDetails.UserName ?? 'User',
     role: this.userDetails.RoleName ?? '',
@@ -37,13 +41,18 @@ export class WorkspaceComponent implements OnInit {
 
   constructor(
     private readonly router: Router,
-    private readonly menuService: MenuService
+    private readonly menuService: MenuService,
+    private readonly organizationService: OrganizationService,
+    private readonly runtimeConfig: RuntimeConfigService,
+    @Inject(DOCUMENT) private readonly document: Document,
+    @Inject(PLATFORM_ID) private readonly platformId: object
   ) {
     this.syncActiveMenu(this.router.url);
     this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)).subscribe((event) => this.syncActiveMenu(event.urlAfterRedirects));
   }
 
   ngOnInit(): void {
+    this.loadorganizationconfig();
     this.loadMenus();
   }
 
@@ -87,6 +96,35 @@ export class WorkspaceComponent implements OnInit {
     this.activeMenuKey = routeSegment && routeSegment !== 'pos' ? routeSegment : 'dashboard';
   }
 
+  async loadorganizationconfig(): Promise<void> {
+    const orgId = Number(this.userDetails.OrgId || 0);
+
+    if (!orgId) {
+      this.applyOrganizationTheme();
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetOrganizationConfigByOrgId(orgId));
+      const config = response?.result;
+
+      if (config) {
+        const themeColor = String(config.ThemeColor ?? config.themeColor ?? '#2f7d57');
+        const fontSize = Number(config.FontSize ?? config.fontSize ?? 14);
+        const image = this.normalizeOrganizationImageValue(String(config.Image ?? config.image ?? ''));
+
+        this.brandLogoUrl = this.getOrganizationLogoUrl(image);
+        this.applyOrganizationTheme(themeColor, fontSize);
+        this.changeDetector.detectChanges();
+        return;
+      }
+    } catch {
+      this.brandLogoUrl = '';
+    }
+
+    this.applyOrganizationTheme();
+  }
+
   private mapMenus(menus: ApiMenu[]): MenuGroup[] {
     return menus
       // .filter((menu) => menu.IsActive)
@@ -103,6 +141,145 @@ export class WorkspaceComponent implements OnInit {
             route: subMenu.Route
           }))
       }));
+  }
+
+  private applyOrganizationTheme(themeColor = '#2f7d57', fontSize = 14): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const root = this.document.documentElement;
+    const palette = this.buildThemePalette(themeColor);
+
+    root.style.setProperty('--app-font-size', `${fontSize || 14}px`);
+    root.style.setProperty('--app-primary', palette.primary);
+    root.style.setProperty('--app-primary-rgb', palette.primaryRgb);
+    root.style.setProperty('--app-primary-strong', palette.primaryStrong);
+    root.style.setProperty('--app-primary-soft', palette.primarySoft);
+    root.style.setProperty('--app-accent', palette.accent);
+    root.style.setProperty('--app-accent-rgb', palette.accentRgb);
+    root.style.setProperty('--app-accent-strong', palette.accentStrong);
+    root.style.setProperty('--app-scrollbar', `rgba(${palette.primaryRgb}, 0.3)`);
+    root.style.setProperty('--app-scrollbar-hover', `rgba(${palette.primaryRgb}, 0.42)`);
+  }
+
+  private buildThemePalette(themeColor: string): any {
+    const primary = this.normalizeHexColor(themeColor);
+    const primaryStrong = this.adjustHexColor(primary, -32);
+    const primarySoft = this.mixHexColor(primary, '#ffffff', 0.88);
+    const accent = this.mixHexColor(primary, '#ffffff', 0.38);
+    const accentStrong = this.adjustHexColor(accent, -18);
+
+    return {
+      primary,
+      primaryRgb: this.hexToRgbValue(primary),
+      primaryStrong,
+      primarySoft,
+      accent,
+      accentRgb: this.hexToRgbValue(accent),
+      accentStrong
+    };
+  }
+
+  private normalizeHexColor(color: string): string {
+    const value = color.trim();
+
+    if (!/^#([A-Fa-f0-9]{6})$/.test(value)) {
+      return '#2f7d57';
+    }
+
+    return value;
+  }
+
+  private adjustHexColor(color: string, amount: number): string {
+    const [red, green, blue] = this.hexToRgb(color);
+
+    return this.rgbToHex(
+      this.clampColor(red + amount),
+      this.clampColor(green + amount),
+      this.clampColor(blue + amount)
+    );
+  }
+
+  private mixHexColor(color: string, mixWith: string, ratio: number): string {
+    const [red, green, blue] = this.hexToRgb(color);
+    const [mixRed, mixGreen, mixBlue] = this.hexToRgb(mixWith);
+
+    return this.rgbToHex(
+      Math.round(red * (1 - ratio) + mixRed * ratio),
+      Math.round(green * (1 - ratio) + mixGreen * ratio),
+      Math.round(blue * (1 - ratio) + mixBlue * ratio)
+    );
+  }
+
+  private hexToRgb(color: string): number[] {
+    const normalizedColor = this.normalizeHexColor(color).replace('#', '');
+
+    return [
+      parseInt(normalizedColor.substring(0, 2), 16),
+      parseInt(normalizedColor.substring(2, 4), 16),
+      parseInt(normalizedColor.substring(4, 6), 16)
+    ];
+  }
+
+  private hexToRgbValue(color: string): string {
+    return this.hexToRgb(color).join(', ');
+  }
+
+  private rgbToHex(red: number, green: number, blue: number): string {
+    return `#${[red, green, blue].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  private clampColor(value: number): number {
+    return Math.max(0, Math.min(255, value));
+  }
+
+  private normalizeOrganizationImageValue(image: string): string {
+    const normalizedImage = image.trim();
+
+    if (!normalizedImage) {
+      return '';
+    }
+
+    if (normalizedImage.includes('/FileUpload/')) {
+      return this.normalizeOrganizationImageValue(normalizedImage.split('/FileUpload/').pop() ?? '');
+    }
+
+    if (normalizedImage.startsWith('FileUpload/')) {
+      return this.normalizeOrganizationImageValue(normalizedImage.substring('FileUpload/'.length));
+    }
+
+    if (normalizedImage.startsWith('/')) {
+      return this.normalizeOrganizationImageValue(normalizedImage.substring(1));
+    }
+
+    if (normalizedImage.startsWith('Organization/Organization/')) {
+      return this.normalizeOrganizationImageValue(normalizedImage.substring('Organization/'.length));
+    }
+
+    return normalizedImage;
+  }
+
+  private getOrganizationLogoUrl(image: string): string {
+    const normalizedImage = this.normalizeOrganizationImageValue(image);
+
+    if (!normalizedImage) {
+      return '';
+    }
+
+    if (/^https?:\/\//i.test(normalizedImage) || normalizedImage.startsWith('data:')) {
+      return normalizedImage;
+    }
+
+    if (normalizedImage.startsWith('Organization/')) {
+      return `${this.runtimeConfig.apiBaseUrl}/FileUpload/${normalizedImage}`;
+    }
+
+    if (normalizedImage.includes('/')) {
+      return `${this.runtimeConfig.apiBaseUrl}/FileUpload/${normalizedImage}`;
+    }
+
+    return `${this.runtimeConfig.apiBaseUrl}/FileUpload/Organization/${normalizedImage}`;
   }
 
   private getUserDetails(): any {

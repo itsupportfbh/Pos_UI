@@ -33,6 +33,21 @@ export interface Organization {
   IsDeleted?: boolean;
 }
 
+export interface OrganizationConfig {
+  Id: number;
+  Image?: string;
+  ImageFile?: File | null;
+  ThemeColor?: string;
+  FontSize: number;
+  OrgId: number;
+  IsActive?: boolean;
+  CreatedBy?: number | null;
+  CreatedDate?: string;
+  UpdatedBy?: number | null;
+  UpdatedDate?: string | null;
+  IsDeleted?: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -69,12 +84,19 @@ export class OrganizationService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
   }
 
+  CreateUpdateOrganizationConfig(payload: FormData): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/${this.controllerPath}/CreateUpdateOrganizationConfig`, payload);
+  }
+
+  GetOrganizationConfigByOrgId(OrgId: number | string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetOrganizationConfigByOrgId?OrgId=${OrgId}`);
+  }
+
+
   private get baseUrl(): string {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
-
-
 
 
 

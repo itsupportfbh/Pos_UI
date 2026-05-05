@@ -1,4 +1,11 @@
 <footer class="app-footer">
-  <span>{{ appName }}</span>
+  <div class="footer-brand">
+    @if (appLogoUrl) {
+      <img class="footer-logo" [src]="appLogoUrl" [alt]="appName" />
+    } @else {
+      <span class="footer-icon">{{ (appName || 'A').charAt(0).toUpperCase() }}</span>
+    }
+    <span>{{ appName }}</span>
+  </div>
   <span>{{ description }}</span>
 </footer>
