@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
@@ -8,8 +8,9 @@ export interface Paymode {
   Id?: number;
   RowNumber?: number;
   Code?: string;
-  Name?: string;
+  Type?: string;
   Remarks?: string;
+  OrgId?: number;
   IsActive?: boolean;
   Status?: string;
   CreatedBy?: number | null;
@@ -38,8 +39,13 @@ export class PaymodeService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(): Observable<ApiListResponse<Paymode>> {
-    return this.http.get<ApiListResponse<Paymode>>(`${this.baseUrl}/${this.controllerPath}/GetAll`);
+  getAll(orgId: number): Observable<ApiListResponse<Paymode>> {
+    const params = new HttpParams().set('orgid', orgId.toString());
+
+    return this.http.get<ApiListResponse<Paymode>>(
+      `${this.baseUrl}/${this.controllerPath}/GetAll`,
+      { params }
+    );
   }
 
   getById(id: number | string): Observable<any> {
