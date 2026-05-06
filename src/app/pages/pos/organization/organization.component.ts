@@ -1,16 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
+import { ToggleSwitch } from 'primeng/toggleswitch';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { firstValueFrom } from 'rxjs';
 import { AppToastService } from '../../../services/app-toast.service';
+import { BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
 import { Organization, OrganizationConfig, OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
@@ -19,16 +23,33 @@ const cityOptions: any[] = [];
 const stateOptions: any[] = [];
 const countryOptions: any[] = [];
 
+const CODE_TEMPLATE_COLUMNS: SharedTableColumn<any>[] = [
+  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
+  { field: 'Name', header: 'Name', sortable: true, width: '16rem' },
+  { field: 'NoOfDigit', header: 'No Of Digit', sortable: true, width: '10rem' },
+  { field: 'StartValue', header: 'Start Value', sortable: true, width: '10rem' },
+  { field: 'Prefix', header: 'Prefix', sortable: true, width: '8rem' },
+  { field: 'CurrentValue', header: 'Current Value', sortable: true, width: '11rem' },
+  { field: 'Suffix', header: 'Suffix', sortable: true, width: '8rem' },
+  {
+    field: 'IsDateMonthYearWise',
+    header: 'Is Year Type',
+    sortable: true,
+    width: '14rem'
+  }
+];
+
 @Component({
   selector: 'app-organization',
   standalone: true,
-  imports: [CommonModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule],
+  imports: [CommonModule, FormsModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, ToggleSwitch, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, SharedTableCellTemplateDirective],
   providers: [ConfirmationService],
   templateUrl: './organization.component.html',
   styleUrl: './organization.component.css'
 })
 export class OrganizationComponent implements OnInit {
   private readonly toast = inject(AppToastService);
+  private readonly branchService = inject(BranchService);
   private readonly organizationService = inject(OrganizationService);
   private readonly commonService = inject(CommonService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -61,6 +82,7 @@ export class OrganizationComponent implements OnInit {
   dialogPostalCode = '';
   dialogRemarks = '';
   showConfigDialog = false;
+  showCodeTemplateDialog = false;
   showViewSidebar = false;
   configId = 0;
   configOrganizationId = 0;
@@ -73,6 +95,19 @@ export class OrganizationComponent implements OnInit {
   configFontSize = '14';
   configSaving = false;
   viewOrganization: any = null;
+  codeTemplateMasterRows: any[] = [];
+  codeTemplateTransactionRows: any[] = [];
+  codeTemplateRows: any[] = [];
+  codeTemplateLoading = false;
+  codeTemplateSaving = false;
+  codeTemplateColumns: SharedTableColumn<any>[] = CODE_TEMPLATE_COLUMNS;
+  codeTemplateOrganizations: any[] = [];
+  codeTemplateBranches: any[] = [];
+  codeTemplateOrganization: SelectFieldValue = null;
+  codeTemplateBranch: SelectFieldValue = null;
+  isCodeTemplateBranchLocked = false;
+  activeCodeTemplateTab: 'master' | 'transaction' = 'master';
+  isCodeTemplateTabChanging = false;
 
   selectedRow: any = null;
   readonly pageTitle = 'Organization';
@@ -87,14 +122,19 @@ export class OrganizationComponent implements OnInit {
   allRows: any[] = [];
   tableRows: any[] = [];
   userDetails: any = {};
+  isSuperAdmin = false;
+  isAdminUser = false;
 
   showAddNewButton = false;
   readonly addNewButtonLabel = 'Add New';
+  readonly addCodeTemplateButtonLabel = 'Add Code Template';
   rowActionItems: MenuItem[] = [];
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.showAddNewButton = this.userDetails.RoleId === 1;
+    this.isSuperAdmin = this.userDetails.RoleId == 1;
+    this.isAdminUser = this.userDetails.IsAdmin == 1;
+    this.showAddNewButton = this.isSuperAdmin;
     this.loadOrganizations();
   }
 
@@ -112,6 +152,151 @@ export class OrganizationComponent implements OnInit {
     this.showAddDialog = true;
 
     void this.loadCountries();
+  }
+
+  openCodeTemplateDialog(): void {
+    const currentOrgId = Number(this.userDetails.OrgId || 0);
+    const currentBranchId = Number(this.userDetails.BranchId || 0);
+
+    this.codeTemplateMasterRows = [];
+    this.codeTemplateTransactionRows = [];
+    this.codeTemplateRows = [];
+    this.codeTemplateOrganizations = [];
+    this.codeTemplateBranches = [];
+    this.codeTemplateOrganization = null;
+    this.codeTemplateBranch = null;
+    this.isCodeTemplateBranchLocked = !this.isSuperAdmin && !this.isAdminUser;
+    this.activeCodeTemplateTab = 'master';
+    this.codeTemplateLoading = !this.isSuperAdmin;
+    this.showCodeTemplateDialog = true;
+
+    setTimeout(() => {
+      void this.initializeCodeTemplateDialog(currentOrgId, currentBranchId);
+    });
+  }
+
+  async initializeCodeTemplateDialog(currentOrgId: number, currentBranchId: number): Promise<void> {
+    if (this.isSuperAdmin) {
+      this.codeTemplateLoading = false;
+      await this.loadCodeTemplateOrganizations();
+    } else if (this.isAdminUser) {
+      this.codeTemplateOrganization = currentOrgId;
+      await this.loadCodeTemplates();
+    } else {
+      this.codeTemplateOrganization = currentOrgId;
+      this.codeTemplateBranch = currentBranchId;
+      await this.loadCodeTemplateBranches(currentOrgId);
+      this.codeTemplateBranch = currentBranchId;
+      await this.loadCodeTemplates();
+    }
+  }
+
+  closeCodeTemplateDialog(): void {
+    this.showCodeTemplateDialog = false;
+  }
+
+  async loadCodeTemplateOrganizations(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.organizationService.getAll());
+      const organizations = response?.result ?? [];
+
+      this.codeTemplateOrganizations = organizations.filter((x: any) => x.IsActive).map((x: any) => ({
+        label: x.Name ?? '',
+        value: x.Id ?? 0
+      }));
+    } catch {
+      this.codeTemplateOrganizations = [];
+      this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+    }
+  }
+
+  async loadCodeTemplateBranches(orgId: number | null): Promise<void> {
+    if (!orgId || orgId === 0) {
+      this.codeTemplateBranches = [];
+      this.codeTemplateBranch = null;
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.branchService.getAll(orgId));
+      const branches = response?.result ?? [];
+
+      this.codeTemplateBranches = branches.filter((x: any) => x.IsActive).map((x: any) => ({
+        label: x.Name ?? '',
+        value: x.Id ?? 0
+      }));
+    } catch {
+      this.codeTemplateBranches = [];
+      this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
+    }
+  }
+
+  async onCodeTemplateOrganizationChange(value: SelectFieldValue): Promise<void> {
+    this.codeTemplateOrganization = value;
+
+    if (this.isCodeTemplateTabChanging) {
+      return;
+    }
+
+    this.codeTemplateBranch = null;
+    this.codeTemplateMasterRows = [];
+    this.codeTemplateTransactionRows = [];
+    this.codeTemplateRows = [];
+
+    if (this.activeCodeTemplateTab === 'transaction') {
+      await this.loadCodeTemplateBranches(Number(value || 0));
+    } else {
+      this.codeTemplateBranches = [];
+    }
+
+    await this.loadCodeTemplates();
+  }
+
+  async onCodeTemplateBranchChange(value: SelectFieldValue): Promise<void> {
+    this.codeTemplateBranch = value;
+
+    if (this.isCodeTemplateTabChanging) {
+      return;
+    }
+
+    await this.loadCodeTemplates();
+  }
+
+  async onCodeTemplateTabChange(tab: 'master' | 'transaction'): Promise<void> {
+    const currentOrgId = Number(this.userDetails.OrgId || 0);
+    const currentBranchId = Number(this.userDetails.BranchId || 0);
+
+    if (this.activeCodeTemplateTab === tab) {
+      return;
+    }
+
+    this.isCodeTemplateTabChanging = true;
+    try {
+      if (tab === 'master') {
+        this.activeCodeTemplateTab = 'master';
+        this.codeTemplateBranch = null;
+        this.codeTemplateBranches = [];
+        this.codeTemplateRows = [];
+        await this.loadCodeTemplates();
+      } else {
+        this.activeCodeTemplateTab = 'transaction';
+        this.codeTemplateRows = [];
+
+        if (this.isSuperAdmin) {
+          await this.loadCodeTemplateBranches(Number(this.codeTemplateOrganization || 0));
+        } else if (this.isAdminUser) {
+          await this.loadCodeTemplateBranches(currentOrgId);
+        } else {
+          this.codeTemplateOrganization = currentOrgId;
+          await this.loadCodeTemplateBranches(currentOrgId);
+          this.codeTemplateBranch = currentBranchId;
+        }
+
+        await this.loadCodeTemplates();
+      }
+    } finally {
+      this.isCodeTemplateTabChanging = false;
+    }
   }
 
   closeAddDialog(): void {
@@ -270,18 +455,19 @@ export class OrganizationComponent implements OnInit {
         ? (response.result ?? [])
         : (response.result ?? []).filter((x: any) => x.Id === Number(this.userDetails.OrgId));
 
-      this.tableRows = organizations.map((x: any) => {
+      const rows = organizations.map((x: any) => {
         x.RowNumber = RowNumber++;
         x.Status = x.IsActive ? 'Active' : 'Inactive';
         x.ImageUrl = '';
         return x;
       });
 
-      for (const row of this.tableRows) {
+      for (const row of rows) {
         row.ImageUrl = await this.getOrganizationConfigImageUrl(Number(row.Id || 0));
       }
 
-      this.allRows = [...this.tableRows];
+      this.allRows = [...rows];
+      this.tableRows = [...rows];
       this.applyCardSearch();
       this.changeDetector.detectChanges();
     } catch {
@@ -380,6 +566,128 @@ export class OrganizationComponent implements OnInit {
     this.showConfigDialog = false;
   }
 
+  async loadCodeTemplates(): Promise<void> {
+    this.codeTemplateLoading = true;
+
+    try {
+      let orgId = 0;
+      let branchId = 0;
+      const isMasterTab = this.activeCodeTemplateTab === 'master';
+
+      if (this.isSuperAdmin) {
+        orgId = Number(this.codeTemplateOrganization || 0);
+
+        if (!orgId) {
+          this.codeTemplateMasterRows = [];
+          this.codeTemplateTransactionRows = [];
+          this.codeTemplateRows = [];
+          this.changeDetector.detectChanges();
+          return;
+        }
+
+        branchId = isMasterTab ? 0 : Number(this.codeTemplateBranch || 0);
+      } else if (this.isAdminUser) {
+        orgId = Number(this.userDetails.OrgId || 0);
+        branchId = isMasterTab ? 0 : Number(this.codeTemplateBranch || 0);
+      } else {
+        orgId = Number(this.userDetails.OrgId || 0);
+        branchId = isMasterTab ? 0 : Number(this.userDetails.BranchId || 0);
+      }
+
+      const response: any = await firstValueFrom(this.organizationService.GetAllCodeTemplate(orgId, branchId, isMasterTab));
+      let RowNumber = 1;
+      const rows = (response?.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        return x;
+      });
+
+      if (isMasterTab) {
+        this.codeTemplateMasterRows = rows;
+        this.codeTemplateRows = [...this.codeTemplateMasterRows];
+      } else {
+        this.codeTemplateTransactionRows = rows;
+        this.codeTemplateRows = [...this.codeTemplateTransactionRows];
+      }
+
+      this.changeDetector.detectChanges();
+    } catch {
+      if (this.activeCodeTemplateTab === 'master') {
+        this.codeTemplateMasterRows = [];
+      } else {
+        this.codeTemplateTransactionRows = [];
+      }
+      this.codeTemplateRows = [];
+      this.changeDetector.detectChanges();
+      this.toast.error('Load Failed', 'Unable to load code templates. Please check and try again.');
+    } finally {
+      this.codeTemplateLoading = false;
+      this.changeDetector.detectChanges();
+    }
+  }
+
+  async submitCodeTemplates(): Promise<void> {
+    this.codeTemplateSaving = true;
+
+    try {
+      let selectedOrgId = 0;
+      let selectedBranchId = 0;
+      const isMasterTab = this.activeCodeTemplateTab === 'master';
+
+      if (this.isSuperAdmin) {
+        selectedOrgId = Number(this.codeTemplateOrganization || 0);
+        selectedBranchId = isMasterTab ? 0 : Number(this.codeTemplateBranch || 0);
+      } else if (this.isAdminUser) {
+        selectedOrgId = Number(this.userDetails.OrgId || 0);
+        selectedBranchId = isMasterTab ? 0 : Number(this.codeTemplateBranch || 0);
+      } else {
+        selectedOrgId = Number(this.userDetails.OrgId || 0);
+        selectedBranchId = isMasterTab ? 0 : Number(this.userDetails.BranchId || 0);
+      }
+
+      if (!selectedOrgId) {
+        this.toast.warn('Select Organization', 'Please select organization first.');
+        return;
+      }
+
+      if (!isMasterTab && !selectedBranchId) {
+        this.toast.warn('Select Branch', 'Please select branch first.');
+        return;
+      }
+
+      const rows = isMasterTab ? this.codeTemplateMasterRows : this.codeTemplateTransactionRows;
+
+      const payload = rows.map((x: any) => ({
+        Id: Number(x.Id || 0),
+        EntityNo: Number(x.EntityNo || 0),
+        Name: x.Name ?? '',
+        NoOfDigit: Number(x.NoOfDigit || 0),
+        StartValue: Number(x.StartValue || 0),
+        Prefix: x.Prefix ?? '',
+        CurrentValue: x.CurrentValue ?? '',
+        Suffix: x.Suffix ?? '',
+        BranchId: selectedBranchId,
+        IsMaster: isMasterTab,
+        IsDateMonthYearWise: Number(x.IsDateMonthYearWise || 0),
+        OrgId: selectedOrgId,
+        IsActive: x.IsActive === true || x.IsActive === 1
+      }));
+
+      const response: any = await firstValueFrom(this.organizationService.CreateCodetemplate(payload));
+
+      if (response?.ErrorInfo?.Message === true) {
+        this.toast.success('Saved', 'Code templates saved successfully.');
+        this.closeCodeTemplateDialog();
+        return;
+      }
+
+      this.toast.error('Save Failed', response?.ErrorInfo?.Message || 'Unable to save code templates.');
+    } catch {
+      this.toast.error('Save Failed', 'Unable to save code templates.');
+    } finally {
+      this.codeTemplateSaving = false;
+    }
+  }
+
   closeViewSidebar(): void {
     this.showViewSidebar = false;
     this.viewOrganization = null;
@@ -445,7 +753,6 @@ export class OrganizationComponent implements OnInit {
     const reader = new FileReader();
     reader.onload = () => {
       this.configImageUrl = String(reader.result ?? '');
-      this.changeDetector.detectChanges();
     };
     reader.readAsDataURL(file);
   }

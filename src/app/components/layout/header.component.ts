@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 type HeaderUser = {
   name: string;
   role: string;
+  imageUrl?: string;
 };
 
 const THEME_MODE_KEY = 'appTheme';

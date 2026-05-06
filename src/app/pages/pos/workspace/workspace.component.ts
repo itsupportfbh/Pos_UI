@@ -27,9 +27,10 @@ export class WorkspaceComponent implements OnInit {
   private readonly userDetails = this.getUserDetails();
   appName = this.userDetails.OrganizationName ?? 'Unity work POS';
   brandLogoUrl = '';
-  readonly currentUser = {
+  currentUser = {
     name: this.userDetails.UserName ?? 'User',
     role: this.userDetails.RoleName ?? '',
+    imageUrl: '',
     email: this.userDetails.UserCode ?? '',
     location: this.userDetails.BranchName ?? ''
   };
@@ -52,6 +53,7 @@ export class WorkspaceComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.currentUser.imageUrl = this.getUserImageUrl(String(this.userDetails.Image ?? this.userDetails.UserImage ?? ''));
     this.loadorganizationconfig();
     this.loadMenus();
   }
@@ -280,6 +282,44 @@ export class WorkspaceComponent implements OnInit {
     }
 
     return `${this.runtimeConfig.apiBaseUrl}/FileUpload/Organization/${normalizedImage}`;
+  }
+
+  private getUserImageUrl(image: string): string {
+    const normalizedImage = image.trim();
+
+    if (!normalizedImage) {
+      return '';
+    }
+
+    if (/^https?:\/\//i.test(normalizedImage) || normalizedImage.startsWith('data:')) {
+      return normalizedImage;
+    }
+
+    let imagePath = normalizedImage;
+
+    if (imagePath.includes('/FileUpload/')) {
+      imagePath = imagePath.split('/FileUpload/').pop() ?? '';
+    }
+
+    imagePath = imagePath.replace(/^\/+/, '');
+
+    while (imagePath.startsWith('FileUpload/')) {
+      imagePath = imagePath.substring('FileUpload/'.length);
+    }
+
+    while (imagePath.startsWith('User/')) {
+      imagePath = imagePath.substring('User/'.length);
+    }
+
+    if (!imagePath) {
+      return '';
+    }
+
+    if (imagePath.includes('/')) {
+      return `${this.runtimeConfig.apiBaseUrl}/FileUpload/${imagePath}`;
+    }
+
+    return `${this.runtimeConfig.apiBaseUrl}/FileUpload/User/${imagePath}`;
   }
 
   private getUserDetails(): any {

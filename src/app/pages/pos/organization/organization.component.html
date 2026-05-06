@@ -21,6 +21,8 @@
           <input id="organization-card-search" type="text" placeholder="Search organizations"
             [value]="cardSearchText" (input)="onCardSearchChange($any($event.target).value)" />
         </label>
+          <button pButton type="button" icon="pi pi-list" [label]="addCodeTemplateButtonLabel" class="p-button-outlined"
+            (click)="openCodeTemplateDialog()"></button>
         @if (showAddNewButton) {
           <button pButton type="button" icon="pi pi-plus" [label]="addNewButtonLabel" (click)="openAddDialog()"></button>
         }
@@ -80,9 +82,7 @@
             </div>
           </div>
         </article>
-      }
-
-      @if (!tableRows.length) {
+      } @empty {
         <div class="organization-card-empty">
           No organizations found.
         </div>
@@ -336,4 +336,88 @@
       [secondaryDisabled]="configSaving" [secondaryText]="true" [secondaryOutlined]="false"
       (primaryClick)="submitConfigDialog()" (secondaryClick)="closeConfigDialog()" />
   </div>
+</p-dialog>
+
+<p-dialog [(visible)]="showCodeTemplateDialog" [modal]="true"
+  [style]="{ width: '96rem', maxWidth: '99vw', height: '92vh' }" styleClass="code-template-dialog"
+  [draggable]="false" [resizable]="false" [closable]="false" (onHide)="closeCodeTemplateDialog()">
+  <ng-template pTemplate="header">
+    <div class="code-template-header">
+      <div class="dialog-copy">
+        <h3>Code Templates</h3>
+        <p>View all code template data for the organization.</p>
+      </div>
+      <div class="code-template-toolbar">
+        <div class="code-template-tabs">
+          <button type="button" class="code-template-tab" [class.active]="activeCodeTemplateTab === 'master'"
+            (click)="onCodeTemplateTabChange('master')">Masters</button>
+          <button type="button" class="code-template-tab" [class.active]="activeCodeTemplateTab === 'transaction'"
+            (click)="onCodeTemplateTabChange('transaction')">Transactions</button>
+        </div>
+
+        @if (isSuperAdmin) {
+          <app-select-field label="Organization" inputId="code-template-organization" placeholder="Choose organization"
+            [options]="codeTemplateOrganizations" [showClear]="false" [filter]="true" [appendTo]="'body'"
+            [numberValue]="true" [model]="codeTemplateOrganization" (modelChange)="onCodeTemplateOrganizationChange($event)" />
+        }
+
+        @if (activeCodeTemplateTab === 'transaction') {
+          <app-select-field label="Branch" inputId="code-template-branch" placeholder="Choose branch"
+            [options]="codeTemplateBranches" [showClear]="false" [filter]="true" [appendTo]="'body'"
+            [numberValue]="true" [disabled]="isCodeTemplateBranchLocked"
+            [model]="codeTemplateBranch" (modelChange)="onCodeTemplateBranchChange($event)" />
+        }
+      </div>
+      <div class="code-template-header-actions">
+        <app-action-buttons primaryLabel="Save" secondaryLabel="Close" primaryIcon="pi pi-save"
+          secondaryIcon="pi pi-times" [showSecondary]="true" [primaryLoading]="codeTemplateSaving"
+          [primaryDisabled]="codeTemplateSaving" [secondaryDisabled]="codeTemplateSaving"
+          [secondaryOutlined]="true" [buttonSize]="'small'"
+          (primaryClick)="submitCodeTemplates()" (secondaryClick)="closeCodeTemplateDialog()" />
+      </div>
+    </div>
+  </ng-template>
+
+  <section class="code-template-panel">
+    @if (codeTemplateLoading) {
+      <div class="code-template-empty">Loading code templates...</div>
+    } @else if (!codeTemplateRows.length) {
+      <div class="code-template-empty">No code templates found.</div>
+    } @else {
+      <app-shared-table [columns]="codeTemplateColumns" [value]="codeTemplateRows" caption="Code Templates"
+        [showAddNewButton]="false" [showFilterButton]="false" [showRowActions]="false" [rows]="10"
+        [globalFilterPlaceholder]="'Search code templates'" [scrollable]="false" [size]="'small'">
+        <ng-template appTableCellTemplate="NoOfDigit" let-row>
+          <input class="code-template-cell-input" type="number" [value]="row.NoOfDigit ?? ''"
+            (input)="row.NoOfDigit = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="StartValue" let-row>
+          <input class="code-template-cell-input" type="number" [value]="row.StartValue ?? ''"
+            (input)="row.StartValue = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="Prefix" let-row>
+          <input class="code-template-cell-input" type="text" [value]="row.Prefix ?? ''"
+            (input)="row.Prefix = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="CurrentValue" let-row>
+          <input class="code-template-cell-input" type="text" [value]="row.CurrentValue ?? ''"
+            (input)="row.CurrentValue = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="Suffix" let-row>
+          <input class="code-template-cell-input" type="text" [value]="row.Suffix ?? ''"
+            (input)="row.Suffix = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="IsDateMonthYearWise" let-row>
+          <div class="code-template-switch-wrap">
+            <p-toggleswitch [(ngModel)]="row.IsDateMonthYearWise" [trueValue]="1" [falseValue]="0" />
+          </div>
+        </ng-template>
+      </app-shared-table>
+    }
+  </section>
 </p-dialog>
