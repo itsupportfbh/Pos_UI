@@ -72,6 +72,7 @@ const currencyDecimalFormatPage = () => import('../currency-decimal-format/curre
 const languagePage = () => import('../language/language.component').then((module) => module.LanguageComponent);
 const paymodePage = () => import('../paymode/paymode.component').then((module) => module.PaymodeComponent);
 const floorPage = () => import('../Floor/floor.component').then((module) => module.FloorComponent);
+const diningTablePage = () => import('../dining-table/dining-table.component').then((module) => module.DiningTableComponent);
 
 export const POS_ROUTES: Routes = [
   {
@@ -91,6 +92,7 @@ export const POS_ROUTES: Routes = [
       { path: 'low-stock', loadComponent: lowStockPage },
       { path: 'customers', loadComponent: customersPage },
       { path: 'floor', loadComponent: floorPage },
+      { path: 'dining-table', loadComponent: diningTablePage },
       { path: 'customer-history', loadComponent: customerHistoryPage },
       { path: 'credit-tracking', loadComponent: creditTrackingPage },
       { path: 'return-refund', loadComponent: returnRefundPage },
@@ -149,7 +151,7 @@ export const POS_ROUTES: Routes = [
       { path: 'caller-id', loadComponent: callerIdPage },
       { path: 'currency-decimal-format', loadComponent: currencyDecimalFormatPage },
       { path: 'language', loadComponent: languagePage },
-      { path: 'Paymode', loadComponent: paymodePage },
+      { path: 'paymode', loadComponent: paymodePage },
     ]
   }
 ];

@@ -32,7 +32,7 @@ export class subCategoryService {
   constructor(
     private readonly http: HttpClient,
     private readonly runtimeConfig: RuntimeConfigService
-  ) {}
+  ) { }
 
   create(payload: subCategory): Observable<any> {
     return this.http.post<any>(
@@ -66,11 +66,11 @@ export class subCategoryService {
     );
   }
 
- delete(id: number | string): Observable<any> {
-  return this.http.delete<any>(
-    `${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`
-  );
-}
+  delete(id: number | string): Observable<any> {
+    return this.http.delete<any>(
+      `${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`
+    );
+  }
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
   }
@@ -79,12 +79,3 @@ export class subCategoryService {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
-
-
-
-
-
-
-
-
-
