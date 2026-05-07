@@ -88,6 +88,7 @@ export class LoginComponent {
       UserCode: selectedUserDetails.UserCode ?? '',
       EmpCode: selectedUserDetails.EmpCode ?? '',
       UserName: selectedUserDetails.UserName ?? '',
+      Image: selectedUserDetails.Image ?? selectedUserDetails.UserImage ?? '',
       RoleId: selectedUserDetails.RoleId ?? '',
       RoleName: selectedUserDetails.RoleName ?? '',
       OrgId: selectedUserDetails.OrgId ?? '',

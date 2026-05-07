@@ -8,6 +8,7 @@ import { MenuGroup } from './menu.model';
 type ShellUser = {
   name: string;
   role: string;
+  imageUrl?: string;
 };
 
 @Component({

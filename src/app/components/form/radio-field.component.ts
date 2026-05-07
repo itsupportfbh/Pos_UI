@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RadioButtonModule } from 'primeng/radiobutton';
-import { FieldOption } from './field-option.model';
+import { FieldOption } from './select-field.component';
 
 @Component({
   selector: 'app-radio-field',

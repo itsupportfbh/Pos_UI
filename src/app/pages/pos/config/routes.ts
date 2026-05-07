@@ -90,7 +90,7 @@ export const POS_ROUTES: Routes = [
       { path: 'current-stock', loadComponent: currentStockPage },
       { path: 'low-stock', loadComponent: lowStockPage },
       { path: 'customers', loadComponent: customersPage },
-      { path: 'Floor', loadComponent: floorPage },
+      { path: 'floor', loadComponent: floorPage },
       { path: 'customer-history', loadComponent: customerHistoryPage },
       { path: 'credit-tracking', loadComponent: creditTrackingPage },
       { path: 'return-refund', loadComponent: returnRefundPage },

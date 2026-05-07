@@ -92,14 +92,21 @@ export class OrganizationService {
     return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetOrganizationConfigByOrgId?OrgId=${OrgId}`);
   }
 
+  CreateCodetemplate(payload: any[]): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/CodeTemplate/CreateCodetemplate`, payload);
+  }
+
+  GetAllCodeTemplate(OrgId: number | string, BranchId: number | string, IsMaster: boolean): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/CodeTemplate/GetAllCodeTemplate?OrgId=${OrgId}&BranchId=${BranchId}&IsMaster=${IsMaster}`);
+  }
+
+  GetLatestCode(EntityNo: number | string, OrgId: number | string, BranchId: number | string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/CodeTemplate/GetLatestCode?EntityNo=${EntityNo}&OrgId=${OrgId}&BranchId=${BranchId}`);
+  }
+
 
   private get baseUrl(): string {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
-
-
-
-
-
 

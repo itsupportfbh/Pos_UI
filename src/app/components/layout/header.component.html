@@ -38,7 +38,11 @@
       text="true"
       (click)="onThemeToggle()"
     ></button>
-    <p-avatar [label]="initials" shape="circle" size="large"></p-avatar>
+    @if (user.imageUrl) {
+      <img class="header-user-image" [src]="user.imageUrl" [alt]="user.name || 'User'" />
+    } @else {
+      <p-avatar [label]="initials" shape="circle" size="large"></p-avatar>
+    }
     <div class="header-user-details">
       <strong>{{ user.name }}</strong>
       <span>{{ user.role }}</span>

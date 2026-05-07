@@ -2,9 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
-import { FieldOption } from './field-option.model';
 
 export type SelectFieldValue = string | number | null;
+export interface FieldOption {
+  label: string | number;
+  value: string | number;
+}
 
 @Component({
   selector: 'app-select-field',

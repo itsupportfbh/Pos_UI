@@ -3,9 +3,8 @@ import { Component } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { AutocompleteFieldComponent } from '../../../components/form/autocomplete-field.component';
-import { SelectFieldComponent } from '../../../components/form/select-field.component';
+import { FieldOption, SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { FieldOption } from '../../../components/form/field-option.model';
 
 type Product = { id: number; name: string; category: string; price: number; stock: number; barcode: string };
 type CartItem = Product & { quantity: number };
