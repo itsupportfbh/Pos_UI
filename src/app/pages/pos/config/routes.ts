@@ -92,7 +92,7 @@ export const POS_ROUTES: Routes = [
       { path: 'low-stock', loadComponent: lowStockPage },
       { path: 'customers', loadComponent: customersPage },
       { path: 'floor', loadComponent: floorPage },
-      { path: 'dining-table', loadComponent: diningTablePage },
+      { path: 'dining-tables', loadComponent: diningTablePage },
       { path: 'customer-history', loadComponent: customerHistoryPage },
       { path: 'credit-tracking', loadComponent: creditTrackingPage },
       { path: 'return-refund', loadComponent: returnRefundPage },
