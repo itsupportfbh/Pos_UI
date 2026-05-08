@@ -2,38 +2,10 @@
   display: block;
 }
 
-:host ::ng-deep .row-action-menu {
-  min-width: 12rem;
-  border-radius: 0.9rem;
-}
-
-:host ::ng-deep .row-action-menu .p-menu-item-link {
-  border-radius: 0.7rem;
-}
-
-:host ::ng-deep .row-action-menu .row-action-edit .p-menu-item-icon {
-  color: #2563eb;
-}
-
-:host ::ng-deep .row-action-menu .row-action-delete .p-menu-item-icon {
-  color: #dc2626;
-}
-
-:host ::ng-deep .row-action-menu .row-action-active .p-menu-item-icon {
-  color: #16a34a;
-}
-
-:host ::ng-deep .row-action-menu .row-action-inactive .p-menu-item-icon {
-  color: #b45309;
-}
-
-.row-action-trigger {
-  color: var(--app-text-muted);
-}
-
-.row-action-trigger:hover {
-  color: var(--app-primary);
-  background: var(--app-primary-soft);
+.hold-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
 }
 
 .status-badge {
@@ -45,17 +17,40 @@
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.01em;
+  border: 1px solid rgba(var(--app-primary-rgb), 0.28);
+  background: var(--app-primary-soft);
+  color: var(--app-primary);
 }
 
-.status-active {
-  border: 1px solid #86efac;
-  background: #dcfce7;
-  color: #166534;
+.row-action-trigger {
+  color: var(--app-text-muted);
 }
 
-.status-inactive {
-  border: 1px solid #fecaca;
-  background: #fee2e2;
-  color: #991b1b;
+.row-action-trigger:hover {
+  color: var(--app-primary);
+  background: var(--app-primary-soft);
+}
+
+:host ::ng-deep .row-action-menu {
+  min-width: 12rem;
+  border-radius: 0.9rem;
+}
+
+:host ::ng-deep .row-action-menu .p-menu-item-link {
+  border-radius: 0.7rem;
+}
+
+:host ::ng-deep .row-action-menu .row-action-delete .p-menu-item-icon {
+  color: #dc2626;
+}
+
+:host ::ng-deep .row-action-menu .row-action-open .p-menu-item-icon {
+  color: var(--app-primary);
+}
+
+@media (max-width: 700px) {
+  .hold-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }

@@ -10,6 +10,7 @@ import { CategoryService } from '../../../services/Category.service';
 import { MenuService } from '../../../services/FoodMenu.service';
 import { OrderHoldService } from '../../../services/order-hold.service';
 import { subCategoryService } from '../../../services/SubCategory.service';
+import { TaxService } from '../../../services/tax.service';
 
 type OrderType = 'Dine In' | 'Take Away' | 'Delivery';
 
@@ -149,6 +150,10 @@ type HeldOrder = {
   GuestCount?: number;
   guestcount?: number;
   guestCount?: number;
+  Itemcount?: number;
+  ItemCount?: number;
+  itemcount?: number;
+  itemCount?: number;
   SubtotalAmount?: number;
   subtotalAmount?: number;
   TaxAmount?: number;
@@ -174,6 +179,7 @@ type HeldOrder = {
   OrderNo?: string;
   orderno?: string;
   Ordernumber?: string;
+  OrderNumber?: string;
   ordernumber?: string;
   orderNumber?: string;
   DiscountAmount?: number;
@@ -253,6 +259,7 @@ export class OrderScreenComponent implements OnInit {
   currentCustomerDetails: CurrentCustomerDetails = this.getDefaultCustomerDetails();
   searchText = '';
   discountPercent = 5;
+  taxPercent = 5;
   cartItems: CartItem[] = [];
   userDetails: any = {};
   orgId = 0;
@@ -265,6 +272,7 @@ export class OrderScreenComponent implements OnInit {
     private readonly subCategoryService: subCategoryService,
     private readonly foodmenuService: MenuService,
     private readonly orderHoldService: OrderHoldService,
+    private readonly taxService: TaxService,
     private readonly router: Router
   ) {}
 
@@ -272,6 +280,7 @@ export class OrderScreenComponent implements OnInit {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.orgId = this.getUserOrgId();
     this.loadOrderScreenData();
+    this.loadTaxPercentage();
     this.restoreHeldOrder();
   }
 
@@ -313,7 +322,7 @@ export class OrderScreenComponent implements OnInit {
   }
 
   get taxAmount(): number {
-    return (this.subtotal - this.discountAmount) * 0.05;
+    return Math.max(this.subtotal - this.discountAmount, 0) * (this.taxPercent / 100);
   }
 
   get grandTotal(): number {
@@ -324,6 +333,22 @@ export class OrderScreenComponent implements OnInit {
     this.loadCategories();
     this.loadSubCategories();
     this.loadMenus();
+  }
+
+  loadTaxPercentage(): void {
+    this.taxService.getAll(this.orgId).subscribe({
+      next: (response: any) => {
+        const activeTax = this.getResultArray(response).find((row) => this.isActiveRow(row));
+        const percentage = this.toNumber(activeTax?.Percentage);
+
+        if (percentage > 0) {
+          this.taxPercent = percentage;
+        }
+      },
+      error: () => {
+        this.toast.warn('Tax Not Loaded', 'Using default tax percentage for this order.');
+      }
+    });
   }
 
   loadCategories(): void {
@@ -624,53 +649,50 @@ export class OrderScreenComponent implements OnInit {
   private buildOrderHoldPayload(orderId: number, orderNo: string, createdDate: string, createdBy: number | null): any {
     const updatedDate = new Date().toISOString();
     const orderItems = this.cartItems.map((item) => ({
-      Id: item.holdItemId ?? 0,
-      Orderid: orderId || 0,
-      Menuitemid: String(item.id),
-      Itemname: item.name,
-      Quantity: item.quantity,
-      Unitprice: item.price,
-      Totalprice: item.price * item.quantity,
-      DiscountAmount: 0,
-      TaxAmount: 0,
-      Modifierdetails: null,
-      Itemstatus: 'Hold',
-      Notes: item.note ?? null,
-      OrgId: this.orgId,
-      IsActive: true,
-      IsDeleted: false,
-      CreatedBy: createdBy,
-      CreatedDate: this.currentCustomerDetails.heldAt || createdDate,
-      UpdatedBy: orderId ? createdBy : null,
-      UpdatedDate: orderId ? updatedDate : null
+      id: item.holdItemId || 0,
+      orderHoldItemId: item.holdItemId || 0,
+      isActive: true,
+      createdBy: createdBy,
+      createdDate: this.currentCustomerDetails.heldAt || createdDate,
+      updatedBy: orderId ? createdBy : null,
+      updatedDate: orderId ? updatedDate : null,
+      isDeleted: false,
+      itemid: item.holdItemId || 0,
+      orderid: orderId || 0,
+      menuitemid: String(item.id),
+      itemname: item.name,
+      quantity: item.quantity,
+      unitprice: item.price,
+      totalprice: item.price * item.quantity,
+      discountAmount: 0,
+      taxAmount: 0,
+      modifierdetails: null,
+      itemstatus: 'Hold',
+      notes: item.note ?? null,
+      orgId: this.orgId,
+      orderHold: null
     }));
 
     return {
-      Id: orderId || 0,
-      Orderid: orderId || 0,
-      Ordernumber: orderNo,
-      CustomerName: this.customerName,
-      Tableid: this.selectedTable,
-      Ordertype: this.activeOrderType,
-      Orderstatus: 'Hold',
-      Guestcount: this.itemCount,
-      SubtotalAmount: this.subtotal,
-      TaxAmount: this.taxAmount,
-      DiscountAmount: this.discountAmount,
-      TotalAmount: this.grandTotal,
-      Shiftid: this.getCurrentShiftId(),
-      OrgId: this.orgId,
-      IsActive: true,
-      IsDeleted: false,
-      CreatedBy: createdBy,
-      CreatedDate: this.currentCustomerDetails.heldAt || createdDate,
-      UpdatedBy: orderId ? createdBy : null,
-      UpdatedDate: orderId ? updatedDate : null,
-      Items: orderItems,
-      items: orderItems,
-      OrderholdItems: orderItems,
-      orderHoldItems: orderItems,
-      OrderHoldItems: orderItems
+      orderId: orderId || 0,
+      ordernumber: orderNo,
+      tableid: this.selectedTable,
+      ordertype: this.activeOrderType,
+      orderstatus: 'Hold',
+      itemcount: this.itemCount,
+      guestcount: this.itemCount,
+      subtotalAmount: this.subtotal,
+      taxAmount: this.taxAmount,
+      discountAmount: this.discountAmount,
+      totalAmount: this.grandTotal,
+      shiftid: this.getCurrentShiftId(),
+      orgId: this.orgId,
+      createdBy: createdBy,
+      createdDate: this.currentCustomerDetails.heldAt || createdDate,
+      updatedBy: orderId ? createdBy : null,
+      updatedDate: orderId ? updatedDate : null,
+      isDeleted: false,
+      items: orderItems
     };
   }
 
@@ -855,7 +877,7 @@ export class OrderScreenComponent implements OnInit {
       this.cartItems = orderItems.map((item) => this.mapHeldItemToCartItem(item));
 
       localStorage.removeItem(ACTIVE_HELD_ORDER_STORAGE_KEY);
-      this.toast.info('Order Opened', `${source.Ordernumber ?? source.ordernumber ?? source.orderNumber ?? source.OrderNo ?? source.orderno ?? source.orderNo ?? 'Held order'} loaded on order screen.`);
+      this.toast.info('Order Opened', `${source.Ordernumber ?? source.OrderNumber ?? source.ordernumber ?? source.orderNumber ?? source.OrderNo ?? source.orderno ?? source.orderNo ?? 'Held order'} loaded on order screen.`);
     } catch {
       localStorage.removeItem(ACTIVE_HELD_ORDER_STORAGE_KEY);
       this.toast.error('Load Failed', 'Unable to open the held order.');
@@ -930,12 +952,12 @@ export class OrderScreenComponent implements OnInit {
       preparationTime: '5 Min',
       quantity: this.toNumber(item.quantity ?? item.Quantity ?? item.qty ?? item.Qty ?? item.Noofitem ?? item.NoOfItem ?? item.noofitem ?? item.noOfItem) || 1,
       note: item.Notes ?? item.notes ?? undefined,
-      holdItemId: this.toNumber(item.OrderHoldItemId ?? item.orderHoldItemId ?? item.Id)
+      holdItemId: this.firstPositiveNumber(item.Itemid, item.ItemId, item.itemid, item.itemId, item.OrderHoldItemId, item.orderHoldItemId, item.Id, item.id)
     };
   }
 
   private getHeldOrderId(order: HeldOrder): number {
-    return this.firstPositiveNumber(order.Id, order.id, order.Orderid, order.OrderId, order.orderid, order.orderId);
+    return this.firstPositiveNumber(order.orderId, order.OrderId, order.Orderid, order.orderid, order.Id, order.id);
   }
 
   private mapHeldOrderToCustomerDetails(order: HeldOrder): CurrentCustomerDetails {
@@ -947,7 +969,7 @@ export class OrderScreenComponent implements OnInit {
       return total + (lineTotal || calculatedLineTotal);
     }, 0);
     const source = order as any;
-    const orderNumber = this.pickString(source.Ordernumber, source.ordernumber, source.orderNumber, source.OrderNo, source.orderno, source.orderNo);
+    const orderNumber = this.pickString(source.Ordernumber, source.OrderNumber, source.ordernumber, source.orderNumber, source.OrderNo, source.orderno, source.orderNo);
     const customerName = this.pickString(
       order.CustomerName,
       order.Customername,
@@ -960,7 +982,7 @@ export class OrderScreenComponent implements OnInit {
     const subtotalAmount = this.toNumber(order.SubtotalAmount ?? order.subtotalAmount) || itemSubtotal;
     const discountAmount = this.toNumber(order.DiscountAmount ?? order.discountAmount);
     const taxAmount = this.toNumber(order.TaxAmount ?? order.taxAmount) ||
-      ((subtotalAmount - discountAmount) * 0.05);
+      (Math.max(subtotalAmount - discountAmount, 0) * (this.taxPercent / 100));
     const totalAmount = this.toNumber(order.TotalAmount ?? order.totalAmount) ||
       (subtotalAmount - discountAmount + taxAmount);
 
@@ -973,7 +995,7 @@ export class OrderScreenComponent implements OnInit {
       addressLine1: this.pickString(order.AddressLine1, order.addressLine1, order.Address, order.address),
       orderType: this.toOrderType(source.Ordertype ?? source.OrderType ?? source.ordertype ?? source.orderType ?? source.Type ?? source.type),
       table: this.pickString(source.Tableid, source.TableId, source.tableid, source.tableId, source.TableNo, source.tableNo, source.TableName, source.tableName, this.selectedTable),
-      guestCount: this.toNumber(order.Guestcount ?? order.GuestCount ?? order.guestcount ?? order.guestCount) ||
+      guestCount: this.toNumber(order.Itemcount ?? order.ItemCount ?? order.itemcount ?? order.itemCount ?? order.Guestcount ?? order.GuestCount ?? order.guestcount ?? order.guestCount) ||
         orderItems.reduce((total, item) => total + (this.toNumber(item.Quantity ?? item.quantity) || 1), 0),
       orderStatus: this.pickString(source.Orderstatus, source.OrderStatus, source.orderstatus, source.orderStatus, source.Status, source.status, 'Hold'),
       subtotalAmount,

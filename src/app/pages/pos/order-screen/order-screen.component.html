@@ -189,7 +189,7 @@
             <strong>-{{ discountAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
           </div>
           <div>
-            <span>Tax 5%</span>
+            <span>Tax {{ taxPercent | number: '1.0-2' }}%</span>
             <strong>{{ taxAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
           </div>
           <div class="grand-total">
