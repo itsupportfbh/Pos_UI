@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MenuGroup } from './menu.model';
+import { MenuChildItem, MenuGroup } from './menu.model';
 
 @Component({
   selector: 'app-menu',
@@ -15,7 +15,7 @@ export class MenuComponent {
   @Input() sidebarOpen = false;
   @Input() activeMenuKey = '';
   @Input() menuItems: MenuGroup[] = [];
-  @Output() menuSelect = new EventEmitter<string>();
+  @Output() menuSelect = new EventEmitter<MenuChildItem | string>();
 
   menuSearchText = '';
   filteredMenuItems: MenuGroup[] = [];
@@ -53,8 +53,8 @@ export class MenuComponent {
     this.applyMenuSearch();
   }
 
-  onSelect(menuKey: string): void {
-    this.menuSelect.emit(menuKey);
+  onSelect(item: MenuChildItem | string): void {
+    this.menuSelect.emit(item);
   }
 
   private applyMenuSearch(): void {

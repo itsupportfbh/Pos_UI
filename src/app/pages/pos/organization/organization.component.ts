@@ -100,6 +100,7 @@ export class OrganizationComponent implements OnInit {
   codeTemplateRows: any[] = [];
   codeTemplateLoading = false;
   codeTemplateSaving = false;
+  codeTemplateSubmitted = false;
   codeTemplateColumns: SharedTableColumn<any>[] = CODE_TEMPLATE_COLUMNS;
   codeTemplateOrganizations: any[] = [];
   codeTemplateBranches: any[] = [];
@@ -165,6 +166,7 @@ export class OrganizationComponent implements OnInit {
     this.codeTemplateBranches = [];
     this.codeTemplateOrganization = null;
     this.codeTemplateBranch = null;
+    this.codeTemplateSubmitted = false;
     this.isCodeTemplateBranchLocked = !this.isSuperAdmin && !this.isAdminUser;
     this.activeCodeTemplateTab = 'master';
     this.codeTemplateLoading = !this.isSuperAdmin;
@@ -193,6 +195,7 @@ export class OrganizationComponent implements OnInit {
 
   closeCodeTemplateDialog(): void {
     this.showCodeTemplateDialog = false;
+    this.codeTemplateSubmitted = false;
   }
 
   async loadCodeTemplateOrganizations(): Promise<void> {
@@ -541,7 +544,7 @@ export class OrganizationComponent implements OnInit {
       const response: any = await firstValueFrom(this.organizationService.GetOrganizationConfigByOrgId(this.configOrganizationId));
       const config = response?.result?.[0] ?? response?.result ?? response ?? {};
 
-      if (config && config.Id ) {
+      if (config && config.Id) {
         this.configId = Number(config.Id ?? config.id ?? 0);
         this.configImage = this.normalizeConfigImageValue(String(config.Image ?? ''));
         this.configImageName = this.getConfigImageFileName(this.configImage);
@@ -598,6 +601,7 @@ export class OrganizationComponent implements OnInit {
       let RowNumber = 1;
       const rows = (response?.result ?? []).map((x: any) => {
         x.RowNumber = RowNumber++;
+        x.IsDateMonthYearWise = x.IsDateMonthYearWise === true;
         return x;
       });
 
@@ -626,6 +630,7 @@ export class OrganizationComponent implements OnInit {
   }
 
   async submitCodeTemplates(): Promise<void> {
+    this.codeTemplateSubmitted = true;
     this.codeTemplateSaving = true;
 
     try {
@@ -667,9 +672,14 @@ export class OrganizationComponent implements OnInit {
         Suffix: x.Suffix ?? '',
         BranchId: selectedBranchId,
         IsMaster: isMasterTab,
-        IsDateMonthYearWise: Number(x.IsDateMonthYearWise || 0),
+        IsDateMonthYearWise: x.IsDateMonthYearWise === true,
         OrgId: selectedOrgId,
-        IsActive: x.IsActive === true || x.IsActive === 1
+        IsActive: x.IsActive === true,
+        IsDeleted: x.IsDeleted === false,
+        CreatedBy: Number(this.userDetails.UserId || 0),
+        CreatedDate: new Date().toISOString(),
+        UpdatedBy: Number(this.userDetails.UserId || 0),
+        UpdatedDate: new Date().toISOString(),
       }));
 
       const response: any = await firstValueFrom(this.organizationService.CreateCodetemplate(payload));
@@ -714,7 +724,7 @@ export class OrganizationComponent implements OnInit {
     try {
       const formData = this.createOrganizationConfigFormData(payload);
       const response: any = await firstValueFrom(this.organizationService.CreateUpdateOrganizationConfig(formData));
-      if (response.ErrorInfo.Message === true ) {
+      if (response.ErrorInfo.Message === true) {
         this.toast.success('Config Saved', `${this.configOrganizationName || this.pageTitle} configuration saved successfully.`);
         this.closeConfigDialog();
         setTimeout(() => {
@@ -722,8 +732,7 @@ export class OrganizationComponent implements OnInit {
         }, 300);
         return;
       }
-      else
-      {
+      else {
         this.toast.error('Save Failed', response.ErrorInfo.Message || 'Unable to save organization configuration.');
       }
 

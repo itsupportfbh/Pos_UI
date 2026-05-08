@@ -3,6 +3,7 @@ export interface MenuChildItem {
   label: string;
   description: string;
   route: string;
+  entityNo: number;
 }
 
 export interface MenuGroup {

@@ -32,6 +32,7 @@ type RoleRow = Role & {
   Status: string;
 };
 
+
 const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
   { field: 'OrganizationName', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
@@ -104,6 +105,7 @@ export class RolesComponent {
   permissionPages: PagePermission[] = [];
   organizationOptions: any[] = [];
   userDetails: any = {};
+  roleEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Roles';
@@ -184,15 +186,18 @@ export class RolesComponent {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Role';
     this.dialogSubtitle = 'Create a new role template.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+
     if (this.userDetails.RoleId === 1) {
-      this.loadOrganizations();
+      await this.loadOrganizations();
+    } else {
+      await this.loadLatestRoleCode(Number(this.userDetails.OrgId || 0));
     }
   }
 
@@ -239,6 +244,21 @@ export class RolesComponent {
       this.organizationOptions = [];
       this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
     }
+  }
+
+  public async onDialogOrganizationChange(value: SelectFieldValue): Promise<void> {
+    this.dialogOrganization = value;
+
+    if (this.isEditMode) {
+      return;
+    }
+
+    if (!value || Number(value) === 0) {
+      this.dialogCode = '';
+      return;
+    }
+
+    await this.loadLatestRoleCode(Number(value));
   }
 
   async submitAddDialog(): Promise<void> {
@@ -505,6 +525,22 @@ export class RolesComponent {
   private getOrganizationName(orgId: number | string | undefined): string {
     const organization = this.organizationOptions.find((x: any) => Number(x.value || 0) === Number(orgId || 0));
     return organization?.label ?? '';
+  }
+
+  private async loadLatestRoleCode(orgId: number): Promise<void> {
+      if (!this.roleEntityNo || !orgId) {
+        this.dialogCode = '';
+        return;
+      }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.roleEntityNo, orgId, 0));
+
+      this.dialogCode = response?.result ?? '';
+    } catch {
+      this.dialogCode = '';
+      this.toast.error('Load Failed', 'Unable to load role code. Please check and try again.');
+    }
   }
 
   resetDialogForm(keepCode: boolean = false): void {

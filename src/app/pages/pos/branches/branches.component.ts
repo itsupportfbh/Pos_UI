@@ -100,6 +100,7 @@ export class BranchesComponent implements OnInit {
   stateOptions = stateOptions;
   countryOptions = countryOptions;
   organizationOptions: any[] = [];
+  branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Branches';
@@ -186,17 +187,21 @@ export class BranchesComponent implements OnInit {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Branch';
     this.dialogSubtitle = 'Create a new branch for the organization.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+
     if (this.userDetails.RoleId === 1) {
-      this.loadOrganizations();
+      await this.loadOrganizations();
+    } else {
+      await this.loadLatestBranchCode(Number(this.userDetails.OrgId || 0));
     }
-     this.loadCountries();
+
+    await this.loadCountries();
   }
 
   closeAddDialog(): void {
@@ -234,6 +239,21 @@ export class BranchesComponent implements OnInit {
       this.organizationOptions = [];
       this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
     }
+  }
+
+  async onDialogOrganizationChange(value: SelectFieldValue): Promise<void> {
+    this.dialogOrganization = value;
+
+    if (this.isEditMode) {
+      return;
+    }
+
+    if (!value || Number(value) === 0) {
+      this.dialogCode = '';
+      return;
+    }
+
+    await this.loadLatestBranchCode(Number(value));
   }
 
   onCountryChange(value: SelectFieldValue): void {
@@ -540,6 +560,22 @@ export class BranchesComponent implements OnInit {
   private getOrganizationName(orgId: number | string | undefined): string {
     const organization = this.organizationOptions.find((x: any) => Number(x.value || 0) === Number(orgId || 0));
     return organization?.label ?? '';
+  }
+
+  private async loadLatestBranchCode(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogCode = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, 0));
+
+      this.dialogCode = response?.result ?? '';
+    } catch {
+      this.dialogCode = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
   }
 
   private isDialogFormValid(): boolean {

@@ -61,16 +61,15 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    @if (userDetails.RoleId === 1) {
-      <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
-        [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
-        errorMessage="Organization is required." [numberValue]="true" [model]="dialogOrganization"
-        (modelChange)="dialogOrganization = $event" />
-    }
+      @if (userDetails.RoleId === 1) {
+        <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
+          [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+          errorMessage="Organization is required." [numberValue]="true" [model]="dialogOrganization"
+          (modelChange)="onDialogOrganizationChange($event)" />
+      }
 
     <app-text-field label="Code" inputId="dialog-code" placeholder="Role Code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required."
-      [textWithNumbersOnly]="true" formatErrorMessage="Code allows text and numbers only."
       [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Name" inputId="dialog-name" placeholder="Role Name" [required]="true"

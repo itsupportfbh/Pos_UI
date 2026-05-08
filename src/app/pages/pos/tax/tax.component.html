@@ -46,12 +46,12 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    @if (userDetails.RoleId === 1) {
-      <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
-        [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
-        errorMessage="Organization is required." [numberValue]="true" [model]="dialogOrganization"
-        (modelChange)="dialogOrganization = $event" />
-    }
+      @if (userDetails.RoleId === 1) {
+        <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
+          [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+          errorMessage="Organization is required." [numberValue]="true" [model]="dialogOrganization"
+          (modelChange)="onOrganizationChange($event)" />
+      }
 
     <app-text-field label="Tax Code" inputId="dialog-taxCode" [showRequiredMark]="true" placeholder="Enter tax code"
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
