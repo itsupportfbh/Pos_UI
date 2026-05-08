@@ -3,23 +3,28 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
 import { RuntimeConfigService } from './runtime-config.service';
+import { subCategory } from './SubCategory.service';
 
-export interface Menu {
-    Id?: number;
-    code?: string;
-    name?: string;
-    categoryId?: number;
-    price: number;
-    OrgId?: number;
-    IsActive?: boolean;
-    CreatedBy?: number | null;
-    CreatedDate?: string;
-    UpdatedBy?: number | null;
-    UpdatedDate?: string | null;
-    IsDeleted?: boolean;
+export interface DiningTable {
+    id?: number;
+    code: string;
+    name: string;
+    seatingSize: number;
+    branchId: number;
+    floorId: number;
+    image?: string;
+    remarks: string;     
+    displayOrder: number;
+    orgId: number;
+    isActive?: boolean;
+    createdBy: number | null;
+    createdDate?: string;
+    updatedBy: number | null;
+    updatedDate?: string;
+    isDeleted?: boolean;
 }
 
-export interface MenuStatusRequest {
+export interface DiningTableStatusRequest {
     id: number | string;
     isActive: boolean;
 }
@@ -27,42 +32,43 @@ export interface MenuStatusRequest {
 @Injectable({
     providedIn: 'root'
 })
-export class MenuService {
-    private readonly controllerPath = 'FoodMenu';
+export class DiningTableService {
+    private readonly controllerPath = 'Tables';
 
     constructor(
         private readonly http: HttpClient,
         private readonly runtimeConfig: RuntimeConfigService
     ) { }
 
-    create(payload: Menu): Observable<any> {
+    create(payload: DiningTable): Observable<any> {
+        console.log('Creating dining table with payload:', payload);
         return this.http.post<any>(
             `${this.baseUrl}/${this.controllerPath}/Create`,
             payload
         );
     }
 
-    update(payload: Menu): Observable<any> {
+    update(payload: DiningTable): Observable<any> {
         return this.http.put<any>(
             `${this.baseUrl}/${this.controllerPath}/Update`,
             payload
         );
     }
 
-    getAll(orgid: number): Observable<ApiListResponse<Menu>> {
+    getAll(orgid: number): Observable<ApiListResponse<DiningTable>> {
         const params = new HttpParams().set('orgid', orgid.toString());
 
-        return this.http.get<ApiListResponse<Menu>>(
-            `${this.baseUrl}/${this.controllerPath}/GetAllMenu`,
+        return this.http.get<ApiListResponse<DiningTable>>(
+            `${this.baseUrl}/${this.controllerPath}/GetAllTable`,
             { params }
         );
     }
 
-    getById(id: number | string): Observable<Menu> {
+    getById(id: number | string): Observable<DiningTable> {
         const params = new HttpParams().set('Id', id.toString());
 
-        return this.http.get<Menu>(
-            `${this.baseUrl}/${this.controllerPath}/GetMenubyId`,
+        return this.http.get<DiningTable>(
+            `${this.baseUrl}/${this.controllerPath}/GetTableById`,
             { params }
         );
     }
@@ -72,21 +78,11 @@ export class MenuService {
             `${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`
         );
     }
-
     activeInActive(id: number | string, isActive: boolean): Observable<any> {
-    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
-  }
+        return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
+    }
 
     private get baseUrl(): string {
         return this.runtimeConfig.apiBaseUrl;
     }
 }
-
-
-
-
-
-
-
-
-

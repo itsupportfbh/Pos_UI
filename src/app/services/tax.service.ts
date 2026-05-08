@@ -6,9 +6,9 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface Tax {
     Id?: number;
-    code?: string;
-    name?: string;
-    percentage: number;
+    Code?: string;
+    Name?: string;
+    Percentage?: number;
     OrgId?: number;
     IsActive?: boolean;
     CreatedBy?: number | null;

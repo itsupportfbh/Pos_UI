@@ -20,6 +20,7 @@ type MenuRow = {
   code: string;
   name: string;
   categoryId: number;
+  price: number;
   orgId: number;
   isActive: boolean;
   createdBy?: number | null;
@@ -38,6 +39,7 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem', hidden: true },
   { field: 'categoryname', header: 'Category', sortable: true, width: '10rem' },
+  { field: 'price', header: 'Price', sortable: true, width: '10rem' },
   {
     field: 'Status',
     header: 'Status',
@@ -93,6 +95,7 @@ export class MenusComponent {
     code: '',
     name: '',
     categoryId: 0,
+    price: 0,
     OrgId: this.OrgId,
     IsActive: true,
     CreatedBy: 1,
@@ -308,6 +311,7 @@ export class MenusComponent {
           code: menu?.code ?? menu?.Code ?? row.code,
           name: menu?.name ?? menu?.Name ?? row.name,
           categoryId: menu?.categoryId ?? menu?.CategoryId ?? row.categoryId,
+          price: menu?.price ?? menu?.Price ?? row.price,
           OrgId: menu?.orgId ?? menu?.OrgId ?? row.orgId,
           IsActive: menu?.isActive ?? menu?.IsActive ?? row.isActive,
           CreatedBy: menu?.createdBy ?? menu?.CreatedBy ?? 1,
@@ -462,6 +466,7 @@ export class MenusComponent {
       code,
       name: '',
       categoryId: 0,
+      price: 0,
       OrgId: this.OrgId,
       IsActive: true,
       CreatedBy: 1,

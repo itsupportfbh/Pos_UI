@@ -183,9 +183,9 @@ export class TaxComponent implements OnInit {
 
         const payload: Tax = {
             Id: this.dialogId,
-            code: this.dialogTaxCode,
-            name: this.dialogTaxName,
-            percentage: Number(this.dialogPercentage || 0),
+            Code: this.dialogTaxCode,
+            Name: this.dialogTaxName,
+            Percentage: Number(this.dialogPercentage || 0),
             OrgId: this.userDetails.RoleId === 1
                 ? Number(this.dialogOrganization || 0)
                 : Number(this.userDetails.OrgId || 0),
@@ -207,15 +207,15 @@ export class TaxComponent implements OnInit {
             }
 
             if (response === 'AlreadyExists' || response?.result === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-                this.toast.warn('Already Exists', `${payload.name || this.pageTitle} already exists. Please use a different name.`);
+                this.toast.warn('Already Exists', `${payload.Name || this.pageTitle} already exists. Please use a different name.`);
                 this.dialogTaxName = '';
                 return;
             }
 
             if (!payload.Id) {
-                this.toast.success('Saved', `${payload.name || this.pageTitle} saved successfully.`);
+                this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
             } else {
-                this.toast.success('Updated', `${payload.name || this.pageTitle} updated successfully.`);
+                this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
             }
 
             this.closeAddDialog();

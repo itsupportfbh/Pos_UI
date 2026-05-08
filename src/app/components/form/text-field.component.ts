@@ -42,11 +42,11 @@ export class TextFieldComponent {
   @Input() minlength?: number;
   @Input() maxlength?: number;
   @Input() inputMode = '';
-  @Input() step?: string;
+  @Input() step?: string | number;
   @Input() min?: number;
   @Input() max?: number;
   @Input() model: string | number = '';
-  @Output() modelChange = new EventEmitter<string>();
+  @Output() modelChange = new EventEmitter<any>();
 
   get showRequiredError(): boolean {
     return this.submitted && this.isRequiredValueMissing;
@@ -72,8 +72,13 @@ export class TextFieldComponent {
     return this.formatErrorMessage || this.activeFormatRule?.message || `${this.label} format is invalid.`;
   }
 
-  onModelChange(value: string): void {
-    this.modelChange.emit(value);
+  onModelChange(value: string | number): void {
+    if (this.type === 'number') {
+      const numericValue = typeof value === 'number' ? value : Number(value);
+      this.modelChange.emit(Number.isNaN(numericValue) ? value : numericValue);
+    } else {
+      this.modelChange.emit(value);
+    }
   }
 
   private get modelValue(): string {

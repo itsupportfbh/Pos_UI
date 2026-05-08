@@ -1,33 +1,126 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
-import { MenuItem, ConfirmationService } from 'primeng/api';
+import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
 
-import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
-import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { AppToastService } from '../../../services/app-toast.service';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { AppToastService } from '../../../services/app-toast.service';
+import { OrderHoldService } from '../../../services/order-hold.service';
 
-type OrderHoldRow = {
-  Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
-  IsActive: boolean;
-  Status: string;
-  RowNumber: number;
+type HeldOrderItem = {
+  itemid?: number;
+  Itemid?: number;
+  itemId?: number;
+  menuitemid?: string;
+  Menuitemid?: string;
+  itemname?: string;
+  Itemname?: string;
+  Quantity?: number;
+  unitprice?: number;
+  Unitprice?: number;
+  totalprice?: number;
+  Totalprice?: number;
+  id: number;
+  name: string;
+  category: string;
+  subCategory: string;
+  price: number;
+  quantity: number;
+  lineTotal: number;
 };
 
-const ORDERHOLD_COLUMNS: SharedTableColumn<OrderHoldRow>[] = [
+type HeldOrder = {
+  Id?: number;
+  orderId?: number;
+  OrderId?: number;
+  Orderid?: number;
+  orderid?: number;
+  ordernumber?: string;
+  Ordernumber?: string;
+  tableid?: string;
+  Tableid?: string;
+  ordertype?: string;
+  Ordertype?: string;
+  orderstatus?: string;
+  Orderstatus?: string;
+  itemcount?: number;
+  Itemcount?: number;
+  itemCount?: number;
+  ItemCount?: number;
+  guestcount?: number;
+  Guestcount?: number;
+  subtotalAmount?: number;
+  SubtotalAmount?: number;
+  TaxAmount?: number;
+  DiscountAmount?: number;
+  totalAmount?: number;
+  TotalAmount?: number;
+  shiftid?: string;
+  Shiftid?: string;
+  orgId?: number;
+  OrgId?: number;
+  IsDeleted?: boolean;
+  CreatedBy?: string;
+  CreatedDate?: string;
+  UpdatedBy?: string | null;
+  UpdatedDate?: string | null;
+  id: number;
+  orderNo: string;
+  orderType: string;
+  table: string;
+  customerName: string;
+  heldAt: string;
+  Items?: HeldOrderItem[];
+  items?: HeldOrderItem[];
+  OrderHoldItems?: HeldOrderItem[];
+  orderHoldItems?: HeldOrderItem[];
+  subtotal: number;
+  discountPercent: number;
+  discountAmount: number;
+  taxAmount: number;
+  grandTotal: number;
+};
+
+type HeldOrderRow = Omit<HeldOrder, 'Items'> & {
+  HoldId: number;
+  RowNumber: number;
+  OrderNo: string;
+  Type: string;
+  Table: string;
+  Status: string;
+  Items: number;
+  Subtotal: number;
+  Tax: number;
+  Discount: number;
+  Total: number;
+  HeldTime: string;
+};
+
+const ACTIVE_HELD_ORDER_STORAGE_KEY = 'activeHeldOrder';
+const HELD_TIME_FORMATTER = new Intl.DateTimeFormat('en-IN', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+});
+
+const ORDER_HOLD_COLUMNS: SharedTableColumn<HeldOrderRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
-  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
+  { field: 'OrderNo', header: 'Order No', sortable: true, width: '13rem' },
+  { field: 'Type', header: 'Type', sortable: true, width: '10rem' },
+  { field: 'Table', header: 'Table', sortable: true, width: '8rem' },
+  { field: 'Status', header: 'Status', sortable: true, width: '8rem' },
+  { field: 'Items', header: 'NOofItems', sortable: true, width: '7rem' },
+  { field: 'Subtotal', header: 'Subtotal', sortable: true, width: '10rem' },
+  { field: 'Tax', header: 'Tax', sortable: true, width: '9rem' },
+  { field: 'Discount', header: 'Discount', sortable: true, width: '10rem' },
+  { field: 'Total', header: 'Total', sortable: true, width: '10rem' },
+  { field: 'HeldTime', header: 'Held Time', sortable: true, width: '14rem' }
 ];
 
 @Component({
@@ -35,302 +128,458 @@ const ORDERHOLD_COLUMNS: SharedTableColumn<OrderHoldRow>[] = [
   standalone: true,
   imports: [
     CommonModule,
-    ConfirmDialogModule,
     ButtonModule,
     CardModule,
-    DialogModule,
-    TextFieldComponent,
-    ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
     SharedTableCellTemplateDirective
   ],
-  providers: [ConfirmationService],
   templateUrl: './order-hold.component.html',
   styleUrl: './order-hold.component.css'
 })
-export class OrderHoldComponent {
-  private readonly toast = inject(AppToastService);
-  private readonly confirmationService = inject(ConfirmationService);
-
-  @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
-
-  showAddDialog = false;
-  showFilterSidebar = false;
-  isEditMode = false;
-  dialogSubmitted = false;
-  selectedRow: OrderHoldRow | null = null;
+export class OrderHoldComponent implements OnInit {
+  heldOrders: HeldOrder[] = [];
+  tableRows: HeldOrderRow[] = [];
+  selectedRow: HeldOrderRow | null = null;
   rowActionItems: MenuItem[] = [];
-  allRows: OrderHoldRow[] = [];
-  tableRows: OrderHoldRow[] = [];
-
-  filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
+  isLoading = false;
+  userDetails: any = {};
+  orgId = 0;
+  totalHeldOrdersCount = 0;
+  totalHeldItemsCount = 0;
+  totalHeldAmountValue = 0;
 
   readonly pageEyebrow = 'POS';
   readonly pageTitle = 'Order Hold';
-  readonly pageSubtitle = 'Manage order hold records here.';
-  readonly filterTitle = 'Order Hold Filters';
-  readonly primaryActionLabel = 'Search Order Hold';
-  readonly secondaryActionLabel = 'Clear Filters';
-  readonly showSecondaryAction = true;
-  dialogTitle = 'Create Order Hold';
-  dialogSubtitle = 'Create a new order hold record.';
-  dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Order Hold';
-  readonly tableCaption = 'Order Hold';
-  tableColumns = ORDERHOLD_COLUMNS;
-  readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
+  readonly pageSubtitle = 'Review held orders with item, quantity, table, and total details.';
+  readonly tableTitle = 'Order Hold List';
+  readonly tableCaption = 'Order Hold List';
+  readonly tableColumns = ORDER_HOLD_COLUMNS;
+  readonly showFilterButton = false;
+  readonly showAddNewButton = false;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  readonly tableDataKey = 'HoldId';
+
+  constructor(
+    private readonly toast: AppToastService,
+    private readonly orderHoldService: OrderHoldService,
+    private readonly router: Router
+  ) {}
 
   ngOnInit(): void {
-    this.loadRows();
-  }
-  loadRows(): void {
-    this.allRows = [];
-    this.tableRows = [];
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.orgId = this.getUserOrgId();
+    this.loadHeldOrders();
   }
 
-  searchRows(): void {
-    const searchText = this.filterSearchText.trim().toLowerCase();
+  get totalHeldOrders(): number {
+    return this.totalHeldOrdersCount;
+  }
 
-    if (!searchText) {
-      this.tableRows = [...this.allRows];
+  get totalHeldItems(): number {
+    return this.totalHeldItemsCount;
+  }
+
+  get totalHeldAmount(): number {
+    return this.totalHeldAmountValue;
+  }
+
+  loadHeldOrders(): void {
+    this.isLoading = true;
+
+    this.orderHoldService.getAll(this.orgId).subscribe({
+      next: (response: any) => {
+        this.heldOrders = this.getResultArray(response);
+        this.rebuildViewModel();
+      },
+      error: () => {
+        this.heldOrders = [];
+        this.tableRows = [];
+        this.totalHeldOrdersCount = 0;
+        this.totalHeldItemsCount = 0;
+        this.totalHeldAmountValue = 0;
+        this.toast.error('Load Failed', 'Unable to load held orders from API.');
+      },
+      complete: () => {
+        this.isLoading = false;
+      }
+    });
+  }
+
+  removeHeldOrder(orderId: number): void {
+    const order = this.heldOrders.find((item) => this.getOrderId(item) === orderId);
+
+    this.orderHoldService.delete(orderId).subscribe({
+      next: () => {
+        this.heldOrders = this.heldOrders.filter((item) => this.getOrderId(item) !== orderId);
+        this.refreshTableRows();
+        this.toast.success('Removed', `${this.getOrderNumber(order)} removed from hold list.`);
+      },
+      error: () => {
+        this.toast.error('Remove Failed', 'Unable to remove held order from API.');
+      }
+    });
+  }
+
+  clearHeldOrders(): void {
+    if (!this.heldOrders.length) {
       return;
     }
 
-    this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
-    );
+    const deleteCalls = this.heldOrders.map((order) => this.orderHoldService.delete(this.getOrderId(order)));
+
+    forkJoin(deleteCalls).subscribe({
+      next: () => {
+        this.heldOrders = [];
+        this.refreshTableRows();
+        this.toast.success('Cleared', 'All held orders cleared.');
+      },
+      error: () => {
+        this.toast.error('Clear Failed', 'Unable to clear held orders from API.');
+      }
+    });
   }
 
-  resetForm(): void {
-    this.filterSearchText = '';
-    this.tableRows = [...this.allRows];
+  backToOrderScreen(): void {
+    this.router.navigate(['/pos/order-screen']);
   }
 
-  openFilterSidebar(): void {
-    this.resetForm();
-    this.showFilterSidebar = true;
-  }
+  openHeldOrder(order: HeldOrder | HeldOrderRow): void {
+    const orderId = this.getOrderDetailId(order);
 
-  closeFilterSidebar(): void {
-    this.showFilterSidebar = false;
-  }
-
-  openAddDialog(): void {
-    this.resetDialogForm();
-    this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
-    this.dialogPrimaryActionLabel = 'Save';
-    this.showAddDialog = true;
-  }
-
-  closeAddDialog(): void {
-    this.resetDialogForm();
-    this.isEditMode = false;
-    this.dialogSubmitted = false;
-    this.showAddDialog = false;
-  }
-
-  submitAddDialog(): void {
-    this.dialogSubmitted = true;
-
-    if (!this.isDialogFormValid()) {
+    if (!orderId) {
+      const orderDetails = this.buildOpenOrderDetails(order, null);
+      localStorage.setItem(ACTIVE_HELD_ORDER_STORAGE_KEY, JSON.stringify(orderDetails));
+      this.router.navigate(['/pos/order-screen']);
       return;
     }
 
-    if (this.isEditMode && this.dialogId) {
-      this.allRows = this.allRows.map((row) => {
-        if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
-        }
-
-        return row;
-      });
-
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
-    } else {
-      this.allRows.unshift({
-        Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
-        IsActive: true,
-        Status: 'Active',
-        RowNumber: 0
-      });
-
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
-    }
-
-    this.refreshRows();
-    this.closeAddDialog();
-  }
-
-  editRow(row: OrderHoldRow): void {
-    this.isEditMode = true;
-    this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
-    this.dialogPrimaryActionLabel = 'Update';
-    this.showAddDialog = true;
-  }
-
-  deleteRow(row: OrderHoldRow): void {
-    this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
-    this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
-  }
-
-  activateRow(row: OrderHoldRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = true;
-        item.Status = 'Active';
+    this.orderHoldService.getAllHoldorderDetails(orderId).subscribe({
+      next: (response: any) => {
+        const orderDetails = this.buildOpenOrderDetails(order, response);
+        localStorage.setItem(ACTIVE_HELD_ORDER_STORAGE_KEY, JSON.stringify(orderDetails));
+        this.router.navigate(['/pos/order-screen']);
+      },
+      error: () => {
+        const orderDetails = this.buildOpenOrderDetails(order, null);
+        localStorage.setItem(ACTIVE_HELD_ORDER_STORAGE_KEY, JSON.stringify(orderDetails));
+        this.router.navigate(['/pos/order-screen']);
+        this.toast.warn('Details Not Loaded', 'Opened the held order from list data. Item details may be incomplete.');
       }
-
-      return item;
     });
-
-    this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
   }
 
-  deactivateRow(row: OrderHoldRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = false;
-        item.Status = 'Inactive';
-      }
-
-      return item;
-    });
-
-    this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
-  }
-
-  openRowActions(menu: any, event: Event, row: OrderHoldRow): void {
+  openRowActions(menu: any, event: Event, row: HeldOrderRow): void {
     this.selectedRow = row;
-    this.rowActionItems = this.getRowActionItems(row);
+    this.rowActionItems = this.getRowActionItems();
     menu.toggle(event);
   }
 
-  confirmDeleteRow(row: OrderHoldRow): void {
-    this.confirmationService.confirm({
-      header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Yes',
-      rejectLabel: 'No',
-      acceptButtonStyleClass: 'p-button-danger',
-      rejectButtonStyleClass: 'p-button-secondary',
-      accept: () => {
-        this.deleteRow(row);
-      }
-    });
+  getItemCount(order: HeldOrder): number {
+    const source = order as any;
+    const items = this.getOrderItems(order);
+    return this.toNumber(source.Itemcount ?? source.itemcount ?? source.ItemCount ?? source.itemCount ?? source.Guestcount ?? source.guestcount ?? source.guestCount) ||
+      items.reduce((total, item: any) => total + this.toNumber(item.quantity ?? item.Quantity), 0);
   }
 
-  confirmActivateRow(row: OrderHoldRow): void {
-    this.confirmationService.confirm({
-      header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Yes',
-      rejectLabel: 'No',
-      acceptButtonStyleClass: 'p-button-success',
-      rejectButtonStyleClass: 'p-button-secondary',
-      accept: () => {
-        this.activateRow(row);
-      }
-    });
+  getOrderId(order: HeldOrder | HeldOrderRow): number {
+    const source = order as any;
+    return this.firstPositiveNumber(source.Id, source.id, source.HoldId, source.OrderHoldId, source.orderHoldId, source.Orderid, source.OrderId, source.orderid, source.orderId);
   }
 
-  confirmDeactivateRow(row: OrderHoldRow): void {
-    this.confirmationService.confirm({
-      header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Yes',
-      rejectLabel: 'No',
-      acceptButtonStyleClass: 'p-button-warn',
-      rejectButtonStyleClass: 'p-button-secondary',
-      accept: () => {
-        this.deactivateRow(row);
-      }
-    });
+  getOrderDetailId(order: HeldOrder | HeldOrderRow): number {
+    const source = order as any;
+    return this.firstPositiveNumber(source.orderId, source.OrderId, source.Orderid, source.orderid, source.Id, source.id, source.HoldId);
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
-    this.dialogSubmitted = false;
-    this.dialogId = 0;
+  getOrderNumber(order?: HeldOrder | HeldOrderRow): string {
+    const source = order as any;
+    return source?.Ordernumber ?? source?.ordernumber ?? source?.orderNumber ?? source?.OrderNo ?? source?.orderno ?? source?.orderNo ?? 'Held order';
+  }
 
-    if (!keepCode) {
-      this.dialogCode = '';
+  getOrderType(order: HeldOrder): string {
+    const source = order as any;
+    return source.Ordertype ?? source.ordertype ?? source.orderType ?? source.OrderType ?? 'Dine In';
+  }
+
+  getOrderStatus(order: HeldOrder): string {
+    const source = order as any;
+    return source.Orderstatus ?? source.orderstatus ?? source.orderStatus ?? source.OrderStatus ?? 'Hold';
+  }
+
+  getOrderTable(order: HeldOrder): string {
+    const source = order as any;
+    return source.Tableid ?? source.tableid ?? source.tableId ?? source.TableId ?? source.table ?? '-';
+  }
+
+  getOrderHeldDate(order: HeldOrder): string {
+    const source = order as any;
+    return source.CreatedDate ?? source.createdDate ?? source.heldAt ?? '';
+  }
+
+  getOrderSubtotal(order: HeldOrder): number {
+    const source = order as any;
+    return this.toNumber(source.SubtotalAmount ?? source.subtotalAmount ?? source.subtotal);
+  }
+
+  getOrderDiscount(order: HeldOrder): number {
+    const source = order as any;
+    return this.toNumber(source.DiscountAmount ?? source.discountAmount);
+  }
+
+  getOrderTax(order: HeldOrder): number {
+    const source = order as any;
+    return this.toNumber(source.TaxAmount ?? source.taxAmount);
+  }
+
+  getOrderTotal(order: HeldOrder): number {
+    const source = order as any;
+    return this.toNumber(source.TotalAmount ?? source.totalAmount ?? source.grandTotal);
+  }
+
+  formatHeldTime(value: string): string {
+    if (!value) {
+      return '';
     }
 
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    return HELD_TIME_FORMATTER.format(new Date(value));
   }
 
-  private refreshRows(): void {
-    this.allRows = this.allRows.map((row, index) => {
-      row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
-      return row;
+  private refreshTableRows(): void {
+    this.rebuildViewModel();
+  }
+
+  private rebuildViewModel(): void {
+    let totalItems = 0;
+    let totalAmount = 0;
+
+    this.tableRows = this.heldOrders.map((order, index) => {
+      const itemCount = this.getItemCount(order);
+      const orderTotal = this.getOrderTotal(order);
+
+      totalItems += itemCount;
+      totalAmount += orderTotal;
+
+      return this.toTableRow(order, index, itemCount, orderTotal);
     });
 
-    this.searchRows();
+    this.totalHeldOrdersCount = this.heldOrders.length;
+    this.totalHeldItemsCount = totalItems;
+    this.totalHeldAmountValue = totalAmount;
   }
 
-  private isDialogFormValid(): boolean {
-    return this.textFields?.toArray().every((field) => field.isValid) ?? true;
+  private toTableRow(order: HeldOrder, index: number, itemCount = this.getItemCount(order), orderTotal = this.getOrderTotal(order)): HeldOrderRow {
+    return {
+      ...order,
+      HoldId: this.getOrderId(order),
+      RowNumber: index + 1,
+      OrderNo: this.getOrderNumber(order),
+      Type: this.getOrderType(order),
+      Table: this.getOrderTable(order),
+      Status: this.getOrderStatus(order),
+      Items: itemCount,
+      Subtotal: this.getOrderSubtotal(order),
+      Tax: this.getOrderTax(order),
+      Discount: this.getOrderDiscount(order),
+      Total: orderTotal,
+      HeldTime: this.formatHeldTime(this.getOrderHeldDate(order))
+    };
   }
 
-  private getRowActionItems(row: OrderHoldRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+  private getRowActionItems(): MenuItem[] {
+    return [
+      {
+        label: 'Open Order',
+        icon: 'pi pi-arrow-right',
+        styleClass: 'row-action-open',
+        command: () => {
+          if (this.selectedRow) {
+            this.openHeldOrder(this.selectedRow);
+          }
+        }
+      },
+      {
+        label: 'Remove Hold',
+        icon: 'pi pi-trash',
+        styleClass: 'row-action-delete',
+        command: () => {
+          if (this.selectedRow) {
+            this.removeHeldOrder(this.getOrderId(this.selectedRow));
+          }
+        }
+      }
     ];
-
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
-    }
-
-    return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
-    if (!this.selectedRow) {
-      return;
+  private getOrderItems(order: any): any[] {
+    const source = order as any;
+    const items = source.items ??
+      source.Items ??
+      source.orderHoldItems ??
+      source.OrderHoldItems ??
+      source.OrderholdItems ??
+      source.Orderholditems ??
+      source.orderholdItems ??
+      source.orderholditems ??
+      source.orderHoldItem ??
+      source.OrderHoldItem ??
+      source.orderDetails ??
+      source.OrderDetails ??
+      source.details ??
+      source.Details ??
+      [];
+    return Array.isArray(items) ? items : [];
+  }
+
+  private buildOpenOrderDetails(listOrder: HeldOrder | HeldOrderRow, response: any): HeldOrder {
+    const apiResult = response?.result ?? response?.Result ?? response ?? null;
+    const apiOrderDetails = (this.extractOrderHeader(apiResult) ?? listOrder) as HeldOrder;
+    const detailItems = this.extractOrderItems(apiResult, apiOrderDetails, listOrder);
+
+    return {
+      ...listOrder,
+      ...apiOrderDetails,
+      Items: detailItems,
+      items: detailItems,
+      OrderHoldItems: detailItems,
+      orderHoldItems: detailItems
+    };
+  }
+
+  private extractOrderHeader(apiResult: any): HeldOrder | null {
+    if (!apiResult) {
+      return null;
     }
 
-    if (action === 'edit') {
-      this.editRow(this.selectedRow);
-    } else if (action === 'delete') {
-      this.confirmDeleteRow(this.selectedRow);
-    } else if (action === 'activate') {
-      this.confirmActivateRow(this.selectedRow);
-    } else {
-      this.confirmDeactivateRow(this.selectedRow);
+    if (Array.isArray(apiResult)) {
+      return this.findOrderLikeObject(apiResult);
     }
+
+    const source = apiResult as any;
+    const nestedHeader = source.OrderHold ??
+      source.orderHold ??
+      source.Orderhold ??
+      source.orderhold ??
+      source.Order ??
+      source.order ??
+      source.Header ??
+      source.header ??
+      source.Master ??
+      source.master;
+
+    if (Array.isArray(nestedHeader)) {
+      return this.findOrderLikeObject(nestedHeader);
+    }
+
+    if (nestedHeader && typeof nestedHeader === 'object') {
+      return nestedHeader;
+    }
+
+    return this.isOrderLikeObject(source) ? source : null;
+  }
+
+  private extractOrderItems(apiResult: any, apiOrderDetails: HeldOrder, listOrder: HeldOrder | HeldOrderRow): any[] {
+    const resultItems = this.getOrderItems(apiResult as HeldOrder);
+    const detailItems = this.getOrderItems(apiOrderDetails);
+    const listItems = this.getOrderItems(listOrder);
+
+    if (resultItems.length) {
+      return resultItems;
+    }
+
+    if (detailItems.length) {
+      return detailItems;
+    }
+
+    if (Array.isArray(apiResult)) {
+      const itemRows = apiResult.filter((item) => this.isOrderItemLikeObject(item));
+
+      if (itemRows.length) {
+        return itemRows;
+      }
+    }
+
+    return listItems;
+  }
+
+  private findOrderLikeObject(rows: any[]): HeldOrder | null {
+    return rows.find((row) => this.isOrderLikeObject(row)) ?? rows[0] ?? null;
+  }
+
+  private isOrderLikeObject(value: any): boolean {
+    return Boolean(value && typeof value === 'object' && (
+      value.Id !== undefined ||
+      value.id !== undefined ||
+      value.orderId !== undefined ||
+      value.OrderId !== undefined ||
+      value.Orderid !== undefined ||
+      value.orderid !== undefined ||
+      value.Ordernumber !== undefined ||
+      value.ordernumber !== undefined ||
+      value.OrderNo !== undefined ||
+      value.orderNo !== undefined
+    ));
+  }
+
+  private isOrderItemLikeObject(value: any): boolean {
+    return Boolean(value && typeof value === 'object' && (
+      value.Menuitemid !== undefined ||
+      value.menuitemid !== undefined ||
+      value.MenuItemId !== undefined ||
+      value.Itemname !== undefined ||
+      value.itemname !== undefined ||
+      value.ItemName !== undefined ||
+      value.MenuName !== undefined ||
+      value.Quantity !== undefined ||
+      value.quantity !== undefined ||
+      value.qty !== undefined ||
+      value.Unitprice !== undefined ||
+      value.unitprice !== undefined ||
+      value.UnitPrice !== undefined
+    ));
+  }
+
+  private getResultArray(response: any): HeldOrder[] {
+    const result = response?.result ?? response?.Result ?? response ?? [];
+    return Array.isArray(result) ? result : [];
+  }
+
+  private getResultObject(response: any): HeldOrder | null {
+    const result = response?.result ?? response?.Result ?? response ?? null;
+
+    if (Array.isArray(result)) {
+      return result[0] ?? null;
+    }
+
+    return result;
+  }
+
+  private getUserOrgId(): number {
+    return this.toNumber(
+      this.userDetails?.OrgId ??
+      this.userDetails?.orgId ??
+      this.userDetails?.orgid ??
+      this.userDetails?.OrganizationId ??
+      this.userDetails?.organizationId
+    );
+  }
+
+  private toNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private firstPositiveNumber(...values: unknown[]): number {
+    
+    for (const value of values) {
+      const parsed = this.toNumber(value);
+
+      if (parsed > 0) {
+        return parsed;
+      }
+    }
+
+    return 0;
   }
 }
-

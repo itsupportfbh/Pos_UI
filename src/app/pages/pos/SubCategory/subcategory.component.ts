@@ -123,7 +123,7 @@ export class SubCategoryComponent {
 
   ngOnInit(): void { 
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    const userId = Number(this.userDetails.UserId || 0);
+    this.dialogModel.CreatedBy = Number(this.userDetails.UserId || 0);
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.tableColumns = SUBCATEGORY_COLUMNS.map((x: any) => {
       if (x.field === 'organizationname') {

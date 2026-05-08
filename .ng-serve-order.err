@@ -1,0 +1,480 @@
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2345: Argument of type 'string' is not assignable to parameter of type 'MenuCategory'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.html:44:115:
+[37m      44 │ ...tegory === category.name" (click)="selectCategory(category.[32mname[37m)">
+         ╵                                                               [32m~~~~[0m
+
+  Error occurs in the template of component OrderScreenComponent.
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:69:15:
+[37m      69 │   templateUrl: [32m'./order-screen.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG2003: No suitable injection token for parameter 'menuService' of class 'OrderScreenComponent'.
+  Consider using the @Inject decorator to specify an injection token.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:21:
+[37m      96 │     private readonly [32mmenuService[37m: FooMenuService
+         ╵                      [32m~~~~~~~~~~~[0m
+
+  This type does not have a value, so it cannot be used as injection token.
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:34:
+[37m      96 │     private readonly menuService: [32mFooMenuService[37m
+         ╵                                   [32m~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2552: Cannot find name 'FooMenuService'. Did you mean 'MenuService'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:34:
+[37m      96 │     private readonly menuService: [32mFooMenuService[37m
+         ╵                                   [32m~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG2003: No suitable injection token for parameter 'menuService' of class 'OrderScreenComponent'.
+  Consider using the @Inject decorator to specify an injection token.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:21:
+[37m      96 │     private readonly [32mmenuService[37m: FoodMenuService
+         ╵                      [32m~~~~~~~~~~~[0m
+
+  This type does not have a value, so it cannot be used as injection token.
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:34:
+[37m      96 │     private readonly menuService: [32mFoodMenuService[37m
+         ╵                                   [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2552: Cannot find name 'FoodMenuService'. Did you mean 'MenuService'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:34:
+[37m      96 │     private readonly menuService: [32mFoodMenuService[37m
+         ╵                                   [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2724: '"../../../services/FoodMenu.service"' has no exported member named 'FoodMenuService'. Did you mean 'MenuService'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:10:9:
+[37m      10 │ import { [32mFoodMenuService[37m } from '../../../services/FoodMenu.service';
+         ╵          [32m~~~~~~~~~~~~~~~[0m
+
+  'MenuService' is declared here.
+
+    src/app/services/FoodMenu.service.ts:29:13:
+[37m      29 │ export class [32mMenuService[37m {
+         ╵              [32m~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG2003: No suitable injection token for parameter 'menuService' of class 'OrderScreenComponent'.
+  Consider using the @Inject decorator to specify an injection token.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:21:
+[37m      96 │     private readonly [32mmenuService[37m: FoodMenuService
+         ╵                      [32m~~~~~~~~~~~[0m
+
+  This type does not have a value, so it cannot be used as injection token.
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:34:
+[37m      96 │     private readonly menuService: [32mFoodMenuService[37m
+         ╵                                   [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG2003: No suitable injection token for parameter 'menuService' of class 'OrderScreenComponent'.
+  Consider using the @Inject decorator to specify an injection token.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:21:
+[37m      96 │     private readonly [32mmenuService[37m: FoodMenuService
+         ╵                      [32m~~~~~~~~~~~[0m
+
+  This type does not have a value, so it cannot be used as injection token.
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:34:
+[37m      96 │     private readonly menuService: [32mFoodMenuService[37m
+         ╵                                   [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2552: Cannot find name 'FoodMenuService'. Did you mean 'MenuService'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:34:
+[37m      96 │     private readonly menuService: [32mFoodMenuService[37m
+         ╵                                   [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'menuService' does not exist on type 'OrderScreenComponent'. Did you mean 'fomenuService'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:154:18:
+[37m      154 │       menus: this.[32mmenuService[37m.getAll(this.orgId)
+          ╵                   [32m~~~~~~~~~~~[0m
+
+  'fomenuService' is declared here.
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:96:4:
+[37m      96 │     [32mprivate readonly fomenuService: MenuService[37m
+         ╵     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'menuService' does not exist on type 'OrderScreenComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:154:18:
+[37m      154 │       menus: this.[32mmenuService[37m.getAll(this.orgId)
+          ╵                   [32m~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tableColumns' does not exist on type 'OrderScreenComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:7:
+[37m      103 │   this.[32mtableColumns[37m = PAYMODE_COLUMNS.map((x: any) => {
+          ╵        [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'PAYMODE_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:22:
+[37m      103 │   this.tableColumns = [32mPAYMODE_COLUMNS[37m.map((x: any) => {
+          ╵                       [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tableColumns' does not exist on type 'OrderScreenComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:5:
+[37m      103 │ this.[32mtableColumns[37m = PAYMODE_COLUMNS.map((x: any) => {
+          ╵      [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'PAYMODE_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:20:
+[37m      103 │ this.tableColumns = [32mPAYMODE_COLUMNS[37m.map((x: any) => {
+          ╵                     [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'PAYMODE_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:93:16:
+[37m      93 │  tableColumns = [32mPAYMODE_COLUMNS[37m;
+         ╵                 [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'PAYMODE_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:20:
+[37m      103 │ this.tableColumns = [32mPAYMODE_COLUMNS[37m.map((x: any) => {
+          ╵                     [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name '_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:93:16:
+[37m      93 │  tableColumns = [32m_COLUMNS[37m;
+         ╵                 [32m~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'PAYMODE_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:20:
+[37m      103 │ this.tableColumns = [32mPAYMODE_COLUMNS[37m.map((x: any) => {
+          ╵                     [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'ORDER_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:93:16:
+[37m      93 │  tableColumns = [32mORDER_COLUMNS[37m;
+         ╵                 [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'PAYMODE_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:20:
+[37m      103 │ this.tableColumns = [32mPAYMODE_COLUMNS[37m.map((x: any) => {
+          ╵                     [32m~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'ORDER_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:93:16:
+[37m      93 │  tableColumns = [32mORDER_COLUMNS[37m;
+         ╵                 [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'ORDER_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:20:
+[37m      103 │ this.tableColumns = [32mORDER_COLUMNS[37m.map((x: any) => {
+          ╵                     [32m~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2339: Property 'tableColumns' does not exist on type 'OrderScreenComponent'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:5:
+[37m      103 │ this.[32mtableColumns[37m = ORDER_COLUMNS.map((x: any) => {
+          ╵      [32m~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'ORDER_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:20:
+[37m      103 │ this.tableColumns = [32mORDER_COLUMNS[37m.map((x: any) => {
+          ╵                     [32m~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'ORDER_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:93:16:
+[37m      93 │  tableColumns = [32mORDER_COLUMNS[37m;
+         ╵                 [32m~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'ORDER_COLUMNS'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:103:20:
+[37m      103 │ this.tableColumns = [32mORDER_COLUMNS[37m.map((x: any) => {
+          ╵                     [32m~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:399:6:
+[37m      399 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:465:12:
+[37m      465 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:399:6:
+[37m      399 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:465:12:
+[37m      465 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:397:6:
+[37m      397 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:462:12:
+[37m      462 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:397:6:
+[37m      397 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:462:12:
+[37m      462 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:396:6:
+[37m      396 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:460:12:
+[37m      460 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:396:6:
+[37m      396 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:460:12:
+[37m      460 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:396:6:
+[37m      396 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:460:12:
+[37m      460 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:396:6:
+[37m      396 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:460:12:
+[37m      460 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:402:6:
+[37m      402 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:466:12:
+[37m      466 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS1109: Expression expected.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:407:6:
+[37m      407 │       [32m)[37m,
+          ╵       [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnexpected ")"[0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:471:12:
+[37m      471 │             [32m)[37m,
+          ╵             [32m^[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2304: Cannot find name 'de'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-screen/order-screen.component.ts:307:4:
+[37m      307 │     [32mde[37m
+          ╵     [32m~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2307: Cannot find module '../order-hold/order-hold.component' or its corresponding type declarations.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/config/routes.ts:32:35:
+[37m      32 │ ... () => import([32m'../order-hold/order-hold.component'[37m).then((modul...
+         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "../order-hold/order-hold.component"[0m
+
+    src/app/pages/pos/config/routes.ts:30:35:
+[37m      30 │ ... () => import([32m'../order-hold/order-hold.component'[37m).then((modul...
+         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2307: Cannot find module '../order-hold/order-hold.component' or its corresponding type declarations.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/config/routes.ts:32:35:
+[37m      32 │ ... () => import([32m'../order-hold/order-hold.component'[37m).then((modul...
+         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "../order-hold/order-hold.component"[0m
+
+    src/app/pages/pos/config/routes.ts:30:35:
+[37m      30 │ ... () => import([32m'../order-hold/order-hold.component'[37m).then((modul...
+         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2307: Cannot find module '../order-hold/order-hold.component' or its corresponding type declarations.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/config/routes.ts:32:35:
+[37m      32 │ ... () => import([32m'../order-hold/order-hold.component'[37m).then((modul...
+         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "../order-hold/order-hold.component"[0m
+
+    src/app/pages/pos/config/routes.ts:30:35:
+[37m      30 │ ... () => import([32m'../order-hold/order-hold.component'[37m).then((modul...
+         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2307: Cannot find module '../order-hold/order-hold.component' or its corresponding type declarations.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/config/routes.ts:32:35:
+[37m      32 │ ... () => import([32m'../order-hold/order-hold.component'[37m).then((modul...
+         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCould not resolve "../order-hold/order-hold.component"[0m
+
+    src/app/pages/pos/config/routes.ts:30:35:
+[37m      30 │ ... () => import([32m'../order-hold/order-hold.component'[37m).then((modul...
+         ╵                  [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG2008: Could not find stylesheet file './order-hold.component.css'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-hold/order-hold.component.ts:41:12:
+[37m      41 │   styleUrl: [32m'./order-hold.component.css'[37m
+         ╵             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG2008: Could not find stylesheet file './order-hold.component.css'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-hold/order-hold.component.ts:41:12:
+[37m      41 │   styleUrl: [32m'./order-hold.component.css'[37m
+         ╵             [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG2008: Could not find template file './order-hold.component.html'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-hold/order-hold.component.ts:57:15:
+[37m      57 │   templateUrl: [32m'./order-hold.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG2008: Could not find template file './order-hold.component.html'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-hold/order-hold.component.ts:57:15:
+[37m      57 │   templateUrl: [32m'./order-hold.component.html'[37m,
+         ╵                [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m
+[1m[33m[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: SharedTableComponent is not used within the template of OrderHoldComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-hold/order-hold.component.ts:92:4:
+[37m      92 │     [32mSharedTableComponent[37m,
+         ╵     [32m~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: SharedTableCellTemplateDirective is not used within the template of OrderHoldComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/pos/order-hold/order-hold.component.ts:93:4:
+[37m      93 │     [32mSharedTableCellTemplateDirective[37m
+         ╵     [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m

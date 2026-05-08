@@ -1,91 +1,212 @@
-<section class="feature-page">
-  <p-confirmDialog />
-
-  <header class="page-header hero-panel">
+<section class="order-page">
+  <header class="order-header">
     <div>
-      <p class="eyebrow">{{ pageEyebrow }}</p>
-      <h1>{{ pageTitle }}</h1>
-      <p class="page-subtitle">{{ pageSubtitle }}</p>
+      <p class="eyebrow">POS</p>
+      <h1>Order Screen</h1>
+      <p class="page-subtitle">Create dine-in, takeaway, and delivery orders from one focused counter screen.</p>
+    </div>
+
+    <div class="order-stats">
+      <article>
+        <span>Items</span>
+        <strong>{{ itemCount }}</strong>
+      </article>
+      <article>
+        <span>Table</span>
+        <strong>{{ selectedTable }}</strong>
+      </article>
+      <article>
+        <span>Total</span>
+        <strong>{{ grandTotal | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+      </article>
     </div>
   </header>
 
-  <p-card class="feature-card">
-    <div class="section-heading">
-      <div>
-        <h2>{{ tableTitle }}</h2>
-      </div>
-    </div>
+  <section class="order-layout">
+    <section class="menu-panel">
+      <div class="order-tools">
+        <label class="search-field" for="menu-search">
+          <i class="pi pi-search"></i>
+          <input id="menu-search" type="search" placeholder="Search menu items" [value]="searchText" (input)="updateSearchText($event)" />
+        </label>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
-      (toolbarButtonClick)="openAddDialog()">
-      <ng-template #rowActions let-row>
-        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
-
-        <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
-          (click)="openRowActions(rowMenu, $event, row)"></button>
-      </ng-template>
-
-      <ng-template appTableCellTemplate="Status" let-row>
-        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
-          [class.status-inactive]="row.Status === 'Inactive'">
-          {{ row.Status }}
-        </span>
-      </ng-template>
-    </app-shared-table>
-  </p-card>
-</section>
-
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
-  [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
-  [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
-  <p-card class="feature-card filter-drawer-card">
-    <section class="filter-panel filter-panel-compact">
-      <div class="filter-panel-header">
-        <div>
-          <h2>{{ filterTitle }}</h2>
+        <div class="order-type-toggle" aria-label="Order type">
+          @for (orderType of orderTypes; track orderType) {
+            <button type="button" [class.active]="activeOrderType === orderType" (click)="selectOrderType(orderType)">
+              {{ orderType }}
+            </button>
+          }
         </div>
       </div>
 
-      <section class="field-grid">
-        <app-text-field label="Search" inputId="filter-search" placeholder="Search code or name" [model]="filterSearchText"
-          (modelChange)="filterSearchText = $event"></app-text-field>
+      <nav class="category-strip" aria-label="Menu categories">
+        @for (category of categories; track category.id) {
+          <button type="button" [class.active]="activeCategoryId === category.id" (click)="selectCategory(category)">
+            <i [class]="category.icon"></i>
+            <span>{{ category.name }}</span>
+          </button>
+        }
+      </nav>
+
+      <nav class="subcategory-strip" aria-label="Menu subcategories">
+        @for (subCategory of visibleSubCategories; track subCategory.id) {
+          <button type="button" [class.active]="activeSubCategoryId === subCategory.id" (click)="selectSubCategory(subCategory)">
+            {{ subCategory.name }}
+          </button>
+        }
+      </nav>
+
+      <section class="table-strip" aria-label="Tables">
+        @for (table of tables; track table) {
+          <button type="button" [class.active]="selectedTable === table" (click)="selectTable(table)">
+            {{ table }}
+          </button>
+        }
       </section>
 
-      <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()" (secondaryClick)="resetForm()"></app-action-buttons>
+      <section class="menu-grid">
+        @if (isMenuLoading && !allMenuItems.length) {
+          <div class="empty-state">Loading menu items...</div>
+        } @else {
+          @for (item of filteredMenuItems; track item.id) {
+          <article class="menu-card">
+            <div class="menu-card-top">
+              <span>{{ item.category }} / {{ item.subCategory }}</span>
+              @if (item.isPopular) {
+                <p-tag value="Popular" severity="success"></p-tag>
+              }
+            </div>
+
+            <h2>{{ item.name }}</h2>
+            <p>{{ item.preparationTime }} prep</p>
+
+            <div class="menu-card-bottom">
+              <strong>{{ item.price | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+              <button pButton type="button" icon="pi pi-plus" label="Add" (click)="addToCart(item)"></button>
+            </div>
+          </article>
+          } @empty {
+            <div class="empty-state">{{ menuEmptyMessage }}</div>
+          }
+        }
+      </section>
     </section>
-  </p-card>
-</p-dialog>
 
-@if (showAddNewButton) {
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
-  [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
-  <ng-template pTemplate="header">
-    <div class="dialog-copy">
-      <h3>{{ dialogTitle }}</h3>
-      <p>{{ dialogSubtitle }}</p>
-    </div>
-  </ng-template>
+    <aside class="cart-panel">
+      <p-card>
+        <div class="cart-header">
+          <div>
+            <p class="eyebrow">Current Order</p>
+            <h2>{{ activeOrderType }}</h2>
+            @if (currentOrderNumber) {
+              <span>{{ currentOrderNumber }}</span>
+            }
+          </div>
+          <span>{{ customerName }}</span>
+        </div>
 
-  <section class="field-grid dialog-grid">
-    <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
-      [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
+        <section class="customer-details">
+          <div>
+            <span>Customer</span>
+            <strong>{{ currentCustomerDetails.customerName || 'Walk-in Customer' }}</strong>
+          </div>
+          <div>
+            <span>Order No</span>
+            <strong>{{ currentCustomerDetails.orderNumber || '-' }}</strong>
+          </div>
+          <div>
+            <span>Order Type</span>
+            <strong>{{ currentCustomerDetails.orderType }}</strong>
+          </div>
+          <div>
+            <span>Table</span>
+            <strong>{{ currentCustomerDetails.table || selectedTable }}</strong>
+          </div>
+          <div>
+            <span>Guests</span>
+            <strong>{{ itemCount }}</strong>
+          </div>
+          <div>
+            <span>Status</span>
+            <strong>{{ currentCustomerDetails.orderStatus || '-' }}</strong>
+          </div>
+          @if (currentCustomerDetails.mobileNo) {
+            <div>
+              <span>Mobile</span>
+              <strong>{{ currentCustomerDetails.mobileNo }}</strong>
+            </div>
+          }
+          @if (currentCustomerDetails.emailId) {
+            <div>
+              <span>Email</span>
+              <strong>{{ currentCustomerDetails.emailId }}</strong>
+            </div>
+          }
+          @if (currentCustomerDetails.addressLine1) {
+            <div class="customer-details-wide">
+              <span>Address</span>
+              <strong>{{ currentCustomerDetails.addressLine1 }}</strong>
+            </div>
+          }
+        </section>
 
-    <app-text-field label="Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter name"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="200"
-      [model]="dialogName" (modelChange)="dialogName = $event"></app-text-field>
+        <section class="cart-list">
+          @for (item of cartItems; track item.id) {
+            <article class="cart-item">
+              <div class="cart-item-main">
+                <strong>{{ item.name }}</strong>
+                <span>{{ item.price | currency: 'INR' : 'symbol' : '1.2-2' }} each</span>
+              </div>
 
-    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Enter remarks" [maxlength]="250"
-      [model]="dialogRemarks" (modelChange)="dialogRemarks = $event"></app-text-field>
+              <div class="quantity-control">
+                <button type="button" aria-label="Decrease quantity" (click)="decreaseQuantity(item.id)">
+                  <i class="pi pi-minus"></i>
+                </button>
+                <span>{{ item.quantity }}</span>
+                <button type="button" aria-label="Increase quantity" (click)="increaseQuantity(item.id)">
+                  <i class="pi pi-plus"></i>
+                </button>
+              </div>
+
+              <strong class="line-total">{{ item.price * item.quantity | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+
+              <button type="button" class="remove-button" aria-label="Remove item" (click)="removeItem(item.id)">
+                <i class="pi pi-trash"></i>
+              </button>
+            </article>
+          } @empty {
+            <div class="empty-state">No items added yet.</div>
+          }
+        </section>
+
+        <section class="bill-summary">
+          <div>
+            <span>Subtotal</span>
+            <strong>{{ subtotal | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>Discount {{ discountPercent }}%</span>
+            <strong>-{{ discountAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>Tax {{ taxPercent | number: '1.0-2' }}%</span>
+            <strong>{{ taxAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+          </div>
+          <div class="grand-total">
+            <span>Grand Total</span>
+            <strong>{{ grandTotal | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+          </div>
+        </section>
+
+        <div class="cart-actions">
+          <button pButton type="button" icon="pi pi-pause" label="Hold" severity="secondary" [outlined]="true"
+            [disabled]="isHoldingOrder" [loading]="isHoldingOrder" (click)="holdOrder()"></button>
+          <button pButton type="button" icon="pi pi-send" label="Kitchen" (click)="sendToKitchen()"></button>
+          <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>
+        </div>
+
+        <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Order" severity="danger" [text]="true" (click)="clearOrder()"></button>
+      </p-card>
+    </aside>
   </section>
-
-  <div class="dialog-actions">
-    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)"></app-action-buttons>
-  </div>
-</p-dialog>
-}
+</section>

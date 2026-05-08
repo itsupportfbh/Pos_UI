@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
@@ -6,17 +6,93 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface OrderHold {
   Id?: number;
-  RowNumber?: number;
-  Code?: string;
-  Name?: string;
-  Remarks?: string;
+  Orderid?: number;
+  orderId?: number;
+  Ordernumber?: string;
+  ordernumber?: string;
+  Tableid?: string;
+  tableid?: string;
+  Ordertype?: string;
+  ordertype?: string;
+  Orderstatus?: string;
+  orderstatus?: string;
+  Itemcount?: number;
+  itemcount?: number;
+  ItemCount?: number;
+  itemCount?: number;
+  Guestcount?: number;
+  guestcount?: number;
+  SubtotalAmount?: number;
+  subtotalAmount?: number;
+  TaxAmount?: number;
+  taxAmount?: number;
+  DiscountAmount?: number;
+  discountAmount?: number;
+  TotalAmount?: number;
+  totalAmount?: number;
+  Shiftid?: string;
+  shiftid?: string;
+  OrgId?: number;
+  orgId?: number;
   IsActive?: boolean;
-  Status?: string;
-  CreatedBy?: number | null;
-  CreatedDate?: string;
-  UpdatedBy?: number | null;
-  UpdatedDate?: string | null;
+  isActive?: boolean;
   IsDeleted?: boolean;
+  isDeleted?: boolean;
+  CreatedBy?: number | null;
+  createdBy?: number | null;
+  CreatedDate?: string;
+  createdDate?: string;
+  UpdatedBy?: number | null;
+  updatedBy?: number | null;
+  UpdatedDate?: string | null;
+  updatedDate?: string | null;
+  Items?: OrderHoldItem[];
+  items?: OrderHoldItem[];
+  OrderholdItems?: OrderHoldItem[];
+  orderHoldItems?: OrderHoldItem[];
+  OrderHoldItems?: OrderHoldItem[];
+}
+
+export interface OrderHoldItem {
+  Id?: number;
+  itemid?: number;
+  Orderid?: number;
+  orderid?: number;
+  Menuitemid?: string;
+  menuitemid?: string;
+  Itemname?: string;
+  itemname?: string;
+  Quantity?: number;
+  quantity?: number;
+  Unitprice?: number;
+  unitprice?: number;
+  Totalprice?: number;
+  totalprice?: number;
+  DiscountAmount?: number;
+  discountAmount?: number;
+  TaxAmount?: number;
+  taxAmount?: number;
+  Modifierdetails?: string | null;
+  modifierdetails?: string | null;
+  Itemstatus?: string;
+  itemstatus?: string;
+  Notes?: string | null;
+  notes?: string | null;
+  OrgId?: number;
+  orgId?: number;
+  IsActive?: boolean;
+  isActive?: boolean;
+  IsDeleted?: boolean;
+  isDeleted?: boolean;
+  CreatedBy?: number | null;
+  createdBy?: number | null;
+  CreatedDate?: string;
+  createdDate?: string;
+  UpdatedBy?: number | null;
+  updatedBy?: number | null;
+  UpdatedDate?: string | null;
+  updatedDate?: string | null;
+  orderHold?: string | null;
 }
 
 @Injectable({
@@ -38,12 +114,18 @@ export class OrderHoldService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(): Observable<ApiListResponse<OrderHold>> {
-    return this.http.get<ApiListResponse<OrderHold>>(`${this.baseUrl}/${this.controllerPath}/GetAll`);
+  getAll(orgid: number): Observable<ApiListResponse<OrderHold>> {
+    const params = new HttpParams().set('orgid', orgid.toString());
+    return this.http.get<ApiListResponse<OrderHold>>(`${this.baseUrl}/${this.controllerPath}/GetAll`, { params });
   }
 
   getById(id: number | string): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetById?Id=${id}`);
+  }
+
+  getAllHoldorderDetails(id: number | string): Observable<any> {
+    const params = new HttpParams().set('orderId', id.toString());
+    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetAllHoldorderDetails`, { params });
   }
 
   delete(id: number | string): Observable<any> {
@@ -58,8 +140,6 @@ export class OrderHoldService {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
-
-
 
 
 
