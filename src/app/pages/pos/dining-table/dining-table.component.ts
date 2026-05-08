@@ -13,6 +13,9 @@ import { BranchService } from '../../../services/branch.service';
 import { FloorService } from '../../../services/floor.service';
 import { DiningTableService } from '../../../services/diningtable.service';
 import { ConfirmationService, MenuItem } from 'primeng/api';
+import { MenuModule } from 'primeng/menu';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+
 
 type DiningTableRow = {
   id: number;
@@ -26,24 +29,28 @@ type DiningTableRow = {
   displayOrder: number;
   orgId: number;
   isActive: boolean;
-  createdBy?: string;
+  createdBy: number | null;
   createdDate?: string;
-  updatedBy?: string;
+  updatedBy: number | null;
   updatedDate?: string;
   isDeleted?: boolean;
 };
 
-type SelectOption = { label: string | number; value: string | number };
-
 const DINING_TABLE_COLUMNS: SharedTableColumn<DiningTableRow>[] = [
-  { field: 'Code', header: 'Code', width: '8rem' },
-  { field: 'Name', header: 'Name', width: '12rem' },
-  { field: 'SeatingSize', header: 'Capacity', type: 'number', width: '8rem' },
-  { field: 'BranchId', header: 'Branch', width: '10rem' },
-  { field: 'FloorId', header: 'Floor', width: '10rem' },
-  { field: 'IsAvailable', header: 'Available', width: '10rem' },
-  { field: 'IsReservable', header: 'Reservable', width: '10rem' },
-  { field: 'Remarks', header: 'Notes', width: '15rem' }
+  { field: 'code', header: 'Code', sortable: true, width: '8rem' },
+  { field: 'name', header: 'Name', sortable: true, width: '12rem' },
+  { field: 'seatingsize', header: 'Capacity', type: 'number', sortable: true, width: '8rem' },
+  { field: 'branchname', header: 'Branch', sortable: true, width: '10rem' },
+  { field: 'floorname', header: 'Floor', sortable: true, width: '10rem' },
+  { field: 'available', header: 'Available', width: '10rem' },
+  { field: 'reservable', header: 'Reservable', width: '10rem' },
+  { field: 'remarks', header: 'Notes', width: '15rem' },
+  {
+    field: 'Status',
+    header: 'Status',
+    sortable: true,
+    width: '9rem'
+  }
 ];
 
 @Component({
@@ -59,7 +66,9 @@ const DINING_TABLE_COLUMNS: SharedTableColumn<DiningTableRow>[] = [
     SharedTableCellTemplateDirective,
     TextFieldComponent,
     SelectFieldComponent,
-    ActionButtonsComponent
+    ActionButtonsComponent,
+    MenuModule,
+    ConfirmDialogModule
   ],
   providers: [ConfirmationService],
   templateUrl: './dining-table.component.html',
@@ -82,6 +91,8 @@ export class DiningTableComponent {
   dialogSubtitle = 'Create a new dining table.';
   dialogPrimaryActionLabel = 'Save';
   tableColumns = DINING_TABLE_COLUMNS;
+  readonly rowActionHeader = 'Actions';
+  readonly showRowActions = true;
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -97,6 +108,7 @@ export class DiningTableComponent {
   dialogRemarks = '';
   dialogDisplayOrder = 0;
   dialogIsActive = true;
+  dialogcreatedBy = 0;
   allDiningTables: DiningTableRow[] = [];
   tableRows: DiningTableRow[] = [];
   selectedRow: DiningTableRow | null = null;
@@ -120,8 +132,9 @@ export class DiningTableComponent {
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    const userId = Number(this.userDetails.UserId || 0);
+    this.dialogcreatedBy = Number(this.userDetails.UserId || 0);
     this.OrgId = Number(this.userDetails.OrgId || 0);
+    console.log('User Details:', this.OrgId);
     this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
     this.tableColumns = DINING_TABLE_COLUMNS.map((x: any) => {
       if (x.field === 'organizationname') {
@@ -129,7 +142,7 @@ export class DiningTableComponent {
       }
       return x;
     });
-
+    this.loadDiningTables();
     this.loadBranches();
     this.loadFloors();
   }
@@ -222,7 +235,9 @@ export class DiningTableComponent {
       image: this.dialogImage,
       remarks: this.dialogRemarks,
       displayOrder: this.dialogDisplayOrder,
-      orgId: this.OrgId,
+      orgId: Number(this.userDetails.OrgId),
+      createdBy: this.dialogcreatedBy,
+      updatedBy: this.dialogcreatedBy,
       isActive: this.dialogIsActive ?? true,
       isDeleted: false
     };
@@ -282,10 +297,10 @@ export class DiningTableComponent {
         //this.dialogId = category?.id ?? category?.Id ?? row.id,
           this.dialogCode = category?.code ?? category?.Code ?? row.code,
           this.dialogName = category?.name ?? category?.Name ?? row.name,
-          //this.dialogOrgId = category?.orgId ?? category?.OrgId ?? row.orgId,
+          this.dialogSeatingSize = category?.seatingsize ?? category?.seatingsize ?? row.seatingSize,
           this.dialogIsActive = category?.isActive ?? category?.IsActive ?? row.isActive,
           //this.dialogCreatedBy = category?.createdBy ?? category?.CreatedBy ?? 1,
-          //this.dialogCreatedDate = category?.createdDate ?? category?.CreatedDate,
+          //this.dialogcreatedDate = category?.createdDate ?? category?.CreatedDate,
           //this.dialogUpdatedBy = category?.createdBy ?? category?.CreatedBy ?? 1,
           //this.dialogUpdatedDate = category?.updatedDate ?? category?.UpdatedDate,
           //this.dialogIsDeleted = category?.isDeleted ?? category?.IsDeleted ?? false
@@ -401,6 +416,7 @@ export class DiningTableComponent {
   }
 
   private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
+    debugger;
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
@@ -426,7 +442,7 @@ export class DiningTableComponent {
     if (!this.selectedRow) {
       return;
     }
-
+    console.log(`Action: ${action}, Row:`, this.selectedRow);
     if (action === 'edit') {
       this.editRow(this.selectedRow);
     } else if (action === 'delete') {

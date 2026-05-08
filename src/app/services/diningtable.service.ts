@@ -17,9 +17,9 @@ export interface DiningTable {
     displayOrder: number;
     orgId: number;
     isActive?: boolean;
-    createdBy?: string;
+    createdBy: number | null;
     createdDate?: string;
-    updatedBy?: string;
+    updatedBy: number | null;
     updatedDate?: string;
     isDeleted?: boolean;
 }

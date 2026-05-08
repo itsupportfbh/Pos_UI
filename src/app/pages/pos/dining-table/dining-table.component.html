@@ -1,4 +1,6 @@
 <section class="feature-page">
+  <p-confirmDialog />
+
   <header class="page-header hero-panel">
     <div>
       <p class="eyebrow">{{ pageEyebrow }}</p>
@@ -19,12 +21,18 @@
     </div>
 
     <app-shared-table [columns]="tableColumns" [value]="tableRows" [caption]="tableCaption" [showFilterButton]="false"
-      [showAddNewButton]="false" [showRowActions]="false" [paginator]="false">
+      [showAddNewButton]="false" [showRowActions]="showRowActions" [paginator]="false">
       <ng-template appTableCellTemplate="Status" let-row>
-        <span class="status-badge" [class.status-occupied]="row.Status === 'Occupied'"
-          [class.status-available]="row.Status === 'Available'" [class.status-reserved]="row.Status === 'Reserved'">
+        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+          [class.status-inactive]="row.Status === 'Inactive'">
           {{ row.Status }}
         </span>
+      </ng-template>
+      <ng-template #rowActions let-row>
+        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+
+        <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
+          (click)="openRowActions(rowMenu, $event, row)"></button>
       </ng-template>
     </app-shared-table>
   </p-card>

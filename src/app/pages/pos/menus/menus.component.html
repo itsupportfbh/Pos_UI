@@ -82,6 +82,11 @@
       errorMessage="Category is required." [model]="dialogModel.categoryId ?? 0"
       (modelChange)="dialogModel.categoryId = $event" />
 
+    <app-text-field label="Price" inputId="dialog-price" [showRequiredMark]="true"
+      placeholder="Enter price" type="number" [required]="true" [submitted]="dialogSubmitted"
+      [min]="0" [step]="0.01" errorMessage="Price is required and must be a positive number."
+      [model]="dialogModel.price ?? 0" (modelChange)="dialogModel.price = $event" />
+
   </section>
 
 
