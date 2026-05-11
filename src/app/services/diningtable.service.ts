@@ -55,8 +55,12 @@ export class DiningTableService {
         );
     }
 
-    getAll(orgid: number): Observable<ApiListResponse<DiningTable>> {
-        const params = new HttpParams().set('orgid', orgid.toString());
+    getAll(orgid: number, branchid?: number): Observable<ApiListResponse<DiningTable>> {
+        let params = new HttpParams().set('orgid', orgid.toString());
+
+        if (branchid !== undefined && branchid > 0) {
+            params = params.set('branchid', branchid.toString());
+        }
 
         return this.http.get<ApiListResponse<DiningTable>>(
             `${this.baseUrl}/${this.controllerPath}/GetAllTable`,

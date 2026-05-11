@@ -7,6 +7,7 @@ import { TagModule } from 'primeng/tag';
 
 import { AppToastService } from '../../../services/app-toast.service';
 import { CategoryService } from '../../../services/Category.service';
+import { DiningTableService } from '../../../services/diningtable.service';
 import { MenuService } from '../../../services/FoodMenu.service';
 import { OrderHoldService } from '../../../services/order-hold.service';
 import { subCategoryService } from '../../../services/SubCategory.service';
@@ -207,6 +208,7 @@ type CurrentCustomerDetails = {
 
 const ALL_CATEGORY: MenuCategory = { id: 0, name: 'All', icon: 'pi pi-th-large' };
 const ALL_SUBCATEGORY: MenuSubCategory = { id: 0, name: 'All', categoryId: 0 };
+const ALL_TABLE = 'All';
 
 const CATEGORY_ICON_MAP: Record<string, string> = {
   breakfast: 'pi pi-sun',
@@ -235,7 +237,7 @@ const FALLBACK_MENU_CATEGORIES: MenuCategory[] = [
 })
 export class OrderScreenComponent implements OnInit {
   readonly orderTypes: OrderType[] = ['Dine In', 'Take Away', 'Delivery'];
-  readonly tables = ['T-01', 'T-02', 'T-03', 'T-04', 'T-05', 'T-06'];
+  tables: string[] = [];
 
   categories: MenuCategory[] = [ALL_CATEGORY];
   subCategories: MenuSubCategory[] = [ALL_SUBCATEGORY];
@@ -245,6 +247,7 @@ export class OrderScreenComponent implements OnInit {
   isCategoryLoading = false;
   isSubCategoryLoading = false;
   isMenuLoading = false;
+  isTableLoading = false;
   activeCategory = 'All';
   activeCategoryId = 0;
   activeSubCategory = 'All';
@@ -254,7 +257,7 @@ export class OrderScreenComponent implements OnInit {
   activeOrderType: OrderType = 'Dine In';
   currentHeldOrderId = 0;
   currentOrderNumber = '';
-  selectedTable = 'T-03';
+  selectedTable = ALL_TABLE;
   customerName = 'Walk-in Customer';
   currentCustomerDetails: CurrentCustomerDetails = this.getDefaultCustomerDetails();
   searchText = '';
@@ -263,12 +266,14 @@ export class OrderScreenComponent implements OnInit {
   cartItems: CartItem[] = [];
   userDetails: any = {};
   orgId = 0;
+  branchId = 0;
   isHoldingOrder = false;
   private menuLoadingFallback?: ReturnType<typeof setTimeout>;
 
   constructor(
     private readonly toast: AppToastService,
     private readonly categoryService: CategoryService,
+    private readonly diningTableService: DiningTableService,
     private readonly subCategoryService: subCategoryService,
     private readonly foodmenuService: MenuService,
     private readonly orderHoldService: OrderHoldService,
@@ -279,6 +284,7 @@ export class OrderScreenComponent implements OnInit {
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.orgId = this.getUserOrgId();
+    this.branchId = this.getUserBranchId();
     this.loadOrderScreenData();
     this.loadTaxPercentage();
     this.restoreHeldOrder();
@@ -333,6 +339,45 @@ export class OrderScreenComponent implements OnInit {
     this.loadCategories();
     this.loadSubCategories();
     this.loadMenus();
+    this.loadDiningTables();
+  }
+
+  loadDiningTables(): void {
+    this.isTableLoading = true;
+    this.updateLoadingState();
+
+    this.diningTableService.getAll(this.orgId, this.branchId).subscribe({
+      next: (response: any) => {
+        const diningTables = this.getResultArray(response)
+          .filter((row) => this.isActiveRow(row))
+          .filter((row) => this.isCurrentBranchTable(row))
+          .sort((a, b) => this.toNumber(a.displayOrder ?? a.DisplayOrder) - this.toNumber(b.displayOrder ?? b.DisplayOrder))
+          .map((row) => this.getDiningTableLabel(row))
+          .filter((table) => table !== '');
+        this.tables = [ALL_TABLE, ...diningTables];
+
+        if (!this.tables.includes(this.selectedTable)) {
+          this.selectedTable = ALL_TABLE;
+          this.currentCustomerDetails = {
+            ...this.currentCustomerDetails,
+            table: this.selectedTable
+          };
+        }
+      },
+      error: () => {
+        this.tables = [ALL_TABLE];
+        this.selectedTable = ALL_TABLE;
+        this.currentCustomerDetails = {
+          ...this.currentCustomerDetails,
+          table: ALL_TABLE
+        };
+        this.toast.error('Load Failed', 'Unable to load dining tables.');
+      },
+      complete: () => {
+        this.isTableLoading = false;
+        this.updateLoadingState();
+      }
+    });
   }
 
   loadTaxPercentage(): void {
@@ -676,7 +721,7 @@ export class OrderScreenComponent implements OnInit {
     return {
       orderId: orderId || 0,
       ordernumber: orderNo,
-      tableid: this.selectedTable,
+      tableid: this.getSelectedTableForPayload(),
       ordertype: this.activeOrderType,
       orderstatus: 'Hold',
       itemcount: this.itemCount,
@@ -697,56 +742,25 @@ export class OrderScreenComponent implements OnInit {
   }
 
   private mapMenuItem(row: any): MenuItem {
-    const categoryId = this.toNumber(row.categoryId ?? row.CategoryId);
-    const subCategoryId = this.toNumber(
-      row.subCategoryId ??
-      row.SubCategoryId ??
-      row.subcategoryId ??
-      row.SubcategoryId ??
-      row.subCategoryid ??
-      row.Subcategoryid
-    );
+  const categoryId = this.toNumber(row.categoryId);
+  const subCategoryId = this.toNumber(row.subCategoryId);
 
-    return {
-      id: this.toNumber(row.id ?? row.Id),
-      name: String(row.name ?? row.Name ?? row.menuName ?? row.MenuName ?? row.code ?? row.Code ?? 'Menu Item'),
-      category: String(
-        row.categoryname ??
-        row.categoryName ??
-        row.CategoryName ??
-        this.getCategoryName(categoryId)
-      ),
-      categoryId,
-      subCategory: String(
-        row.subcategoryname ??
-        row.subMenuName ??
-        row.SubMenuName ??
-        row.subCategoryName ??
-        row.SubCategoryName ??
-        row.SubcategoryName ??
-        this.getSubCategoryName(subCategoryId)
-      ),
-      subCategoryId,
-      price: this.toNumber(
-        row.subMenuPrice ??
-        row.SubMenuPrice ??
-        row.submenuPrice ??
-        row.SubmenuPrice ??
-        row.price ??
-        row.Price ??
-        row.PRICE ??
-        row.rate ??
-        row.Rate ??
-        row.salesPrice ??
-        row.SalesPrice ??
-        row.menuPrice ??
-        row.MenuPrice
-      ),
-      preparationTime: String(row.preparationTime ?? row.PreparationTime ?? row.prepTime ?? row.PrepTime ?? '5 Min'),
-      isPopular: Boolean(row.isPopular ?? row.IsPopular ?? row.popular ?? false)
-    };
-  }
+  return {
+    id: this.toNumber(row.id),
+    name: row.name || 'Menu Item',
 
+    categoryId: categoryId,
+    category: row.categoryName || this.getCategoryName(categoryId),
+
+    subCategoryId: subCategoryId,
+    subCategory: row.subCategoryName || this.getSubCategoryName(subCategoryId),
+
+    price: this.toNumber(row.price),
+
+    preparationTime: row.preparationTime || '5 Min',
+    isPopular: row.isPopular || false
+  };
+}
   private getCategoryName(categoryId: number): string {
     return this.categories.find((category) => category.id === categoryId)?.name ?? 'Uncategorized';
   }
@@ -806,7 +820,7 @@ export class OrderScreenComponent implements OnInit {
   }
 
   private updateLoadingState(): void {
-    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading;
+    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
   }
 
   private finishMenuLoading(): void {
@@ -830,6 +844,48 @@ export class OrderScreenComponent implements OnInit {
       this.userDetails?.OrganizationId ??
       this.userDetails?.organizationId
     );
+  }
+
+  private getUserBranchId(): number {
+    if (this.toNumber(this.userDetails?.IsAdmin ?? this.userDetails?.isAdmin) === 1) {
+      return 0;
+    }
+
+    return this.toNumber(
+      this.userDetails?.BranchId ??
+      this.userDetails?.branchId ??
+      this.userDetails?.branchid ??
+      this.userDetails?.Branchid ??
+      this.userDetails?.BranchID
+    );
+  }
+
+  private isCurrentBranchTable(row: any): boolean {
+    if (!this.branchId) {
+      return true;
+    }
+
+    const branchId = this.firstPositiveNumber(row.branchId, row.BranchId, row.branchid, row.Branchid, row.BranchID);
+    return !branchId || branchId === this.branchId;
+  }
+
+  private getDiningTableLabel(row: any): string {
+    return this.pickString(
+      row.code,
+      row.Code,
+      row.tableNo,
+      row.TableNo,
+      row.tableName,
+      row.TableName,
+      row.name,
+      row.Name,
+      row.id,
+      row.Id
+    );
+  }
+
+  private getSelectedTableForPayload(): string {
+    return this.selectedTable === ALL_TABLE ? '' : this.selectedTable;
   }
 
   private getCurrentUserId(): number | null {
@@ -906,48 +962,23 @@ export class OrderScreenComponent implements OnInit {
   private mapHeldItemToCartItem(item: HeldOrderItem): CartItem {
     return {
       id: this.toNumber(
-        item.Menuitemid ??
-        item.MenuItemId ??
-        item.menuitemid ??
-        item.menuItemId ??
-        item.menuItemID ??
-        item.Itemid ??
-        item.ItemId ??
-        item.itemid ??
-        item.itemId ??
-        item.MenuId ??
-        item.menuId ??
-        item.id ??
+      
+      //  item.ItemId ??
+      
         item.Id
       ),
       name: this.pickString(
         item.name,
-        item.Itemname,
-        item.ItemName,
-        item.itemname,
-        item.itemName,
-        item.MenuName,
-        item.menuname,
-        item.menuName,
-        item.Menuitemname,
-        item.MenuItemName,
-        item.menuitemname,
-        item.menuItemName,
+       
         'Menu Item'
       ),
       category: this.pickString(item.category, item.Category, item.categoryName, item.CategoryName, 'Uncategorized'),
       categoryId: 0,
-      subCategory: this.pickString(item.subCategory, item.SubCategory, item.subcategory, item.subCategoryName, item.SubCategoryName, 'General'),
+      subCategory: this.pickString(item.subCategoryName, 'General'),
       subCategoryId: 0,
       price: this.toNumber(
-        item.price ??
-        item.Price ??
-        item.Unitprice ??
-        item.UnitPrice ??
-        item.unitprice ??
-        item.unitPrice ??
-        item.rate ??
-        item.Rate
+        item.price 
+        
       ),
       preparationTime: '5 Min',
       quantity: this.toNumber(item.quantity ?? item.Quantity ?? item.qty ?? item.Qty ?? item.Noofitem ?? item.NoOfItem ?? item.noofitem ?? item.noOfItem) || 1,
@@ -971,12 +1002,9 @@ export class OrderScreenComponent implements OnInit {
     const source = order as any;
     const orderNumber = this.pickString(source.Ordernumber, source.OrderNumber, source.ordernumber, source.orderNumber, source.OrderNo, source.orderno, source.orderNo);
     const customerName = this.pickString(
-      order.CustomerName,
-      order.Customername,
+      
       order.customerName,
-      order.customername,
-      order.Name,
-      order.name,
+      
       'Walk-in Customer'
     );
     const subtotalAmount = this.toNumber(order.SubtotalAmount ?? order.subtotalAmount) || itemSubtotal;
