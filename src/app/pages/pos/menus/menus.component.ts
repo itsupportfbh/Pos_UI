@@ -12,6 +12,7 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 import { AppToastService } from '../../../services/app-toast.service';
 import { Menu, MenuService } from '../../../services/FoodMenu.service';
 import { CategoryService } from '../../../services/Category.service';
+import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 
@@ -20,6 +21,7 @@ type MenuRow = {
   code: string;
   name: string;
   categoryId: number;
+  subCategoryId: number;
   price: number;
   orgId: number;
   isActive: boolean;
@@ -39,6 +41,7 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'categoryId', header: 'Category ID', sortable: true, width: '10rem', hidden: true },
   { field: 'categoryname', header: 'Category', sortable: true, width: '10rem' },
+  { field: 'subCategoryName', header: 'SubCategory', sortable: true, width: '10rem' },
   { field: 'price', header: 'Price', sortable: true, width: '10rem' },
   {
     field: 'Status',
@@ -60,6 +63,7 @@ export class MenusComponent {
   private readonly toast = inject(AppToastService);
   private readonly menuService = inject(MenuService);
   private readonly categoryService = inject(CategoryService);
+   private readonly subCategoryService = inject(subCategoryService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
 
@@ -84,6 +88,8 @@ export class MenusComponent {
   editingMenuId: number | null = null;
 
   categoryOptions: any[] = [];
+  subCategoryOptions: any[] = [];
+  allSubCategoryOptions: (subCategory & { id?: number; categoryId?: number })[] = [];
   categoryfilterOptions: any[] = [];
   dialogCategory: number | null = null;
 
@@ -95,6 +101,7 @@ export class MenusComponent {
     code: '',
     name: '',
     categoryId: 0,
+    subCategoryId: 0,
     price: 0,
     OrgId: this.OrgId,
     IsActive: true,
@@ -138,6 +145,7 @@ export class MenusComponent {
     });
 
     this.loadCategories();
+    this.loadSubCategories();
     this.loadFilterCategories();
   }
 
@@ -148,6 +156,41 @@ export class MenusComponent {
         value: item.id
       }));
     });
+  }
+  loadSubCategories(): void {
+    this.subCategoryService.getAll(this.OrgId).subscribe((res: any) => {
+      this.allSubCategoryOptions = (res.result || []).map((item: any) => ({
+        ...item,
+        id: item.id ?? item.Id,
+        categoryId: item.categoryId ?? item.CategoryId
+      }));
+      this.setSubCategoryOptions(this.dialogModel.categoryId ?? 0, false);
+    });
+  }
+
+  onDialogCategoryChange(categoryId: number | null): void {
+    this.dialogModel.categoryId = categoryId ?? 0;
+    this.dialogModel.subCategoryId = 0;
+    this.setSubCategoryOptions(this.dialogModel.categoryId);
+  }
+
+  private setSubCategoryOptions(categoryId: number | null | undefined, resetInvalidSelection = true): void {
+    const selectedCategoryId = Number(categoryId ?? 0);
+
+    this.subCategoryOptions = this.allSubCategoryOptions
+      .filter((item) => !selectedCategoryId || Number(item.categoryId ?? 0) === selectedCategoryId)
+      .map((item: any) => ({
+        label: item.name ?? item.Name,
+        value: item.id ?? item.Id
+      }));
+
+    if (
+      resetInvalidSelection &&
+      this.dialogModel.subCategoryId &&
+      !this.subCategoryOptions.some((option) => Number(option.value) === Number(this.dialogModel.subCategoryId))
+    ) {
+      this.dialogModel.subCategoryId = 0;
+    }
   }
 
   loadFilterCategories() {
@@ -248,6 +291,7 @@ export class MenusComponent {
 
     const payload: Menu = {
       ...this.dialogModel,
+      subCategoryId: Number(this.dialogModel.subCategoryId ?? 0),
       OrgId: this.OrgId,
       IsActive: this.dialogModel.IsActive ?? true,
       IsDeleted: false
@@ -311,6 +355,7 @@ export class MenusComponent {
           code: menu?.code ?? menu?.Code ?? row.code,
           name: menu?.name ?? menu?.Name ?? row.name,
           categoryId: menu?.categoryId ?? menu?.CategoryId ?? row.categoryId,
+          subCategoryId: menu?.subCategoryId ?? menu?.SubCategoryId ?? row.subCategoryId,
           price: menu?.price ?? menu?.Price ?? row.price,
           OrgId: menu?.orgId ?? menu?.OrgId ?? row.orgId,
           IsActive: menu?.isActive ?? menu?.IsActive ?? row.isActive,
@@ -321,6 +366,7 @@ export class MenusComponent {
           IsDeleted: menu?.isDeleted ?? menu?.IsDeleted ?? false
         };
 
+        this.setSubCategoryOptions(this.dialogModel.categoryId, false);
         this.showAddDialog = true;
         //this.toast.info('Edit Mode', `Editing ${row.name}.`);
       },
@@ -466,6 +512,7 @@ export class MenusComponent {
       code,
       name: '',
       categoryId: 0,
+      subCategoryId: 0,
       price: 0,
       OrgId: this.OrgId,
       IsActive: true,
@@ -473,5 +520,6 @@ export class MenusComponent {
       UpdatedBy: 1,
       IsDeleted: false
     };
+    this.setSubCategoryOptions(this.dialogModel.categoryId, false);
   }
 }

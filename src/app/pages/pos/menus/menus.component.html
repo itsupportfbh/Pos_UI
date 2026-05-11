@@ -80,12 +80,17 @@
     <app-select-field label="Category" [showRequiredMark]="true" inputId="dialog-category" placeholder="Select category"
       [options]="categoryOptions" [numberValue]="true" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Category is required." [model]="dialogModel.categoryId ?? 0"
-      (modelChange)="dialogModel.categoryId = $event" />
+      (modelChange)="onDialogCategoryChange($event)" />
+
+      <app-select-field label="SubCategory" [showRequiredMark]="true" inputId="dialog-subcategory" placeholder="Select Subcategory"
+      [options]="subCategoryOptions" [numberValue]="true" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="SubCategory is required." [model]="dialogModel.subCategoryId ?? 0"
+      (modelChange)="dialogModel.subCategoryId = $event" />
 
     <app-text-field label="Price" inputId="dialog-price" [showRequiredMark]="true"
       placeholder="Enter price" type="number" [required]="true" [submitted]="dialogSubmitted"
       [min]="0" [step]="0.01" errorMessage="Price is required and must be a positive number."
-      [model]="dialogModel.price ?? 0" (modelChange)="dialogModel.price = $event" />
+      [model]="dialogModel.price" (modelChange)="dialogModel.price = $event" />
 
   </section>
 
