@@ -5,7 +5,7 @@ import { filter, firstValueFrom } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ShellComponent } from '../../../components/layout/shell.component';
-import { MenuGroup } from '../../../components/layout/menu.model';
+import { MenuChildItem, MenuGroup } from '../../../components/layout/menu.model';
 import { ApiMenu, MenuService } from '../../../services/menu.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
@@ -88,9 +88,16 @@ export class WorkspaceComponent implements OnInit {
 
   toggleSidebar(): void { this.sidebarOpen = !this.sidebarOpen; }
 
-  selectMenu(menuKey: string): void {
-    this.activeMenuKey = menuKey;
-    this.router.navigate(['/pos', menuKey]);
+  selectMenu(item: MenuChildItem | string): void {
+    if (typeof item === 'string') {
+      this.activeMenuKey = item;
+      this.router.navigate(['/pos', item]);
+      return;
+    }
+
+    this.activeMenuKey = item.route;
+    sessionStorage.setItem("currentMenuEntityNo", String(item.entityNo || 0));
+    this.router.navigate(['/pos', item.route]);
   }
 
   private syncActiveMenu(url: string): void {
@@ -140,7 +147,8 @@ export class WorkspaceComponent implements OnInit {
             key: String(subMenu.SubMenuId),
             label: subMenu.SubMenuName,
             description: subMenu.Remarks ?? '',
-            route: subMenu.Route
+            route: subMenu.Route,
+            entityNo: Number(subMenu.EntityNo || 0)
           }))
       }));
   }

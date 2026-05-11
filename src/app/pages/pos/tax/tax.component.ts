@@ -59,6 +59,7 @@ export class TaxComponent implements OnInit {
     rateErrorMessage = '';
     userDetails: any = {};
     organizationOptions: any[] = [];
+    taxEntityNo = Number(sessionStorage.getItem('currentMenuEntityNo') || 0);
 
     allRows: any[] = [];
     tableRows: any[] = [];
@@ -118,7 +119,7 @@ export class TaxComponent implements OnInit {
         });
     }
 
-    openAddDialog(): void {
+    async openAddDialog(): Promise<void> {
         this.isEditMode = false;
         this.resetDialogForm();
         this.dialogTitle = 'Create Tax';
@@ -127,7 +128,9 @@ export class TaxComponent implements OnInit {
         this.showAddDialog = true;
 
         if (this.userDetails.RoleId === 1) {
-            this.loadOrganizations();
+            await this.loadOrganizations();
+        } else {
+            await this.loadLatestTaxCode(Number(this.userDetails.OrgId || 0));
         }
     }
 
@@ -152,6 +155,21 @@ export class TaxComponent implements OnInit {
             this.organizationOptions = [];
             this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
         }
+    }
+
+    public async onOrganizationChange(value: SelectFieldValue): Promise<void> {
+        this.dialogOrganization = value;
+
+        if (this.isEditMode) {
+            return;
+        }
+
+        if (!value || Number(value) === 0) {
+            this.dialogTaxCode = '';
+            return;
+        }
+
+        await this.loadLatestTaxCode(Number(value));
     }
 
     async submitAddDialog(): Promise<void> {
@@ -388,5 +406,20 @@ export class TaxComponent implements OnInit {
         this.dialogTaxCode = keepCode ? this.dialogTaxCode : '';
         this.dialogTaxName = '';
         this.dialogPercentage = '';
+    }
+
+    private async loadLatestTaxCode(orgId: number): Promise<void> {
+        if (!this.taxEntityNo || !orgId) {
+            this.dialogTaxCode = '';
+            return;
+        }
+
+        try {
+            const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.taxEntityNo, orgId, 0));
+            this.dialogTaxCode = response?.result ?? '';
+        } catch {
+            this.dialogTaxCode = '';
+            this.toast.error('Load Failed', 'Unable to load tax code. Please check and try again.');
+        }
     }
 }

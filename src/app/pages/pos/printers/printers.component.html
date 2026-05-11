@@ -79,7 +79,6 @@
   <section class="field-grid dialog-grid">
     <app-text-field label="Printer Code" inputId="dialog-printerCode" placeholder="Enter printer code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Printer Code is required."
-      [textWithNumbersOnly]="true" formatErrorMessage="Printer Code allows text and numbers only."
       [model]="dialogPrinterCode" (modelChange)="dialogPrinterCode = $event" />
 
     <app-text-field label="Printer Name" inputId="dialog-printerName" placeholder="Enter printer name" [required]="true"

@@ -357,13 +357,15 @@
 
         @if (isSuperAdmin) {
           <app-select-field label="Organization" inputId="code-template-organization" placeholder="Choose organization"
-            [options]="codeTemplateOrganizations" [showClear]="false" [filter]="true" [appendTo]="'body'"
+            [options]="codeTemplateOrganizations" [required]="true" [showRequiredMark]="true"
+            [submitted]="codeTemplateSubmitted" errorMessage="Organization is required." [showClear]="false" [filter]="true" [appendTo]="'body'"
             [numberValue]="true" [model]="codeTemplateOrganization" (modelChange)="onCodeTemplateOrganizationChange($event)" />
         }
 
         @if (activeCodeTemplateTab === 'transaction') {
           <app-select-field label="Branch" inputId="code-template-branch" placeholder="Choose branch"
-            [options]="codeTemplateBranches" [showClear]="false" [filter]="true" [appendTo]="'body'"
+            [options]="codeTemplateBranches" [required]="true" [showRequiredMark]="true"
+            [submitted]="codeTemplateSubmitted" errorMessage="Branch is required." [showClear]="false" [filter]="true" [appendTo]="'body'"
             [numberValue]="true" [disabled]="isCodeTemplateBranchLocked"
             [model]="codeTemplateBranch" (modelChange)="onCodeTemplateBranchChange($event)" />
         }
@@ -414,7 +416,7 @@
 
         <ng-template appTableCellTemplate="IsDateMonthYearWise" let-row>
           <div class="code-template-switch-wrap">
-            <p-toggleswitch [(ngModel)]="row.IsDateMonthYearWise" [trueValue]="1" [falseValue]="0" />
+            <p-toggleswitch [(ngModel)]="row.IsDateMonthYearWise" [trueValue]="true" [falseValue]="false" />
           </div>
         </ng-template>
       </app-shared-table>

@@ -119,6 +119,7 @@ export class UsersComponent implements OnInit {
   branchOptions: any[] = [];
   roleOptions: any[] = [];
   userDetails: any = {};
+  userEntityNo = Number(sessionStorage.getItem('currentMenuEntityNo') || 0);
 
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Users';
@@ -181,20 +182,22 @@ export class UsersComponent implements OnInit {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create User';
     this.dialogSubtitle = 'Create a new user profile.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+
     if (this.userDetails.RoleId === 1) {
-      this.loadOrganizations();
+      await this.loadOrganizations();
     } else {
-      this.loadBranches();
-      this.loadRoles();
+      await this.loadLatestUserCode(Number(this.userDetails.OrgId || 0));
+      await this.loadBranches();
+      await this.loadRoles();
     }
-    this.loadCountries();
+    await this.loadCountries();
   }
 
   closeAddDialog(): void {
@@ -322,7 +325,7 @@ export class UsersComponent implements OnInit {
     this.loadStates(Number(value));
   }
 
-  onOrganizationChange(value: SelectFieldValue): void {
+  async onOrganizationChange(value: SelectFieldValue): Promise<void> {
     this.dialogOrganization = value;
     this.dialogBranches = [];
     this.dialogRoles = [];
@@ -330,11 +333,16 @@ export class UsersComponent implements OnInit {
     this.roleOptions = [];
 
     if (!value || Number(value) === 0) {
+      this.dialogCode = '';
       return;
     }
 
-    this.loadBranches(Number(value));
-    this.loadRoles(Number(value));
+    if (!this.isEditMode) {
+      await this.loadLatestUserCode(Number(value));
+    }
+
+    await this.loadBranches(Number(value));
+    await this.loadRoles(Number(value));
   }
 
   async loadStates(countryId: number): Promise<void> {
@@ -710,7 +718,7 @@ export class UsersComponent implements OnInit {
     const markerIndex = image.indexOf(marker);
 
     if (markerIndex >= 0) {
-      return image.substring(markerIndex + marker.length);
+      return this.normalizeImageValue(image.substring(markerIndex + marker.length));
     }
 
     const normalizedImage = image.replace(/^\/+/, '');
@@ -719,8 +727,12 @@ export class UsersComponent implements OnInit {
       return this.normalizeImageValue(normalizedImage.substring('FileUpload/'.length));
     }
 
-    if (normalizedImage.startsWith('User/User/')) {
-      return this.normalizeImageValue(normalizedImage.substring('User/'.length));
+    if (normalizedImage.startsWith('User/')) {
+      return this.getImageFileName(normalizedImage);
+    }
+
+    if (normalizedImage.includes('/')) {
+      return this.getImageFileName(normalizedImage);
     }
 
     return normalizedImage;
@@ -759,6 +771,21 @@ export class UsersComponent implements OnInit {
 
     const parts = image.split(/[\\/]/);
     return parts[parts.length - 1] ?? '';
+  }
+
+  private async loadLatestUserCode(orgId: number): Promise<void> {
+    if (!this.userEntityNo || !orgId) {
+      this.dialogCode = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.userEntityNo, orgId, 0));
+      this.dialogCode = response?.result ?? '';
+    } catch {
+      this.dialogCode = '';
+      this.toast.error('Load Failed', 'Unable to load user code. Please check and try again.');
+    }
   }
 
   private createUserFormData(payload: UserMaster): FormData {

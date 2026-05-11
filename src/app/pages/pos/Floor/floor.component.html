@@ -84,8 +84,7 @@
         (modelChange)="dialogBranch = $event" />
 
       <app-text-field label="Code" inputId="dialog-code" placeholder="Floor Code" [required]="true"
-        [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required."
-        [textWithNumbersOnly]="true" formatErrorMessage="Code allows text and numbers only." [model]="dialogCode"
+        [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogCode"
         (modelChange)="dialogCode = $event" />
 
       <app-text-field label="Name" inputId="dialog-name" placeholder="Floor Name" [required]="true"
