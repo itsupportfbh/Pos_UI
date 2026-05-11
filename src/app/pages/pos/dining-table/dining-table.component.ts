@@ -8,6 +8,7 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { ImageUploadFieldComponent } from '../../../components/form/image-upload-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { BranchService } from '../../../services/branch.service';
 import { FloorService } from '../../../services/floor.service';
@@ -67,6 +68,7 @@ const DINING_TABLE_COLUMNS: SharedTableColumn<DiningTableRow>[] = [
     TextFieldComponent,
     SelectFieldComponent,
     ActionButtonsComponent,
+    ImageUploadFieldComponent,
     MenuModule,
     ConfirmDialogModule
   ],
@@ -105,6 +107,8 @@ export class DiningTableComponent {
   dialogBranchId: SelectFieldValue | null = null;
   dialogFloorId: SelectFieldValue | null = null;
   dialogImage = '';
+  dialogImageFile: File | null = null;
+  dialogImagePreviewUrl: string | null = null;
   dialogRemarks = '';
   dialogDisplayOrder = 0;
   dialogIsActive = true;
@@ -177,7 +181,7 @@ export class DiningTableComponent {
         let RowNumber = 1;
         this.allDiningTables = (response.result ?? []).map((x: any) => {
           x.RowNumber = RowNumber++;
-          x.Status = x.isActive ? 'Active' : 'Inactive';
+          x.Status = x.isactive ? 'Active' : 'Inactive';
           return x;
         });
         this.tableRows = [...this.allDiningTables];
@@ -224,6 +228,28 @@ export class DiningTableComponent {
       return;
     }
 
+    // If there's an image file, convert it to base64
+    if (this.dialogImageFile) {
+      this.convertImageToBase64(this.dialogImageFile).then((base64String) => {
+        this.createOrUpdateTable(base64String);
+      });
+    } else {
+      this.createOrUpdateTable(this.dialogImage);
+    }
+  }
+
+  private convertImageToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private createOrUpdateTable(imageData: string): void {
     // Create new table
     const payload: DiningTableRow = {
       id: 0,
@@ -232,7 +258,7 @@ export class DiningTableComponent {
       seatingSize: this.dialogSeatingSize,
       branchId: Number(this.dialogBranchId),
       floorId: Number(this.dialogFloorId),
-      image: this.dialogImage,
+      image: imageData,
       remarks: this.dialogRemarks,
       displayOrder: this.dialogDisplayOrder,
       orgId: Number(this.userDetails.OrgId),
@@ -289,21 +315,24 @@ export class DiningTableComponent {
     this.dialogTitle = 'Edit Dining Table';
     this.dialogSubtitle = 'Update the selected Dining Table details.';
     this.dialogPrimaryActionLabel = 'Update';
-
+    debugger;
     this.diningTableService.getById(row.id).subscribe({
       next: (response: any) => {
         const category = response?.result?.[0] ?? response?.result ?? response;
 
         //this.dialogId = category?.id ?? category?.Id ?? row.id,
-          this.dialogCode = category?.code ?? category?.Code ?? row.code,
+        this.dialogCode = category?.code ?? category?.Code ?? row.code,
           this.dialogName = category?.name ?? category?.Name ?? row.name,
-          this.dialogSeatingSize = category?.seatingsize ?? category?.seatingsize ?? row.seatingSize,
+          this.dialogSeatingSize = category?.seatingSize ?? category?.seatingsize ?? row.seatingSize,
           this.dialogIsActive = category?.isActive ?? category?.IsActive ?? row.isActive,
-          //this.dialogCreatedBy = category?.createdBy ?? category?.CreatedBy ?? 1,
-          //this.dialogcreatedDate = category?.createdDate ?? category?.CreatedDate,
-          //this.dialogUpdatedBy = category?.createdBy ?? category?.CreatedBy ?? 1,
-          //this.dialogUpdatedDate = category?.updatedDate ?? category?.UpdatedDate,
-          //this.dialogIsDeleted = category?.isDeleted ?? category?.IsDeleted ?? false
+          this.dialogImage = category?.image ?? category?.Image ?? row.image ?? '',
+          this.dialogImagePreviewUrl = (category?.image ?? category?.Image ?? row.image ?? '').startsWith('data:')
+            ? (category?.image ?? category?.Image ?? row.image ?? '')
+            : null,
+          this.dialogBranchId = category?.branchId ?? category?.BranchId ?? row.branchId,
+          this.dialogFloorId = category?.floorId ?? category?.FloorId ?? row.floorId,
+          this.dialogRemarks = category?.remarks ?? category?.Remarks ?? row.remarks,
+          this.dialogDisplayOrder = category?.displayOrder ?? category?.DisplayOrder ?? row.displayOrder,
 
 
           this.showAddDialog = true;
@@ -462,6 +491,8 @@ export class DiningTableComponent {
     this.dialogBranchId = null;
     this.dialogFloorId = null;
     this.dialogImage = '';
+    this.dialogImageFile = null;
+    this.dialogImagePreviewUrl = null;
     this.dialogRemarks = '';
     this.dialogDisplayOrder = 0;
   }

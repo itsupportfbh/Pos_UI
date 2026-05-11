@@ -8,8 +8,10 @@
       <p class="page-subtitle">{{ pageSubtitle }}</p>
     </div>
     <div class="button-group">
-      <button pButton type="button" label="Add Table" icon="pi pi-plus" class="primary-button" (click)="openAddDialog()"></button>
-      <button pButton type="button" label="Refresh" icon="pi pi-refresh" class="refresh-button" (click)="refreshTables()"></button>
+      <button pButton type="button" label="Add Table" icon="pi pi-plus" class="primary-button"
+        (click)="openAddDialog()"></button>
+      <button pButton type="button" label="Refresh" icon="pi pi-refresh" class="refresh-button"
+        (click)="refreshTables()"></button>
     </div>
   </header>
 
@@ -49,98 +51,41 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field
-      label="Table Code"
-      inputId="dialog-code"
-      placeholder="e.g., T9"
-      [required]="true"
-      [submitted]="dialogSubmitted" errorMessage="Code is required."
-      [model]="dialogCode"
-      (modelChange)="dialogCode = $event"
-    />
+    <app-text-field label="Table Code" inputId="dialog-code" placeholder="e.g., T9" [required]="true"
+      [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogCode"
+      (modelChange)="dialogCode = $event" />
 
-    <app-text-field
-      label="Table Name"
-      inputId="dialog-name"
-      placeholder="e.g., Window Table"
-      [required]="true"
-      [submitted]="dialogSubmitted" errorMessage="Name is required."
-      [model]="dialogName"
-      (modelChange)="dialogName = $event"
-    />
+    <app-text-field label="Table Name" inputId="dialog-name" placeholder="e.g., Window Table" [required]="true"
+      [submitted]="dialogSubmitted" errorMessage="Name is required." [model]="dialogName"
+      (modelChange)="dialogName = $event" />
 
-    <app-text-field
-      label="Seating Size"
-      inputId="dialog-seatingSize"
-      type="number"
-      placeholder="4"
-      [required]="true"
-      [submitted]="dialogSubmitted" errorMessage="Seating size is required."
-      [model]="dialogSeatingSize"
-      (modelChange)="onSeatingChange($event)"
-    />
+    <app-text-field label="Seating Size" inputId="dialog-seatingSize" type="number" placeholder="4" [required]="true"
+      [submitted]="dialogSubmitted" errorMessage="Seating size is required." [model]="dialogSeatingSize"
+      (modelChange)="onSeatingChange($event)" />
 
-    <app-select-field
-      label="Branch"
-      inputId="dialog-branch"
-      placeholder="Choose branch"
-      [options]="branchOptions"
-      [required]="true"
-      [submitted]="dialogSubmitted" errorMessage="Please select a branch."
-      [model]="dialogBranchId"
-      (modelChange)="dialogBranchId = $event"
-    />
+    <app-select-field label="Branch" inputId="dialog-branch" placeholder="Choose branch" [options]="branchOptions"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Please select a branch." [model]="dialogBranchId"
+      (modelChange)="dialogBranchId = $event" />
 
-    <app-select-field
-      label="Floor"
-      inputId="dialog-floor"
-      placeholder="Choose floor"
-      [options]="floorOptions"
-      [required]="true"
-      [submitted]="dialogSubmitted" errorMessage="Please select a floor."
-      [model]="dialogFloorId"
-      (modelChange)="dialogFloorId = $event"
-    />
+    <app-select-field label="Floor" inputId="dialog-floor" placeholder="Choose floor" [options]="floorOptions"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Please select a floor." [model]="dialogFloorId"
+      (modelChange)="dialogFloorId = $event" />
 
-    <app-text-field
-      label="Image URL"
-      inputId="dialog-image"
-      placeholder="e.g., /assets/table-1.jpg"
-      [required]="false"
-      [model]="dialogImage"
-      (modelChange)="dialogImage = $event"
-    />
+    <app-text-field label="Display Order" inputId="dialog-displayOrder" type="number" placeholder="1" [required]="true"
+      [model]="dialogDisplayOrder" (modelChange)="onDisplayOrderChange($event)" />
 
-    <app-text-field
-      label="Remarks"
-      inputId="dialog-remarks"
-      placeholder="e.g., Window seat, High chair available"
-      [required]="false"
-      [model]="dialogRemarks"
-      (modelChange)="dialogRemarks = $event"
-    />
+    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="e.g., Window seat, High chair available"
+      [required]="false" [model]="dialogRemarks" (modelChange)="dialogRemarks = $event" />
 
-    <app-text-field
-      label="Display Order"
-      inputId="dialog-displayOrder"
-      type="number"
-      placeholder="1"
-      [required]="true"
-      [model]="dialogDisplayOrder"
-      (modelChange)="onDisplayOrderChange($event)"
-    />      
+    <app-image-upload-field label="Table Image" inputId="dialog-image" [required]="false" [submitted]="dialogSubmitted"
+      errorMessage="Image is required." [model]="dialogImageFile" [previewUrl]="dialogImagePreviewUrl"
+      (modelChange)="dialogImageFile = $event" (previewUrlChange)="dialogImagePreviewUrl = $event" />
+
   </section>
 
   <div class="dialog-actions">
-    <app-action-buttons
-      primaryLabel="Create Table"
-      secondaryLabel="Cancel"
-      primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times"
-      [secondaryText]="true"
-      [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()"
-      (secondaryClick)="closeAddDialog()"
-    />
+    <app-action-buttons primaryLabel="Create Table" secondaryLabel="Cancel" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-times" [secondaryText]="true" [secondaryOutlined]="false" (primaryClick)="submitAddDialog()"
+      (secondaryClick)="closeAddDialog()" />
   </div>
 </p-dialog>
