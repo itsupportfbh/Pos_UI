@@ -7,29 +7,26 @@
       <h1>{{ pageTitle }}</h1>
       <p class="page-subtitle">{{ pageSubtitle }}</p>
     </div>
-    <div class="button-group">
-      <button pButton type="button" label="Add Table" icon="pi pi-plus" class="primary-button"
-        (click)="openAddDialog()"></button>
-      <button pButton type="button" style="display: none;" label="Refresh" icon="pi pi-refresh" class="refresh-button"
-        (click)="refreshTables()"></button>
-    </div>
   </header>
 
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
-        <h2>Dining table list</h2>
+        <h2>{{ tableTitle }}</h2>
       </div>
     </div>
 
-    <app-shared-table [columns]="tableColumns" [value]="tableRows" [caption]="tableCaption" [showFilterButton]="false"
-      [showAddNewButton]="false" [showRowActions]="showRowActions" [paginator]="false">
+    <app-shared-table [showFilterButton]="showFilterButton" [caption]="tableCaption" [columns]="tableColumns"
+      [value]="tableRows" [showAddNewButton]="showAddNewButton" [toolbarButtonLabel]="addNewButtonLabel"
+      [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader" [paginator]="false"
+      (toolbarButtonClick)="openAddDialog()">
       <ng-template appTableCellTemplate="Status" let-row>
         <span class="status-badge" [class.status-active]="row.Status === 'Active'"
           [class.status-inactive]="row.Status === 'Inactive'">
           {{ row.Status }}
         </span>
       </ng-template>
+
       <ng-template #rowActions let-row>
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
 
@@ -40,52 +37,59 @@
   </p-card>
 </section>
 
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '56rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
-      <p class="eyebrow">{{ pageEyebrow }}</p>
-      <h3>Create Dining Table</h3>
-      <p>Add a new dining table to manage seating arrangements.</p>
+      <h3>{{ dialogTitle }}</h3>
+      <p>{{ dialogSubtitle }}</p>
     </div>
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Table Code" inputId="dialog-code" placeholder="e.g., T9" [required]="true"
-      [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogCode"
-      (modelChange)="dialogCode = $event" />
+    @if (userDetails.RoleId === 1) {
+      <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
+        [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+        errorMessage="Organization is required." [numberValue]="true" [model]="dialogOrganization"
+        (modelChange)="onDialogOrganizationChange($event)" />
+    }
 
-    <app-text-field label="Table Name" inputId="dialog-name" placeholder="e.g., Window Table" [required]="true"
-      [submitted]="dialogSubmitted" errorMessage="Name is required." [model]="dialogName"
-      (modelChange)="dialogName = $event" />
+    <app-text-field label="Table Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter table code"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
+      [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
-    <app-text-field label="Seating Size" inputId="dialog-seatingSize" type="number" placeholder="4" [required]="true"
-      [submitted]="dialogSubmitted" errorMessage="Seating size is required." [model]="dialogSeatingSize"
-      (modelChange)="onSeatingChange($event)" />
+    <app-text-field label="Table Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter table name"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="200"
+      [model]="dialogName" (modelChange)="dialogName = $event" />
 
     <app-select-field label="Branch" inputId="dialog-branch" placeholder="Choose branch" [options]="branchOptions"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Please select a branch." [model]="dialogBranchId"
-      (modelChange)="dialogBranchId = $event" />
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Branch is required."
+      [numberValue]="true" [model]="dialogBranchId" (modelChange)="onDialogBranchChange($event)" />
 
     <app-select-field label="Floor" inputId="dialog-floor" placeholder="Choose floor" [options]="floorOptions"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Please select a floor." [model]="dialogFloorId"
-      (modelChange)="dialogFloorId = $event" />
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Floor is required."
+      [numberValue]="true" [model]="dialogFloorId" (modelChange)="dialogFloorId = $event" />
 
-    <app-text-field label="Display Order" inputId="dialog-displayOrder" type="number" placeholder="1" [required]="true"
-      [model]="dialogDisplayOrder" (modelChange)="onDisplayOrderChange($event)" />
+    <app-text-field label="Seating Size" inputId="dialog-seating-size" type="number" [showRequiredMark]="true"
+      placeholder="Enter seating size" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Seating size is required." [model]="dialogSeatingSize" (modelChange)="dialogSeatingSize = $event" />
 
-    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="e.g., Window seat, High chair available"
-      [required]="false" [model]="dialogRemarks" (modelChange)="dialogRemarks = $event" />
+    <app-text-field label="Display Order" inputId="dialog-display-order" type="number" [showRequiredMark]="true"
+      placeholder="Enter table display order" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Display order is required." [model]="dialogDisplayOrder"
+      (modelChange)="dialogDisplayOrder = $event" />
 
-    <app-image-upload-field label="Table Image" inputId="dialog-image" [required]="false" [submitted]="dialogSubmitted"
-      errorMessage="Image is required." [model]="dialogImageFile" [previewUrl]="dialogImagePreviewUrl"
-      (modelChange)="dialogImageFile = $event" (previewUrlChange)="dialogImagePreviewUrl = $event" />
+    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Enter table remarks" [model]="dialogRemarks"
+      (modelChange)="dialogRemarks = $event" />
 
+    <app-image-upload-field label="Table Image" inputId="dialog-image" [model]="dialogImageFile"
+      [previewUrl]="dialogImagePreviewUrl" (modelChange)="dialogImageFile = $event"
+      (previewUrlChange)="dialogImagePreviewUrl = $event" />
   </section>
 
   <div class="dialog-actions">
-    <app-action-buttons primaryLabel="Create Table" secondaryLabel="Cancel" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times" [secondaryText]="true" [secondaryOutlined]="false" (primaryClick)="submitAddDialog()"
-      (secondaryClick)="closeAddDialog()" />
+    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()" />
   </div>
 </p-dialog>

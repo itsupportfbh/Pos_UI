@@ -68,15 +68,15 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-subcategoryCode" placeholder="SUBCAT-01"
+    <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-subcategoryCode" placeholder="Enter sub category code"
       [required]="true" [maxlength]="50" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogModel.code ?? ''"
       (modelChange)="dialogModel.code = $event" />
 
-    <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-subcategoryName" placeholder="South Indian"
+    <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-subcategoryName" placeholder="Enter sub category name"
       [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Name is required." [model]="dialogModel.name ?? ''"
       (modelChange)="dialogModel.name = $event" />
 
-    <app-select-field label="Category" [showRequiredMark]="true" inputId="dialog-category" placeholder="Select category"
+    <app-select-field label="Category" [showRequiredMark]="true" inputId="dialog-category" placeholder="Choose category"
       [options]="categoryOptions" [numberValue]="true" [required]="true" [submitted]="dialogSubmitted" errorMessage="Category is required." [model]="dialogModel.categoryId ?? 0"
       (modelChange)="dialogModel.categoryId = $event" />
 

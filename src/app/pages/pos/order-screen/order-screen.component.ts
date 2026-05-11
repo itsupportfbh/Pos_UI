@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
+import { firstValueFrom } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
 import { CategoryService } from '../../../services/Category.service';
@@ -221,13 +222,6 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
 const DEFAULT_CATEGORY_ICON = 'pi pi-shopping-bag';
 const ACTIVE_HELD_ORDER_STORAGE_KEY = 'activeHeldOrder';
 
-const FALLBACK_MENU_CATEGORIES: MenuCategory[] = [
-  { id: 2, name: 'Breakfast', icon: 'pi pi-sun' },
-  { id: 3, name: 'Meals', icon: 'pi pi-objects-column' },
-  { id: 4, name: 'Beverages', icon: 'pi pi-cup' },
-  { id: 5, name: 'Desserts', icon: 'pi pi-star' }
-];
-
 @Component({
   selector: 'app-order-screen',
   standalone: true,
@@ -236,13 +230,16 @@ const FALLBACK_MENU_CATEGORIES: MenuCategory[] = [
   styleUrl: './order-screen.component.css'
 })
 export class OrderScreenComponent implements OnInit {
+  private readonly changeDetector = inject(ChangeDetectorRef);
   readonly orderTypes: OrderType[] = ['Dine In', 'Take Away', 'Delivery'];
   tables: string[] = [];
 
   categories: MenuCategory[] = [ALL_CATEGORY];
   subCategories: MenuSubCategory[] = [ALL_SUBCATEGORY];
+  visibleSubCategories: MenuSubCategory[] = [ALL_SUBCATEGORY];
   allMenuItems: MenuItem[] = [];
   menuItems: MenuItem[] = [];
+  filteredMenuItems: MenuItem[] = [];
   isLoading = false;
   isCategoryLoading = false;
   isSubCategoryLoading = false;
@@ -258,17 +255,21 @@ export class OrderScreenComponent implements OnInit {
   currentHeldOrderId = 0;
   currentOrderNumber = '';
   selectedTable = ALL_TABLE;
-  customerName = 'Walk-in Customer';
+  customerName = '';
   currentCustomerDetails: CurrentCustomerDetails = this.getDefaultCustomerDetails();
   searchText = '';
   discountPercent = 5;
   taxPercent = 5;
   cartItems: CartItem[] = [];
+  itemCount = 0;
+  subtotal = 0;
+  discountAmount = 0;
+  taxAmount = 0;
+  grandTotal = 0;
   userDetails: any = {};
   orgId = 0;
   branchId = 0;
   isHoldingOrder = false;
-  private menuLoadingFallback?: ReturnType<typeof setTimeout>;
 
   constructor(
     private readonly toast: AppToastService,
@@ -283,237 +284,172 @@ export class OrderScreenComponent implements OnInit {
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.orgId = this.getUserOrgId();
-    this.branchId = this.getUserBranchId();
-    this.loadOrderScreenData();
-    this.loadTaxPercentage();
-    this.restoreHeldOrder();
-  }
-
-  get filteredMenuItems(): MenuItem[] {
-    const search = this.searchText.trim().toLowerCase();
-
-    return this.menuItems.filter((item) => {
-      const matchesSearch = !search ||
-        item.name.toLowerCase().includes(search) ||
-        item.category.toLowerCase().includes(search) ||
-        item.subCategory.toLowerCase().includes(search);
-
-      return matchesSearch;
+    this.orgId = Number(this.userDetails.OrgId || 0);
+    this.branchId = this.userDetails.IsAdmin === true ? 0 : Number(this.userDetails.BranchId || 0);
+    
+    setTimeout(async () => {
+      await this.loadOrderScreenData();
+      await this.loadTaxPercentage();
+      this.restoreHeldOrder();
+      this.updateOrderSummary();
+      this.changeDetector.detectChanges();
     });
   }
 
-  get visibleSubCategories(): MenuSubCategory[] {
-    const filtered = this.activeCategoryId === 0
-      ? this.subCategories.filter((item) => item.id !== 0)
-      : this.subCategories.filter((item) => item.categoryId === this.activeCategoryId);
-
-    return [ALL_SUBCATEGORY, ...filtered];
+  async loadOrderScreenData(): Promise<void> {
+    await this.loadCategories();
+    await this.loadSubCategories();
+    await this.loadMenus();
+    await this.loadDiningTables();
   }
 
-  get menuEmptyMessage(): string {
-    return 'No menu items match your selection.';
-  }
-
-  get itemCount(): number {
-    return this.cartItems.reduce((total, item) => total + item.quantity, 0);
-  }
-
-  get subtotal(): number {
-    return this.cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
-  }
-
-  get discountAmount(): number {
-    return this.subtotal * (this.discountPercent / 100);
-  }
-
-  get taxAmount(): number {
-    return Math.max(this.subtotal - this.discountAmount, 0) * (this.taxPercent / 100);
-  }
-
-  get grandTotal(): number {
-    return this.subtotal - this.discountAmount + this.taxAmount;
-  }
-
-  loadOrderScreenData(): void {
-    this.loadCategories();
-    this.loadSubCategories();
-    this.loadMenus();
-    this.loadDiningTables();
-  }
-
-  loadDiningTables(): void {
+  async loadDiningTables(): Promise<void> {
     this.isTableLoading = true;
-    this.updateLoadingState();
+    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
 
-    this.diningTableService.getAll(this.orgId, this.branchId).subscribe({
-      next: (response: any) => {
-        const diningTables = this.getResultArray(response)
-          .filter((row) => this.isActiveRow(row))
-          .filter((row) => this.isCurrentBranchTable(row))
-          .sort((a, b) => this.toNumber(a.displayOrder ?? a.DisplayOrder) - this.toNumber(b.displayOrder ?? b.DisplayOrder))
-          .map((row) => this.getDiningTableLabel(row))
-          .filter((table) => table !== '');
-        this.tables = [ALL_TABLE, ...diningTables];
+    try {
+      const response: any = await firstValueFrom(this.diningTableService.getAll(this.orgId, this.branchId));
+      const diningTables = (response.result ?? [])
+        .filter((row: any) => (row.IsActive === true || row.isactive === true))
+        .filter((row: any) => {
+          if (!this.branchId) {
+            return true;
+          }
 
-        if (!this.tables.includes(this.selectedTable)) {
-          this.selectedTable = ALL_TABLE;
-          this.currentCustomerDetails = {
-            ...this.currentCustomerDetails,
-            table: this.selectedTable
-          };
-        }
-      },
-      error: () => {
-        this.tables = [ALL_TABLE];
+          return Number(row.BranchId ?? row.branchid ?? row.branchId ?? 0) === this.branchId;
+        })
+        .sort((a: any, b: any) => Number(a.displayorder ?? 0) - Number(b.displayOrder ?? b.DisplayOrder ?? 0))
+        .map((row: any) => String(row.Code ?? row.code ?? row.TableNo ?? row.tableNo ?? row.TableName ?? row.tableName ?? row.Name ?? row.name ?? ''))
+        .filter((table: string) => table !== '');
+
+      this.tables = [ALL_TABLE, ...diningTables];
+
+      if (!this.tables.includes(this.selectedTable)) {
         this.selectedTable = ALL_TABLE;
         this.currentCustomerDetails = {
           ...this.currentCustomerDetails,
           table: ALL_TABLE
         };
-        this.toast.error('Load Failed', 'Unable to load dining tables.');
-      },
-      complete: () => {
-        this.isTableLoading = false;
-        this.updateLoadingState();
       }
-    });
+    } catch {
+      this.tables = [ALL_TABLE];
+      this.selectedTable = ALL_TABLE;
+      this.currentCustomerDetails = {
+        ...this.currentCustomerDetails,
+        table: ALL_TABLE
+      };
+      this.toast.error('Load Failed', 'Unable to load dining tables.');
+    }
+
+    this.isTableLoading = false;
+    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
   }
 
-  loadTaxPercentage(): void {
-    this.taxService.getAll(this.orgId).subscribe({
-      next: (response: any) => {
-        const activeTax = this.getResultArray(response).find((row) => this.isActiveRow(row));
-        const percentage = this.toNumber(activeTax?.Percentage);
+  async loadTaxPercentage(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.taxService.getAll(this.orgId));
+      const activeTax = (response.result ?? []).find((row: any) => row.IsActive === true);
+      const percentage = Number(activeTax?.Percentage ?? 0);
 
-        if (percentage > 0) {
-          this.taxPercent = percentage;
-        }
-      },
-      error: () => {
-        this.toast.warn('Tax Not Loaded', 'Using default tax percentage for this order.');
+      if (percentage > 0) {
+        this.taxPercent = percentage;
+        this.updateOrderSummary();
       }
-    });
+    } catch {
+      this.toast.warn('Tax Not Loaded', 'Using default tax percentage for this order.');
+    }
   }
 
-  loadCategories(): void {
+  async loadCategories(): Promise<void> {
     this.isCategoryLoading = true;
-    this.updateLoadingState();
+    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
 
-    this.categoryService.getAll(this.orgId).subscribe({
-      next: (response: any) => {
-        const categoryRows = this.getResultArray(response);
+    try {
+      const response: any = await firstValueFrom(this.categoryService.getAll(this.orgId));
+      const categoryRows = response.result ?? [];
+      this.categories = [
+        ALL_CATEGORY,
+        ...categoryRows
+          .filter((row: any) => row.IsActive === true || row.isactive === true)
+          .map((row: any) => ({
+            id: Number(row.id ?? row.Id ?? 0),
+            name: String(row.name ?? row.Name ?? row.code ?? row.Code ?? ''),
+            icon: this.getCategoryIcon(String(row.name ?? row.Name ?? row.code ?? row.Code ?? ''))
+          }))
+      ];
 
-        this.categories = [
-          ALL_CATEGORY,
-          ...categoryRows
-            .filter((row) => this.isActiveRow(row))
-            .map((row) => ({
-              id: this.toNumber(row.id ?? row.Id),
-              name: String(row.name ?? row.Name ?? row.code ?? row.Code ?? 'Category'),
-              icon: this.getCategoryIcon(String(row.name ?? row.Name ?? row.code ?? row.Code ?? 'Category'))
-            }))
-        ];
+      this.selectCategory(this.categories[0] ?? ALL_CATEGORY);
 
-        if (this.categories.length === 1) {
-          this.categories = [ALL_CATEGORY, ...FALLBACK_MENU_CATEGORIES];
-        }
+      this.allMenuItems = this.allMenuItems.map((item) => ({
+        ...item,
+        category: this.getCategoryName(item.categoryId)
+      }));
 
-        this.selectCategory(this.categories[0] ?? ALL_CATEGORY);
+      this.applyMenuSelection();
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load categories.');
+    }
 
-        this.allMenuItems = this.allMenuItems.map((item) => ({
-          ...item,
-          category: this.getCategoryName(item.categoryId)
-        }));
-
-        this.applyMenuSelection();
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load categories.');
-        this.isCategoryLoading = false;
-        this.updateLoadingState();
-      },
-      complete: () => {
-        this.isCategoryLoading = false;
-        this.updateLoadingState();
-      }
-    });
+    this.isCategoryLoading = false;
+    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
   }
 
-  loadSubCategories(): void {
+  async loadSubCategories(): Promise<void> {
     this.isSubCategoryLoading = true;
-    this.updateLoadingState();
+    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
 
-    this.subCategoryService.getAll(this.orgId).subscribe({
-      next: (response: any) => {
-        this.subCategories = [
-          ALL_SUBCATEGORY,
-          ...this.getResultArray(response)
-            .filter((row) => this.isActiveRow(row))
-            .map((row) => ({
-              id: this.toNumber(row.id ?? row.Id),
-              name: String(row.name ?? row.Name ?? row.code ?? row.Code ?? 'Sub Category'),
-              categoryId: this.toNumber(row.categoryId ?? row.CategoryId)
-            }))
-        ];
+    try {
+      const response: any = await firstValueFrom(this.subCategoryService.getAll(this.orgId));
 
-        this.allMenuItems = this.allMenuItems.map((item) => ({
-          ...item,
-          subCategory: this.getSubCategoryName(item.subCategoryId)
-        }));
+      this.subCategories = [
+        ALL_SUBCATEGORY,
+        ...(response.result ?? [])
+          .filter((row: any) => row.IsActive === true || row.isactive === true)
+          .map((row: any) => ({
+            id: Number(row.id ?? row.Id ?? 0),
+            name: String(row.name ?? row.Name ?? row.code ?? row.Code ?? ''),
+            categoryId: Number(row.categoryId ?? row.CategoryId ?? 0)
+          }))
+      ];
 
-        this.applyMenuSelection();
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load subcategories.');
-        this.isSubCategoryLoading = false;
-        this.updateLoadingState();
-      },
-      complete: () => {
-        this.isSubCategoryLoading = false;
-        this.updateLoadingState();
-      }
-    });
+      this.allMenuItems = this.allMenuItems.map((item) => ({
+        ...item,
+        subCategory: this.getSubCategoryName(item.subCategoryId)
+      }));
+
+      this.updateVisibleSubCategories();
+      this.applyMenuSelection();
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load subcategories.');
+    }
+
+    this.isSubCategoryLoading = false;
+    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
   }
 
-  loadMenus(): void {
+  async loadMenus(): Promise<void> {
     this.isMenuLoading = true;
-    this.updateLoadingState();
-    this.clearMenuLoadingFallback();
-    this.menuLoadingFallback = setTimeout(() => {
-      if (!this.menuItems.length && this.allMenuItems.length) {
+    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
+    
+    try {
+      const response: any = await firstValueFrom(this.foodmenuService.getAll(this.orgId));
+
+      this.allMenuItems = this.getUniqueRowsById(response.result ?? [])
+        .filter((row) => row.IsActive === true || row.isactive === true)
+        .map((row) => this.mapMenuItem(row));
+
+      if (this.activeCategoryId === 0 && this.activeSubCategoryId === 0) {
         this.menuItems = [...this.allMenuItems];
+        this.updateFilteredMenuItems();
+      } else {
+        this.applyMenuSelection();
       }
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load menu items.');
+    }
 
-      this.finishMenuLoading();
-    }, 8000);
-
-    this.foodmenuService.getAll(this.orgId).subscribe({
-      next: (response: any) => {
-        try {
-          this.allMenuItems = this.getUniqueRowsById(this.getResultArray(response))
-            .filter((row) => this.isActiveRow(row))
-            .map((row) => this.mapMenuItem(row));
-
-          if (this.activeCategoryId === 0 && this.activeSubCategoryId === 0) {
-            this.menuItems = [...this.allMenuItems];
-          } else {
-            this.applyMenuSelection();
-          }
-        } catch {
-          this.toast.error('Load Failed', 'Unable to prepare menu items.');
-        }
-
-        this.finishMenuLoading();
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load menu items.');
-        this.finishMenuLoading();
-      },
-      complete: () => {
-        this.finishMenuLoading();
-      }
-    });
+    this.isMenuLoading = false;
+    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
   }
 
   selectCategory(category: MenuCategory): void {
@@ -523,6 +459,7 @@ export class OrderScreenComponent implements OnInit {
     this.activeSubCategoryId = 0;
     this.activeSubCategoryCategoryId = 0;
     this.hasSelectedSubCategory = true;
+    this.updateVisibleSubCategories();
     this.applyMenuSelection();
   }
 
@@ -553,6 +490,7 @@ export class OrderScreenComponent implements OnInit {
 
   updateSearchText(event: Event): void {
     this.searchText = (event.target as HTMLInputElement).value;
+    this.updateFilteredMenuItems();
   }
 
   applyMenuSelection(): void {
@@ -564,6 +502,7 @@ export class OrderScreenComponent implements OnInit {
 
       return matchesCategory && matchesSubCategory;
     });
+    this.updateFilteredMenuItems();
   }
 
   addToCart(menuItem: MenuItem): void {
@@ -574,22 +513,27 @@ export class OrderScreenComponent implements OnInit {
     } else {
       this.cartItems = [{ ...menuItem, quantity: 1 }, ...this.cartItems];
     }
+
+    this.updateOrderSummary();
   }
 
   increaseQuantity(itemId: number): void {
     this.cartItems = this.cartItems.map((item) =>
       item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
     );
+    this.updateOrderSummary();
   }
 
   decreaseQuantity(itemId: number): void {
     this.cartItems = this.cartItems
       .map((item) => item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item)
       .filter((item) => item.quantity > 0);
+    this.updateOrderSummary();
   }
 
   removeItem(itemId: number): void {
     this.cartItems = this.cartItems.filter((item) => item.id !== itemId);
+    this.updateOrderSummary();
   }
 
   clearOrder(): void {
@@ -597,8 +541,9 @@ export class OrderScreenComponent implements OnInit {
     this.discountPercent = 0;
     this.currentHeldOrderId = 0;
     this.currentOrderNumber = '';
-    this.customerName = 'Walk-in Customer';
+    this.customerName = '';
     this.currentCustomerDetails = this.getDefaultCustomerDetails();
+    this.updateOrderSummary();
   }
 
   holdOrder(): void {
@@ -614,7 +559,7 @@ export class OrderScreenComponent implements OnInit {
     const orderId = this.currentHeldOrderId;
     const orderNo = this.currentOrderNumber || `HOLD-${Date.now()}`;
     const createdDate = new Date().toISOString();
-    const createdBy = this.getCurrentUserId();
+    const createdBy = Number(this.userDetails.UserId || this.userDetails.userId || this.userDetails.CreatedBy || 0) || null;
     const payload = this.buildOrderHoldPayload(orderId, orderNo, createdDate, createdBy);
 
     this.isHoldingOrder = true;
@@ -721,7 +666,7 @@ export class OrderScreenComponent implements OnInit {
     return {
       orderId: orderId || 0,
       ordernumber: orderNo,
-      tableid: this.getSelectedTableForPayload(),
+      tableid: this.selectedTable === ALL_TABLE ? '' : this.selectedTable,
       ordertype: this.activeOrderType,
       orderstatus: 'Hold',
       itemcount: this.itemCount,
@@ -730,7 +675,7 @@ export class OrderScreenComponent implements OnInit {
       taxAmount: this.taxAmount,
       discountAmount: this.discountAmount,
       totalAmount: this.grandTotal,
-      shiftid: this.getCurrentShiftId(),
+      shiftid: String(this.userDetails.Shiftid || this.userDetails.ShiftId || this.userDetails.shiftId || ''),
       orgId: this.orgId,
       createdBy: createdBy,
       createdDate: this.currentCustomerDetails.heldAt || createdDate,
@@ -742,12 +687,12 @@ export class OrderScreenComponent implements OnInit {
   }
 
   private mapMenuItem(row: any): MenuItem {
-  const categoryId = this.toNumber(row.categoryId);
-  const subCategoryId = this.toNumber(row.subCategoryId);
+  const categoryId = Number(row.categoryId ?? 0);
+  const subCategoryId = Number(row.subCategoryId ?? 0);
 
   return {
-    id: this.toNumber(row.id),
-    name: row.name || 'Menu Item',
+    id: Number(row.id ?? 0),
+    name: String(row.name ?? row.Name ?? ''),
 
     categoryId: categoryId,
     category: row.categoryName || this.getCategoryName(categoryId),
@@ -755,14 +700,14 @@ export class OrderScreenComponent implements OnInit {
     subCategoryId: subCategoryId,
     subCategory: row.subCategoryName || this.getSubCategoryName(subCategoryId),
 
-    price: this.toNumber(row.price),
+    price: Number(row.price ?? 0),
 
-    preparationTime: row.preparationTime || '5 Min',
+    preparationTime: String(row.preparationTime ?? row.PreparationTime ?? ''),
     isPopular: row.isPopular || false
   };
 }
   private getCategoryName(categoryId: number): string {
-    return this.categories.find((category) => category.id === categoryId)?.name ?? 'Uncategorized';
+    return this.categories.find((category) => category.id === categoryId)?.name ?? '';
   }
 
   private getCategoryIcon(categoryName: string): string {
@@ -770,19 +715,14 @@ export class OrderScreenComponent implements OnInit {
   }
 
   private getSubCategoryName(subCategoryId: number): string {
-    return this.subCategories.find((subCategory) => subCategory.id === subCategoryId)?.name ?? 'General';
-  }
-
-  private getResultArray(response: any): any[] {
-    const result = response?.result ?? response?.Result ?? response ?? [];
-    return Array.isArray(result) ? result : [];
+    return this.subCategories.find((subCategory) => subCategory.id === subCategoryId)?.name ?? '';
   }
 
   private getUniqueRowsById(rows: any[]): any[] {
     const uniqueRows = new Map<number, any>();
 
     rows.forEach((row) => {
-      const id = this.toNumber(row.id ?? row.Id);
+      const id = Number(row.id ?? row.Id ?? 0);
 
       if (!uniqueRows.has(id)) {
         uniqueRows.set(id, row);
@@ -792,119 +732,43 @@ export class OrderScreenComponent implements OnInit {
     return [...uniqueRows.values()];
   }
 
-  private isActiveRow(row: any): boolean {
-    const activeValue = row.isactive ?? row.isActive ?? row.IsActive;
-    return activeValue === undefined ||
-      activeValue === null ||
-      activeValue === true ||
-      activeValue === 1 ||
-      String(activeValue).toLowerCase() === 'true' ||
-      String(activeValue) === '1';
+  private updateVisibleSubCategories(): void {
+    const rows = this.activeCategoryId === 0
+      ? this.subCategories.filter((x) => x.id !== 0)
+      : this.subCategories.filter((x) => x.categoryId === this.activeCategoryId);
+
+    this.visibleSubCategories = [ALL_SUBCATEGORY, ...rows];
   }
 
-  private toNumber(value: unknown): number {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
+  private updateFilteredMenuItems(): void {
+    const search = this.searchText.trim().toLowerCase();
 
-  private firstPositiveNumber(...values: unknown[]): number {
-    for (const value of values) {
-      const parsed = this.toNumber(value);
-
-      if (parsed > 0) {
-        return parsed;
+    this.filteredMenuItems = this.menuItems.filter((item) => {
+      if (!search) {
+        return true;
       }
-    }
 
-    return 0;
+      return item.name.toLowerCase().includes(search)
+        || item.category.toLowerCase().includes(search)
+        || item.subCategory.toLowerCase().includes(search);
+    });
   }
 
-  private updateLoadingState(): void {
-    this.isLoading = this.isCategoryLoading || this.isSubCategoryLoading || this.isMenuLoading || this.isTableLoading;
-  }
+  private updateOrderSummary(): void {
+    this.itemCount = this.cartItems.reduce((total, item) => total + item.quantity, 0);
+    this.subtotal = this.cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+    this.discountAmount = this.subtotal * (this.discountPercent / 100);
+    this.taxAmount = Math.max(this.subtotal - this.discountAmount, 0) * (this.taxPercent / 100);
+    this.grandTotal = this.subtotal - this.discountAmount + this.taxAmount;
 
-  private finishMenuLoading(): void {
-    this.clearMenuLoadingFallback();
-    this.isMenuLoading = false;
-    this.updateLoadingState();
-  }
-
-  private clearMenuLoadingFallback(): void {
-    if (this.menuLoadingFallback) {
-      clearTimeout(this.menuLoadingFallback);
-      this.menuLoadingFallback = undefined;
-    }
-  }
-
-  private getUserOrgId(): number {
-    return this.toNumber(
-      this.userDetails?.OrgId ??
-      this.userDetails?.orgId ??
-      this.userDetails?.orgid ??
-      this.userDetails?.OrganizationId ??
-      this.userDetails?.organizationId
-    );
-  }
-
-  private getUserBranchId(): number {
-    if (this.toNumber(this.userDetails?.IsAdmin ?? this.userDetails?.isAdmin) === 1) {
-      return 0;
-    }
-
-    return this.toNumber(
-      this.userDetails?.BranchId ??
-      this.userDetails?.branchId ??
-      this.userDetails?.branchid ??
-      this.userDetails?.Branchid ??
-      this.userDetails?.BranchID
-    );
-  }
-
-  private isCurrentBranchTable(row: any): boolean {
-    if (!this.branchId) {
-      return true;
-    }
-
-    const branchId = this.firstPositiveNumber(row.branchId, row.BranchId, row.branchid, row.Branchid, row.BranchID);
-    return !branchId || branchId === this.branchId;
-  }
-
-  private getDiningTableLabel(row: any): string {
-    return this.pickString(
-      row.code,
-      row.Code,
-      row.tableNo,
-      row.TableNo,
-      row.tableName,
-      row.TableName,
-      row.name,
-      row.Name,
-      row.id,
-      row.Id
-    );
-  }
-
-  private getSelectedTableForPayload(): string {
-    return this.selectedTable === ALL_TABLE ? '' : this.selectedTable;
-  }
-
-  private getCurrentUserId(): number | null {
-    const userId = this.toNumber(
-      this.userDetails?.UserId ??
-      this.userDetails?.userId ??
-      this.userDetails?.CreatedBy
-    );
-
-    return userId || null;
-  }
-
-  private getCurrentShiftId(): string {
-    return String(
-      this.userDetails?.Shiftid ??
-      this.userDetails?.ShiftId ??
-      this.userDetails?.shiftId ??
-      ''
-    );
+    this.currentCustomerDetails = {
+      ...this.currentCustomerDetails,
+      guestCount: this.itemCount,
+      subtotalAmount: this.subtotal,
+      discountAmount: this.discountAmount,
+      taxAmount: this.taxAmount,
+      totalAmount: this.grandTotal
+    };
   }
 
   private restoreHeldOrder(): void {
@@ -931,6 +795,7 @@ export class OrderScreenComponent implements OnInit {
       this.customerName = this.currentCustomerDetails.customerName || this.customerName;
       this.discountPercent = this.getHeldOrderDiscountPercent(heldOrder);
       this.cartItems = orderItems.map((item) => this.mapHeldItemToCartItem(item));
+      this.updateOrderSummary();
 
       localStorage.removeItem(ACTIVE_HELD_ORDER_STORAGE_KEY);
       this.toast.info('Order Opened', `${source.Ordernumber ?? source.OrderNumber ?? source.ordernumber ?? source.orderNumber ?? source.OrderNo ?? source.orderno ?? source.orderNo ?? 'Held order'} loaded on order screen.`);
@@ -961,70 +826,58 @@ export class OrderScreenComponent implements OnInit {
 
   private mapHeldItemToCartItem(item: HeldOrderItem): CartItem {
     return {
-      id: this.toNumber(
+      id: Number(
       
       //  item.ItemId ??
       
-        item.Id
+        item.Id ?? 0
       ),
-      name: this.pickString(
-        item.name,
-       
-        'Menu Item'
-      ),
-      category: this.pickString(item.category, item.Category, item.categoryName, item.CategoryName, 'Uncategorized'),
+      name: this.pickString(item.name, item.ItemName, item.itemName, item.MenuName, item.menuName),
+      category: this.pickString(item.category, item.Category, item.categoryName, item.CategoryName),
       categoryId: 0,
-      subCategory: this.pickString(item.subCategoryName, 'General'),
+      subCategory: this.pickString(item.subCategoryName, item.SubCategoryName, item.subCategory, item.SubCategory),
       subCategoryId: 0,
-      price: this.toNumber(
-        item.price 
-        
-      ),
-      preparationTime: '5 Min',
-      quantity: this.toNumber(item.quantity ?? item.Quantity ?? item.qty ?? item.Qty ?? item.Noofitem ?? item.NoOfItem ?? item.noofitem ?? item.noOfItem) || 1,
+      price: Number(item.price ?? 0),
+      preparationTime: '',
+      quantity: Number(item.quantity ?? item.Quantity ?? item.qty ?? item.Qty ?? item.Noofitem ?? item.NoOfItem ?? item.noofitem ?? item.noOfItem ?? 0) || 1,
       note: item.Notes ?? item.notes ?? undefined,
-      holdItemId: this.firstPositiveNumber(item.Itemid, item.ItemId, item.itemid, item.itemId, item.OrderHoldItemId, item.orderHoldItemId, item.Id, item.id)
+      holdItemId: Number(item.Itemid ?? item.ItemId ?? item.itemid ?? item.itemId ?? item.OrderHoldItemId ?? item.orderHoldItemId ?? item.Id ?? item.id ?? 0)
     };
   }
 
   private getHeldOrderId(order: HeldOrder): number {
-    return this.firstPositiveNumber(order.orderId, order.OrderId, order.Orderid, order.orderid, order.Id, order.id);
+    return Number(order.orderId ?? order.OrderId ?? order.Orderid ?? order.orderid ?? order.Id ?? order.id ?? 0);
   }
 
   private mapHeldOrderToCustomerDetails(order: HeldOrder): CurrentCustomerDetails {
     const orderItems = this.getHeldOrderItems(order);
     const itemSubtotal = orderItems.reduce((total, item) => {
-      const lineTotal = this.toNumber(item.Totalprice ?? item.TotalPrice ?? item.totalprice ?? item.totalPrice);
+      const lineTotal = Number(item.Totalprice ?? item.TotalPrice ?? item.totalprice ?? item.totalPrice ?? 0);
       const calculatedLineTotal = this.mapHeldItemToCartItem(item).price * this.mapHeldItemToCartItem(item).quantity;
 
       return total + (lineTotal || calculatedLineTotal);
     }, 0);
     const source = order as any;
     const orderNumber = this.pickString(source.Ordernumber, source.OrderNumber, source.ordernumber, source.orderNumber, source.OrderNo, source.orderno, source.orderNo);
-    const customerName = this.pickString(
-      
-      order.customerName,
-      
-      'Walk-in Customer'
-    );
-    const subtotalAmount = this.toNumber(order.SubtotalAmount ?? order.subtotalAmount) || itemSubtotal;
-    const discountAmount = this.toNumber(order.DiscountAmount ?? order.discountAmount);
-    const taxAmount = this.toNumber(order.TaxAmount ?? order.taxAmount) ||
+    const customerName = this.pickString(order.customerName, order.CustomerName, order.customername, order.Name, order.name);
+    const subtotalAmount = Number(order.SubtotalAmount ?? order.subtotalAmount ?? 0) || itemSubtotal;
+    const discountAmount = Number(order.DiscountAmount ?? order.discountAmount ?? 0);
+    const taxAmount = Number(order.TaxAmount ?? order.taxAmount ?? 0) ||
       (Math.max(subtotalAmount - discountAmount, 0) * (this.taxPercent / 100));
-    const totalAmount = this.toNumber(order.TotalAmount ?? order.totalAmount) ||
+    const totalAmount = Number(order.TotalAmount ?? order.totalAmount ?? 0) ||
       (subtotalAmount - discountAmount + taxAmount);
 
     return {
       orderNumber,
-      customerId: this.toNumber(order.Customerid ?? order.CustomerId ?? order.customerid ?? order.customerId),
+      customerId: Number(order.Customerid ?? order.CustomerId ?? order.customerid ?? order.customerId ?? 0),
       customerName,
       mobileNo: this.pickString(order.MobileNo, order.mobileNo, order.Phone, order.phone),
       emailId: this.pickString(order.EmailId, order.emailId, order.Email, order.email),
       addressLine1: this.pickString(order.AddressLine1, order.addressLine1, order.Address, order.address),
       orderType: this.toOrderType(source.Ordertype ?? source.OrderType ?? source.ordertype ?? source.orderType ?? source.Type ?? source.type),
       table: this.pickString(source.Tableid, source.TableId, source.tableid, source.tableId, source.TableNo, source.tableNo, source.TableName, source.tableName, this.selectedTable),
-      guestCount: this.toNumber(order.Itemcount ?? order.ItemCount ?? order.itemcount ?? order.itemCount ?? order.Guestcount ?? order.GuestCount ?? order.guestcount ?? order.guestCount) ||
-        orderItems.reduce((total, item) => total + (this.toNumber(item.Quantity ?? item.quantity) || 1), 0),
+      guestCount: Number(order.Itemcount ?? order.ItemCount ?? order.itemcount ?? order.itemCount ?? order.Guestcount ?? order.GuestCount ?? order.guestcount ?? order.guestCount ?? 0) ||
+        orderItems.reduce((total, item) => total + (Number(item.Quantity ?? item.quantity ?? 0) || 1), 0),
       orderStatus: this.pickString(source.Orderstatus, source.OrderStatus, source.orderstatus, source.orderStatus, source.Status, source.status, 'Hold'),
       subtotalAmount,
       discountAmount,
@@ -1039,7 +892,7 @@ export class OrderScreenComponent implements OnInit {
     return {
       orderNumber: '',
       customerId: 0,
-      customerName: 'Walk-in Customer',
+      customerName: '',
       mobileNo: '',
       emailId: '',
       addressLine1: '',
@@ -1063,14 +916,14 @@ export class OrderScreenComponent implements OnInit {
 
   private getHeldOrderDiscountPercent(order: HeldOrder): number {
     if (order.discountPercent !== undefined && order.discountPercent !== null) {
-      return this.toNumber(order.discountPercent);
+      return Number(order.discountPercent);
     }
 
     const hasDiscountAmount = order.DiscountAmount !== undefined || order.discountAmount !== undefined;
 
-    const discountAmount = this.toNumber(order.DiscountAmount ?? order.discountAmount);
+    const discountAmount = Number(order.DiscountAmount ?? order.discountAmount ?? 0);
     const itemsSubtotal = this.getHeldOrderItems(order).reduce((total, item) => {
-      const lineTotal = this.toNumber(item.Totalprice ?? item.TotalPrice ?? item.totalprice ?? item.totalPrice);
+      const lineTotal = Number(item.Totalprice ?? item.TotalPrice ?? item.totalprice ?? item.totalPrice ?? 0);
       const cartItem = this.mapHeldItemToCartItem(item);
       const calculatedLineTotal = cartItem.price * cartItem.quantity;
 

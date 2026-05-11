@@ -1,52 +1,105 @@
 <section class="billing-page">
-  <header class="hero-panel">
+  <header class="page-header hero-panel billing-header">
     <div>
-      <p class="eyebrow">Billing</p>
-      <h1>Billing</h1>
-      <p class="page-subtitle">Search menus, add them to cart, update quantity, apply discount, choose customer and payment mode, then generate the bill.</p>
-    </div>
-    <div class="summary-strip">
-      <article><span>Cart Items</span><strong>{{ totalItems }}</strong></article>
-      <article><span>Discount</span><strong>{{ discountAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong></article>
-      <article><span>Total</span><strong>{{ grandTotal | currency: 'USD' : 'symbol' : '1.2-2' }}</strong></article>
+      <h1>{{ pageTitle }}</h1>
+      <p class="page-subtitle">{{ pageSubtitle }}</p>
     </div>
   </header>
 
+  <section class="billing-stats">
+    <article class="summary-card">
+      <span>Items</span>
+      <strong>{{ totalItems }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Customer</span>
+      <strong>{{ selectedCustomer || '-' }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Discount</span>
+      <strong>{{ discountAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Total</span>
+      <strong>{{ grandTotal | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+    </article>
+  </section>
+
   <section class="billing-layout">
-    <p-card class="catalog-card">
-      <div class="section-heading"><div><p class="eyebrow">Menu List</p><h2>Add Items To Cart</h2></div></div>
-      <section class="lookup-grid">
-        <app-text-field label="Menu Search" inputId="productSearch" placeholder="Search menu or category" [model]="productSearch" (modelChange)="productSearch = $event" />
-        <app-text-field label="Barcode Scan" inputId="barcodeSearch" placeholder="Search barcode" [model]="barcodeSearch" (modelChange)="barcodeSearch = $event" />
+    <p-card class="catalog-card feature-card">
+      <div class="billing-tools">
+        <div class="tool-block">
+          <span class="tool-label">Find Items</span>
+          <app-text-field label="" inputId="productSearch" placeholder="Search menu or category" [model]="productSearch"
+            (modelChange)="onProductSearchChange($event)" />
+        </div>
+
+        <div class="tool-block">
+          <span class="tool-label">Barcode</span>
+          <app-text-field label="" inputId="barcodeSearch" placeholder="Search barcode" [model]="barcodeSearch"
+            (modelChange)="onBarcodeSearchChange($event)" />
+        </div>
       </section>
+
       <section class="product-grid">
         @for (product of filteredProducts; track product.id) {
           <article class="product-card">
-            <div class="product-top"><span class="product-category">{{ product.category }}</span><span class="product-stock" [class.low-stock]="product.stock < 20">{{ product.stock }} in stock</span></div>
+            <div class="product-top">
+              <span class="product-category">{{ product.category }}</span>
+              <span class="product-stock" [class.low-stock]="product.stock < 20">{{ product.stock }} in stock</span>
+            </div>
             <h3>{{ product.name }}</h3>
             <p class="barcode-text">Barcode {{ product.barcode }}</p>
-            <div class="product-footer"><strong>{{ product.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong><p-button label="Add" icon="pi pi-plus" (onClick)="addToCart(product)" /></div>
+            <div class="product-footer">
+              <strong>{{ product.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+              <p-button label="Add" icon="pi pi-plus" (onClick)="addToCart(product)" />
+            </div>
           </article>
+        } @empty {
+          <div class="empty-state">No menu items found.</div>
         }
       </section>
     </p-card>
 
-    <p-card class="cart-card">
-      <div class="section-heading"><div><p class="eyebrow">Current Cart</p><h2>Items Added</h2></div></div>
+    <p-card class="cart-card feature-card">
+      <div class="cart-header">
+        <div>
+          <p class="eyebrow">Current Bill</p>
+          <h2>Items Added</h2>
+        </div>
+        <span class="cart-customer-name">{{ selectedCustomer || '-' }}</span>
+      </div>
+
+      <div class="cart-section-title">
+        <span>Selected Items</span>
+      </div>
       <section class="cart-list">
         @if (cartItems.length) {
           @for (item of cartItems; track item.id) {
             <article class="cart-item">
-              <div><strong>{{ item.name }}</strong><p>{{ item.price | currency: 'USD' : 'symbol' : '1.2-2' }} each</p></div>
-              <div class="qty-actions"><button type="button" (click)="decreaseQuantity(item.id)">-</button><span>{{ item.quantity }}</span><button type="button" (click)="increaseQuantity(item.id)">+</button></div>
+              <div class="cart-item-main">
+                <strong>{{ item.name }}</strong>
+                <p>{{ item.price | currency: 'USD' : 'symbol' : '1.2-2' }} each</p>
+              </div>
+
+              <div class="qty-actions">
+                <button type="button" (click)="decreaseQuantity(item.id)">-</button>
+                <span>{{ item.quantity }}</span>
+                <button type="button" (click)="increaseQuantity(item.id)">+</button>
+              </div>
+
               <strong>{{ item.price * item.quantity | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
               <button type="button" class="remove-link" (click)="removeCartItem(item.id)">Remove</button>
             </article>
           }
         } @else {
-          <div class="empty-state">No items in the cart. Add products from the catalog.</div>
+          <div class="empty-state">No items added yet.</div>
         }
       </section>
+
+      <div class="cart-section-title">
+        <span>Bill Summary</span>
+      </div>
       <section class="totals-card">
         <div><span>Subtotal</span><strong>{{ subtotal | currency: 'USD' : 'symbol' : '1.2-2' }}</strong></div>
         <div><span>Discount</span><strong>- {{ discountAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong></div>
@@ -56,14 +109,18 @@
     </p-card>
   </section>
 
-  <p-card class="payment-card">
-    <div class="section-heading"><div><p class="eyebrow">Payment Section</p><h2>Checkout</h2></div></div>
+    <p-card class="payment-card feature-card">
+    <div class="section-heading"><div><h2>Checkout</h2></div></div>
     <section class="payment-grid">
       <app-autocomplete-field label="Select Customer" inputId="customer" placeholder="Search customer" [suggestions]="customers" [model]="selectedCustomer" (modelChange)="selectedCustomer = $event" />
       <app-select-field label="Payment Mode" inputId="paymentMode" placeholder="Choose payment mode" [options]="paymentModes" [model]="selectedPaymentMode" (modelChange)="selectedPaymentMode = $event" />
-      <app-text-field label="Discount" inputId="discount" placeholder="0.00" [model]="discountInput" (modelChange)="discountInput = $event" />
+      <app-text-field label="Discount" inputId="discount" placeholder="Enter discount amount" [model]="discountInput" (modelChange)="onDiscountChange($event)" />
       <div class="payment-summary"><span>Customer</span><strong>{{ selectedCustomer || 'Walk-in Customer' }}</strong><span>Mode</span><strong>{{ selectedPaymentMode || 'Cash' }}</strong></div>
     </section>
-    <div class="action-row"><p-button label="Generate Bill" icon="pi pi-check-circle" /><p-button label="Print Bill" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printBill()" /></div>
+    <div class="action-row">
+      <p-button label="Generate Bill" icon="pi pi-check-circle" />
+      <p-button label="Print Bill" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printBill()" />
+    </div>
+    <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Bill" severity="danger" [text]="true" (click)="clearBill()"></button>
   </p-card>
 </section>

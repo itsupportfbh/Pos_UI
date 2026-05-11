@@ -1,57 +1,33 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, inject, QueryList, ViewChildren } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
-import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
-import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
+import { MenuModule } from 'primeng/menu';
+
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { ImageUploadFieldComponent } from '../../../components/form/image-upload-field.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { BranchService } from '../../../services/branch.service';
+import { DiningTable, DiningTableService } from '../../../services/diningtable.service';
 import { FloorService } from '../../../services/floor.service';
-import { DiningTableService } from '../../../services/diningtable.service';
-import { ConfirmationService, MenuItem } from 'primeng/api';
-import { MenuModule } from 'primeng/menu';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { OrganizationService } from '../../../services/organization.service';
 
-
-type DiningTableRow = {
-  id: number;
-  code: string;
-  name: string;
-  seatingSize: number;
-  branchId: number;
-  floorId: number;
-  image?: string;
-  remarks: string;
-  displayOrder: number;
-  orgId: number;
-  isActive: boolean;
-  createdBy: number | null;
-  createdDate?: string;
-  updatedBy: number | null;
-  updatedDate?: string;
-  isDeleted?: boolean;
-};
-
-const DINING_TABLE_COLUMNS: SharedTableColumn<DiningTableRow>[] = [
-  { field: 'code', header: 'Code', sortable: true, width: '8rem' },
-  { field: 'name', header: 'Name', sortable: true, width: '12rem' },
-  { field: 'seatingsize', header: 'Capacity', type: 'number', sortable: true, width: '8rem' },
-  { field: 'branchname', header: 'Branch', sortable: true, width: '10rem' },
-  { field: 'floorname', header: 'Floor', sortable: true, width: '10rem' },
-  { field: 'available', header: 'Available', width: '10rem' },
-  { field: 'reservable', header: 'Reservable', width: '10rem' },
-  { field: 'remarks', header: 'Notes', width: '15rem' },
-  {
-    field: 'Status',
-    header: 'Status',
-    sortable: true,
-    width: '9rem'
-  }
+const DINING_TABLE_COLUMNS: SharedTableColumn<any>[] = [
+  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
+  { field: 'OrganizationName', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
+  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
+  { field: 'Name', header: 'Name', sortable: true, width: '16rem' },
+  { field: 'SeatingSize', header: 'Capacity', sortable: true, width: '8rem' },
+  { field: 'BranchName', header: 'Branch', sortable: true, width: '12rem' },
+  { field: 'FloorName', header: 'Floor', sortable: true, width: '12rem' },
+  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
 @Component({
@@ -59,7 +35,6 @@ const DINING_TABLE_COLUMNS: SharedTableColumn<DiningTableRow>[] = [
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     CardModule,
     ButtonModule,
     DialogModule,
@@ -76,299 +51,365 @@ const DINING_TABLE_COLUMNS: SharedTableColumn<DiningTableRow>[] = [
   templateUrl: './dining-table.component.html',
   styleUrl: './dining-table.component.css'
 })
-
-export class DiningTableComponent {
+export class DiningTableComponent implements OnInit {
   private readonly toast = inject(AppToastService);
   private readonly branchService = inject(BranchService);
   private readonly floorService = inject(FloorService);
   private readonly diningTableService = inject(DiningTableService);
-  private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
-
-  readonly pageEyebrow = 'Dining';
-  readonly pageTitle = 'Dining Tables';
-  readonly pageSubtitle = 'Manage dining table status and occupancy.';
-  readonly tableCaption = 'Dining tables overview';
-  dialogTitle = 'Create Dining Table';
-  dialogSubtitle = 'Create a new dining table.';
-  dialogPrimaryActionLabel = 'Save';
-  tableColumns = DINING_TABLE_COLUMNS;
-  readonly rowActionHeader = 'Actions';
-  readonly showRowActions = true;
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
 
-  // Dialog state
   showAddDialog = false;
+  isEditMode = false;
+  dialogSubmitted = false;
+  dialogSaving = false;
+
+  dialogId = 0;
+  dialogOrganization: SelectFieldValue = null;
+  dialogBranchId: SelectFieldValue = null;
+  dialogFloorId: SelectFieldValue = null;
   dialogCode = '';
   dialogName = '';
-  dialogSeatingSize = 1;
-  dialogBranchId: SelectFieldValue | null = null;
-  dialogFloorId: SelectFieldValue | null = null;
+  dialogSeatingSize = '';
+  dialogDisplayOrder = '';
+  dialogRemarks = '';
   dialogImage = '';
   dialogImageFile: File | null = null;
   dialogImagePreviewUrl: string | null = null;
-  dialogRemarks = '';
-  dialogDisplayOrder = 0;
-  dialogIsActive = true;
-  dialogcreatedBy = 0;
-  allDiningTables: DiningTableRow[] = [];
-  tableRows: DiningTableRow[] = [];
-  selectedRow: DiningTableRow | null = null;
-  isLoading = false;
+
+  allRows: any[] = [];
+  tableRows: any[] = [];
+  selectedRow: any = null;
+  rowActionItems: MenuItem[] = [];
+  organizationOptions: any[] = [];
   branchOptions: any[] = [];
   floorOptions: any[] = [];
   userDetails: any = {};
-  dialogSubmitted = false;
   OrgId = 0;
   BranchId = 0;
-  isEditMode = false;
-  editingdiningtable: number | null = null;
 
-  rowActionItems: MenuItem[] = [
-    { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
-    { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
-    { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
-    { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
-  ];
-
+  readonly pageEyebrow = 'Dining';
+  readonly pageTitle = 'Dining Tables';
+  readonly pageSubtitle = 'Maintain dining table details and seating capacity.';
+  readonly tableTitle = 'Dining Tables';
+  readonly tableCaption = 'Dining tables';
+  dialogTitle = 'Create Dining Table';
+  dialogSubtitle = 'Create a new dining table.';
+  dialogPrimaryActionLabel = 'Save';
+  tableColumns = DINING_TABLE_COLUMNS;
+  readonly showAddNewButton = true;
+  readonly addNewButtonLabel = 'Add New';
+  readonly showFilterButton = false;
+  readonly showRowActions = true;
+  readonly rowActionHeader = 'Actions';
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.dialogcreatedBy = Number(this.userDetails.UserId || 0);
     this.OrgId = Number(this.userDetails.OrgId || 0);
-    console.log('User Details:', this.OrgId);
-    this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+    this.BranchId = this.userDetails.IsAdmin === true ? 0 : Number(this.userDetails.BranchId || 0);
+
     this.tableColumns = DINING_TABLE_COLUMNS.map((x: any) => {
-      if (x.field === 'organizationname') {
+      if (x.field === 'OrganizationName') {
         x.hidden = this.userDetails.RoleId !== 1;
       }
+
       return x;
     });
+
     this.loadDiningTables();
-    this.loadBranches();
-    this.loadFloors();
   }
 
-  loadBranches() {
-    this.branchService.getAll(this.OrgId).subscribe((res: any) => {
-      this.branchOptions = (res.result || []).map((item: any) => ({
-        label: item.Name,
-        value: item.Id
+  async loadOrganizations(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.organizationService.getAll());
+      const organizations = response?.result ?? [];
+
+      this.organizationOptions = organizations.filter((x: any) => x.IsActive).map((x: any) => ({
+        label: x.Name ?? '',
+        value: x.Id ?? 0
       }));
-    });
+    } catch {
+      this.organizationOptions = [];
+      this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+    }
   }
 
-  loadFloors() {
-    this.floorService.getAll(this.OrgId, this.BranchId).subscribe((res: any) => {
-      this.floorOptions = (res.result || []).map((item: any) => ({
-        label: item.Name,
-        value: item.Id
+  async loadBranches(orgId: number): Promise<void> {
+    if (!orgId) {
+      this.branchOptions = [];
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.branchService.getAll(orgId));
+      const branches = response?.result ?? [];
+
+      this.branchOptions = branches.filter((x: any) => x.IsActive).map((x: any) => ({
+        label: x.Name ?? '',
+        value: x.Id ?? 0
       }));
-    });
+    } catch {
+      this.branchOptions = [];
+      this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
+    }
   }
 
-  loadDiningTables(): void {
-    this.isLoading = true;
+  async loadFloors(orgId: number, branchId: number): Promise<void> {
+    if (!orgId || !branchId) {
+      this.floorOptions = [];
+      return;
+    }
 
-    this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
-    this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+    try {
+      const response: any = await firstValueFrom(this.floorService.getAll(orgId, branchId));
+      const floors = response?.result ?? [];
 
-    this.diningTableService.getAll(this.OrgId).subscribe({
-      next: (response: any) => {
-        const result = response?.result ?? response ?? [];
-        let RowNumber = 1;
-        this.allDiningTables = (response.result ?? []).map((x: any) => {
-          x.RowNumber = RowNumber++;
-          x.Status = x.isactive ? 'Active' : 'Inactive';
-          return x;
-        });
-        this.tableRows = [...this.allDiningTables];
-        this.changeDetector.detectChanges();
-      },
-      error: () => {
-        this.toast.error(
-          'Load Failed',
-          'Unable to load dining tables. Please check API and try again.'
-        );
-      },
-      complete: () => {
-        this.isLoading = false;
-      }
-    });
+      this.floorOptions = floors.filter((x: any) => x.IsActive).map((x: any) => ({
+        label: x.Name ?? '',
+        value: x.Id ?? 0
+      }));
+    } catch {
+      this.floorOptions = [];
+      this.toast.error('Load Failed', 'Unable to load floors. Please check and try again.');
+    }
   }
 
-  refreshTables(): void {
-    this.tableRows = [...this.tableRows];
+  async loadDiningTables(): Promise<void> {
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const branchId = this.userDetails.IsAdmin === true ? 0 : Number(this.userDetails.BranchId || 0);
+      const response: any = await firstValueFrom(this.diningTableService.getAll(orgId, branchId));
+      let RowNumber = 1;
+
+      this.tableRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? '';
+        x.Code = x.Code ?? x.code ?? '';
+        x.Name = x.Name ?? x.name ?? '';
+        x.SeatingSize = Number(x.SeatingSize ?? x.seatingsize ?? x.seatingSize ?? 0);
+        x.BranchName = x.BranchName ?? x.branchname ?? '';
+        x.FloorName = x.FloorName ?? x.floorname ?? '';
+        x.Status = x.IsActive === true || x.isactive === true ? 'Active' : 'Inactive';
+        x.ImagePreviewUrl = this.getImagePreviewUrl(String(x.Image ?? x.image ?? ''));
+        return x;
+      });
+
+      this.allRows = [...this.tableRows];
+      this.changeDetector.detectChanges();
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load dining tables. Please check API and try again.');
+    }
   }
 
-  openAddDialog(): void {
-    this.isEditMode = false;
-    this.editingdiningtable = null;
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
-    this.showAddDialog = true;
+    this.isEditMode = false;
     this.dialogTitle = 'Create Dining Table';
     this.dialogSubtitle = 'Create a new dining table.';
     this.dialogPrimaryActionLabel = 'Save';
+    this.showAddDialog = true;
+
+    if (this.userDetails.RoleId === 1) {
+      await this.loadOrganizations();
+    } else {
+      await this.loadBranches(Number(this.userDetails.OrgId || 0));
+
+      if (this.userDetails.IsAdmin !== true) {
+        this.dialogBranchId = Number(this.userDetails.BranchId || 0);
+        await this.loadFloors(Number(this.userDetails.OrgId || 0), Number(this.dialogBranchId || 0));
+      }
+    }
   }
 
   closeAddDialog(): void {
-    this.resetDialogForm();
     this.loadDiningTables();
     this.isEditMode = false;
-    this.showAddDialog = false;
     this.dialogSubmitted = false;
+    this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
+  async onDialogOrganizationChange(value: SelectFieldValue): Promise<void> {
+    this.dialogOrganization = value;
+    this.dialogBranchId = null;
+    this.dialogFloorId = null;
+    this.branchOptions = [];
+    this.floorOptions = [];
+
+    if (!value || Number(value) === 0) {
+      return;
+    }
+
+    await this.loadBranches(Number(value));
+  }
+
+  async onDialogBranchChange(value: SelectFieldValue): Promise<void> {
+    this.dialogBranchId = value;
+    this.dialogFloorId = null;
+    this.floorOptions = [];
+
+    const orgId = this.userDetails.RoleId === 1
+      ? Number(this.dialogOrganization || 0)
+      : Number(this.userDetails.OrgId || 0);
+
+    if (!orgId || !value || Number(value) === 0) {
+      return;
+    }
+
+    await this.loadFloors(orgId, Number(value));
+  }
+
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
       return;
     }
 
-    const imageValue = this.dialogImageFile
-      ? this.dialogImagePreviewUrl
-      : this.dialogImage?.startsWith('data:') || this.dialogImage?.startsWith('http://') || this.dialogImage?.startsWith('https://')
-        ? this.dialogImage
-        : this.getImageFileName(this.dialogImage ?? '');
+    this.dialogSaving = true;
 
-    this.createOrUpdateTable(imageValue ?? '');
-  }
-
-  private getImagePreviewUrl(image: string): string | null {
-    if (!image) {
-      return null;
-    }
-
-    if (image.startsWith('data:') || image.startsWith('http://') || image.startsWith('https://')) {
-      return image;
-    }
-
-    const fileName = this.getImageFileName(image);
-    if (!fileName) {
-      return null;
-    }
-
-    // Look for the image in the local project upload folder using the stored filename.
-    return `/FileUpload/${encodeURIComponent(fileName)}`;
-  }
-
-  private getImageFileName(image: string): string {
-    if (!image) {
-      return '';
-    }
-
-    const parts = image.split(/[\\\/]/);
-    return parts[parts.length - 1] ?? '';
-  }
-
-  private createOrUpdateTable(imageData: string): void {
-    // Create new table
-    const payload: DiningTableRow = {
-      id: 0,
+    const payload: DiningTable = {
+      id: this.dialogId,
       code: this.dialogCode,
       name: this.dialogName,
-      seatingSize: this.dialogSeatingSize,
-      branchId: Number(this.dialogBranchId),
-      floorId: Number(this.dialogFloorId),
-      image: imageData ?? '',
+      seatingSize: Number(this.dialogSeatingSize || 0),
+      branchId: Number(this.dialogBranchId || 0),
+      floorId: Number(this.dialogFloorId || 0),
+      image: this.dialogImageFile ? String(this.dialogImagePreviewUrl ?? '') : this.dialogImage,
       remarks: this.dialogRemarks,
-      displayOrder: this.dialogDisplayOrder,
-      orgId: Number(this.userDetails.OrgId),
-      createdBy: this.dialogcreatedBy,
-      updatedBy: this.dialogcreatedBy,
-      isActive: this.dialogIsActive ?? true,
+      displayOrder: Number(this.dialogDisplayOrder || 0),
+      orgId: this.userDetails.RoleId === 1 ? Number(this.dialogOrganization || 0) : Number(this.userDetails.OrgId || 0),
+      isActive: true,
+      createdBy: Number(this.userDetails.UserId || 0),
+      createdDate: new Date().toISOString(),
+      updatedBy: Number(this.userDetails.UserId || 0),
+      updatedDate: new Date().toISOString(),
       isDeleted: false
     };
 
-    console.log('Submitting dining table:', payload);
+    try {
+      let response: any;
 
-    if (this.isEditMode && this.editingdiningtable) {
-      payload.id = this.editingdiningtable;
+      if (!payload.id) {
+        response = await firstValueFrom(this.diningTableService.create(payload));
+      } else {
+        response = await firstValueFrom(this.diningTableService.update(payload));
+      }
 
-      this.diningTableService.update(payload).subscribe({
-        next: (response: any) => {
-          if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-            this.toast.warn('Duplicate', 'Dining table already exists.');
-            return;
-          }
+      if (response === 'AlreadyExists' || response?.message === 'AlreadyExists' || response?.result === 'AlreadyExists') {
+        this.toast.warn('Already Exists', `${payload.name || this.pageTitle} already exists. Please use a different name.`);
+        return;
+      }
 
-          this.toast.success('Updated', 'Dining table updated successfully.');
-          this.closeAddDialog();
-          this.loadDiningTables();
-        },
-        error: () => {
-          this.toast.error('Update Failed', 'Unable to update dining table.');
-        }
-      });
+      if (!payload.id) {
+        this.toast.success('Saved', `${payload.name || this.pageTitle} saved successfully.`);
+      } else {
+        this.toast.success('Updated', `${payload.name || this.pageTitle} updated successfully.`);
+      }
 
-      return;
+      this.closeAddDialog();
+    } catch {
+      this.toast.error(payload.id ? 'Update Failed' : 'Save Failed', `Unable to save ${this.pageTitle.toLowerCase()}.`);
+    } finally {
+      this.dialogSaving = false;
     }
-
-    this.diningTableService.create(payload).subscribe({
-      next: (response: any) => {
-        if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-          this.toast.warn('Duplicate', 'Dining table already exists.');
-          return;
-        }
-
-        this.toast.success('Saved', 'Dining table saved successfully.');
-        this.closeAddDialog();
-        this.loadDiningTables();
-      },
-      error: () => {
-        this.toast.error('Save Failed', 'Unable to save dining table.');
-      }
-    });
   }
 
-  editRow(row: DiningTableRow): void {
+  async editRow(row: any): Promise<void> {
+    this.resetDialogForm();
     this.isEditMode = true;
-    this.editingdiningtable = row.id;
     this.dialogTitle = 'Edit Dining Table';
-    this.dialogSubtitle = 'Update the selected Dining Table details.';
+    this.dialogSubtitle = 'Update the selected dining table details.';
     this.dialogPrimaryActionLabel = 'Update';
-    debugger;
-    this.diningTableService.getById(row.id).subscribe({
-      next: (response: any) => {
-        const category = response?.result?.[0] ?? response?.result ?? response;
-        const imageValue = category?.image ?? category?.Image ?? row.image ?? '';
+    this.showAddDialog = true;
 
-        this.dialogCode = category?.code ?? category?.Code ?? row.code,
-          this.dialogName = category?.name ?? category?.Name ?? row.name,
-          this.dialogSeatingSize = category?.seatingSize ?? category?.seatingsize ?? row.seatingSize,
-          this.dialogIsActive = category?.isActive ?? category?.IsActive ?? row.isActive,
-          this.dialogImage = imageValue,
-          this.dialogImagePreviewUrl = this.getImagePreviewUrl(imageValue),
-          this.dialogBranchId = category?.branchId ?? category?.BranchId ?? row.branchId,
-          this.dialogFloorId = category?.floorId ?? category?.FloorId ?? row.floorId,
-          this.dialogRemarks = category?.remarks ?? category?.Remarks ?? row.remarks,
-          this.dialogDisplayOrder = category?.displayOrder ?? category?.DisplayOrder ?? row.displayOrder,
+    try {
+      const response: any = await firstValueFrom(this.diningTableService.getById(row.Id || row.id));
+      const diningTable = response?.result?.[0] ?? response?.result ?? response ?? {};
+      const orgId = this.userDetails.RoleId === 1
+        ? Number(diningTable.OrgId ?? diningTable.orgId ?? 0)
+        : Number(this.userDetails.OrgId || 0);
 
+      this.dialogId = Number(diningTable.Id ?? diningTable.id ?? 0);
+      this.dialogCode = diningTable.Code ?? diningTable.code ?? '';
+      this.dialogName = diningTable.Name ?? diningTable.name ?? '';
+      this.dialogSeatingSize = String(diningTable.SeatingSize ?? diningTable.seatingsize ?? diningTable.seatingSize ?? '');
+      this.dialogDisplayOrder = String(diningTable.DisplayOrder ?? diningTable.displayorder ?? '');
+      this.dialogRemarks = diningTable.Remarks ?? diningTable.remarks ?? '';
+      this.dialogImage = diningTable.Image ?? diningTable.image ?? '';
+      this.dialogImagePreviewUrl = this.getImagePreviewUrl(this.dialogImage);
 
-          this.showAddDialog = true;
-        //this.toast.info('Edit Mode', `Editing ${row.name}.`);
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load dining table details.');
+      if (this.userDetails.RoleId === 1) {
+        await this.loadOrganizations();
+        this.dialogOrganization = orgId;
       }
-    });
+
+      await this.loadBranches(orgId);
+      this.dialogBranchId = Number(diningTable.BranchId ?? diningTable.branchId ?? 0);
+
+      if (this.dialogBranchId) {
+        await this.loadFloors(orgId, Number(this.dialogBranchId));
+      }
+
+      this.dialogFloorId = Number(diningTable.FloorId ?? diningTable.floorId ?? 0);
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load dining table details. Please check and try again.');
+    }
   }
 
-  onSeatingChange(value: string): void {
-    const numericValue = parseInt(value, 10);
-    this.dialogSeatingSize = isNaN(numericValue) ? 1 : numericValue;
+  async deleteRow(row: any): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.diningTableService.delete(row.Id || row.id));
+
+      if (response?.ErrorInfo?.Message === true || response === true || response?.result === true) {
+        this.toast.success('Deleted', `${String(row.Name ?? row.Code ?? 'Record')} deleted successfully.`);
+        this.loadDiningTables();
+        return;
+      }
+
+      this.toast.error('Delete Failed', response?.ErrorInfo?.Message || 'Unable to delete dining table.');
+    } catch {
+      this.toast.error('Delete Failed', 'Unable to delete dining table.');
+    }
   }
 
-  onDisplayOrderChange(value: string): void {
-    const numericValue = parseInt(value, 10);
-    this.dialogDisplayOrder = isNaN(numericValue) ? 0 : numericValue;
+  async activateRow(row: any): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.diningTableService.activeInActive(row.Id || row.id, true));
+
+      if (response?.ErrorInfo?.Message === true || response === true || response?.result === true) {
+        this.toast.success('Activated', `${String(row.Name ?? row.Code ?? 'Record')} activated successfully.`);
+        this.loadDiningTables();
+        return;
+      }
+
+      this.toast.error('Activation Failed', response?.ErrorInfo?.Message || 'Unable to activate dining table.');
+    } catch {
+      this.toast.error('Activation Failed', 'Unable to activate dining table.');
+    }
   }
 
-  confirmDeleteRow(row: DiningTableRow): void {
-    const name = row.name ?? row.code ?? 'this Dining Table';
+  async deactivateRow(row: any): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.diningTableService.activeInActive(row.Id || row.id, false));
+
+      if (response?.ErrorInfo?.Message === true || response === true || response?.result === true) {
+        this.toast.success('Deactivated', `${String(row.Name ?? row.Code ?? 'Record')} deactivated successfully.`);
+        this.loadDiningTables();
+        return;
+      }
+
+      this.toast.error('Deactivation Failed', response?.ErrorInfo?.Message || 'Unable to deactivate dining table.');
+    } catch {
+      this.toast.error('Deactivation Failed', 'Unable to deactivate dining table.');
+    }
+  }
+
+  confirmDeleteRow(row: any): void {
+    const name = String(row.Name ?? row.Code ?? 'this dining table');
 
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
@@ -383,20 +424,8 @@ export class DiningTableComponent {
     });
   }
 
-  deleteRow(row: DiningTableRow): void {
-    this.diningTableService.delete(row.id).subscribe({
-      next: () => {
-        this.toast.warn('Deleted', `${row.name} removed successfully.`);
-        this.loadDiningTables();
-      },
-      error: () => {
-        this.toast.error('Delete Failed', 'Unable to delete dining table.');
-      }
-    });
-  }
-
-  confirmActivateRow(row: DiningTableRow): void {
-    const name = row.name ?? row.code ?? 'this Dining Table';
+  confirmActivateRow(row: any): void {
+    const name = String(row.Name ?? row.Code ?? 'this dining table');
 
     this.confirmationService.confirm({
       header: 'Activate Confirmation',
@@ -411,8 +440,8 @@ export class DiningTableComponent {
     });
   }
 
-  confirmDeactivateRow(row: DiningTableRow): void {
-    const name = row.name ?? row.code ?? 'this dining table';
+  confirmDeactivateRow(row: any): void {
+    const name = String(row.Name ?? row.Code ?? 'this dining table');
 
     this.confirmationService.confirm({
       header: 'Inactive Confirmation',
@@ -427,43 +456,18 @@ export class DiningTableComponent {
     });
   }
 
-  activateRow(row: DiningTableRow): void {
-    this.diningTableService.activeInActive(row.id, true).subscribe({
-      next: () => {
-        this.toast.success('Status Updated', `${row.name} marked as active.`);
-        this.loadDiningTables();
-      },
-      error: () => {
-        this.toast.error('Update Failed', 'Unable to activate dining table.');
-      }
-    });
-  }
-
-  deactivateRow(row: DiningTableRow): void {
-    this.diningTableService.activeInActive(row.id, false).subscribe({
-      next: () => {
-        this.toast.info('Status Updated', `${row.name} marked as inactive.`);
-        this.loadDiningTables();
-      },
-      error: () => {
-        this.toast.error('Update Failed', 'Unable to deactivate dining table.');
-      }
-    });
-  }
-
-  openRowActions(menu: any, event: Event, row: DiningTableRow): void {
+  openRowActions(menu: any, event: Event, row: any): void {
     this.selectedRow = row;
     this.rowActionItems = this.getRowActionItems(row);
     menu.toggle(event);
   }
 
-  private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-    debugger;
+  private getRowActionItems(row: any): MenuItem[] {
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
 
-    if (row['isactive'] === true) {
+    if (row.IsActive === true || row.isactive === true) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
@@ -473,18 +477,11 @@ export class DiningTableComponent {
     return items;
   }
 
-  private isDialogFormValid(): boolean {
-    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
-    const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
-
-    return areTextFieldsValid && areSelectFieldsValid;
-  }
-
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
     if (!this.selectedRow) {
       return;
     }
-    console.log(`Action: ${action}, Row:`, this.selectedRow);
+
     if (action === 'edit') {
       this.editRow(this.selectedRow);
     } else if (action === 'delete') {
@@ -496,17 +493,58 @@ export class DiningTableComponent {
     }
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  private isDialogFormValid(): boolean {
+    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+
+    return areTextFieldsValid && areSelectFieldsValid;
+  }
+
+  private getImagePreviewUrl(image: string): string | null {
+    if (!image) {
+      return null;
+    }
+
+    if (image.startsWith('data:') || image.startsWith('http://') || image.startsWith('https://')) {
+      return image;
+    }
+
+    const fileName = this.getImageFileName(image);
+
+    if (!fileName) {
+      return null;
+    }
+
+    return `/FileUpload/${encodeURIComponent(fileName)}`;
+  }
+
+  private getImageFileName(image: string): string {
+    if (!image) {
+      return '';
+    }
+
+    const parts = image.split(/[\\/]/);
+    return parts[parts.length - 1] ?? '';
+  }
+
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
-    this.dialogCode = '';
-    this.dialogName = '';
-    this.dialogSeatingSize = 1;
+    this.dialogSaving = false;
+    this.dialogId = 0;
+    this.dialogOrganization = null;
     this.dialogBranchId = null;
     this.dialogFloorId = null;
+    this.dialogCode = '';
+    this.dialogName = '';
+    this.dialogSeatingSize = '';
+    this.dialogDisplayOrder = '';
+    this.dialogRemarks = '';
     this.dialogImage = '';
     this.dialogImageFile = null;
     this.dialogImagePreviewUrl = null;
-    this.dialogRemarks = '';
-    this.dialogDisplayOrder = 0;
+
+    if (this.userDetails.IsAdmin !== true && this.userDetails.RoleId !== 1) {
+      this.dialogBranchId = Number(this.userDetails.BranchId || 0);
+    }
   }
 }

@@ -1,44 +1,57 @@
 <section class="order-page">
-  <header class="order-header">
+  <header class="page-header hero-panel order-header">
     <div>
-      <p class="eyebrow">POS</p>
       <h1>Order Screen</h1>
       <p class="page-subtitle">Create dine-in, takeaway, and delivery orders from one focused counter screen.</p>
     </div>
-
-    <div class="order-stats">
-      <article>
-        <span>Items</span>
-        <strong>{{ itemCount }}</strong>
-      </article>
-      <article>
-        <span>Table</span>
-        <strong>{{ selectedTable }}</strong>
-      </article>
-      <article>
-        <span>Total</span>
-        <strong>{{ grandTotal | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
-      </article>
-    </div>
   </header>
 
-  <section class="order-layout">
-    <section class="menu-panel">
-      <div class="order-tools">
-        <label class="search-field" for="menu-search">
-          <i class="pi pi-search"></i>
-          <input id="menu-search" type="search" placeholder="Search menu items" [value]="searchText" (input)="updateSearchText($event)" />
-        </label>
+  <section class="order-stats">
+    <article class="summary-card">
+      <span>Items</span>
+      <strong>{{ itemCount }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Table</span>
+      <strong>{{ selectedTable }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Customer</span>
+      <strong>{{ customerName || '-' }}</strong>
+    </article>
+    <article class="summary-card">
+      <span>Total</span>
+      <strong>{{ grandTotal | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+    </article>
+  </section>
 
-        <div class="order-type-toggle" aria-label="Order type">
-          @for (orderType of orderTypes; track orderType) {
-            <button type="button" [class.active]="activeOrderType === orderType" (click)="selectOrderType(orderType)">
-              {{ orderType }}
-            </button>
-          }
+  <section class="order-layout">
+    <p-card class="menu-panel feature-card">
+      <div class="order-tools">
+        <div class="tool-block tool-block-search">
+          <span class="tool-label">Find Items</span>
+          <label class="search-field" for="menu-search">
+            <i class="pi pi-search"></i>
+            <input id="menu-search" type="search" placeholder="Search menu items" [value]="searchText" (input)="updateSearchText($event)" />
+          </label>
+        </div>
+
+        <div class="tool-block tool-block-toggle">
+          <span class="tool-label">Order Type</span>
+          <div class="order-type-toggle" aria-label="Order type">
+            @for (orderType of orderTypes; track orderType) {
+              <button type="button" [class.active]="activeOrderType === orderType" (click)="selectOrderType(orderType)">
+                {{ orderType }}
+              </button>
+            }
+          </div>
         </div>
       </div>
 
+      <div class="filter-group">
+        <div class="filter-group-label">
+          <span>Categories</span>
+        </div>
       <nav class="category-strip" aria-label="Menu categories">
         @for (category of categories; track category.id) {
           <button type="button" [class.active]="activeCategoryId === category.id" (click)="selectCategory(category)">
@@ -47,7 +60,12 @@
           </button>
         }
       </nav>
+      </div>
 
+      <div class="filter-group">
+        <div class="filter-group-label">
+          <span>Sub Categories</span>
+        </div>
       <nav class="subcategory-strip" aria-label="Menu subcategories">
         @for (subCategory of visibleSubCategories; track subCategory.id) {
           <button type="button" [class.active]="activeSubCategoryId === subCategory.id" (click)="selectSubCategory(subCategory)">
@@ -55,7 +73,12 @@
           </button>
         }
       </nav>
+      </div>
 
+      <div class="filter-group">
+        <div class="filter-group-label">
+          <span>Tables</span>
+        </div>
       <section class="table-strip" aria-label="Tables">
         @for (table of tables; track table) {
           <button type="button" [class.active]="selectedTable === table" (click)="selectTable(table)">
@@ -63,6 +86,7 @@
           </button>
         }
       </section>
+      </div>
 
       <section class="menu-grid">
         @if (isMenuLoading && !allMenuItems.length) {
@@ -78,22 +102,25 @@
             </div>
 
             <h2>{{ item.name }}</h2>
-            <p>{{ item.preparationTime }} prep</p>
+            <p>{{ item.preparationTime || '-' }}</p>
 
             <div class="menu-card-bottom">
-              <strong>{{ item.price | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+              <div class="menu-card-price">
+                <span>Price</span>
+                <strong>{{ item.price | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+              </div>
               <button pButton type="button" icon="pi pi-plus" label="Add" (click)="addToCart(item)"></button>
             </div>
           </article>
           } @empty {
-            <div class="empty-state">{{ menuEmptyMessage }}</div>
+            <div class="empty-state">No menu items found.</div>
           }
         }
       </section>
-    </section>
+    </p-card>
 
     <aside class="cart-panel">
-      <p-card>
+      <p-card class="feature-card">
         <div class="cart-header">
           <div>
             <p class="eyebrow">Current Order</p>
@@ -102,13 +129,13 @@
               <span>{{ currentOrderNumber }}</span>
             }
           </div>
-          <span>{{ customerName }}</span>
+          <span class="cart-customer-name">{{ customerName || '-' }}</span>
         </div>
 
         <section class="customer-details">
           <div>
             <span>Customer</span>
-            <strong>{{ currentCustomerDetails.customerName || 'Walk-in Customer' }}</strong>
+            <strong>{{ currentCustomerDetails.customerName || '-' }}</strong>
           </div>
           <div>
             <span>Order No</span>
@@ -124,7 +151,7 @@
           </div>
           <div>
             <span>Guests</span>
-            <strong>{{ itemCount }}</strong>
+            <strong>{{ currentCustomerDetails.guestCount }}</strong>
           </div>
           <div>
             <span>Status</span>
@@ -150,6 +177,9 @@
           }
         </section>
 
+        <div class="cart-section-title">
+          <span>Selected Items</span>
+        </div>
         <section class="cart-list">
           @for (item of cartItems; track item.id) {
             <article class="cart-item">
@@ -179,6 +209,9 @@
           }
         </section>
 
+        <div class="cart-section-title">
+          <span>Bill Summary</span>
+        </div>
         <section class="bill-summary">
           <div>
             <span>Subtotal</span>
