@@ -228,25 +228,40 @@ export class DiningTableComponent {
       return;
     }
 
-    // If there's an image file, convert it to base64
-    if (this.dialogImageFile) {
-      this.convertImageToBase64(this.dialogImageFile).then((base64String) => {
-        this.createOrUpdateTable(base64String);
-      });
-    } else {
-      this.createOrUpdateTable(this.dialogImage);
-    }
+    const imageValue = this.dialogImageFile
+      ? this.dialogImagePreviewUrl
+      : this.dialogImage?.startsWith('data:') || this.dialogImage?.startsWith('http://') || this.dialogImage?.startsWith('https://')
+        ? this.dialogImage
+        : this.getImageFileName(this.dialogImage ?? '');
+
+    this.createOrUpdateTable(imageValue ?? '');
   }
 
-  private convertImageToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        resolve(reader.result as string);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
+  private getImagePreviewUrl(image: string): string | null {
+    if (!image) {
+      return null;
+    }
+
+    if (image.startsWith('data:') || image.startsWith('http://') || image.startsWith('https://')) {
+      return image;
+    }
+
+    const fileName = this.getImageFileName(image);
+    if (!fileName) {
+      return null;
+    }
+
+    // Look for the image in the local project upload folder using the stored filename.
+    return `/FileUpload/${encodeURIComponent(fileName)}`;
+  }
+
+  private getImageFileName(image: string): string {
+    if (!image) {
+      return '';
+    }
+
+    const parts = image.split(/[\\\/]/);
+    return parts[parts.length - 1] ?? '';
   }
 
   private createOrUpdateTable(imageData: string): void {
@@ -258,7 +273,7 @@ export class DiningTableComponent {
       seatingSize: this.dialogSeatingSize,
       branchId: Number(this.dialogBranchId),
       floorId: Number(this.dialogFloorId),
-      image: imageData,
+      image: imageData ?? '',
       remarks: this.dialogRemarks,
       displayOrder: this.dialogDisplayOrder,
       orgId: Number(this.userDetails.OrgId),
@@ -319,16 +334,14 @@ export class DiningTableComponent {
     this.diningTableService.getById(row.id).subscribe({
       next: (response: any) => {
         const category = response?.result?.[0] ?? response?.result ?? response;
+        const imageValue = category?.image ?? category?.Image ?? row.image ?? '';
 
-        //this.dialogId = category?.id ?? category?.Id ?? row.id,
         this.dialogCode = category?.code ?? category?.Code ?? row.code,
           this.dialogName = category?.name ?? category?.Name ?? row.name,
           this.dialogSeatingSize = category?.seatingSize ?? category?.seatingsize ?? row.seatingSize,
           this.dialogIsActive = category?.isActive ?? category?.IsActive ?? row.isActive,
-          this.dialogImage = category?.image ?? category?.Image ?? row.image ?? '',
-          this.dialogImagePreviewUrl = (category?.image ?? category?.Image ?? row.image ?? '').startsWith('data:')
-            ? (category?.image ?? category?.Image ?? row.image ?? '')
-            : null,
+          this.dialogImage = imageValue,
+          this.dialogImagePreviewUrl = this.getImagePreviewUrl(imageValue),
           this.dialogBranchId = category?.branchId ?? category?.BranchId ?? row.branchId,
           this.dialogFloorId = category?.floorId ?? category?.FloorId ?? row.floorId,
           this.dialogRemarks = category?.remarks ?? category?.Remarks ?? row.remarks,
