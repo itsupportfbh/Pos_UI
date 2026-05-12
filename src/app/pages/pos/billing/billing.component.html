@@ -30,8 +30,8 @@
       <div class="billing-tools">
         <div class="tool-block">
           <span class="tool-label">Find Items</span>
-          <app-text-field label="" inputId="productSearch" placeholder="Search menu or category" [model]="productSearch"
-            (modelChange)="onProductSearchChange($event)" />
+          <app-text-field label="" inputId="productSearch" placeholder="Search menu or category"
+            [model]="productSearch" (modelChange)="onProductSearchChange($event)" />
         </div>
 
         <div class="tool-block">
@@ -39,7 +39,7 @@
           <app-text-field label="" inputId="barcodeSearch" placeholder="Search barcode" [model]="barcodeSearch"
             (modelChange)="onBarcodeSearchChange($event)" />
         </div>
-      </section>
+      </div>
 
       <section class="product-grid">
         @for (product of filteredProducts; track product.id) {
@@ -109,18 +109,37 @@
     </p-card>
   </section>
 
-    <p-card class="payment-card feature-card">
-    <div class="section-heading"><div><h2>Checkout</h2></div></div>
+  <p-card class="payment-card feature-card">
+    <div class="section-heading">
+      <div>
+        <h2>Checkout</h2>
+      </div>
+    </div>
+
     <section class="payment-grid">
-      <app-autocomplete-field label="Select Customer" inputId="customer" placeholder="Search customer" [suggestions]="customers" [model]="selectedCustomer" (modelChange)="selectedCustomer = $event" />
-      <app-select-field label="Payment Mode" inputId="paymentMode" placeholder="Choose payment mode" [options]="paymentModes" [model]="selectedPaymentMode" (modelChange)="selectedPaymentMode = $event" />
-      <app-text-field label="Discount" inputId="discount" placeholder="Enter discount amount" [model]="discountInput" (modelChange)="onDiscountChange($event)" />
-      <div class="payment-summary"><span>Customer</span><strong>{{ selectedCustomer || 'Walk-in Customer' }}</strong><span>Mode</span><strong>{{ selectedPaymentMode || 'Cash' }}</strong></div>
+      <app-autocomplete-field label="Select Customer" inputId="customer" placeholder="Search customer"
+        [suggestions]="customers" [model]="selectedCustomer" (modelChange)="selectedCustomer = $event" />
+
+      <app-select-field label="Payment Mode" inputId="paymentMode" placeholder="Choose payment mode"
+        [options]="paymentModes" [model]="selectedPaymentMode" (modelChange)="selectedPaymentMode = $event" />
+
+      <app-text-field label="Discount" inputId="discount" placeholder="Enter discount amount" [model]="discountInput"
+        (modelChange)="onDiscountChange($event)" />
+
+      <div class="payment-summary">
+        <span>Customer</span>
+        <strong>{{ selectedCustomer || 'Walk-in Customer' }}</strong>
+        <span>Mode</span>
+        <strong>{{ selectedPaymentMode || 'Cash' }}</strong>
+      </div>
     </section>
+
     <div class="action-row">
       <p-button label="Generate Bill" icon="pi pi-check-circle" />
       <p-button label="Print Bill" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printBill()" />
     </div>
-    <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Bill" severity="danger" [text]="true" (click)="clearBill()"></button>
+
+    <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Bill"
+      severity="danger" [text]="true" (click)="clearBill()"></button>
   </p-card>
 </section>
