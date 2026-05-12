@@ -91,7 +91,7 @@ export class OrganizationComponent implements OnInit {
   configImageName = '';
   configImageUrl = '';
   configImageFile: File | null = null;
-  configThemeColor = '#2f7d57';
+  configThemeColor = '#7b3b1e';
   configFontSize = '14';
   configSaving = false;
   viewOrganization: any = null;
@@ -553,7 +553,7 @@ export class OrganizationComponent implements OnInit {
         this.configImageName = this.getConfigImageFileName(this.configImage);
         this.configImageUrl = this.getConfigImagePreviewUrl(this.configImage);
         this.configImageFile = null;
-        this.configThemeColor = String(config.ThemeColor ?? config.themeColor ?? '#2f7d57');
+        this.configThemeColor = String(config.ThemeColor ?? config.themeColor ?? '#7b3b1e');
         this.configFontSize = String(config.FontSize ?? config.fontSize ?? '14');
       }
     } catch {
@@ -562,7 +562,7 @@ export class OrganizationComponent implements OnInit {
       this.configImageName = '';
       this.configImageUrl = '';
       this.configImageFile = null;
-      this.configThemeColor = '#2f7d57';
+      this.configThemeColor = '#7b3b1e';
       this.configFontSize = '14';
     }
 
@@ -958,7 +958,7 @@ export class OrganizationComponent implements OnInit {
     this.configImageName = '';
     this.configImageUrl = '';
     this.configImageFile = null;
-    this.configThemeColor = '#2f7d57';
+    this.configThemeColor = '#7b3b1e';
     this.configFontSize = '14';
     this.configSaving = false;
   }

@@ -152,7 +152,7 @@ export class WorkspaceComponent implements OnInit {
       const config = response?.result;
 
       if (config) {
-        const themeColor = String(config.ThemeColor ?? config.themeColor ?? '#2f7d57');
+        const themeColor = String(config.ThemeColor ?? config.themeColor ?? '#7b3b1e');
         const fontSize = Number(config.FontSize ?? config.fontSize ?? 14);
         const image = this.normalizeOrganizationImageValue(String(config.Image ?? config.image ?? ''));
 
@@ -268,7 +268,7 @@ export class WorkspaceComponent implements OnInit {
     return FRONT_OFFICE_SCOPE;
   }
 
-  private applyOrganizationTheme(themeColor = '#2f7d57', fontSize = 14): void {
+  private applyOrganizationTheme(themeColor = '#7b3b1e', fontSize = 14): void {
     if (!isPlatformBrowser(this.platformId)) {
       return;
     }
@@ -310,7 +310,7 @@ export class WorkspaceComponent implements OnInit {
     const value = color.trim();
 
     if (!/^#([A-Fa-f0-9]{6})$/.test(value)) {
-      return '#2f7d57';
+      return '#7b3b1e';
     }
 
     return value;

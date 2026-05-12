@@ -3,9 +3,9 @@
   padding: 1rem;
   overflow: hidden;
   background:
-    radial-gradient(circle at top left, rgba(58, 145, 94, 0.16), transparent 22%),
-    radial-gradient(circle at bottom right, rgba(142, 198, 112, 0.12), transparent 24%),
-    linear-gradient(135deg, #eff5ef 0%, #f7faf6 45%, #eef4f0 100%);
+    radial-gradient(circle at top left, rgba(123, 59, 30, 0.14), transparent 22%),
+    radial-gradient(circle at bottom right, rgba(200, 90, 43, 0.12), transparent 24%),
+    linear-gradient(135deg, #f7f0e8 0%, #fbf7f3 45%, #f3e8dd 100%);
 }
 
 .login-shell {
@@ -40,10 +40,10 @@
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at top right, rgba(203, 239, 177, 0.28), transparent 24%),
+    radial-gradient(circle at top right, rgba(248, 212, 190, 0.28), transparent 24%),
     radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.12), transparent 26%),
-    linear-gradient(155deg, #123525 0%, #1a5639 45%, #2f7d57 100%);
-  color: #f7fff8;
+    linear-gradient(155deg, #5d2d17 0%, #7b3b1e 45%, #c85a2b 100%);
+  color: #fffaf5;
 }
 
 .login-hero::after,
@@ -94,11 +94,11 @@
   align-items: center;
   justify-content: center;
   border-radius: 1.1rem;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(214, 243, 186, 0.16));
-  color: #f6fff8;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.24), rgba(248, 212, 190, 0.16));
+  color: #fffaf5;
   font-size: 1.3rem;
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(239, 249, 241, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 245, 237, 0.18);
 }
 
 .brand-lockup strong {
@@ -113,7 +113,7 @@
 }
 
 .brand-lockup p {
-  color: rgba(234, 247, 238, 0.72);
+  color: rgba(255, 239, 226, 0.72);
   font-size: 0.92rem;
 }
 
