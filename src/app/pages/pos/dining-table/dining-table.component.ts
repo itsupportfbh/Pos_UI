@@ -190,7 +190,7 @@ export class DiningTableComponent implements OnInit {
 
       this.tableRows = (response.result ?? []).map((x: any) => {
         x.RowNumber = RowNumber++;
-        x.Status = x.isactive === true ? 'Active' : 'Inactive';
+        x.status = x.isactive === true ? 'Active' : 'Inactive';
         x.ImagePreviewUrl = this.getImagePreviewUrl(String(x.image ?? ''));
         return x;
       });
