@@ -21,13 +21,13 @@ import { OrganizationService } from '../../../services/organization.service';
 
 const DINING_TABLE_COLUMNS: SharedTableColumn<any>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'OrganizationName', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '16rem' },
-  { field: 'SeatingSize', header: 'Capacity', sortable: true, width: '8rem' },
-  { field: 'BranchName', header: 'Branch', sortable: true, width: '12rem' },
-  { field: 'FloorName', header: 'Floor', sortable: true, width: '12rem' },
-  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
+  { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
+  { field: 'code', header: 'Code', sortable: true, width: '10rem' },
+  { field: 'name', header: 'Name', sortable: true, width: '16rem' },
+  { field: 'seatingsize', header: 'Capacity', sortable: true, width: '8rem' },
+  { field: 'branchname', header: 'Branch', sortable: true, width: '12rem' },
+  { field: 'floorname', header: 'Floor', sortable: true, width: '12rem' },
+  { field: 'status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
 @Component({
@@ -113,7 +113,7 @@ export class DiningTableComponent implements OnInit {
     this.BranchId = this.userDetails.IsAdmin === true ? 0 : Number(this.userDetails.BranchId || 0);
 
     this.tableColumns = DINING_TABLE_COLUMNS.map((x: any) => {
-      if (x.field === 'OrganizationName') {
+      if (x.field === 'organizationname') {
         x.hidden = this.userDetails.RoleId !== 1;
       }
 
@@ -132,7 +132,8 @@ export class DiningTableComponent implements OnInit {
         label: x.Name ?? '',
         value: x.Id ?? 0
       }));
-    } catch {
+    } catch (error: any) {
+      console.error('Error loading organizations:', error);
       this.organizationOptions = [];
       this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
     }
@@ -152,7 +153,8 @@ export class DiningTableComponent implements OnInit {
         label: x.Name ?? '',
         value: x.Id ?? 0
       }));
-    } catch {
+    } catch (error: any) {
+      console.error('Error loading branches:', error);
       this.branchOptions = [];
       this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
     }
@@ -172,7 +174,8 @@ export class DiningTableComponent implements OnInit {
         label: x.Name ?? '',
         value: x.Id ?? 0
       }));
-    } catch {
+    } catch (error: any) {
+      console.error('Error loading floors:', error);
       this.floorOptions = [];
       this.toast.error('Load Failed', 'Unable to load floors. Please check and try again.');
     }
@@ -200,7 +203,8 @@ export class DiningTableComponent implements OnInit {
 
       this.allRows = [...this.tableRows];
       this.changeDetector.detectChanges();
-    } catch {
+    } catch (error: any) {
+      console.error('Error loading dining tables:', error);
       this.toast.error('Load Failed', 'Unable to load dining tables. Please check API and try again.');
     }
   }
@@ -278,7 +282,8 @@ export class DiningTableComponent implements OnInit {
       seatingSize: Number(this.dialogSeatingSize || 0),
       branchId: Number(this.dialogBranchId || 0),
       floorId: Number(this.dialogFloorId || 0),
-      image: this.dialogImageFile ? String(this.dialogImagePreviewUrl ?? '') : this.dialogImage,
+      image: this.dialogImage,
+      imageFile: this.dialogImageFile,
       remarks: this.dialogRemarks,
       displayOrder: Number(this.dialogDisplayOrder || 0),
       orgId: this.userDetails.RoleId === 1 ? Number(this.dialogOrganization || 0) : Number(this.userDetails.OrgId || 0),
@@ -311,8 +316,13 @@ export class DiningTableComponent implements OnInit {
       }
 
       this.closeAddDialog();
-    } catch {
-      this.toast.error(payload.id ? 'Update Failed' : 'Save Failed', `Unable to save ${this.pageTitle.toLowerCase()}.`);
+    } catch (error: any) {
+      //console.error('Error saving dining table:', error);
+      //console.error('Error details:', error?.error?.errors || error?.error?.message || error?.message);
+      // const errorMessage = error?.error?.errors 
+      //   ? Object.values(error.error.errors).flat().join(', ')
+      //   : (error?.error?.message || `Unable to save ${this.pageTitle.toLowerCase()}.`);
+      this.toast.error(payload.id ? 'Update Failed' : 'Save Failed', error);
     } finally {
       this.dialogSaving = false;
     }
@@ -355,7 +365,8 @@ export class DiningTableComponent implements OnInit {
       }
 
       this.dialogFloorId = Number(diningTable.FloorId ?? diningTable.floorId ?? 0);
-    } catch {
+    } catch (error: any) {
+      //console.error('Error loading dining table:', error);
       this.toast.error('Load Failed', 'Unable to load dining table details. Please check and try again.');
     }
   }
@@ -371,7 +382,8 @@ export class DiningTableComponent implements OnInit {
       }
 
       this.toast.error('Delete Failed', response?.ErrorInfo?.Message || 'Unable to delete dining table.');
-    } catch {
+    } catch (error: any) {
+      console.error('Error deleting dining table:', error);
       this.toast.error('Delete Failed', 'Unable to delete dining table.');
     }
   }
@@ -387,7 +399,8 @@ export class DiningTableComponent implements OnInit {
       }
 
       this.toast.error('Activation Failed', response?.ErrorInfo?.Message || 'Unable to activate dining table.');
-    } catch {
+    } catch (error: any) {
+      console.error('Error activating dining table:', error);
       this.toast.error('Activation Failed', 'Unable to activate dining table.');
     }
   }
@@ -403,7 +416,8 @@ export class DiningTableComponent implements OnInit {
       }
 
       this.toast.error('Deactivation Failed', response?.ErrorInfo?.Message || 'Unable to deactivate dining table.');
-    } catch {
+    } catch (error: any) {
+      console.error('Error deactivating dining table:', error);
       this.toast.error('Deactivation Failed', 'Unable to deactivate dining table.');
     }
   }
