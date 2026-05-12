@@ -149,11 +149,11 @@ export class OrderHoldComponent implements OnInit {
   totalHeldItemsCount = 0;
   totalHeldAmountValue = 0;
 
-  readonly pageEyebrow = 'POS';
-  readonly pageTitle = 'Order Hold';
-  readonly pageSubtitle = 'Review held orders with item, quantity, table, and total details.';
-  readonly tableTitle = 'Order Hold List';
-  readonly tableCaption = 'Order Hold List';
+  readonly pageEyebrow = 'Orders';
+  readonly pageTitle = 'Hold Orders';
+  readonly pageSubtitle = 'Review held tickets, tables, and totals before sending them back to service.';
+  readonly tableTitle = 'Hold Orders';
+  readonly tableCaption = 'Hold Orders';
   readonly tableColumns = ORDER_HOLD_COLUMNS;
   readonly showFilterButton = false;
   readonly showAddNewButton = false;
@@ -583,3 +583,5 @@ export class OrderHoldComponent implements OnInit {
     return 0;
   }
 }
+
+

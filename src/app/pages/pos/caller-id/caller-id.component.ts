@@ -70,18 +70,18 @@ export class CallerIdComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
-  readonly pageTitle = 'Caller Id';
-  readonly pageSubtitle = 'Manage caller id records here.';
-  readonly filterTitle = 'Caller Id Filters';
-  readonly primaryActionLabel = 'Search Caller Id';
+  readonly pageEyebrow = 'System';
+  readonly pageTitle = 'Caller ID';
+  readonly pageSubtitle = 'Support phone-order recognition and quick guest identification.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Caller Id';
-  dialogSubtitle = 'Create a new caller id record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Caller Id';
-  readonly tableCaption = 'Caller Id';
+  readonly tableTitle = 'Caller ID';
+  readonly tableCaption = 'Caller ID';
   tableColumns = CALLERID_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
@@ -186,7 +186,7 @@ export class CallerIdComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class CallerIdComponent {
     }
   }
 }
+
+
+
 

@@ -14,9 +14,13 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type RecallRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  RecallNo: string;
+  BillNo: string;
+  CustomerName: string;
+  PhoneNo: string;
+  OrderMode: string;
+  OrderTotal: number;
+  RecallReason: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
@@ -24,9 +28,12 @@ type RecallRow = {
 
 const RECALL_COLUMNS: SharedTableColumn<RecallRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'RecallNo', header: 'Recall No', sortable: true, width: '11rem' },
+  { field: 'BillNo', header: 'Bill No', sortable: true, width: '10rem' },
+  { field: 'CustomerName', header: 'Customer', sortable: true, width: '14rem' },
+  { field: 'PhoneNo', header: 'Phone', sortable: true, width: '11rem' },
+  { field: 'OrderMode', header: 'Mode', sortable: true, width: '9rem' },
+  { field: 'OrderTotal', header: 'Amount', sortable: true, width: '10rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +72,38 @@ export class RecallComponent {
   tableRows: RecallRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
-  readonly pageTitle = 'Recall';
-  readonly pageSubtitle = 'Manage recall records here.';
-  readonly filterTitle = 'Recall Filters';
-  readonly primaryActionLabel = 'Search Recall';
+  dialogId = 0;
+  dialogRecallNo = '';
+  dialogBillNo = '';
+  dialogCustomerName = '';
+  dialogPhoneNo = '';
+  dialogOrderMode = '';
+  dialogOrderTotal = '';
+  dialogRecallReason = '';
+
+  totalRecalls = 0;
+  activeRecalls = 0;
+  totalAmount = 0;
+  previewBillNo = 'BILL-2084';
+  previewCustomerName = 'Asha Family';
+  previewRecallReason = 'Guest asked for a copy and item review';
+
+  readonly pageEyebrow = 'Orders';
+  readonly pageTitle = 'Recall Orders';
+  readonly pageSubtitle = 'Bring recent tickets back on screen for follow-up, review, or repeat service.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Recall';
-  dialogSubtitle = 'Create a new recall record.';
+  dialogTitle = 'Create Recall Ticket';
+  dialogSubtitle = 'Capture the bill details that need to be recalled at the counter.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Recall';
-  readonly tableCaption = 'Recall';
+  readonly tableTitle = 'Recall Queue';
+  readonly tableCaption = 'Recall Orders';
   tableColumns = RECALL_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Add Recall';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +111,12 @@ export class RecallComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
+    this.updatePreview();
   }
 
   searchRows(): void {
@@ -106,9 +128,11 @@ export class RecallComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.RecallNo.toLowerCase().includes(searchText) ||
+      row.BillNo.toLowerCase().includes(searchText) ||
+      row.CustomerName.toLowerCase().includes(searchText) ||
+      row.PhoneNo.toLowerCase().includes(searchText) ||
+      row.RecallReason.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +153,8 @@ export class RecallComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Create Recall Ticket';
+    this.dialogSubtitle = 'Capture the bill details that need to be recalled at the counter.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,27 +176,35 @@ export class RecallComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.RecallNo = this.dialogRecallNo;
+          row.BillNo = this.dialogBillNo;
+          row.CustomerName = this.dialogCustomerName;
+          row.PhoneNo = this.dialogPhoneNo;
+          row.OrderMode = this.dialogOrderMode;
+          row.OrderTotal = Number(this.dialogOrderTotal || 0);
+          row.RecallReason = this.dialogRecallReason;
         }
 
         return row;
       });
 
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
+      this.toast.success('Updated', 'Recall order updated successfully.');
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        RecallNo: this.dialogRecallNo,
+        BillNo: this.dialogBillNo,
+        CustomerName: this.dialogCustomerName,
+        PhoneNo: this.dialogPhoneNo,
+        OrderMode: this.dialogOrderMode,
+        OrderTotal: Number(this.dialogOrderTotal || 0),
+        RecallReason: this.dialogRecallReason,
         IsActive: true,
-        Status: 'Active',
+        Status: 'Pending',
         RowNumber: 0
       });
 
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
+      this.toast.success('Saved', 'Recall order saved successfully.');
     }
 
     this.refreshRows();
@@ -182,11 +214,15 @@ export class RecallComponent {
   editRow(row: RecallRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogRecallNo = row.RecallNo;
+    this.dialogBillNo = row.BillNo;
+    this.dialogCustomerName = row.CustomerName;
+    this.dialogPhoneNo = row.PhoneNo;
+    this.dialogOrderMode = row.OrderMode;
+    this.dialogOrderTotal = String(row.OrderTotal);
+    this.dialogRecallReason = row.RecallReason;
+    this.dialogTitle = 'Edit Recall Ticket';
+    this.dialogSubtitle = 'Update the selected recall request before the bill is reopened.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,35 +230,35 @@ export class RecallComponent {
   deleteRow(row: RecallRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.RecallNo + ' removed successfully.');
   }
 
   activateRow(row: RecallRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = true;
-        item.Status = 'Active';
+        item.Status = 'Pending';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Activated', row.RecallNo + ' reopened successfully.');
   }
 
   deactivateRow(row: RecallRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = false;
-        item.Status = 'Inactive';
+        item.Status = 'Completed';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Completed', row.RecallNo + ' marked as completed.');
   }
 
   openRowActions(menu: any, event: Event, row: RecallRow): void {
@@ -234,7 +270,7 @@ export class RecallComponent {
   confirmDeleteRow(row: RecallRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.RecallNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -248,8 +284,8 @@ export class RecallComponent {
 
   confirmActivateRow(row: RecallRow): void {
     this.confirmationService.confirm({
-      header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      header: 'Reopen Confirmation',
+      message: 'Are you sure you want to reopen ' + row.RecallNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -263,8 +299,8 @@ export class RecallComponent {
 
   confirmDeactivateRow(row: RecallRow): void {
     this.confirmationService.confirm({
-      header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      header: 'Complete Confirmation',
+      message: 'Are you sure you want to complete ' + row.RecallNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,26 +312,41 @@ export class RecallComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogRecallNo = '';
+    this.dialogBillNo = '';
+    this.dialogCustomerName = '';
+    this.dialogPhoneNo = '';
+    this.dialogOrderMode = '';
+    this.dialogOrderTotal = '';
+    this.dialogRecallReason = '';
   }
 
   private refreshRows(): void {
     this.allRows = this.allRows.map((row, index) => {
       row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
       return row;
     });
 
     this.searchRows();
+    this.updateSummary();
+    this.updatePreview();
+  }
+
+  private updateSummary(): void {
+    this.totalRecalls = this.allRows.length;
+    this.activeRecalls = this.allRows.filter((row) => row.IsActive).length;
+    this.totalAmount = this.allRows.reduce((total, row) => total + row.OrderTotal, 0);
+  }
+
+  private updatePreview(): void {
+    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+
+    this.previewBillNo = activeRow?.BillNo ?? 'BILL-2084';
+    this.previewCustomerName = activeRow?.CustomerName ?? 'Asha Family';
+    this.previewRecallReason = activeRow?.RecallReason ?? 'Guest asked for a copy and item review';
   }
 
   private isDialogFormValid(): boolean {
@@ -309,9 +360,9 @@ export class RecallComponent {
 
     if (row.IsActive) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      items.push({ label: 'Completed', icon: 'pi pi-check-circle', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      items.push({ label: 'Reopen', icon: 'pi pi-refresh', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
     }
 
     return items;
@@ -333,4 +384,3 @@ export class RecallComponent {
     }
   }
 }
-

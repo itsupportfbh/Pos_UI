@@ -9,22 +9,53 @@
     </div>
   </header>
 
+  <section class="summary-grid cash-summary-grid">
+    <article class="summary-card">
+      <span>Entries</span>
+      <strong>{{ totalEntries }}</strong>
+      <small>Total pay out records</small>
+    </article>
+    <article class="summary-card">
+      <span>Active Entries</span>
+      <strong>{{ activeEntries }}</strong>
+      <small>Entries still available in workflow</small>
+    </article>
+    <article class="summary-card">
+      <span>Total Amount</span>
+      <strong>{{ totalAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+      <small>Outgoing cash captured</small>
+    </article>
+  </section>
+
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
         <h2>{{ tableTitle }}</h2>
+        <p class="section-note">Track every outgoing cash movement with drawer, reason, and approver details.</p>
       </div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
+    <app-shared-table
+      [showFilterButton]="showFilterButton"
+      (filterButtonClick)="openFilterSidebar()"
+      [caption]="tableCaption"
+      [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
+      [columns]="tableColumns"
+      [value]="tableRows"
+      [showAddNewButton]="showAddNewButton"
+      [toolbarButtonLabel]="addNewButtonLabel"
+      [showRowActions]="showRowActions"
+      [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
 
         <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
           (click)="openRowActions(rowMenu, $event, row)"></button>
+      </ng-template>
+
+      <ng-template appTableCellTemplate="Amount" let-row>
+        {{ row.Amount | currency: 'INR' : 'symbol' : '1.2-2' }}
       </ng-template>
 
       <ng-template appTableCellTemplate="Status" let-row>
@@ -49,18 +80,18 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Search" inputId="filter-search" placeholder="Search code or name" [model]="filterSearchText"
-          (modelChange)="filterSearchText = $event"></app-text-field>
+        <app-text-field label="Search" inputId="filter-search" placeholder="Search reference, reason, or approver"
+          [model]="filterSearchText" (modelChange)="filterSearchText = $event"></app-text-field>
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()" (secondaryClick)="resetForm()"></app-action-buttons>
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()"
+        (secondaryClick)="resetForm()"></app-action-buttons>
     </section>
   </p-card>
 </p-dialog>
 
-@if (showAddNewButton) {
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '56rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
@@ -70,22 +101,38 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
-      [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
+    <app-text-field label="Reference No" inputId="dialog-reference-no" [showRequiredMark]="true"
+      placeholder="Enter reference number" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Reference number is required." [maxlength]="100" [model]="dialogReferenceNo"
+      (modelChange)="dialogReferenceNo = $event"></app-text-field>
 
-    <app-text-field label="Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter name"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="200"
-      [model]="dialogName" (modelChange)="dialogName = $event"></app-text-field>
+    <app-text-field label="Reason" inputId="dialog-reason" [showRequiredMark]="true" placeholder="Enter reason"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Reason is required." [maxlength]="200"
+      [model]="dialogReason" (modelChange)="dialogReason = $event"></app-text-field>
 
-    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Enter remarks" [maxlength]="250"
-      [model]="dialogRemarks" (modelChange)="dialogRemarks = $event"></app-text-field>
+    <app-text-field label="Drawer" inputId="dialog-drawer-name" [showRequiredMark]="true"
+      placeholder="Enter drawer name" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Drawer is required." [maxlength]="200" [model]="dialogDrawerName"
+      (modelChange)="dialogDrawerName = $event"></app-text-field>
+
+    <app-text-field label="Approved By" inputId="dialog-approved-by" [showRequiredMark]="true"
+      placeholder="Enter approver name" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Approver name is required." [maxlength]="200" [model]="dialogApprovedBy"
+      (modelChange)="dialogApprovedBy = $event"></app-text-field>
+
+    <app-text-field label="Amount" inputId="dialog-amount" type="number" [showRequiredMark]="true"
+      placeholder="Enter amount" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Amount is required." [model]="dialogAmount"
+      (modelChange)="dialogAmount = $event"></app-text-field>
+
+    <app-text-field label="Notes" inputId="dialog-notes" placeholder="Enter notes" [maxlength]="250"
+      [model]="dialogNotes" (modelChange)="dialogNotes = $event"></app-text-field>
   </section>
 
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
       secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)"></app-action-buttons>
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()"></app-action-buttons>
   </div>
 </p-dialog>
-}
+

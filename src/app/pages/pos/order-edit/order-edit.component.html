@@ -9,32 +9,86 @@
     </div>
   </header>
 
-  <p-card class="feature-card">
-    <div class="section-heading">
-      <div>
-        <h2>{{ tableTitle }}</h2>
+  <section class="summary-grid workflow-summary-grid">
+    <article class="summary-card">
+      <span>Edit Tickets</span>
+      <strong>{{ totalTickets }}</strong>
+      <small>Orders waiting for changes</small>
+    </article>
+    <article class="summary-card">
+      <span>Items Impacted</span>
+      <strong>{{ totalItems }}</strong>
+      <small>Lines affected by edits</small>
+    </article>
+    <article class="summary-card">
+      <span>Ticket Value</span>
+      <strong>{{ totalAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+      <small>Total value under review</small>
+    </article>
+  </section>
+
+  <section class="workflow-layout">
+    <p-card class="feature-card workflow-preview-card">
+      <div class="section-heading">
+        <div>
+          <h2>Edit Snapshot</h2>
+          <p class="section-note">Keep the service team aligned before the ticket goes back to billing.</p>
+        </div>
       </div>
-    </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
-      (toolbarButtonClick)="openAddDialog()">
-      <ng-template #rowActions let-row>
-        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+      <section class="workflow-preview-surface">
+        <div class="workflow-preview-topline">
+          <span>{{ previewTableName }}</span>
+          <strong>{{ previewOrderNo }}</strong>
+        </div>
+        <div class="workflow-preview-copy">
+          <p class="workflow-preview-title">{{ previewGuestName }}</p>
+          <h3>Order update in progress</h3>
+          <p>{{ previewNotes }}</p>
+        </div>
+      </section>
+    </p-card>
 
-        <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
-          (click)="openRowActions(rowMenu, $event, row)"></button>
-      </ng-template>
+    <p-card class="feature-card">
+      <div class="section-heading">
+        <div>
+          <h2>{{ tableTitle }}</h2>
+          <p class="section-note">Review and reopen dine-in tickets that need item, guest, or note corrections.</p>
+        </div>
+      </div>
 
-      <ng-template appTableCellTemplate="Status" let-row>
-        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
-          [class.status-inactive]="row.Status === 'Inactive'">
-          {{ row.Status }}
-        </span>
-      </ng-template>
-    </app-shared-table>
-  </p-card>
+      <app-shared-table
+        [showFilterButton]="showFilterButton"
+        (filterButtonClick)="openFilterSidebar()"
+        [caption]="tableCaption"
+        [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
+        [columns]="tableColumns"
+        [value]="tableRows"
+        [showAddNewButton]="showAddNewButton"
+        [toolbarButtonLabel]="addNewButtonLabel"
+        [showRowActions]="showRowActions"
+        [rowActionHeader]="rowActionHeader"
+        (toolbarButtonClick)="openAddDialog()">
+        <ng-template #rowActions let-row>
+          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+
+          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
+            (click)="openRowActions(rowMenu, $event, row)"></button>
+        </ng-template>
+
+        <ng-template appTableCellTemplate="OrderTotal" let-row>
+          {{ row.OrderTotal | currency: 'INR' : 'symbol' : '1.2-2' }}
+        </ng-template>
+
+        <ng-template appTableCellTemplate="Status" let-row>
+          <span class="status-badge" [class.status-active]="row.Status === 'Open'"
+            [class.status-inactive]="row.Status === 'Closed'">
+            {{ row.Status }}
+          </span>
+        </ng-template>
+      </app-shared-table>
+    </p-card>
+  </section>
 </section>
 
 <p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
@@ -49,18 +103,18 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Search" inputId="filter-search" placeholder="Search code or name" [model]="filterSearchText"
-          (modelChange)="filterSearchText = $event"></app-text-field>
+        <app-text-field label="Search" inputId="filter-search" placeholder="Search order, guest, or table"
+          [model]="filterSearchText" (modelChange)="filterSearchText = $event"></app-text-field>
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()" (secondaryClick)="resetForm()"></app-action-buttons>
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()"
+        (secondaryClick)="resetForm()"></app-action-buttons>
     </section>
   </p-card>
 </p-dialog>
 
-@if (showAddNewButton) {
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '60rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
@@ -70,22 +124,43 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
-      [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
+    <app-text-field label="Order No" inputId="dialog-order-no" [showRequiredMark]="true"
+      placeholder="Enter order number" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Order number is required." [maxlength]="100" [model]="dialogOrderNo"
+      (modelChange)="dialogOrderNo = $event"></app-text-field>
 
-    <app-text-field label="Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter name"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="200"
-      [model]="dialogName" (modelChange)="dialogName = $event"></app-text-field>
+    <app-text-field label="Table" inputId="dialog-table-name" [showRequiredMark]="true"
+      placeholder="Enter table name" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Table is required." [maxlength]="100" [model]="dialogTableName"
+      (modelChange)="dialogTableName = $event"></app-text-field>
 
-    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Enter remarks" [maxlength]="250"
-      [model]="dialogRemarks" (modelChange)="dialogRemarks = $event"></app-text-field>
+    <app-text-field label="Guest" inputId="dialog-guest-name" [showRequiredMark]="true"
+      placeholder="Enter guest name" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Guest name is required." [maxlength]="200" [model]="dialogGuestName"
+      (modelChange)="dialogGuestName = $event"></app-text-field>
+
+    <app-text-field label="Items" inputId="dialog-item-count" type="number" [showRequiredMark]="true"
+      placeholder="Enter item count" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Item count is required." [model]="dialogItemCount"
+      (modelChange)="dialogItemCount = $event"></app-text-field>
+
+    <app-text-field label="Order Total" inputId="dialog-order-total" type="number" [showRequiredMark]="true"
+      placeholder="Enter ticket total" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Order total is required." [model]="dialogOrderTotal"
+      (modelChange)="dialogOrderTotal = $event"></app-text-field>
+
+    <app-text-field label="Updated By" inputId="dialog-updated-by" [showRequiredMark]="true"
+      placeholder="Enter staff name" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Updated by is required." [maxlength]="150" [model]="dialogUpdatedBy"
+      (modelChange)="dialogUpdatedBy = $event"></app-text-field>
+
+    <app-text-field label="Notes" inputId="dialog-notes" placeholder="Enter edit notes" [maxlength]="250"
+      [model]="dialogNotes" (modelChange)="dialogNotes = $event"></app-text-field>
   </section>
 
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
       secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)"></app-action-buttons>
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()"></app-action-buttons>
   </div>
 </p-dialog>
-}

@@ -14,19 +14,25 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type QuickServeRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  TicketNo: string;
+  CounterName: string;
+  OrderMode: string;
+  ItemCount: number;
+  TotalAmount: number;
+  PickupLabel: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
 };
 
-const QUICKSERVE_COLUMNS: SharedTableColumn<QuickServeRow>[] = [
+const QUICK_SERVE_COLUMNS: SharedTableColumn<QuickServeRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'TicketNo', header: 'Ticket No', sortable: true, width: '11rem' },
+  { field: 'CounterName', header: 'Counter', sortable: true, width: '11rem' },
+  { field: 'OrderMode', header: 'Mode', sortable: true, width: '9rem' },
+  { field: 'ItemCount', header: 'Items', sortable: true, width: '7rem' },
+  { field: 'TotalAmount', header: 'Total', sortable: true, width: '10rem' },
+  { field: 'PickupLabel', header: 'Pickup', sortable: true, width: '11rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +71,37 @@ export class QuickServeComponent {
   tableRows: QuickServeRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  dialogId = 0;
+  dialogTicketNo = '';
+  dialogCounterName = '';
+  dialogOrderMode = '';
+  dialogItemCount = '';
+  dialogTotalAmount = '';
+  dialogPickupLabel = '';
+
+  activeTickets = 0;
+  totalItems = 0;
+  totalSales = 0;
+  previewCounterName = 'Counter 2';
+  previewOrderMode = 'Take Away';
+  previewPickupLabel = 'Pickup Slip 14';
+
+  readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Quick Serve';
-  readonly pageSubtitle = 'Manage quick serve records here.';
-  readonly filterTitle = 'Quick Serve Filters';
-  readonly primaryActionLabel = 'Search Quick Serve';
+  readonly pageSubtitle = 'Handle high-speed counter tickets with short queues and fast pickup handoff.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Quick Serve';
-  dialogSubtitle = 'Create a new quick serve record.';
+  dialogTitle = 'Create Quick Serve Ticket';
+  dialogSubtitle = 'Capture a fast-service ticket for counter billing and pickup.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Quick Serve';
+  readonly tableTitle = 'Quick Serve Queue';
   readonly tableCaption = 'Quick Serve';
-  tableColumns = QUICKSERVE_COLUMNS;
+  tableColumns = QUICK_SERVE_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Add Quick Ticket';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +109,12 @@ export class QuickServeComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
+    this.updatePreview();
   }
 
   searchRows(): void {
@@ -106,9 +126,10 @@ export class QuickServeComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.TicketNo.toLowerCase().includes(searchText) ||
+      row.CounterName.toLowerCase().includes(searchText) ||
+      row.OrderMode.toLowerCase().includes(searchText) ||
+      row.PickupLabel.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +150,8 @@ export class QuickServeComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Create Quick Serve Ticket';
+    this.dialogSubtitle = 'Capture a fast-service ticket for counter billing and pickup.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,27 +173,33 @@ export class QuickServeComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.TicketNo = this.dialogTicketNo;
+          row.CounterName = this.dialogCounterName;
+          row.OrderMode = this.dialogOrderMode;
+          row.ItemCount = Number(this.dialogItemCount || 0);
+          row.TotalAmount = Number(this.dialogTotalAmount || 0);
+          row.PickupLabel = this.dialogPickupLabel;
         }
 
         return row;
       });
 
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
+      this.toast.success('Updated', 'Quick serve ticket updated successfully.');
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        TicketNo: this.dialogTicketNo,
+        CounterName: this.dialogCounterName,
+        OrderMode: this.dialogOrderMode,
+        ItemCount: Number(this.dialogItemCount || 0),
+        TotalAmount: Number(this.dialogTotalAmount || 0),
+        PickupLabel: this.dialogPickupLabel,
         IsActive: true,
-        Status: 'Active',
+        Status: 'Queued',
         RowNumber: 0
       });
 
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
+      this.toast.success('Saved', 'Quick serve ticket saved successfully.');
     }
 
     this.refreshRows();
@@ -182,11 +209,14 @@ export class QuickServeComponent {
   editRow(row: QuickServeRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTicketNo = row.TicketNo;
+    this.dialogCounterName = row.CounterName;
+    this.dialogOrderMode = row.OrderMode;
+    this.dialogItemCount = String(row.ItemCount);
+    this.dialogTotalAmount = String(row.TotalAmount);
+    this.dialogPickupLabel = row.PickupLabel;
+    this.dialogTitle = 'Edit Quick Serve Ticket';
+    this.dialogSubtitle = 'Update the selected quick-service ticket before it is handed over.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,35 +224,35 @@ export class QuickServeComponent {
   deleteRow(row: QuickServeRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.TicketNo + ' removed successfully.');
   }
 
   activateRow(row: QuickServeRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = true;
-        item.Status = 'Active';
+        item.Status = 'Queued';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Reopened', row.TicketNo + ' reopened successfully.');
   }
 
   deactivateRow(row: QuickServeRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = false;
-        item.Status = 'Inactive';
+        item.Status = 'Served';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Served', row.TicketNo + ' marked as served.');
   }
 
   openRowActions(menu: any, event: Event, row: QuickServeRow): void {
@@ -234,7 +264,7 @@ export class QuickServeComponent {
   confirmDeleteRow(row: QuickServeRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.TicketNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -248,8 +278,8 @@ export class QuickServeComponent {
 
   confirmActivateRow(row: QuickServeRow): void {
     this.confirmationService.confirm({
-      header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      header: 'Reopen Confirmation',
+      message: 'Are you sure you want to reopen ' + row.TicketNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -263,8 +293,8 @@ export class QuickServeComponent {
 
   confirmDeactivateRow(row: QuickServeRow): void {
     this.confirmationService.confirm({
-      header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      header: 'Serve Confirmation',
+      message: 'Are you sure you want to mark ' + row.TicketNo + ' as served?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,26 +306,40 @@ export class QuickServeComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogTicketNo = '';
+    this.dialogCounterName = '';
+    this.dialogOrderMode = '';
+    this.dialogItemCount = '';
+    this.dialogTotalAmount = '';
+    this.dialogPickupLabel = '';
   }
 
   private refreshRows(): void {
     this.allRows = this.allRows.map((row, index) => {
       row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
       return row;
     });
 
     this.searchRows();
+    this.updateSummary();
+    this.updatePreview();
+  }
+
+  private updateSummary(): void {
+    this.activeTickets = this.allRows.filter((row) => row.IsActive).length;
+    this.totalItems = this.allRows.reduce((total, row) => total + row.ItemCount, 0);
+    this.totalSales = this.allRows.reduce((total, row) => total + row.TotalAmount, 0);
+  }
+
+  private updatePreview(): void {
+    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+
+    this.previewCounterName = activeRow?.CounterName ?? 'Counter 2';
+    this.previewOrderMode = activeRow?.OrderMode ?? 'Take Away';
+    this.previewPickupLabel = activeRow?.PickupLabel ?? 'Pickup Slip 14';
   }
 
   private isDialogFormValid(): boolean {
@@ -309,9 +353,9 @@ export class QuickServeComponent {
 
     if (row.IsActive) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      items.push({ label: 'Served', icon: 'pi pi-check-circle', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      items.push({ label: 'Reopen', icon: 'pi pi-refresh', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
     }
 
     return items;
@@ -333,4 +377,3 @@ export class QuickServeComponent {
     }
   }
 }
-

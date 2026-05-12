@@ -70,15 +70,15 @@ export class TipAdjustmentComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  readonly pageEyebrow = 'Payments';
   readonly pageTitle = 'Tip Adjustment';
-  readonly pageSubtitle = 'Manage tip adjustment records here.';
-  readonly filterTitle = 'Tip Adjustment Filters';
-  readonly primaryActionLabel = 'Search Tip Adjustment';
+  readonly pageSubtitle = 'Adjust gratuities cleanly before final settlement and reporting.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Tip Adjustment';
-  dialogSubtitle = 'Create a new tip adjustment record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Tip Adjustment';
   readonly tableCaption = 'Tip Adjustment';
@@ -186,7 +186,7 @@ export class TipAdjustmentComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class TipAdjustmentComponent {
     }
   }
 }
+
+
+
 

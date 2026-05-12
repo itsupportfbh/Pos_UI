@@ -70,18 +70,18 @@ export class HistoryComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
-  readonly pageTitle = 'History';
-  readonly pageSubtitle = 'Manage history records here.';
-  readonly filterTitle = 'History Filters';
-  readonly primaryActionLabel = 'Search History';
+  readonly pageEyebrow = 'Payments';
+  readonly pageTitle = 'Gift Card History';
+  readonly pageSubtitle = 'Review gift card issue, usage, and balance movement history.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create History';
-  dialogSubtitle = 'Create a new history record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'History';
-  readonly tableCaption = 'History';
+  readonly tableTitle = 'Gift Card History';
+  readonly tableCaption = 'Gift Card History';
   tableColumns = HISTORY_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
@@ -186,7 +186,7 @@ export class HistoryComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class HistoryComponent {
     }
   }
 }
+
+
+
 

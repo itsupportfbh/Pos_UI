@@ -71,7 +71,7 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Counter Code" inputId="dialog-counterCode" placeholder="Enter counter code" [required]="true"
+    <app-text-field label="Code" inputId="dialog-counterCode" placeholder="Enter counter code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Counter Code is required."
       [model]="dialogCounterCode" (modelChange)="dialogCounterCode = $event" />
 
@@ -86,7 +86,7 @@
 
     <app-select-field label="Branch" inputId="dialog-counter-branch" placeholder="Select branch"
       [options]="branchOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
-      errorMessage="Branch is required." [numberValue]="true" [model]="dialogBranch"
+      errorMessage="Branch is required." [numberValue]="true" [disabled]="isBranchSelectionLocked" [model]="dialogBranch"
       (modelChange)="dialogBranch = $event">
     </app-select-field>
 

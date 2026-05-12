@@ -70,15 +70,15 @@ export class ComboMenuComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  readonly pageEyebrow = 'Food Menu';
   readonly pageTitle = 'Combo Menu';
-  readonly pageSubtitle = 'Manage combo menu records here.';
-  readonly filterTitle = 'Combo Menu Filters';
-  readonly primaryActionLabel = 'Search Combo Menu';
+  readonly pageSubtitle = 'Create bundled menu combinations for promotions, meals, and service speed.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Combo Menu';
-  dialogSubtitle = 'Create a new combo menu record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Combo Menu';
   readonly tableCaption = 'Combo Menu';
@@ -186,7 +186,7 @@ export class ComboMenuComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class ComboMenuComponent {
     }
   }
 }
+
+
+
 

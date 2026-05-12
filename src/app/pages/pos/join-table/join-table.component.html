@@ -9,32 +9,82 @@
     </div>
   </header>
 
-  <p-card class="feature-card">
-    <div class="section-heading">
-      <div>
-        <h2>{{ tableTitle }}</h2>
+  <section class="summary-grid workflow-summary-grid">
+    <article class="summary-card">
+      <span>Joined Groups</span>
+      <strong>{{ totalJoins }}</strong>
+      <small>Total merged-table requests</small>
+    </article>
+    <article class="summary-card">
+      <span>Active Joins</span>
+      <strong>{{ activeJoins }}</strong>
+      <small>Current merged dining groups</small>
+    </article>
+    <article class="summary-card">
+      <span>Guests Covered</span>
+      <strong>{{ totalGuests }}</strong>
+      <small>Guests included in merged seating</small>
+    </article>
+  </section>
+
+  <section class="workflow-layout">
+    <p-card class="feature-card workflow-preview-card">
+      <div class="section-heading">
+        <div>
+          <h2>Join Snapshot</h2>
+          <p class="section-note">Keep joined groups visible so service and billing stay under one captain.</p>
+        </div>
       </div>
-    </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
-      (toolbarButtonClick)="openAddDialog()">
-      <ng-template #rowActions let-row>
-        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+      <section class="workflow-preview-surface">
+        <div class="workflow-preview-topline">
+          <span>{{ previewPrimaryTable }}</span>
+          <strong>{{ previewSecondaryTables }}</strong>
+        </div>
+        <div class="workflow-preview-copy">
+          <p class="workflow-preview-title">Join note</p>
+          <h3>Tables merged under one bill</h3>
+          <p>{{ previewNotes }}</p>
+        </div>
+      </section>
+    </p-card>
 
-        <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
-          (click)="openRowActions(rowMenu, $event, row)"></button>
-      </ng-template>
+    <p-card class="feature-card">
+      <div class="section-heading">
+        <div>
+          <h2>{{ tableTitle }}</h2>
+          <p class="section-note">Track primary and merged tables, guest size, and the steward handling the group.</p>
+        </div>
+      </div>
 
-      <ng-template appTableCellTemplate="Status" let-row>
-        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
-          [class.status-inactive]="row.Status === 'Inactive'">
-          {{ row.Status }}
-        </span>
-      </ng-template>
-    </app-shared-table>
-  </p-card>
+      <app-shared-table
+        [showFilterButton]="showFilterButton"
+        (filterButtonClick)="openFilterSidebar()"
+        [caption]="tableCaption"
+        [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
+        [columns]="tableColumns"
+        [value]="tableRows"
+        [showAddNewButton]="showAddNewButton"
+        [toolbarButtonLabel]="addNewButtonLabel"
+        [showRowActions]="showRowActions"
+        [rowActionHeader]="rowActionHeader"
+        (toolbarButtonClick)="openAddDialog()">
+        <ng-template #rowActions let-row>
+          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+
+          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
+            (click)="openRowActions(rowMenu, $event, row)"></button>
+        </ng-template>
+
+        <ng-template appTableCellTemplate="Status" let-row>
+          <span class="status-badge" [class.status-active]="row.Status === 'Joined'"
+            [class.status-inactive]="row.Status === 'Released'">
+            {{ row.Status }}
+          </span>
+        </ng-template>
+      </app-shared-table>
+    </p-card>
+  </section>
 </section>
 
 <p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
@@ -49,18 +99,18 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Search" inputId="filter-search" placeholder="Search code or name" [model]="filterSearchText"
-          (modelChange)="filterSearchText = $event"></app-text-field>
+        <app-text-field label="Search" inputId="filter-search" placeholder="Search join, table, or steward"
+          [model]="filterSearchText" (modelChange)="filterSearchText = $event"></app-text-field>
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()" (secondaryClick)="resetForm()"></app-action-buttons>
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()"
+        (secondaryClick)="resetForm()"></app-action-buttons>
     </section>
   </p-card>
 </p-dialog>
 
-@if (showAddNewButton) {
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '60rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
@@ -70,22 +120,38 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
-      [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
+    <app-text-field label="Join No" inputId="dialog-join-no" [showRequiredMark]="true"
+      placeholder="Enter join number" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Join number is required." [maxlength]="100" [model]="dialogJoinNo"
+      (modelChange)="dialogJoinNo = $event"></app-text-field>
 
-    <app-text-field label="Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter name"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="200"
-      [model]="dialogName" (modelChange)="dialogName = $event"></app-text-field>
+    <app-text-field label="Primary Table" inputId="dialog-primary-table" [showRequiredMark]="true"
+      placeholder="Enter primary table" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Primary table is required." [maxlength]="100" [model]="dialogPrimaryTable"
+      (modelChange)="dialogPrimaryTable = $event"></app-text-field>
 
-    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Enter remarks" [maxlength]="250"
-      [model]="dialogRemarks" (modelChange)="dialogRemarks = $event"></app-text-field>
+    <app-text-field label="Merged Tables" inputId="dialog-secondary-tables" [showRequiredMark]="true"
+      placeholder="Enter merged tables" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Merged tables are required." [maxlength]="150" [model]="dialogSecondaryTables"
+      (modelChange)="dialogSecondaryTables = $event"></app-text-field>
+
+    <app-text-field label="Guest Count" inputId="dialog-guest-count" type="number" [showRequiredMark]="true"
+      placeholder="Enter guest count" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Guest count is required." [model]="dialogGuestCount"
+      (modelChange)="dialogGuestCount = $event"></app-text-field>
+
+    <app-text-field label="Steward" inputId="dialog-steward-name" [showRequiredMark]="true"
+      placeholder="Enter steward name" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Steward is required." [maxlength]="150" [model]="dialogStewardName"
+      (modelChange)="dialogStewardName = $event"></app-text-field>
+
+    <app-text-field label="Notes" inputId="dialog-notes" placeholder="Enter join notes" [maxlength]="250"
+      [model]="dialogNotes" (modelChange)="dialogNotes = $event"></app-text-field>
   </section>
 
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
       secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)"></app-action-buttons>
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()"></app-action-buttons>
   </div>
 </p-dialog>
-}

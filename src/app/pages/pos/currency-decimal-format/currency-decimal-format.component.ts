@@ -70,18 +70,18 @@ export class CurrencyDecimalFormatComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
-  readonly pageTitle = 'Currency Decimal Format';
-  readonly pageSubtitle = 'Manage currency decimal format records here.';
-  readonly filterTitle = 'Currency Decimal Format Filters';
-  readonly primaryActionLabel = 'Search Currency Decimal Format';
+  readonly pageEyebrow = 'System';
+  readonly pageTitle = 'Currency & Decimal Format';
+  readonly pageSubtitle = 'Control currency symbol, decimal precision, and rounding display rules.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Currency Decimal Format';
-  dialogSubtitle = 'Create a new currency decimal format record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Currency Decimal Format';
-  readonly tableCaption = 'Currency Decimal Format';
+  readonly tableTitle = 'Currency & Decimal Format';
+  readonly tableCaption = 'Currency & Decimal Format';
   tableColumns = CURRENCYDECIMALFORMAT_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
@@ -186,7 +186,7 @@ export class CurrencyDecimalFormatComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class CurrencyDecimalFormatComponent {
     }
   }
 }
+
+
+
 

@@ -70,15 +70,15 @@ export class WeighingScaleComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  readonly pageEyebrow = 'System';
   readonly pageTitle = 'Weighing Scale';
-  readonly pageSubtitle = 'Manage weighing scale records here.';
-  readonly filterTitle = 'Weighing Scale Filters';
-  readonly primaryActionLabel = 'Search Weighing Scale';
+  readonly pageSubtitle = 'Configure weighing scale connections and defaults for measured items.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Weighing Scale';
-  dialogSubtitle = 'Create a new weighing scale record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Weighing Scale';
   readonly tableCaption = 'Weighing Scale';
@@ -186,7 +186,7 @@ export class WeighingScaleComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class WeighingScaleComponent {
     }
   }
 }
+
+
+
 

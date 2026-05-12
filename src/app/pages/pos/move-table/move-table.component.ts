@@ -14,19 +14,24 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type MoveTableRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  MoveNo: string;
+  FromTable: string;
+  ToTable: string;
+  GuestCount: number;
+  StewardName: string;
+  MoveReason: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
 };
 
-const MOVETABLE_COLUMNS: SharedTableColumn<MoveTableRow>[] = [
+const MOVE_TABLE_COLUMNS: SharedTableColumn<MoveTableRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'MoveNo', header: 'Move No', sortable: true, width: '11rem' },
+  { field: 'FromTable', header: 'From', sortable: true, width: '9rem' },
+  { field: 'ToTable', header: 'To', sortable: true, width: '9rem' },
+  { field: 'GuestCount', header: 'Guests', sortable: true, width: '7rem' },
+  { field: 'StewardName', header: 'Steward', sortable: true, width: '12rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +70,37 @@ export class MoveTableComponent {
   tableRows: MoveTableRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  dialogId = 0;
+  dialogMoveNo = '';
+  dialogFromTable = '';
+  dialogToTable = '';
+  dialogGuestCount = '';
+  dialogStewardName = '';
+  dialogMoveReason = '';
+
+  totalMoves = 0;
+  activeMoves = 0;
+  totalGuests = 0;
+  previewFromTable = 'T-04';
+  previewToTable = 'T-12';
+  previewMoveReason = 'Guest count increased after starters';
+
+  readonly pageEyebrow = 'Dining';
   readonly pageTitle = 'Move Table';
-  readonly pageSubtitle = 'Manage move table records here.';
-  readonly filterTitle = 'Move Table Filters';
-  readonly primaryActionLabel = 'Search Move Table';
+  readonly pageSubtitle = 'Transfer active dine-in orders between tables without losing seat or bill context.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Move Table';
-  dialogSubtitle = 'Create a new move table record.';
+  dialogTitle = 'Create Table Move';
+  dialogSubtitle = 'Capture the table transfer details before the service team shifts the ticket.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Move Table';
+  readonly tableTitle = 'Table Transfer Queue';
   readonly tableCaption = 'Move Table';
-  tableColumns = MOVETABLE_COLUMNS;
+  tableColumns = MOVE_TABLE_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Add Move';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +108,12 @@ export class MoveTableComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
+    this.updatePreview();
   }
 
   searchRows(): void {
@@ -106,9 +125,11 @@ export class MoveTableComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.MoveNo.toLowerCase().includes(searchText) ||
+      row.FromTable.toLowerCase().includes(searchText) ||
+      row.ToTable.toLowerCase().includes(searchText) ||
+      row.StewardName.toLowerCase().includes(searchText) ||
+      row.MoveReason.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +150,8 @@ export class MoveTableComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Create Table Move';
+    this.dialogSubtitle = 'Capture the table transfer details before the service team shifts the ticket.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,27 +173,33 @@ export class MoveTableComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.MoveNo = this.dialogMoveNo;
+          row.FromTable = this.dialogFromTable;
+          row.ToTable = this.dialogToTable;
+          row.GuestCount = Number(this.dialogGuestCount || 0);
+          row.StewardName = this.dialogStewardName;
+          row.MoveReason = this.dialogMoveReason;
         }
 
         return row;
       });
 
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
+      this.toast.success('Updated', 'Table move updated successfully.');
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        MoveNo: this.dialogMoveNo,
+        FromTable: this.dialogFromTable,
+        ToTable: this.dialogToTable,
+        GuestCount: Number(this.dialogGuestCount || 0),
+        StewardName: this.dialogStewardName,
+        MoveReason: this.dialogMoveReason,
         IsActive: true,
-        Status: 'Active',
+        Status: 'Pending',
         RowNumber: 0
       });
 
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
+      this.toast.success('Saved', 'Table move saved successfully.');
     }
 
     this.refreshRows();
@@ -182,11 +209,14 @@ export class MoveTableComponent {
   editRow(row: MoveTableRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogMoveNo = row.MoveNo;
+    this.dialogFromTable = row.FromTable;
+    this.dialogToTable = row.ToTable;
+    this.dialogGuestCount = String(row.GuestCount);
+    this.dialogStewardName = row.StewardName;
+    this.dialogMoveReason = row.MoveReason;
+    this.dialogTitle = 'Edit Table Move';
+    this.dialogSubtitle = 'Update the selected table transfer before the floor team acts on it.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,35 +224,35 @@ export class MoveTableComponent {
   deleteRow(row: MoveTableRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.MoveNo + ' removed successfully.');
   }
 
   activateRow(row: MoveTableRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = true;
-        item.Status = 'Active';
+        item.Status = 'Pending';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Reopened', row.MoveNo + ' reopened successfully.');
   }
 
   deactivateRow(row: MoveTableRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = false;
-        item.Status = 'Inactive';
+        item.Status = 'Moved';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Completed', row.MoveNo + ' marked as moved.');
   }
 
   openRowActions(menu: any, event: Event, row: MoveTableRow): void {
@@ -234,7 +264,7 @@ export class MoveTableComponent {
   confirmDeleteRow(row: MoveTableRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.MoveNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -248,8 +278,8 @@ export class MoveTableComponent {
 
   confirmActivateRow(row: MoveTableRow): void {
     this.confirmationService.confirm({
-      header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      header: 'Reopen Confirmation',
+      message: 'Are you sure you want to reopen ' + row.MoveNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -263,8 +293,8 @@ export class MoveTableComponent {
 
   confirmDeactivateRow(row: MoveTableRow): void {
     this.confirmationService.confirm({
-      header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      header: 'Move Confirmation',
+      message: 'Are you sure you want to mark ' + row.MoveNo + ' as moved?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,26 +306,40 @@ export class MoveTableComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogMoveNo = '';
+    this.dialogFromTable = '';
+    this.dialogToTable = '';
+    this.dialogGuestCount = '';
+    this.dialogStewardName = '';
+    this.dialogMoveReason = '';
   }
 
   private refreshRows(): void {
     this.allRows = this.allRows.map((row, index) => {
       row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
       return row;
     });
 
     this.searchRows();
+    this.updateSummary();
+    this.updatePreview();
+  }
+
+  private updateSummary(): void {
+    this.totalMoves = this.allRows.length;
+    this.activeMoves = this.allRows.filter((row) => row.IsActive).length;
+    this.totalGuests = this.allRows.reduce((total, row) => total + row.GuestCount, 0);
+  }
+
+  private updatePreview(): void {
+    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+
+    this.previewFromTable = activeRow?.FromTable ?? 'T-04';
+    this.previewToTable = activeRow?.ToTable ?? 'T-12';
+    this.previewMoveReason = activeRow?.MoveReason ?? 'Guest count increased after starters';
   }
 
   private isDialogFormValid(): boolean {
@@ -309,9 +353,9 @@ export class MoveTableComponent {
 
     if (row.IsActive) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      items.push({ label: 'Moved', icon: 'pi pi-check-circle', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      items.push({ label: 'Reopen', icon: 'pi pi-refresh', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
     }
 
     return items;
@@ -333,4 +377,3 @@ export class MoveTableComponent {
     }
   }
 }
-

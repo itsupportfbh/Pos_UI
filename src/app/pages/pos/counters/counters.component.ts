@@ -86,6 +86,7 @@ export class CountersComponent implements OnInit {
   hiddenTableRow: CounterRow[] = [];
   userDetails: any = {};
   branchOptions = BRANCH_OPTIONS;
+  public isBranchSelectionLocked = false;
 
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Counters';
@@ -108,6 +109,7 @@ export class CountersComponent implements OnInit {
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
     this.tableColumns = COUNTER_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
         x.hidden = this.userDetails.RoleId !== 1;
@@ -138,14 +140,16 @@ export class CountersComponent implements OnInit {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
-    this.resetDialogForm();
+  async openAddDialog(): Promise<void> {
+    await this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Counter';
     this.dialogSubtitle = 'Create a new Counter for the Branch.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
-    this.loadBranches();
+    if (!this.isBranchSelectionLocked) {
+      this.loadBranches();
+    }
   }
 
   closeAddDialog(): void {
@@ -294,7 +298,7 @@ export class CountersComponent implements OnInit {
       return;
     }
 
-    this.resetDialogForm();
+    await this.resetDialogForm();
     this.isEditMode = true;
     this.dialogTitle = 'Edit Counter';
     this.dialogSubtitle = 'Update the selected counter details.';
@@ -443,7 +447,7 @@ export class CountersComponent implements OnInit {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  async resetDialogForm(keepCode: boolean = false): Promise<void> {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
@@ -454,6 +458,11 @@ export class CountersComponent implements OnInit {
     this.dialogPhone = '';
     this.dialogBranch = null;
     this.dialogRemarks = '';
+
+    if (this.isBranchSelectionLocked) {
+      this.loadBranches();
+      this.dialogBranch = Number(this.userDetails?.BranchId || 0);
+    }
   }
 
   private isDialogFormValid(): boolean {

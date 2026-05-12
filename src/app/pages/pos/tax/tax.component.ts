@@ -194,7 +194,8 @@ export class TaxComponent implements OnInit {
             CreatedDate: new Date().toISOString(),
             UpdatedBy: Number(this.userDetails.UserId || 0),
             UpdatedDate: null,
-            IsDeleted: false
+            IsDeleted: false,
+            EntityNo: this.taxEntityNo
         };
 
         try {

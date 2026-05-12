@@ -14,19 +14,22 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type DisplayMenuItemsRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  ScreenCode: string;
+  ScreenName: string;
+  StationName: string;
+  ThemeName: string;
+  KitchenMessage: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
 };
 
-const DISPLAYMENUITEMS_COLUMNS: SharedTableColumn<DisplayMenuItemsRow>[] = [
+const DISPLAY_MENU_ITEMS_COLUMNS: SharedTableColumn<DisplayMenuItemsRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'ScreenCode', header: 'Screen Code', sortable: true, width: '10rem' },
+  { field: 'ScreenName', header: 'Screen Name', sortable: true, width: '14rem' },
+  { field: 'StationName', header: 'Station', sortable: true, width: '12rem' },
+  { field: 'ThemeName', header: 'Theme', sortable: true, width: '10rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +68,36 @@ export class DisplayMenuItemsComponent {
   tableRows: DisplayMenuItemsRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
-  readonly pageTitle = 'Display Menu Items';
-  readonly pageSubtitle = 'Manage display menu items records here.';
-  readonly filterTitle = 'Display Menu Items Filters';
-  readonly primaryActionLabel = 'Search Display Menu Items';
+  dialogId = 0;
+  dialogScreenCode = '';
+  dialogScreenName = '';
+  dialogStationName = '';
+  dialogThemeName = '';
+  dialogKitchenMessage = '';
+
+  totalScreens = 0;
+  activeScreens = 0;
+  previewScreenName = 'Kitchen Expo Board';
+  previewStationName = 'Hot Kitchen';
+  previewThemeName = 'Production Mode';
+  previewKitchenMessage = '2 tickets waiting for preparation';
+
+  readonly pageEyebrow = 'Displays';
+  readonly pageTitle = 'Kitchen Display';
+  readonly pageSubtitle = 'Control kitchen-facing menu item visibility and service flow settings.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Display Menu Items';
-  dialogSubtitle = 'Create a new display menu items record.';
+  dialogTitle = 'Create Kitchen Display';
+  dialogSubtitle = 'Capture kitchen display details for prep flow and station visibility.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Display Menu Items';
-  readonly tableCaption = 'Display Menu Items';
-  tableColumns = DISPLAYMENUITEMS_COLUMNS;
+  readonly tableTitle = 'Kitchen Display Profiles';
+  readonly tableCaption = 'Kitchen Display Profiles';
+  tableColumns = DISPLAY_MENU_ITEMS_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Add Kitchen Screen';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +105,12 @@ export class DisplayMenuItemsComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
+    this.updatePreview();
   }
 
   searchRows(): void {
@@ -106,9 +122,11 @@ export class DisplayMenuItemsComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.ScreenCode.toLowerCase().includes(searchText) ||
+      row.ScreenName.toLowerCase().includes(searchText) ||
+      row.StationName.toLowerCase().includes(searchText) ||
+      row.ThemeName.toLowerCase().includes(searchText) ||
+      row.KitchenMessage.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +147,8 @@ export class DisplayMenuItemsComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Create Kitchen Display';
+    this.dialogSubtitle = 'Capture kitchen display details for prep flow and station visibility.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,9 +170,11 @@ export class DisplayMenuItemsComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.ScreenCode = this.dialogScreenCode;
+          row.ScreenName = this.dialogScreenName;
+          row.StationName = this.dialogStationName;
+          row.ThemeName = this.dialogThemeName;
+          row.KitchenMessage = this.dialogKitchenMessage;
         }
 
         return row;
@@ -164,9 +184,11 @@ export class DisplayMenuItemsComponent {
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        ScreenCode: this.dialogScreenCode,
+        ScreenName: this.dialogScreenName,
+        StationName: this.dialogStationName,
+        ThemeName: this.dialogThemeName,
+        KitchenMessage: this.dialogKitchenMessage,
         IsActive: true,
         Status: 'Active',
         RowNumber: 0
@@ -182,11 +204,13 @@ export class DisplayMenuItemsComponent {
   editRow(row: DisplayMenuItemsRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogScreenCode = row.ScreenCode;
+    this.dialogScreenName = row.ScreenName;
+    this.dialogStationName = row.StationName;
+    this.dialogThemeName = row.ThemeName;
+    this.dialogKitchenMessage = row.KitchenMessage;
+    this.dialogTitle = 'Edit Kitchen Display';
+    this.dialogSubtitle = 'Update the selected kitchen display setup.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,7 +218,7 @@ export class DisplayMenuItemsComponent {
   deleteRow(row: DisplayMenuItemsRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.ScreenName + ' deleted successfully.');
   }
 
   activateRow(row: DisplayMenuItemsRow): void {
@@ -208,7 +232,7 @@ export class DisplayMenuItemsComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Activated', row.ScreenName + ' activated successfully.');
   }
 
   deactivateRow(row: DisplayMenuItemsRow): void {
@@ -222,7 +246,7 @@ export class DisplayMenuItemsComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Deactivated', row.ScreenName + ' deactivated successfully.');
   }
 
   openRowActions(menu: any, event: Event, row: DisplayMenuItemsRow): void {
@@ -234,7 +258,7 @@ export class DisplayMenuItemsComponent {
   confirmDeleteRow(row: DisplayMenuItemsRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.ScreenName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -249,7 +273,7 @@ export class DisplayMenuItemsComponent {
   confirmActivateRow(row: DisplayMenuItemsRow): void {
     this.confirmationService.confirm({
       header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      message: 'Are you sure you want to activate ' + row.ScreenName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -264,7 +288,7 @@ export class DisplayMenuItemsComponent {
   confirmDeactivateRow(row: DisplayMenuItemsRow): void {
     this.confirmationService.confirm({
       header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      message: 'Are you sure you want to deactivate ' + row.ScreenName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,16 +300,14 @@ export class DisplayMenuItemsComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogScreenCode = '';
+    this.dialogScreenName = '';
+    this.dialogStationName = '';
+    this.dialogThemeName = '';
+    this.dialogKitchenMessage = '';
   }
 
   private refreshRows(): void {
@@ -296,6 +318,22 @@ export class DisplayMenuItemsComponent {
     });
 
     this.searchRows();
+    this.updateSummary();
+    this.updatePreview();
+  }
+
+  private updateSummary(): void {
+    this.totalScreens = this.allRows.length;
+    this.activeScreens = this.allRows.filter((row) => row.IsActive).length;
+  }
+
+  private updatePreview(): void {
+    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+
+    this.previewScreenName = activeRow?.ScreenName ?? 'Kitchen Expo Board';
+    this.previewStationName = activeRow?.StationName ?? 'Hot Kitchen';
+    this.previewThemeName = activeRow?.ThemeName ?? 'Production Mode';
+    this.previewKitchenMessage = activeRow?.KitchenMessage ?? '2 tickets waiting for preparation';
   }
 
   private isDialogFormValid(): boolean {

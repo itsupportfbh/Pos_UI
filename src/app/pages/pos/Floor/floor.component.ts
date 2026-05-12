@@ -217,8 +217,8 @@ export class FloorComponent implements OnInit {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
-    this.resetDialogForm();
+  async openAddDialog(): Promise<void> {
+    await this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Floor';
     this.dialogSubtitle = 'Create a new floor for the branch.';
@@ -227,8 +227,6 @@ export class FloorComponent implements OnInit {
 
     if (this.userDetails.RoleId === 1) {
       void this.loadAllBranches();
-    } else {
-      void this.loadBranches(Number(this.userDetails?.OrgId || 0));
     }
   }
 
@@ -389,7 +387,7 @@ export class FloorComponent implements OnInit {
   }
 
   async editRow(row: FloorRow): Promise<void> {
-    this.resetDialogForm();
+    await this.resetDialogForm();
     this.isEditMode = true;
     this.dialogTitle = 'Edit Floor';
     this.dialogSubtitle = 'Update the selected floor details.';
@@ -521,7 +519,7 @@ export class FloorComponent implements OnInit {
     });
   }
 
-  resetDialogForm(): void {
+  async resetDialogForm(): Promise<void> {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
@@ -529,6 +527,14 @@ export class FloorComponent implements OnInit {
     this.dialogName = '';
     this.dialogBranch = null;
     this.dialogRemarks = '';
+
+    if (this.userDetails.RoleId !== 1) {
+      await this.loadBranches(Number(this.userDetails?.OrgId || 0));
+    }
+
+    if (this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true) {
+      this.dialogBranch = Number(this.userDetails?.BranchId || 0);
+    }
   }
 
   private isDialogFormValid(): boolean {

@@ -136,7 +136,7 @@ export class TerminalComponent implements OnInit {
         this.OrgId = Number(this.userDetails.OrgId || 0);
         this.BranchId = Number(this.userDetails.BranchId || 0);
         this.isAdmin = this.userDetails.IsAdmin == true || this.userDetails.IsAdmin == 1;
-        this.isBranchSelectionLocked = !this.isAdmin;
+        this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
         
         this.tableColumns = TERMINAL_COLUMNS.map((x: any) => {
             if (x.field === 'organizationname') {
@@ -292,27 +292,27 @@ export class TerminalComponent implements OnInit {
     closeFilterSidebar(): void {
         this.showFilterSidebar = false;
     }
-    openAddDialog(): void {
+    async openAddDialog(): Promise<void> {
         this.isEditMode = false;
         this.editingTerminalId = null;
-        this.resetDialogForm();
+        await this.resetDialogForm();
         this.dialogTitle = 'Create Terminal';
         this.dialogSubtitle = 'Add a new terminal and assign it to a branch and counter.';
         this.dialogPrimaryActionLabel = 'Save';
 
-        void this.loadBranches();
+        await this.loadBranches();
 
         if (this.isBranchSelectionLocked && Number(this.BranchId || 0) > 0) {
             this.dialogBranch = Number(this.BranchId);
             this.dialogModel.branchId = Number(this.BranchId);
-            void this.loadDialogCounters(Number(this.BranchId));
+            await this.loadDialogCounters(Number(this.BranchId));
         }
 
         this.showAddDialog = true;
     }
 
     closeAddDialog(): void {
-        this.resetDialogForm();
+        void this.resetDialogForm();
         this.isEditMode = false;
         this.showAddDialog = false;
         this.dialogSubmitted = false;
@@ -359,7 +359,7 @@ export class TerminalComponent implements OnInit {
 
     async editRow(row: TerminalRow): Promise<void> {
         try {
-            this.resetDialogForm();
+            await this.resetDialogForm();
             this.isEditMode = true;
             this.editingTerminalId = row.id;
             this.dialogTitle = 'Edit Terminal';
@@ -519,7 +519,7 @@ export class TerminalComponent implements OnInit {
         }
     }
 
-    resetDialogForm(keepCode: boolean = false): void {
+    async resetDialogForm(keepCode: boolean = false): Promise<void> {
         this.dialogSubmitted = false;
         this.counterOptions = [];
         const code = keepCode ? this.dialogModel.code ?? '' : '';
@@ -537,5 +537,11 @@ export class TerminalComponent implements OnInit {
             IsDeleted: false
         };
         this.dialogBranch = this.isBranchSelectionLocked && Number(this.BranchId || 0) > 0 ? Number(this.BranchId) : null;
+
+        if (this.isBranchSelectionLocked && Number(this.BranchId || 0) > 0) {
+            await this.loadBranches();
+            await this.loadDialogCounters(Number(this.BranchId || 0));
+            this.dialogModel.branchId = Number(this.BranchId || 0);
+        }
     }
 }

@@ -139,7 +139,7 @@ export class PrintersComponent implements OnInit {
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.BranchId = Number(this.userDetails.BranchId || 0);
     this.isAdmin = this.userDetails.IsAdmin == true || this.userDetails.IsAdmin == 1;
-    this.isBranchSelectionLocked = !this.isAdmin;
+    this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
 
     this.tableColumns = PRINTER_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
@@ -182,7 +182,7 @@ export class PrintersComponent implements OnInit {
   }
 
   async openAddDialog(): Promise<void> {
-    this.resetDialogForm();
+    await this.resetDialogForm();
     if (!this.branchOptions.length) {
       await this.loadBranches();
     }
@@ -204,7 +204,7 @@ export class PrintersComponent implements OnInit {
     this.dialogSubmitted = false;
     this.isEditMode = false;
     this.showAddDialog = false;
-    this.resetDialogForm();
+    void this.resetDialogForm();
     this.loadPrinters();
   }
 
@@ -345,7 +345,7 @@ export class PrintersComponent implements OnInit {
   }
 
   async editRow(row: PrinterRow): Promise<void> {
-    this.resetDialogForm();
+    await this.resetDialogForm();
     this.isEditMode = true;
     this.dialogTitle = 'Edit Printer';
     this.dialogSubtitle = 'Update the selected printer configuration.';
@@ -489,7 +489,7 @@ export class PrintersComponent implements OnInit {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  async resetDialogForm(keepCode: boolean = false): Promise<void> {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
@@ -506,6 +506,11 @@ export class PrintersComponent implements OnInit {
     this.dialogBranch = this.isBranchSelectionLocked && Number(this.userDetails.BranchId || 0) > 0
       ? Number(this.userDetails.BranchId)
       : null;
+
+    if (this.isBranchSelectionLocked && Number(this.userDetails.BranchId || 0) > 0) {
+      await this.loadBranches();
+      await this.loadDialogCounters(Number(this.userDetails.BranchId || 0));
+    }
   }
 
   private async loadBranches(): Promise<void> {

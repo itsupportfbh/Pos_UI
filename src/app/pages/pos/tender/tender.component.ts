@@ -70,15 +70,15 @@ export class TenderComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  readonly pageEyebrow = 'Billing';
   readonly pageTitle = 'Tender';
-  readonly pageSubtitle = 'Manage tender records here.';
-  readonly filterTitle = 'Tender Filters';
-  readonly primaryActionLabel = 'Search Tender';
+  readonly pageSubtitle = 'Maintain tender options used at checkout and settlement counters.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Tender';
-  dialogSubtitle = 'Create a new tender record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Tender';
   readonly tableCaption = 'Tender';
@@ -186,7 +186,7 @@ export class TenderComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class TenderComponent {
     }
   }
 }
+
+
+
 

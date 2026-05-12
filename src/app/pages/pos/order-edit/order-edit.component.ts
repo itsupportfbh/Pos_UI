@@ -14,19 +14,26 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type OrderEditRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  OrderNo: string;
+  TableName: string;
+  GuestName: string;
+  ItemCount: number;
+  OrderTotal: number;
+  UpdatedBy: string;
+  Notes: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
 };
 
-const ORDEREDIT_COLUMNS: SharedTableColumn<OrderEditRow>[] = [
+const ORDER_EDIT_COLUMNS: SharedTableColumn<OrderEditRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'OrderNo', header: 'Order No', sortable: true, width: '11rem' },
+  { field: 'TableName', header: 'Table', sortable: true, width: '9rem' },
+  { field: 'GuestName', header: 'Guest', sortable: true, width: '14rem' },
+  { field: 'ItemCount', header: 'Items', sortable: true, width: '7rem' },
+  { field: 'OrderTotal', header: 'Total', sortable: true, width: '10rem' },
+  { field: 'UpdatedBy', header: 'Updated By', sortable: true, width: '12rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +72,39 @@ export class OrderEditComponent {
   tableRows: OrderEditRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
-  readonly pageTitle = 'Order Edit';
-  readonly pageSubtitle = 'Manage order edit records here.';
-  readonly filterTitle = 'Order Edit Filters';
-  readonly primaryActionLabel = 'Search Order Edit';
+  dialogId = 0;
+  dialogOrderNo = '';
+  dialogTableName = '';
+  dialogGuestName = '';
+  dialogItemCount = '';
+  dialogOrderTotal = '';
+  dialogUpdatedBy = '';
+  dialogNotes = '';
+
+  totalTickets = 0;
+  totalItems = 0;
+  totalAmount = 0;
+  previewOrderNo = 'ORD-EDIT-01';
+  previewTableName = 'Table 6';
+  previewGuestName = 'Walk-in Guest';
+  previewNotes = 'Guest changed one item before billing';
+
+  readonly pageEyebrow = 'Orders';
+  readonly pageTitle = 'Edit Orders';
+  readonly pageSubtitle = 'Reopen active tickets and update items, guests, or notes without slowing service.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Order Edit';
-  dialogSubtitle = 'Create a new order edit record.';
+  dialogTitle = 'Create Edit Order';
+  dialogSubtitle = 'Capture ticket details that need a menu or guest update.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Order Edit';
-  readonly tableCaption = 'Order Edit';
-  tableColumns = ORDEREDIT_COLUMNS;
+  readonly tableTitle = 'Edit Queue';
+  readonly tableCaption = 'Edit Orders';
+  tableColumns = ORDER_EDIT_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Add Edit Request';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +112,12 @@ export class OrderEditComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
+    this.updatePreview();
   }
 
   searchRows(): void {
@@ -106,9 +129,11 @@ export class OrderEditComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.OrderNo.toLowerCase().includes(searchText) ||
+      row.TableName.toLowerCase().includes(searchText) ||
+      row.GuestName.toLowerCase().includes(searchText) ||
+      row.UpdatedBy.toLowerCase().includes(searchText) ||
+      row.Notes.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +154,8 @@ export class OrderEditComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Create Edit Order';
+    this.dialogSubtitle = 'Capture ticket details that need a menu or guest update.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,27 +177,35 @@ export class OrderEditComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.OrderNo = this.dialogOrderNo;
+          row.TableName = this.dialogTableName;
+          row.GuestName = this.dialogGuestName;
+          row.ItemCount = Number(this.dialogItemCount || 0);
+          row.OrderTotal = Number(this.dialogOrderTotal || 0);
+          row.UpdatedBy = this.dialogUpdatedBy;
+          row.Notes = this.dialogNotes;
         }
 
         return row;
       });
 
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
+      this.toast.success('Updated', 'Edit order updated successfully.');
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        OrderNo: this.dialogOrderNo,
+        TableName: this.dialogTableName,
+        GuestName: this.dialogGuestName,
+        ItemCount: Number(this.dialogItemCount || 0),
+        OrderTotal: Number(this.dialogOrderTotal || 0),
+        UpdatedBy: this.dialogUpdatedBy,
+        Notes: this.dialogNotes,
         IsActive: true,
-        Status: 'Active',
+        Status: 'Open',
         RowNumber: 0
       });
 
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
+      this.toast.success('Saved', 'Edit order saved successfully.');
     }
 
     this.refreshRows();
@@ -182,11 +215,15 @@ export class OrderEditComponent {
   editRow(row: OrderEditRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogOrderNo = row.OrderNo;
+    this.dialogTableName = row.TableName;
+    this.dialogGuestName = row.GuestName;
+    this.dialogItemCount = String(row.ItemCount);
+    this.dialogOrderTotal = String(row.OrderTotal);
+    this.dialogUpdatedBy = row.UpdatedBy;
+    this.dialogNotes = row.Notes;
+    this.dialogTitle = 'Edit Order Ticket';
+    this.dialogSubtitle = 'Update the selected edit request before service continues.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,35 +231,35 @@ export class OrderEditComponent {
   deleteRow(row: OrderEditRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.OrderNo + ' removed successfully.');
   }
 
   activateRow(row: OrderEditRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = true;
-        item.Status = 'Active';
+        item.Status = 'Open';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Activated', row.OrderNo + ' reopened successfully.');
   }
 
   deactivateRow(row: OrderEditRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = false;
-        item.Status = 'Inactive';
+        item.Status = 'Closed';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Closed', row.OrderNo + ' closed successfully.');
   }
 
   openRowActions(menu: any, event: Event, row: OrderEditRow): void {
@@ -234,7 +271,7 @@ export class OrderEditComponent {
   confirmDeleteRow(row: OrderEditRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.OrderNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -248,8 +285,8 @@ export class OrderEditComponent {
 
   confirmActivateRow(row: OrderEditRow): void {
     this.confirmationService.confirm({
-      header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      header: 'Reopen Confirmation',
+      message: 'Are you sure you want to reopen ' + row.OrderNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -263,8 +300,8 @@ export class OrderEditComponent {
 
   confirmDeactivateRow(row: OrderEditRow): void {
     this.confirmationService.confirm({
-      header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      header: 'Close Confirmation',
+      message: 'Are you sure you want to close ' + row.OrderNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,26 +313,42 @@ export class OrderEditComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogOrderNo = '';
+    this.dialogTableName = '';
+    this.dialogGuestName = '';
+    this.dialogItemCount = '';
+    this.dialogOrderTotal = '';
+    this.dialogUpdatedBy = '';
+    this.dialogNotes = '';
   }
 
   private refreshRows(): void {
     this.allRows = this.allRows.map((row, index) => {
       row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
       return row;
     });
 
     this.searchRows();
+    this.updateSummary();
+    this.updatePreview();
+  }
+
+  private updateSummary(): void {
+    this.totalTickets = this.allRows.length;
+    this.totalItems = this.allRows.reduce((total, row) => total + row.ItemCount, 0);
+    this.totalAmount = this.allRows.reduce((total, row) => total + row.OrderTotal, 0);
+  }
+
+  private updatePreview(): void {
+    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+
+    this.previewOrderNo = activeRow?.OrderNo ?? 'ORD-EDIT-01';
+    this.previewTableName = activeRow?.TableName ?? 'Table 6';
+    this.previewGuestName = activeRow?.GuestName ?? 'Walk-in Guest';
+    this.previewNotes = activeRow?.Notes ?? 'Guest changed one item before billing';
   }
 
   private isDialogFormValid(): boolean {
@@ -309,9 +362,9 @@ export class OrderEditComponent {
 
     if (row.IsActive) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      items.push({ label: 'Close', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      items.push({ label: 'Reopen', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
     }
 
     return items;
@@ -333,4 +386,3 @@ export class OrderEditComponent {
     }
   }
 }
-

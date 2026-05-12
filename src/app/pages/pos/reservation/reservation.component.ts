@@ -14,9 +14,14 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type ReservationRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  ReservationNo: string;
+  GuestName: string;
+  ContactNo: string;
+  VisitDate: string;
+  VisitTime: string;
+  TableName: string;
+  GuestCount: number;
+  Notes: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
@@ -24,9 +29,13 @@ type ReservationRow = {
 
 const RESERVATION_COLUMNS: SharedTableColumn<ReservationRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'ReservationNo', header: 'Reservation No', sortable: true, width: '13rem' },
+  { field: 'GuestName', header: 'Guest', sortable: true, width: '14rem' },
+  { field: 'ContactNo', header: 'Phone', sortable: true, width: '11rem' },
+  { field: 'VisitDate', header: 'Date', sortable: true, width: '10rem' },
+  { field: 'VisitTime', header: 'Time', sortable: true, width: '9rem' },
+  { field: 'TableName', header: 'Table', sortable: true, width: '9rem' },
+  { field: 'GuestCount', header: 'Guests', sortable: true, width: '7rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +74,39 @@ export class ReservationComponent {
   tableRows: ReservationRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  dialogId = 0;
+  dialogReservationNo = '';
+  dialogGuestName = '';
+  dialogContactNo = '';
+  dialogVisitDate = '';
+  dialogVisitTime = '';
+  dialogTableName = '';
+  dialogGuestCount = '';
+  dialogNotes = '';
+
+  totalReservations = 0;
+  upcomingReservations = 0;
+  totalGuests = 0;
+  previewGuestName = 'Rahul Family';
+  previewVisitSlot = '19 May, 8:00 PM';
+  previewTableName = 'Garden 3';
+
+  readonly pageEyebrow = 'Dining';
   readonly pageTitle = 'Reservation';
-  readonly pageSubtitle = 'Manage reservation records here.';
-  readonly filterTitle = 'Reservation Filters';
-  readonly primaryActionLabel = 'Search Reservation';
+  readonly pageSubtitle = 'Manage guest bookings, visit timing, and table readiness before the party arrives.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
   dialogTitle = 'Create Reservation';
-  dialogSubtitle = 'Create a new reservation record.';
+  dialogSubtitle = 'Capture guest booking details and reserve the right table in advance.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Reservation';
+  readonly tableTitle = 'Reservation List';
   readonly tableCaption = 'Reservation';
   tableColumns = RESERVATION_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Add Reservation';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +114,12 @@ export class ReservationComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
+    this.updatePreview();
   }
 
   searchRows(): void {
@@ -106,9 +131,11 @@ export class ReservationComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.ReservationNo.toLowerCase().includes(searchText) ||
+      row.GuestName.toLowerCase().includes(searchText) ||
+      row.ContactNo.toLowerCase().includes(searchText) ||
+      row.TableName.toLowerCase().includes(searchText) ||
+      row.Notes.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +156,8 @@ export class ReservationComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Create Reservation';
+    this.dialogSubtitle = 'Capture guest booking details and reserve the right table in advance.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,27 +179,37 @@ export class ReservationComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.ReservationNo = this.dialogReservationNo;
+          row.GuestName = this.dialogGuestName;
+          row.ContactNo = this.dialogContactNo;
+          row.VisitDate = this.dialogVisitDate;
+          row.VisitTime = this.dialogVisitTime;
+          row.TableName = this.dialogTableName;
+          row.GuestCount = Number(this.dialogGuestCount || 0);
+          row.Notes = this.dialogNotes;
         }
 
         return row;
       });
 
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
+      this.toast.success('Updated', 'Reservation updated successfully.');
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        ReservationNo: this.dialogReservationNo,
+        GuestName: this.dialogGuestName,
+        ContactNo: this.dialogContactNo,
+        VisitDate: this.dialogVisitDate,
+        VisitTime: this.dialogVisitTime,
+        TableName: this.dialogTableName,
+        GuestCount: Number(this.dialogGuestCount || 0),
+        Notes: this.dialogNotes,
         IsActive: true,
-        Status: 'Active',
+        Status: 'Upcoming',
         RowNumber: 0
       });
 
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
+      this.toast.success('Saved', 'Reservation saved successfully.');
     }
 
     this.refreshRows();
@@ -182,11 +219,16 @@ export class ReservationComponent {
   editRow(row: ReservationRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogReservationNo = row.ReservationNo;
+    this.dialogGuestName = row.GuestName;
+    this.dialogContactNo = row.ContactNo;
+    this.dialogVisitDate = row.VisitDate;
+    this.dialogVisitTime = row.VisitTime;
+    this.dialogTableName = row.TableName;
+    this.dialogGuestCount = String(row.GuestCount);
+    this.dialogNotes = row.Notes;
+    this.dialogTitle = 'Edit Reservation';
+    this.dialogSubtitle = 'Update the selected guest booking before arrival.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,35 +236,35 @@ export class ReservationComponent {
   deleteRow(row: ReservationRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.ReservationNo + ' removed successfully.');
   }
 
   activateRow(row: ReservationRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = true;
-        item.Status = 'Active';
+        item.Status = 'Upcoming';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Activated', row.ReservationNo + ' reopened successfully.');
   }
 
   deactivateRow(row: ReservationRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = false;
-        item.Status = 'Inactive';
+        item.Status = 'Seated';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Seated', row.ReservationNo + ' marked as seated.');
   }
 
   openRowActions(menu: any, event: Event, row: ReservationRow): void {
@@ -234,7 +276,7 @@ export class ReservationComponent {
   confirmDeleteRow(row: ReservationRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.ReservationNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -248,8 +290,8 @@ export class ReservationComponent {
 
   confirmActivateRow(row: ReservationRow): void {
     this.confirmationService.confirm({
-      header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      header: 'Reopen Confirmation',
+      message: 'Are you sure you want to reopen ' + row.ReservationNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -263,8 +305,8 @@ export class ReservationComponent {
 
   confirmDeactivateRow(row: ReservationRow): void {
     this.confirmationService.confirm({
-      header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      header: 'Seat Confirmation',
+      message: 'Are you sure you want to mark ' + row.ReservationNo + ' as seated?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,26 +318,42 @@ export class ReservationComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogReservationNo = '';
+    this.dialogGuestName = '';
+    this.dialogContactNo = '';
+    this.dialogVisitDate = '';
+    this.dialogVisitTime = '';
+    this.dialogTableName = '';
+    this.dialogGuestCount = '';
+    this.dialogNotes = '';
   }
 
   private refreshRows(): void {
     this.allRows = this.allRows.map((row, index) => {
       row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
       return row;
     });
 
     this.searchRows();
+    this.updateSummary();
+    this.updatePreview();
+  }
+
+  private updateSummary(): void {
+    this.totalReservations = this.allRows.length;
+    this.upcomingReservations = this.allRows.filter((row) => row.IsActive).length;
+    this.totalGuests = this.allRows.reduce((total, row) => total + row.GuestCount, 0);
+  }
+
+  private updatePreview(): void {
+    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+
+    this.previewGuestName = activeRow?.GuestName ?? 'Rahul Family';
+    this.previewVisitSlot = activeRow ? activeRow.VisitDate + ' ' + activeRow.VisitTime : '19 May, 8:00 PM';
+    this.previewTableName = activeRow?.TableName ?? 'Garden 3';
   }
 
   private isDialogFormValid(): boolean {
@@ -309,9 +367,9 @@ export class ReservationComponent {
 
     if (row.IsActive) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      items.push({ label: 'Seated', icon: 'pi pi-check-circle', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      items.push({ label: 'Reopen', icon: 'pi pi-refresh', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
     }
 
     return items;
@@ -333,4 +391,3 @@ export class ReservationComponent {
     }
   }
 }
-

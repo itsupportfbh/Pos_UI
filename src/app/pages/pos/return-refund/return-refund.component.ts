@@ -29,22 +29,22 @@ export class ReturnRefundComponent {  readonly formState: Record<string, string 
   showAddDialog = false;
   showFilterSidebar = false;
   readonly pageEyebrow = 'Orders';
-  readonly pageTitle = 'Return Refund';
-  readonly pageSubtitle = 'Capture returned items and refund mode.';
+  readonly pageTitle = 'Return & Refunds';
+  readonly pageSubtitle = 'Track returned items and process refunds with clear payment references.';
   readonly paymentModeOptions = PAYMENT_MODE_OPTIONS;
   
-  readonly filterTitle = `${'Return Refund'} Filters`;
-  readonly filterDescription = `API data will be loaded for ${'Return Refund'.toLowerCase()}.`;
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly filterDescription = 'API data will be loaded for ' + this.pageTitle.toLowerCase() + '.';
   readonly fields: any[] = [{ key: 'invoiceNo', label: 'Invoice Number', type: 'text', placeholder: 'Enter invoice number' }, { key: 'refundMode', label: 'Refund Mode', type: 'select', placeholder: 'Choose refund mode', options: PAYMENT_MODE_OPTIONS }];
-  readonly primaryActionLabel = `Search ${'Return Refund'}`;
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
   readonly dialogTitle = '';
   readonly dialogSubtitle = '';
   readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Return Refund';
-  readonly tableCaption = 'Return Refund';
+  readonly tableTitle = 'Return & Refunds';
+  readonly tableCaption = 'Return & Refunds';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];
     readonly showAddNewButton = false;
@@ -122,6 +122,9 @@ export class ReturnRefundComponent {  readonly formState: Record<string, string 
     }
   }
 }
+
+
+
 
 
 

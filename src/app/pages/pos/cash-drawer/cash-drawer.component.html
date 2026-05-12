@@ -9,22 +9,68 @@
     </div>
   </header>
 
+  <section class="summary-grid cash-summary-grid">
+    <article class="summary-card">
+      <span>Drawer Sessions</span>
+      <strong>{{ totalDrawers }}</strong>
+      <small>Total recorded sessions</small>
+    </article>
+    <article class="summary-card">
+      <span>Active Drawers</span>
+      <strong>{{ activeDrawers }}</strong>
+      <small>Open or usable drawer slots</small>
+    </article>
+    <article class="summary-card">
+      <span>Opening Cash</span>
+      <strong>{{ totalOpeningBalance | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+      <small>Opening balance across sessions</small>
+    </article>
+    <article class="summary-card">
+      <span>Closing Cash</span>
+      <strong>{{ totalClosingBalance | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+      <small>Closing balance across sessions</small>
+    </article>
+  </section>
+
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
         <h2>{{ tableTitle }}</h2>
+        <p class="section-note">Review drawer movement by counter, opening, closing, and variance.</p>
       </div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
+    <app-shared-table
+      [showFilterButton]="showFilterButton"
+      (filterButtonClick)="openFilterSidebar()"
+      [caption]="tableCaption"
+      [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
+      [columns]="tableColumns"
+      [value]="tableRows"
+      [showAddNewButton]="showAddNewButton"
+      [toolbarButtonLabel]="addNewButtonLabel"
+      [showRowActions]="showRowActions"
+      [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
 
         <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
           (click)="openRowActions(rowMenu, $event, row)"></button>
+      </ng-template>
+
+      <ng-template appTableCellTemplate="OpeningBalance" let-row>
+        {{ row.OpeningBalance | currency: 'INR' : 'symbol' : '1.2-2' }}
+      </ng-template>
+
+      <ng-template appTableCellTemplate="ClosingBalance" let-row>
+        {{ row.ClosingBalance | currency: 'INR' : 'symbol' : '1.2-2' }}
+      </ng-template>
+
+      <ng-template appTableCellTemplate="Variance" let-row>
+        <span class="variance-value" [class.variance-negative]="row.Variance < 0">
+          {{ row.Variance | currency: 'INR' : 'symbol' : '1.2-2' }}
+        </span>
       </ng-template>
 
       <ng-template appTableCellTemplate="Status" let-row>
@@ -49,18 +95,18 @@
       </div>
 
       <section class="field-grid">
-        <app-text-field label="Search" inputId="filter-search" placeholder="Search code or name" [model]="filterSearchText"
-          (modelChange)="filterSearchText = $event"></app-text-field>
+        <app-text-field label="Search" inputId="filter-search" placeholder="Search drawer, counter, or notes"
+          [model]="filterSearchText" (modelChange)="filterSearchText = $event"></app-text-field>
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()" (secondaryClick)="resetForm()"></app-action-buttons>
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()"
+        (secondaryClick)="resetForm()"></app-action-buttons>
     </section>
   </p-card>
 </p-dialog>
 
-@if (showAddNewButton) {
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '56rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
@@ -70,22 +116,38 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
-      [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
+    <app-text-field label="Drawer Code" inputId="dialog-drawer-code" [showRequiredMark]="true"
+      placeholder="Enter drawer code" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Drawer code is required." [maxlength]="100" [model]="dialogDrawerCode"
+      (modelChange)="dialogDrawerCode = $event"></app-text-field>
 
-    <app-text-field label="Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter name"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="200"
-      [model]="dialogName" (modelChange)="dialogName = $event"></app-text-field>
+    <app-text-field label="Drawer Name" inputId="dialog-drawer-name" [showRequiredMark]="true"
+      placeholder="Enter drawer name" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Drawer name is required." [maxlength]="200" [model]="dialogDrawerName"
+      (modelChange)="dialogDrawerName = $event"></app-text-field>
 
-    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Enter remarks" [maxlength]="250"
-      [model]="dialogRemarks" (modelChange)="dialogRemarks = $event"></app-text-field>
+    <app-text-field label="Counter" inputId="dialog-counter-name" [showRequiredMark]="true"
+      placeholder="Enter counter name" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Counter is required." [maxlength]="200" [model]="dialogCounterName"
+      (modelChange)="dialogCounterName = $event"></app-text-field>
+
+    <app-text-field label="Opening Balance" inputId="dialog-opening-balance" type="number" [showRequiredMark]="true"
+      placeholder="Enter opening balance" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Opening balance is required." [model]="dialogOpeningBalance"
+      (modelChange)="dialogOpeningBalance = $event"></app-text-field>
+
+    <app-text-field label="Closing Balance" inputId="dialog-closing-balance" type="number" [showRequiredMark]="true"
+      placeholder="Enter closing balance" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Closing balance is required." [model]="dialogClosingBalance"
+      (modelChange)="dialogClosingBalance = $event"></app-text-field>
+
+    <app-text-field label="Notes" inputId="dialog-notes" placeholder="Enter drawer notes" [maxlength]="250"
+      [model]="dialogNotes" (modelChange)="dialogNotes = $event"></app-text-field>
   </section>
 
   <div class="dialog-actions">
     <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
       secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)"></app-action-buttons>
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()"></app-action-buttons>
   </div>
 </p-dialog>
-}

@@ -17,7 +17,7 @@
     <app-shared-table
       [showFilterButton]="showFilterButton"
       (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption"
+      [caption]="tableCaption" [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
       [columns]="tableColumns"
       [value]="tableRows"
       [showAddNewButton]="showAddNewButton"
@@ -102,3 +102,6 @@
     </div>
   </p-dialog>
 }
+
+
+

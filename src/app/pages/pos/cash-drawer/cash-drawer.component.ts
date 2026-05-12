@@ -14,19 +14,26 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type CashDrawerRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  DrawerCode: string;
+  DrawerName: string;
+  CounterName: string;
+  OpeningBalance: number;
+  ClosingBalance: number;
+  Variance: number;
+  Notes: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
 };
 
-const CASHDRAWER_COLUMNS: SharedTableColumn<CashDrawerRow>[] = [
+const CASH_DRAWER_COLUMNS: SharedTableColumn<CashDrawerRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'DrawerCode', header: 'Drawer Code', sortable: true, width: '10rem' },
+  { field: 'DrawerName', header: 'Drawer Name', sortable: true, width: '14rem' },
+  { field: 'CounterName', header: 'Counter', sortable: true, width: '12rem' },
+  { field: 'OpeningBalance', header: 'Opening', sortable: true, width: '9rem' },
+  { field: 'ClosingBalance', header: 'Closing', sortable: true, width: '9rem' },
+  { field: 'Variance', header: 'Variance', sortable: true, width: '9rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +72,35 @@ export class CashDrawerComponent {
   tableRows: CashDrawerRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  dialogId = 0;
+  dialogDrawerCode = '';
+  dialogDrawerName = '';
+  dialogCounterName = '';
+  dialogOpeningBalance = '';
+  dialogClosingBalance = '';
+  dialogNotes = '';
+
+  totalDrawers = 0;
+  activeDrawers = 0;
+  totalOpeningBalance = 0;
+  totalClosingBalance = 0;
+
+  readonly pageEyebrow = 'Payments';
   readonly pageTitle = 'Cash Drawer';
-  readonly pageSubtitle = 'Manage cash drawer records here.';
-  readonly filterTitle = 'Cash Drawer Filters';
-  readonly primaryActionLabel = 'Search Cash Drawer';
+  readonly pageSubtitle = 'Track drawer openings, drops, and balance checks across service shifts.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Cash Drawer';
-  dialogSubtitle = 'Create a new cash drawer record.';
+  dialogTitle = 'Open Cash Drawer';
+  dialogSubtitle = 'Capture the drawer opening and closing details for the shift.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Cash Drawer';
-  readonly tableCaption = 'Cash Drawer';
-  tableColumns = CASHDRAWER_COLUMNS;
+  readonly tableTitle = 'Drawer Sessions';
+  readonly tableCaption = 'Drawer Sessions';
+  tableColumns = CASH_DRAWER_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Open Drawer';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +108,11 @@ export class CashDrawerComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
   }
 
   searchRows(): void {
@@ -106,9 +124,10 @@ export class CashDrawerComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.DrawerCode.toLowerCase().includes(searchText) ||
+      row.DrawerName.toLowerCase().includes(searchText) ||
+      row.CounterName.toLowerCase().includes(searchText) ||
+      row.Notes.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +148,8 @@ export class CashDrawerComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Open Cash Drawer';
+    this.dialogSubtitle = 'Capture the drawer opening and closing details for the shift.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,9 +171,12 @@ export class CashDrawerComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.DrawerCode = this.dialogDrawerCode;
+          row.DrawerName = this.dialogDrawerName;
+          row.CounterName = this.dialogCounterName;
+          row.OpeningBalance = Number(this.dialogOpeningBalance || 0);
+          row.ClosingBalance = Number(this.dialogClosingBalance || 0);
+          row.Notes = this.dialogNotes;
         }
 
         return row;
@@ -164,9 +186,13 @@ export class CashDrawerComponent {
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        DrawerCode: this.dialogDrawerCode,
+        DrawerName: this.dialogDrawerName,
+        CounterName: this.dialogCounterName,
+        OpeningBalance: Number(this.dialogOpeningBalance || 0),
+        ClosingBalance: Number(this.dialogClosingBalance || 0),
+        Variance: 0,
+        Notes: this.dialogNotes,
         IsActive: true,
         Status: 'Active',
         RowNumber: 0
@@ -182,11 +208,14 @@ export class CashDrawerComponent {
   editRow(row: CashDrawerRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogDrawerCode = row.DrawerCode;
+    this.dialogDrawerName = row.DrawerName;
+    this.dialogCounterName = row.CounterName;
+    this.dialogOpeningBalance = String(row.OpeningBalance);
+    this.dialogClosingBalance = String(row.ClosingBalance);
+    this.dialogNotes = row.Notes;
+    this.dialogTitle = 'Edit Cash Drawer';
+    this.dialogSubtitle = 'Update the selected drawer session details.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,7 +223,7 @@ export class CashDrawerComponent {
   deleteRow(row: CashDrawerRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.DrawerName + ' deleted successfully.');
   }
 
   activateRow(row: CashDrawerRow): void {
@@ -208,7 +237,7 @@ export class CashDrawerComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Activated', row.DrawerName + ' activated successfully.');
   }
 
   deactivateRow(row: CashDrawerRow): void {
@@ -222,7 +251,7 @@ export class CashDrawerComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Deactivated', row.DrawerName + ' deactivated successfully.');
   }
 
   openRowActions(menu: any, event: Event, row: CashDrawerRow): void {
@@ -234,7 +263,7 @@ export class CashDrawerComponent {
   confirmDeleteRow(row: CashDrawerRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.DrawerName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -249,7 +278,7 @@ export class CashDrawerComponent {
   confirmActivateRow(row: CashDrawerRow): void {
     this.confirmationService.confirm({
       header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      message: 'Are you sure you want to activate ' + row.DrawerName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -264,7 +293,7 @@ export class CashDrawerComponent {
   confirmDeactivateRow(row: CashDrawerRow): void {
     this.confirmationService.confirm({
       header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      message: 'Are you sure you want to deactivate ' + row.DrawerName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,26 +305,34 @@ export class CashDrawerComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogDrawerCode = '';
+    this.dialogDrawerName = '';
+    this.dialogCounterName = '';
+    this.dialogOpeningBalance = '';
+    this.dialogClosingBalance = '';
+    this.dialogNotes = '';
   }
 
   private refreshRows(): void {
     this.allRows = this.allRows.map((row, index) => {
       row.RowNumber = index + 1;
+      row.Variance = row.ClosingBalance - row.OpeningBalance;
       row.Status = row.IsActive ? 'Active' : 'Inactive';
       return row;
     });
 
     this.searchRows();
+    this.updateSummary();
+  }
+
+  private updateSummary(): void {
+    this.totalDrawers = this.allRows.length;
+    this.activeDrawers = this.allRows.filter((row) => row.IsActive).length;
+    this.totalOpeningBalance = this.allRows.reduce((total, row) => total + row.OpeningBalance, 0);
+    this.totalClosingBalance = this.allRows.reduce((total, row) => total + row.ClosingBalance, 0);
   }
 
   private isDialogFormValid(): boolean {
@@ -333,4 +370,3 @@ export class CashDrawerComponent {
     }
   }
 }
-

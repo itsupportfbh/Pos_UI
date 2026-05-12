@@ -21,12 +21,12 @@ import { OrganizationService } from '../../../services/organization.service';
 
 const DINING_TABLE_COLUMNS: SharedTableColumn<any>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'OrganizationName', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '16rem' },
-  { field: 'SeatingSize', header: 'Capacity', sortable: true, width: '8rem' },
-  { field: 'BranchName', header: 'Branch', sortable: true, width: '12rem' },
-  { field: 'FloorName', header: 'Floor', sortable: true, width: '12rem' },
+  { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
+  { field: 'code', header: 'Code', sortable: true, width: '10rem' },
+  { field: 'name', header: 'Name', sortable: true, width: '16rem' },
+  { field: 'seatingsize', header: 'Capacity', sortable: true, width: '8rem' },
+  { field: 'branchname', header: 'Branch', sortable: true, width: '12rem' },
+  { field: 'floorname', header: 'Floor', sortable: true, width: '12rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -113,7 +113,7 @@ export class DiningTableComponent implements OnInit {
     this.BranchId = this.userDetails.IsAdmin === true ? 0 : Number(this.userDetails.BranchId || 0);
 
     this.tableColumns = DINING_TABLE_COLUMNS.map((x: any) => {
-      if (x.field === 'OrganizationName') {
+      if (x.field === 'organizationname') {
         x.hidden = this.userDetails.RoleId !== 1;
       }
 
@@ -187,14 +187,8 @@ export class DiningTableComponent implements OnInit {
 
       this.tableRows = (response.result ?? []).map((x: any) => {
         x.RowNumber = RowNumber++;
-        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? '';
-        x.Code = x.Code ?? x.code ?? '';
-        x.Name = x.Name ?? x.name ?? '';
-        x.SeatingSize = Number(x.SeatingSize ?? x.seatingsize ?? x.seatingSize ?? 0);
-        x.BranchName = x.BranchName ?? x.branchname ?? '';
-        x.FloorName = x.FloorName ?? x.floorname ?? '';
-        x.Status = x.IsActive === true || x.isactive === true ? 'Active' : 'Inactive';
-        x.ImagePreviewUrl = this.getImagePreviewUrl(String(x.Image ?? x.image ?? ''));
+        x.Status = x.isactive === true ? 'Active' : 'Inactive';
+        x.ImagePreviewUrl = this.getImagePreviewUrl(String(x.image ?? ''));
         return x;
       });
 
@@ -206,7 +200,7 @@ export class DiningTableComponent implements OnInit {
   }
 
   async openAddDialog(): Promise<void> {
-    this.resetDialogForm();
+    await this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Dining Table';
     this.dialogSubtitle = 'Create a new dining table.';
@@ -319,7 +313,7 @@ export class DiningTableComponent implements OnInit {
   }
 
   async editRow(row: any): Promise<void> {
-    this.resetDialogForm();
+    await this.resetDialogForm();
     this.isEditMode = true;
     this.dialogTitle = 'Edit Dining Table';
     this.dialogSubtitle = 'Update the selected dining table details.';
@@ -527,13 +521,10 @@ export class DiningTableComponent implements OnInit {
     return parts[parts.length - 1] ?? '';
   }
 
-  resetDialogForm(): void {
+  async resetDialogForm(): Promise<void> {
     this.dialogSubmitted = false;
     this.dialogSaving = false;
     this.dialogId = 0;
-    this.dialogOrganization = null;
-    this.dialogBranchId = null;
-    this.dialogFloorId = null;
     this.dialogCode = '';
     this.dialogName = '';
     this.dialogSeatingSize = '';
@@ -542,9 +533,19 @@ export class DiningTableComponent implements OnInit {
     this.dialogImage = '';
     this.dialogImageFile = null;
     this.dialogImagePreviewUrl = null;
+    this.dialogOrganization = null;
+    this.dialogBranchId = null;
+    this.dialogFloorId = null;
+    this.branchOptions = [];
+    this.floorOptions = [];
 
-    if (this.userDetails.IsAdmin !== true && this.userDetails.RoleId !== 1) {
+    if (this.userDetails.RoleId !== 1) {
+      await this.loadBranches(Number(this.userDetails.OrgId || 0));
+    }
+
+    if (this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true) {
       this.dialogBranchId = Number(this.userDetails.BranchId || 0);
+      await this.loadFloors(Number(this.userDetails.OrgId || 0), Number(this.dialogBranchId || 0));
     }
   }
 }

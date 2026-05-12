@@ -70,15 +70,15 @@ export class AnnouncementComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  readonly pageEyebrow = 'Displays';
   readonly pageTitle = 'Announcement';
-  readonly pageSubtitle = 'Manage announcement records here.';
-  readonly filterTitle = 'Announcement Filters';
-  readonly primaryActionLabel = 'Search Announcement';
+  readonly pageSubtitle = 'Publish restaurant notices to service screens and customer displays.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Announcement';
-  dialogSubtitle = 'Create a new announcement record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Announcement';
   readonly tableCaption = 'Announcement';
@@ -186,7 +186,7 @@ export class AnnouncementComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class AnnouncementComponent {
     }
   }
 }
+
+
+
 

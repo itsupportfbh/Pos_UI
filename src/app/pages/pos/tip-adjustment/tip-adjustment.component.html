@@ -17,7 +17,7 @@
     </div>
 
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+      [caption]="tableCaption" [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
@@ -89,3 +89,6 @@
   </div>
 </p-dialog>
 }
+
+
+

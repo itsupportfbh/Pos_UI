@@ -16,6 +16,7 @@ export interface Role {
   UpdatedBy?: number | null;
   UpdatedDate?: string | null;
   IsDeleted?: boolean;
+  EntityNo?: number;
 }
 
 @Injectable({

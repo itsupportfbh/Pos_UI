@@ -80,7 +80,8 @@
     <section class="field-grid dialog-grid">
       <app-select-field label="Branch" inputId="dialog-branch" placeholder="Choose branch" [options]="branchOptions"
         [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
-        errorMessage="Branch is required." [numberValue]="true" [model]="dialogBranch"
+        errorMessage="Branch is required." [numberValue]="true"
+        [disabled]="userDetails.RoleId !== 1 && userDetails.IsAdmin !== true" [model]="dialogBranch"
         (modelChange)="dialogBranch = $event" />
 
       <app-text-field label="Code" inputId="dialog-code" placeholder="Floor Code" [required]="true"

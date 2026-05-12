@@ -70,18 +70,18 @@ export class RegistrationComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
-  readonly pageTitle = 'Registration';
-  readonly pageSubtitle = 'Manage registration records here.';
-  readonly filterTitle = 'Registration Filters';
-  readonly primaryActionLabel = 'Search Registration';
+  readonly pageEyebrow = 'Payments';
+  readonly pageTitle = 'Gift Card Registration';
+  readonly pageSubtitle = 'Issue new gift cards and register opening balances for customers.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Registration';
-  dialogSubtitle = 'Create a new registration record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Registration';
-  readonly tableCaption = 'Registration';
+  readonly tableTitle = 'Gift Card Registration';
+  readonly tableCaption = 'Gift Card Registration';
   tableColumns = REGISTRATION_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
@@ -186,7 +186,7 @@ export class RegistrationComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class RegistrationComponent {
     }
   }
 }
+
+
+
 

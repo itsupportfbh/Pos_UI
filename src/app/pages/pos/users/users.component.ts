@@ -401,7 +401,7 @@ export class UsersComponent implements OnInit {
       Remarks: this.dialogRemarks,
       IsAdmin: this.dialogIsAdmin === 'Yes',
       Email: this.dialogEmail,
-      ContactNo: Number(this.dialogContactNumber || 0),
+      ContactNo: this.dialogContactNumber.trim(),
       OrgId: this.userDetails.RoleId === 1
         ? Number(this.dialogOrganization || 0)
         : Number(this.userDetails.OrgId || 0),
@@ -444,7 +444,8 @@ export class UsersComponent implements OnInit {
       CreatedDate: new Date().toISOString(),
       UpdatedBy: Number(this.userDetails.UserId || 0),
       UpdatedDate: null,
-      IsDeleted: false
+      IsDeleted: false,
+      EntityNo: this.userEntityNo
     };
 
     const formData = this.createUserFormData(payload);
@@ -798,7 +799,7 @@ export class UsersComponent implements OnInit {
     formData.append('IsAdmin', String(payload.IsAdmin ?? false));
     formData.append('Email', payload.Email ?? '');
     formData.append('Password', payload.Password ?? '');
-    formData.append('ContactNo', String(payload.ContactNo ?? 0));
+    formData.append('ContactNo', payload.ContactNo ?? '');
     formData.append('EmpCode', payload.EmpCode ?? '');
     formData.append('OrgId', String(payload.OrgId ?? 0));
     formData.append('Image', payload.Image ?? '');
@@ -817,6 +818,7 @@ export class UsersComponent implements OnInit {
     formData.append('UpdatedBy', String(payload.UpdatedBy ?? 0));
     formData.append('UpdatedDate', payload.UpdatedDate ?? '');
     formData.append('IsDeleted', String(payload.IsDeleted ?? false));
+    formData.append('EntityNo', String(payload.EntityNo ?? 0));
 
     if (payload.ImageFile) {
       formData.append('ImageFile', payload.ImageFile, payload.ImageFile.name);

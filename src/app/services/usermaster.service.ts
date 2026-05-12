@@ -6,6 +6,7 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface UserMaster {
   Id?: number;
+  EntityNo?: number;
   Code?: string;
   Name?: string;
   Remarks?: string;
@@ -13,7 +14,7 @@ export interface UserMaster {
   EmpCode?: string;
   Email?: string;
   Password?: string;
-  ContactNo?: number;
+  ContactNo?: string;
   OrgId?: number;
   Image?: string;
   Gender?: number;

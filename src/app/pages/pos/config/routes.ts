@@ -106,7 +106,7 @@ export const POS_ROUTES: Routes = [
       { path: 'counters', loadComponent: countersPage },
       { path: 'terminal', loadComponent: terminalPage },
       { path: 'printers', loadComponent: printersPage },
-      { path: 'Tax', loadComponent: TaxPage },
+      { path: 'tax', loadComponent: TaxPage },
       { path: 'users', loadComponent: usersPage },
       { path: 'roles', loadComponent: rolesPage },
       { path: 'order-screen', loadComponent: orderScreenPage },
@@ -131,7 +131,7 @@ export const POS_ROUTES: Routes = [
       { path: 'move-table', loadComponent: moveTablePage },
       { path: 'join-table', loadComponent: joinTablePage },
       { path: 'reservation', loadComponent: reservationPage },
-      { path: 'membership-management', loadComponent: membershipManagementPage },
+      { path: 'reward-point', loadComponent: membershipManagementPage },
       { path: 'customer-display', loadComponent: customerDisplayPage },
       { path: 'dual-display', loadComponent: dualDisplayPage },
       { path: 'menu-setting', loadComponent: menuSettingPage },
@@ -152,6 +152,12 @@ export const POS_ROUTES: Routes = [
       { path: 'currency-decimal-format', loadComponent: currencyDecimalFormatPage },
       { path: 'language', loadComponent: languagePage },
       { path: 'paymode', loadComponent: paymodePage },
+      { path: 'kitchen-display', loadComponent: displayMenuItemsPage },
+
+      { path: 'Tax', redirectTo: 'tax', pathMatch: 'full' },
+      { path: 'display-menu-items', redirectTo: 'kitchen-display', pathMatch: 'full' },
+      { path: 'membership-management', redirectTo: 'reward-point', pathMatch: 'full' },
+      { path: 'reward-points', redirectTo: 'reward-point', pathMatch: 'full' }
     ]
   }
 ];

@@ -2,6 +2,98 @@
   display: block;
 }
 
+.display-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.summary-card {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.9rem 1rem;
+}
+
+.summary-card span {
+  color: var(--app-text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summary-card strong {
+  font-size: 1.18rem;
+}
+
+.summary-card small,
+.section-note {
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.display-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.display-preview-card {
+  align-self: start;
+}
+
+.display-preview-surface {
+  display: grid;
+  gap: 1rem;
+  min-height: 20rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #112235 0%, #182f47 42%, #0d1724 100%);
+  color: #f8fbff;
+}
+
+.display-preview-topline,
+.display-preview-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.display-preview-topline span,
+.display-preview-topline strong,
+.display-preview-total span,
+.display-preview-total strong {
+  font-size: 0.84rem;
+  letter-spacing: 0.03em;
+}
+
+.display-preview-copy {
+  display: grid;
+  gap: 0.45rem;
+  align-content: center;
+  min-height: 10rem;
+}
+
+.display-preview-title {
+  margin: 0;
+  color: rgba(248, 251, 255, 0.75);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.display-preview-copy h3 {
+  margin: 0;
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+
+.display-preview-copy p {
+  margin: 0;
+  color: rgba(248, 251, 255, 0.8);
+  line-height: 1.45;
+}
+
 :host ::ng-deep .row-action-menu {
   min-width: 12rem;
   border-radius: 0.9rem;
@@ -58,4 +150,16 @@
   border: 1px solid #fecaca;
   background: #fee2e2;
   color: #991b1b;
+}
+
+@media (max-width: 1100px) {
+  .display-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .display-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }

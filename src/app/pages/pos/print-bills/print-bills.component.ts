@@ -26,13 +26,13 @@ export class PrintBillsComponent {  readonly formState: Record<string, string | 
   showFilterSidebar = false;
   readonly pageEyebrow = 'Billing';
   readonly pageTitle = 'Print Bills';
-  readonly pageSubtitle = 'Review invoices and trigger reprints.';
+  readonly pageSubtitle = 'Find completed bills quickly and reprint them when guests need another copy.';
   readonly paymentModeOptions = PAYMENT_MODE_OPTIONS;
   
-  readonly filterTitle = `${'Print Bills'} Filters`;
-  readonly filterDescription = `API data will be loaded for ${'Print Bills'.toLowerCase()}.`;
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly filterDescription = 'API data will be loaded for ' + this.pageTitle.toLowerCase() + '.';
   readonly fields: any[] = [{ key: 'invoiceNo', label: 'Invoice Number', type: 'text', placeholder: 'Search invoice number' }, { key: 'paymentMode', label: 'Payment Mode', type: 'select', placeholder: 'Choose payment mode', options: PAYMENT_MODE_OPTIONS }];
-  readonly primaryActionLabel = `Search ${'Print Bills'}`;
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
   readonly dialogTitle = '';
@@ -123,6 +123,9 @@ export class PrintBillsComponent {  readonly formState: Record<string, string | 
     }
   }
 }
+
+
+
 
 
 

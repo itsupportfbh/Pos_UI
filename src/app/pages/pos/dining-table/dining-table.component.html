@@ -54,7 +54,7 @@
         (modelChange)="onDialogOrganizationChange($event)" />
     }
 
-    <app-text-field label="Table Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter table code"
+    <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter table code"
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
       [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
@@ -64,7 +64,8 @@
 
     <app-select-field label="Branch" inputId="dialog-branch" placeholder="Choose branch" [options]="branchOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Branch is required."
-      [numberValue]="true" [model]="dialogBranchId" (modelChange)="onDialogBranchChange($event)" />
+      [numberValue]="true" [disabled]="userDetails.RoleId !== 1 && userDetails.IsAdmin !== true"
+      [model]="dialogBranchId" (modelChange)="onDialogBranchChange($event)" />
 
     <app-select-field label="Floor" inputId="dialog-floor" placeholder="Choose floor" [options]="floorOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Floor is required."

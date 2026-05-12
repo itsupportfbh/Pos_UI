@@ -125,6 +125,7 @@ export class OrganizationComponent implements OnInit {
   userDetails: any = {};
   isSuperAdmin = false;
   isAdminUser = false;
+  organizationEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   showAddNewButton = false;
   readonly addNewButtonLabel = 'Add New';
@@ -143,7 +144,7 @@ export class OrganizationComponent implements OnInit {
     this.cardSearchText = value;
     this.applyCardSearch();
   }
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Organization';
@@ -152,7 +153,8 @@ export class OrganizationComponent implements OnInit {
 
     this.showAddDialog = true;
 
-    void this.loadCountries();
+    await this.loadLatestOrganizationCode();
+    await this.loadCountries();
   }
 
   openCodeTemplateDialog(): void {
@@ -414,7 +416,8 @@ export class OrganizationComponent implements OnInit {
       CreatedDate: new Date().toISOString(),
       UpdatedBy: Number(this.userDetails.UserId || 0),
       UpdatedDate: null,
-      IsDeleted: false
+      IsDeleted: false,
+      EntityNo: this.organizationEntityNo
     };
     try {
       let response: any;
@@ -923,6 +926,22 @@ export class OrganizationComponent implements OnInit {
     this.dialogCountry = null;
     this.dialogPostalCode = '';
     this.dialogRemarks = '';
+  }
+
+  private async loadLatestOrganizationCode(): Promise<void> {
+    if (!this.organizationEntityNo) {
+      this.dialogCode = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.organizationEntityNo, 0, 0));
+
+      this.dialogCode = response?.result ?? '';
+    } catch {
+      this.dialogCode = '';
+      this.toast.error('Load Failed', 'Unable to load organization code. Please check and try again.');
+    }
   }
 
   private isDialogFormValid(): boolean {

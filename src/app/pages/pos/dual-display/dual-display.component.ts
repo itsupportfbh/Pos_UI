@@ -14,19 +14,22 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type DualDisplayRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  ScreenCode: string;
+  ScreenName: string;
+  CounterName: string;
+  ThemeName: string;
+  WelcomeText: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
 };
 
-const DUALDISPLAY_COLUMNS: SharedTableColumn<DualDisplayRow>[] = [
+const DUAL_DISPLAY_COLUMNS: SharedTableColumn<DualDisplayRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'ScreenCode', header: 'Screen Code', sortable: true, width: '10rem' },
+  { field: 'ScreenName', header: 'Screen Name', sortable: true, width: '14rem' },
+  { field: 'CounterName', header: 'Counter', sortable: true, width: '12rem' },
+  { field: 'ThemeName', header: 'Theme', sortable: true, width: '10rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +68,36 @@ export class DualDisplayComponent {
   tableRows: DualDisplayRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  dialogId = 0;
+  dialogScreenCode = '';
+  dialogScreenName = '';
+  dialogCounterName = '';
+  dialogThemeName = '';
+  dialogWelcomeText = '';
+
+  totalScreens = 0;
+  activeScreens = 0;
+  previewScreenName = 'Dual Display Screen';
+  previewCounterName = 'Counter A';
+  previewThemeName = 'Split View';
+  previewWelcomeText = 'Operator and guest view are synchronized';
+
+  readonly pageEyebrow = 'Displays';
   readonly pageTitle = 'Dual Display';
-  readonly pageSubtitle = 'Manage dual display records here.';
-  readonly filterTitle = 'Dual Display Filters';
-  readonly primaryActionLabel = 'Search Dual Display';
+  readonly pageSubtitle = 'Configure paired operator and guest displays for smoother checkout.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
   dialogTitle = 'Create Dual Display';
-  dialogSubtitle = 'Create a new dual display record.';
+  dialogSubtitle = 'Capture the paired operator and guest display details for checkout.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Dual Display';
-  readonly tableCaption = 'Dual Display';
-  tableColumns = DUALDISPLAY_COLUMNS;
+  readonly tableTitle = 'Dual Display Profiles';
+  readonly tableCaption = 'Dual Display Profiles';
+  tableColumns = DUAL_DISPLAY_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Add Dual Display';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +105,12 @@ export class DualDisplayComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
+    this.updatePreview();
   }
 
   searchRows(): void {
@@ -106,9 +122,11 @@ export class DualDisplayComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.ScreenCode.toLowerCase().includes(searchText) ||
+      row.ScreenName.toLowerCase().includes(searchText) ||
+      row.CounterName.toLowerCase().includes(searchText) ||
+      row.ThemeName.toLowerCase().includes(searchText) ||
+      row.WelcomeText.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +147,8 @@ export class DualDisplayComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Create Dual Display';
+    this.dialogSubtitle = 'Capture the paired operator and guest display details for checkout.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,9 +170,11 @@ export class DualDisplayComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.ScreenCode = this.dialogScreenCode;
+          row.ScreenName = this.dialogScreenName;
+          row.CounterName = this.dialogCounterName;
+          row.ThemeName = this.dialogThemeName;
+          row.WelcomeText = this.dialogWelcomeText;
         }
 
         return row;
@@ -164,9 +184,11 @@ export class DualDisplayComponent {
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        ScreenCode: this.dialogScreenCode,
+        ScreenName: this.dialogScreenName,
+        CounterName: this.dialogCounterName,
+        ThemeName: this.dialogThemeName,
+        WelcomeText: this.dialogWelcomeText,
         IsActive: true,
         Status: 'Active',
         RowNumber: 0
@@ -182,11 +204,13 @@ export class DualDisplayComponent {
   editRow(row: DualDisplayRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogScreenCode = row.ScreenCode;
+    this.dialogScreenName = row.ScreenName;
+    this.dialogCounterName = row.CounterName;
+    this.dialogThemeName = row.ThemeName;
+    this.dialogWelcomeText = row.WelcomeText;
+    this.dialogTitle = 'Edit Dual Display';
+    this.dialogSubtitle = 'Update the selected dual display setup.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,7 +218,7 @@ export class DualDisplayComponent {
   deleteRow(row: DualDisplayRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.ScreenName + ' deleted successfully.');
   }
 
   activateRow(row: DualDisplayRow): void {
@@ -208,7 +232,7 @@ export class DualDisplayComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Activated', row.ScreenName + ' activated successfully.');
   }
 
   deactivateRow(row: DualDisplayRow): void {
@@ -222,7 +246,7 @@ export class DualDisplayComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Deactivated', row.ScreenName + ' deactivated successfully.');
   }
 
   openRowActions(menu: any, event: Event, row: DualDisplayRow): void {
@@ -234,7 +258,7 @@ export class DualDisplayComponent {
   confirmDeleteRow(row: DualDisplayRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.ScreenName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -249,7 +273,7 @@ export class DualDisplayComponent {
   confirmActivateRow(row: DualDisplayRow): void {
     this.confirmationService.confirm({
       header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      message: 'Are you sure you want to activate ' + row.ScreenName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -264,7 +288,7 @@ export class DualDisplayComponent {
   confirmDeactivateRow(row: DualDisplayRow): void {
     this.confirmationService.confirm({
       header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      message: 'Are you sure you want to deactivate ' + row.ScreenName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,16 +300,14 @@ export class DualDisplayComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogScreenCode = '';
+    this.dialogScreenName = '';
+    this.dialogCounterName = '';
+    this.dialogThemeName = '';
+    this.dialogWelcomeText = '';
   }
 
   private refreshRows(): void {
@@ -296,6 +318,22 @@ export class DualDisplayComponent {
     });
 
     this.searchRows();
+    this.updateSummary();
+    this.updatePreview();
+  }
+
+  private updateSummary(): void {
+    this.totalScreens = this.allRows.length;
+    this.activeScreens = this.allRows.filter((row) => row.IsActive).length;
+  }
+
+  private updatePreview(): void {
+    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+
+    this.previewScreenName = activeRow?.ScreenName ?? 'Dual Display Screen';
+    this.previewCounterName = activeRow?.CounterName ?? 'Counter A';
+    this.previewThemeName = activeRow?.ThemeName ?? 'Split View';
+    this.previewWelcomeText = activeRow?.WelcomeText ?? 'Operator and guest view are synchronized';
   }
 
   private isDialogFormValid(): boolean {

@@ -70,15 +70,15 @@ export class DataInitializationComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  readonly pageEyebrow = 'System';
   readonly pageTitle = 'Data Initialization';
-  readonly pageSubtitle = 'Manage data initialization records here.';
-  readonly filterTitle = 'Data Initialization Filters';
-  readonly primaryActionLabel = 'Search Data Initialization';
+  readonly pageSubtitle = 'Prepare opening data and reset operational baselines when needed.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Data Initialization';
-  dialogSubtitle = 'Create a new data initialization record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Data Initialization';
   readonly tableCaption = 'Data Initialization';
@@ -186,7 +186,7 @@ export class DataInitializationComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class DataInitializationComponent {
     }
   }
 }
+
+
+
 

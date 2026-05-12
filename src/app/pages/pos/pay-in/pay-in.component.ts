@@ -14,19 +14,24 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type PayInRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  ReferenceNo: string;
+  Reason: string;
+  DrawerName: string;
+  ApprovedBy: string;
+  Amount: number;
+  Notes: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
 };
 
-const PAYIN_COLUMNS: SharedTableColumn<PayInRow>[] = [
+const PAY_IN_COLUMNS: SharedTableColumn<PayInRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'ReferenceNo', header: 'Reference', sortable: true, width: '11rem' },
+  { field: 'Reason', header: 'Reason', sortable: true, width: '15rem' },
+  { field: 'DrawerName', header: 'Drawer', sortable: true, width: '12rem' },
+  { field: 'ApprovedBy', header: 'Approved By', sortable: true, width: '12rem' },
+  { field: 'Amount', header: 'Amount', sortable: true, width: '10rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +70,34 @@ export class PayInComponent {
   tableRows: PayInRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  dialogId = 0;
+  dialogReferenceNo = '';
+  dialogReason = '';
+  dialogDrawerName = '';
+  dialogApprovedBy = '';
+  dialogAmount = '';
+  dialogNotes = '';
+
+  totalEntries = 0;
+  activeEntries = 0;
+  totalAmount = 0;
+
+  readonly pageEyebrow = 'Payments';
   readonly pageTitle = 'Pay In';
-  readonly pageSubtitle = 'Manage pay in records here.';
-  readonly filterTitle = 'Pay In Filters';
-  readonly primaryActionLabel = 'Search Pay In';
+  readonly pageSubtitle = 'Record cash moving into the drawer with clear notes and timing.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Pay In';
-  dialogSubtitle = 'Create a new pay in record.';
+  dialogTitle = 'Record Pay In';
+  dialogSubtitle = 'Capture incoming cash with drawer and approval details.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Pay In';
-  readonly tableCaption = 'Pay In';
-  tableColumns = PAYIN_COLUMNS;
+  readonly tableTitle = 'Pay In Entries';
+  readonly tableCaption = 'Pay In Entries';
+  tableColumns = PAY_IN_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Record Pay In';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +105,11 @@ export class PayInComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
   }
 
   searchRows(): void {
@@ -106,9 +121,11 @@ export class PayInComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.ReferenceNo.toLowerCase().includes(searchText) ||
+      row.Reason.toLowerCase().includes(searchText) ||
+      row.DrawerName.toLowerCase().includes(searchText) ||
+      row.ApprovedBy.toLowerCase().includes(searchText) ||
+      row.Notes.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +146,8 @@ export class PayInComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Record Pay In';
+    this.dialogSubtitle = 'Capture incoming cash with drawer and approval details.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,9 +169,12 @@ export class PayInComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.ReferenceNo = this.dialogReferenceNo;
+          row.Reason = this.dialogReason;
+          row.DrawerName = this.dialogDrawerName;
+          row.ApprovedBy = this.dialogApprovedBy;
+          row.Amount = Number(this.dialogAmount || 0);
+          row.Notes = this.dialogNotes;
         }
 
         return row;
@@ -164,9 +184,12 @@ export class PayInComponent {
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        ReferenceNo: this.dialogReferenceNo,
+        Reason: this.dialogReason,
+        DrawerName: this.dialogDrawerName,
+        ApprovedBy: this.dialogApprovedBy,
+        Amount: Number(this.dialogAmount || 0),
+        Notes: this.dialogNotes,
         IsActive: true,
         Status: 'Active',
         RowNumber: 0
@@ -182,11 +205,14 @@ export class PayInComponent {
   editRow(row: PayInRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogReferenceNo = row.ReferenceNo;
+    this.dialogReason = row.Reason;
+    this.dialogDrawerName = row.DrawerName;
+    this.dialogApprovedBy = row.ApprovedBy;
+    this.dialogAmount = String(row.Amount);
+    this.dialogNotes = row.Notes;
+    this.dialogTitle = 'Edit Pay In';
+    this.dialogSubtitle = 'Update the selected pay in entry.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,7 +220,7 @@ export class PayInComponent {
   deleteRow(row: PayInRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.ReferenceNo + ' deleted successfully.');
   }
 
   activateRow(row: PayInRow): void {
@@ -208,7 +234,7 @@ export class PayInComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Activated', row.ReferenceNo + ' activated successfully.');
   }
 
   deactivateRow(row: PayInRow): void {
@@ -222,7 +248,7 @@ export class PayInComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Deactivated', row.ReferenceNo + ' deactivated successfully.');
   }
 
   openRowActions(menu: any, event: Event, row: PayInRow): void {
@@ -234,7 +260,7 @@ export class PayInComponent {
   confirmDeleteRow(row: PayInRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.ReferenceNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -249,7 +275,7 @@ export class PayInComponent {
   confirmActivateRow(row: PayInRow): void {
     this.confirmationService.confirm({
       header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      message: 'Are you sure you want to activate ' + row.ReferenceNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -264,7 +290,7 @@ export class PayInComponent {
   confirmDeactivateRow(row: PayInRow): void {
     this.confirmationService.confirm({
       header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      message: 'Are you sure you want to deactivate ' + row.ReferenceNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,16 +302,15 @@ export class PayInComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogReferenceNo = '';
+    this.dialogReason = '';
+    this.dialogDrawerName = '';
+    this.dialogApprovedBy = '';
+    this.dialogAmount = '';
+    this.dialogNotes = '';
   }
 
   private refreshRows(): void {
@@ -296,6 +321,13 @@ export class PayInComponent {
     });
 
     this.searchRows();
+    this.updateSummary();
+  }
+
+  private updateSummary(): void {
+    this.totalEntries = this.allRows.length;
+    this.activeEntries = this.allRows.filter((row) => row.IsActive).length;
+    this.totalAmount = this.allRows.reduce((total, row) => total + row.Amount, 0);
   }
 
   private isDialogFormValid(): boolean {
@@ -333,4 +365,3 @@ export class PayInComponent {
     }
   }
 }
-

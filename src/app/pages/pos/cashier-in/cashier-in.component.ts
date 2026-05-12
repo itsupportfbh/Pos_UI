@@ -14,19 +14,24 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type CashierInRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  CashierCode: string;
+  CashierName: string;
+  CounterName: string;
+  ShiftName: string;
+  OpeningFloat: number;
+  Notes: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
 };
 
-const CASHIERIN_COLUMNS: SharedTableColumn<CashierInRow>[] = [
+const CASHIER_IN_COLUMNS: SharedTableColumn<CashierInRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'CashierCode', header: 'Cashier Code', sortable: true, width: '10rem' },
+  { field: 'CashierName', header: 'Cashier', sortable: true, width: '14rem' },
+  { field: 'CounterName', header: 'Counter', sortable: true, width: '12rem' },
+  { field: 'ShiftName', header: 'Shift', sortable: true, width: '10rem' },
+  { field: 'OpeningFloat', header: 'Opening Float', sortable: true, width: '10rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +70,34 @@ export class CashierInComponent {
   tableRows: CashierInRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  dialogId = 0;
+  dialogCashierCode = '';
+  dialogCashierName = '';
+  dialogCounterName = '';
+  dialogShiftName = '';
+  dialogOpeningFloat = '';
+  dialogNotes = '';
+
+  totalSessions = 0;
+  activeSessions = 0;
+  totalOpeningFloat = 0;
+
+  readonly pageEyebrow = 'Payments';
   readonly pageTitle = 'Cashier In';
-  readonly pageSubtitle = 'Manage cashier in records here.';
-  readonly filterTitle = 'Cashier In Filters';
-  readonly primaryActionLabel = 'Search Cashier In';
+  readonly pageSubtitle = 'Open cashier sessions with the right starting balances and accountability.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Cashier In';
-  dialogSubtitle = 'Create a new cashier in record.';
+  dialogTitle = 'Open Cashier Session';
+  dialogSubtitle = 'Capture cashier, counter, and shift opening float details.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Cashier In';
-  readonly tableCaption = 'Cashier In';
-  tableColumns = CASHIERIN_COLUMNS;
+  readonly tableTitle = 'Cashier Opening Sessions';
+  readonly tableCaption = 'Cashier Opening Sessions';
+  tableColumns = CASHIER_IN_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Cashier In';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +105,11 @@ export class CashierInComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
   }
 
   searchRows(): void {
@@ -106,9 +121,11 @@ export class CashierInComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.CashierCode.toLowerCase().includes(searchText) ||
+      row.CashierName.toLowerCase().includes(searchText) ||
+      row.CounterName.toLowerCase().includes(searchText) ||
+      row.ShiftName.toLowerCase().includes(searchText) ||
+      row.Notes.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +146,8 @@ export class CashierInComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Open Cashier Session';
+    this.dialogSubtitle = 'Capture cashier, counter, and shift opening float details.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,9 +169,12 @@ export class CashierInComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.CashierCode = this.dialogCashierCode;
+          row.CashierName = this.dialogCashierName;
+          row.CounterName = this.dialogCounterName;
+          row.ShiftName = this.dialogShiftName;
+          row.OpeningFloat = Number(this.dialogOpeningFloat || 0);
+          row.Notes = this.dialogNotes;
         }
 
         return row;
@@ -164,9 +184,12 @@ export class CashierInComponent {
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        CashierCode: this.dialogCashierCode,
+        CashierName: this.dialogCashierName,
+        CounterName: this.dialogCounterName,
+        ShiftName: this.dialogShiftName,
+        OpeningFloat: Number(this.dialogOpeningFloat || 0),
+        Notes: this.dialogNotes,
         IsActive: true,
         Status: 'Active',
         RowNumber: 0
@@ -182,11 +205,14 @@ export class CashierInComponent {
   editRow(row: CashierInRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogCashierCode = row.CashierCode;
+    this.dialogCashierName = row.CashierName;
+    this.dialogCounterName = row.CounterName;
+    this.dialogShiftName = row.ShiftName;
+    this.dialogOpeningFloat = String(row.OpeningFloat);
+    this.dialogNotes = row.Notes;
+    this.dialogTitle = 'Edit Cashier In';
+    this.dialogSubtitle = 'Update the selected cashier opening session.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,7 +220,7 @@ export class CashierInComponent {
   deleteRow(row: CashierInRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.CashierName + ' deleted successfully.');
   }
 
   activateRow(row: CashierInRow): void {
@@ -208,7 +234,7 @@ export class CashierInComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Activated', row.CashierName + ' activated successfully.');
   }
 
   deactivateRow(row: CashierInRow): void {
@@ -222,7 +248,7 @@ export class CashierInComponent {
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Deactivated', row.CashierName + ' deactivated successfully.');
   }
 
   openRowActions(menu: any, event: Event, row: CashierInRow): void {
@@ -234,7 +260,7 @@ export class CashierInComponent {
   confirmDeleteRow(row: CashierInRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.CashierName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -249,7 +275,7 @@ export class CashierInComponent {
   confirmActivateRow(row: CashierInRow): void {
     this.confirmationService.confirm({
       header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      message: 'Are you sure you want to activate ' + row.CashierName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -264,7 +290,7 @@ export class CashierInComponent {
   confirmDeactivateRow(row: CashierInRow): void {
     this.confirmationService.confirm({
       header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      message: 'Are you sure you want to deactivate ' + row.CashierName + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,16 +302,15 @@ export class CashierInComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogCashierCode = '';
+    this.dialogCashierName = '';
+    this.dialogCounterName = '';
+    this.dialogShiftName = '';
+    this.dialogOpeningFloat = '';
+    this.dialogNotes = '';
   }
 
   private refreshRows(): void {
@@ -296,6 +321,13 @@ export class CashierInComponent {
     });
 
     this.searchRows();
+    this.updateSummary();
+  }
+
+  private updateSummary(): void {
+    this.totalSessions = this.allRows.length;
+    this.activeSessions = this.allRows.filter((row) => row.IsActive).length;
+    this.totalOpeningFloat = this.allRows.reduce((total, row) => total + row.OpeningFloat, 0);
   }
 
   private isDialogFormValid(): boolean {
@@ -333,4 +365,3 @@ export class CashierInComponent {
     }
   }
 }
-

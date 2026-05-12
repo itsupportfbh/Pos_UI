@@ -6,6 +6,7 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface Tax {
     Id?: number;
+    EntityNo?: number;
     Code?: string;
     Name?: string;
     Percentage?: number;

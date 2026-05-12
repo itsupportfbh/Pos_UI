@@ -6,6 +6,7 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface Organization {
   Id?: number;
+  EntityNo?: number;
   RowNumber?: number;
   Code?: string;
   Name?: string;
@@ -109,4 +110,3 @@ export class OrganizationService {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
-

@@ -14,19 +14,24 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 type JoinTableRow = {
   Id: number;
-  Code: string;
-  Name: string;
-  Remarks: string;
+  JoinNo: string;
+  PrimaryTable: string;
+  SecondaryTables: string;
+  GuestCount: number;
+  StewardName: string;
+  Notes: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
 };
 
-const JOINTABLE_COLUMNS: SharedTableColumn<JoinTableRow>[] = [
+const JOIN_TABLE_COLUMNS: SharedTableColumn<JoinTableRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'JoinNo', header: 'Join No', sortable: true, width: '11rem' },
+  { field: 'PrimaryTable', header: 'Primary Table', sortable: true, width: '11rem' },
+  { field: 'SecondaryTables', header: 'Merged Tables', sortable: true, width: '14rem' },
+  { field: 'GuestCount', header: 'Guests', sortable: true, width: '7rem' },
+  { field: 'StewardName', header: 'Steward', sortable: true, width: '12rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -65,26 +70,37 @@ export class JoinTableComponent {
   tableRows: JoinTableRow[] = [];
 
   filterSearchText = '';
-  dialogId = 0;
-  dialogCode = '';
-  dialogName = '';
-  dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  dialogId = 0;
+  dialogJoinNo = '';
+  dialogPrimaryTable = '';
+  dialogSecondaryTables = '';
+  dialogGuestCount = '';
+  dialogStewardName = '';
+  dialogNotes = '';
+
+  totalJoins = 0;
+  activeJoins = 0;
+  totalGuests = 0;
+  previewPrimaryTable = 'T-10';
+  previewSecondaryTables = 'T-11, T-12';
+  previewNotes = 'Birthday group moved under one bill';
+
+  readonly pageEyebrow = 'Dining';
   readonly pageTitle = 'Join Table';
-  readonly pageSubtitle = 'Manage join table records here.';
-  readonly filterTitle = 'Join Table Filters';
-  readonly primaryActionLabel = 'Search Join Table';
+  readonly pageSubtitle = 'Combine tables for larger groups and keep one coordinated guest and billing flow.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Join Table';
-  dialogSubtitle = 'Create a new join table record.';
+  dialogTitle = 'Create Table Join';
+  dialogSubtitle = 'Capture the tables that are being merged into one service group.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Join Table';
+  readonly tableTitle = 'Joined Tables';
   readonly tableCaption = 'Join Table';
-  tableColumns = JOINTABLE_COLUMNS;
+  tableColumns = JOIN_TABLE_COLUMNS;
   readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add New';
+  readonly addNewButtonLabel = 'Add Join';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
@@ -92,9 +108,12 @@ export class JoinTableComponent {
   ngOnInit(): void {
     this.loadRows();
   }
+
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+    this.updateSummary();
+    this.updatePreview();
   }
 
   searchRows(): void {
@@ -106,9 +125,11 @@ export class JoinTableComponent {
     }
 
     this.tableRows = this.allRows.filter((row) =>
-      row.Code.toLowerCase().includes(searchText) ||
-      row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.JoinNo.toLowerCase().includes(searchText) ||
+      row.PrimaryTable.toLowerCase().includes(searchText) ||
+      row.SecondaryTables.toLowerCase().includes(searchText) ||
+      row.StewardName.toLowerCase().includes(searchText) ||
+      row.Notes.toLowerCase().includes(searchText)
     );
   }
 
@@ -129,8 +150,8 @@ export class JoinTableComponent {
   openAddDialog(): void {
     this.resetDialogForm();
     this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogTitle = 'Create Table Join';
+    this.dialogSubtitle = 'Capture the tables that are being merged into one service group.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -152,27 +173,33 @@ export class JoinTableComponent {
     if (this.isEditMode && this.dialogId) {
       this.allRows = this.allRows.map((row) => {
         if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+          row.JoinNo = this.dialogJoinNo;
+          row.PrimaryTable = this.dialogPrimaryTable;
+          row.SecondaryTables = this.dialogSecondaryTables;
+          row.GuestCount = Number(this.dialogGuestCount || 0);
+          row.StewardName = this.dialogStewardName;
+          row.Notes = this.dialogNotes;
         }
 
         return row;
       });
 
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
+      this.toast.success('Updated', 'Table join updated successfully.');
     } else {
       this.allRows.unshift({
         Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
+        JoinNo: this.dialogJoinNo,
+        PrimaryTable: this.dialogPrimaryTable,
+        SecondaryTables: this.dialogSecondaryTables,
+        GuestCount: Number(this.dialogGuestCount || 0),
+        StewardName: this.dialogStewardName,
+        Notes: this.dialogNotes,
         IsActive: true,
-        Status: 'Active',
+        Status: 'Joined',
         RowNumber: 0
       });
 
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
+      this.toast.success('Saved', 'Table join saved successfully.');
     }
 
     this.refreshRows();
@@ -182,11 +209,14 @@ export class JoinTableComponent {
   editRow(row: JoinTableRow): void {
     this.isEditMode = true;
     this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogJoinNo = row.JoinNo;
+    this.dialogPrimaryTable = row.PrimaryTable;
+    this.dialogSecondaryTables = row.SecondaryTables;
+    this.dialogGuestCount = String(row.GuestCount);
+    this.dialogStewardName = row.StewardName;
+    this.dialogNotes = row.Notes;
+    this.dialogTitle = 'Edit Table Join';
+    this.dialogSubtitle = 'Update the selected table merge before the floor is reset.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -194,35 +224,35 @@ export class JoinTableComponent {
   deleteRow(row: JoinTableRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
-    this.toast.success('Deleted', row.Name + ' deleted successfully.');
+    this.toast.success('Deleted', row.JoinNo + ' removed successfully.');
   }
 
   activateRow(row: JoinTableRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = true;
-        item.Status = 'Active';
+        item.Status = 'Joined';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Activated', row.Name + ' activated successfully.');
+    this.toast.success('Activated', row.JoinNo + ' reopened successfully.');
   }
 
   deactivateRow(row: JoinTableRow): void {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = false;
-        item.Status = 'Inactive';
+        item.Status = 'Released';
       }
 
       return item;
     });
 
     this.refreshRows();
-    this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
+    this.toast.success('Released', row.JoinNo + ' marked as released.');
   }
 
   openRowActions(menu: any, event: Event, row: JoinTableRow): void {
@@ -234,7 +264,7 @@ export class JoinTableComponent {
   confirmDeleteRow(row: JoinTableRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.Name + '?',
+      message: 'Are you sure you want to delete ' + row.JoinNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -248,8 +278,8 @@ export class JoinTableComponent {
 
   confirmActivateRow(row: JoinTableRow): void {
     this.confirmationService.confirm({
-      header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.Name + '?',
+      header: 'Reopen Confirmation',
+      message: 'Are you sure you want to reopen ' + row.JoinNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -263,8 +293,8 @@ export class JoinTableComponent {
 
   confirmDeactivateRow(row: JoinTableRow): void {
     this.confirmationService.confirm({
-      header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.Name + '?',
+      header: 'Release Confirmation',
+      message: 'Are you sure you want to release ' + row.JoinNo + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -276,26 +306,40 @@ export class JoinTableComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+  resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
+    this.dialogJoinNo = '';
+    this.dialogPrimaryTable = '';
+    this.dialogSecondaryTables = '';
+    this.dialogGuestCount = '';
+    this.dialogStewardName = '';
+    this.dialogNotes = '';
   }
 
   private refreshRows(): void {
     this.allRows = this.allRows.map((row, index) => {
       row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
       return row;
     });
 
     this.searchRows();
+    this.updateSummary();
+    this.updatePreview();
+  }
+
+  private updateSummary(): void {
+    this.totalJoins = this.allRows.length;
+    this.activeJoins = this.allRows.filter((row) => row.IsActive).length;
+    this.totalGuests = this.allRows.reduce((total, row) => total + row.GuestCount, 0);
+  }
+
+  private updatePreview(): void {
+    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+
+    this.previewPrimaryTable = activeRow?.PrimaryTable ?? 'T-10';
+    this.previewSecondaryTables = activeRow?.SecondaryTables ?? 'T-11, T-12';
+    this.previewNotes = activeRow?.Notes ?? 'Birthday group moved under one bill';
   }
 
   private isDialogFormValid(): boolean {
@@ -309,9 +353,9 @@ export class JoinTableComponent {
 
     if (row.IsActive) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      items.push({ label: 'Release', icon: 'pi pi-check-circle', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      items.push({ label: 'Reopen', icon: 'pi pi-refresh', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
     }
 
     return items;
@@ -333,4 +377,3 @@ export class JoinTableComponent {
     }
   }
 }
-

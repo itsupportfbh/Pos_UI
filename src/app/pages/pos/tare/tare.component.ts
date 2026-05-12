@@ -70,15 +70,15 @@ export class TareComponent {
   dialogName = '';
   dialogRemarks = '';
 
-  readonly pageEyebrow = 'POS';
+  readonly pageEyebrow = 'System';
   readonly pageTitle = 'Tare';
-  readonly pageSubtitle = 'Manage tare records here.';
-  readonly filterTitle = 'Tare Filters';
-  readonly primaryActionLabel = 'Search Tare';
+  readonly pageSubtitle = 'Maintain tare presets for weighed items and scale-driven workflows.';
+  readonly filterTitle = this.pageTitle + ' Filters';
+  readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
-  dialogTitle = 'Create Tare';
-  dialogSubtitle = 'Create a new tare record.';
+  dialogTitle = 'Create ' + this.pageTitle;
+  dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Tare';
   readonly tableCaption = 'Tare';
@@ -186,7 +186,7 @@ export class TareComponent {
     this.dialogName = row.Name;
     this.dialogRemarks = row.Remarks;
     this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
+    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
   }
@@ -333,4 +333,7 @@ export class TareComponent {
     }
   }
 }
+
+
+
 
