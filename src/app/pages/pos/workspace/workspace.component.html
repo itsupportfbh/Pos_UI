@@ -8,8 +8,11 @@
     [sidebarOpen]="sidebarOpen"
     [activeMenuKey]="activeMenuKey"
     [menuItems]="sidebarMenus"
+    [currentOfficeScope]="currentOfficeScope"
+    [officeOptions]="officeOptions"
     (menuToggle)="toggleSidebar()"
     (menuSelect)="selectMenu($event)"
+    (officeScopeChange)="onOfficeScopeChange($event)"
     (logoutClick)="logout()"
   >
     <router-outlet />

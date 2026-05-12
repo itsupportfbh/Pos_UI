@@ -1,6 +1,21 @@
 @if (sidebarOpen) {
   <aside class="sidebar sidebar-open">
     <nav class="menu-list">
+      @if (officeOptions.length > 1) {
+        <section class="office-switcher">
+          @for (option of officeOptions; track option.value) {
+            <button
+              type="button"
+              class="office-switcher-button"
+              [class.active]="currentOfficeScope === option.value"
+              (click)="onOfficeScopeSelect(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </section>
+      }
+
       <section class="menu-search">
         <i class="pi pi-search"></i>
         <input

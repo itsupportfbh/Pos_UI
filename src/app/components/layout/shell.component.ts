@@ -3,7 +3,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FooterComponent } from './footer.component';
 import { HeaderComponent } from './header.component';
 import { MenuComponent } from './menu.component';
-import { MenuChildItem, MenuGroup } from './menu.model';
+import { MenuChildItem, MenuGroup, MenuOfficeOption } from './menu.model';
 
 type ShellUser = {
   name: string;
@@ -26,9 +26,12 @@ export class ShellComponent {
   @Input() sidebarOpen = false;
   @Input() activeMenuKey = '';
   @Input() menuItems: MenuGroup[] = [];
+  @Input() currentOfficeScope = 2;
+  @Input() officeOptions: MenuOfficeOption[] = [];
 
   @Output() menuToggle = new EventEmitter<void>();
   @Output() menuSelect = new EventEmitter<MenuChildItem | string>();
+  @Output() officeScopeChange = new EventEmitter<number>();
   @Output() logoutClick = new EventEmitter<void>();
 
   onMenuToggle(): void {
@@ -37,6 +40,10 @@ export class ShellComponent {
 
   onMenuSelect(item: MenuChildItem | string): void {
     this.menuSelect.emit(item);
+  }
+
+  onOfficeScopeChange(scope: number): void {
+    this.officeScopeChange.emit(scope);
   }
 
   onLogoutClick(): void {

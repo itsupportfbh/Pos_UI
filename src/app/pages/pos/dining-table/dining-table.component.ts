@@ -27,7 +27,7 @@ const DINING_TABLE_COLUMNS: SharedTableColumn<any>[] = [
   { field: 'seatingsize', header: 'Capacity', sortable: true, width: '8rem' },
   { field: 'branchname', header: 'Branch', sortable: true, width: '12rem' },
   { field: 'floorname', header: 'Floor', sortable: true, width: '12rem' },
-  { field: 'status', header: 'Status', sortable: true, width: '8rem' }
+  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
 @Component({
@@ -190,7 +190,7 @@ export class DiningTableComponent implements OnInit {
 
       this.tableRows = (response.result ?? []).map((x: any) => {
         x.RowNumber = RowNumber++;
-        x.status = x.isactive === true ? 'Active' : 'Inactive';
+        x.Status = x.isactive === true ? 'Active' : 'Inactive';
         x.ImagePreviewUrl = this.getImagePreviewUrl(String(x.image ?? ''));
         return x;
       });

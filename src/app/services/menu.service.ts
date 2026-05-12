@@ -10,6 +10,8 @@ export interface ApiSubMenu {
   MenuId: number;
   Route: string;
   Remarks?: string;
+  Menuscope?: number;
+  MenuIcon?: string;
   IsActive: boolean;
 }
 
@@ -17,6 +19,7 @@ export interface ApiMenu {
   MenuId: number;
   MenuName: string;
   MenuIcon?: string;
+  Menuscope?: number;
   IsActive: boolean;
   SubMenus: ApiSubMenu[];
 }

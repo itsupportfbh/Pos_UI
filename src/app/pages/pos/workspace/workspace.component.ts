@@ -5,13 +5,16 @@ import { filter, firstValueFrom } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ShellComponent } from '../../../components/layout/shell.component';
-import { MenuChildItem, MenuGroup } from '../../../components/layout/menu.model';
+import { MenuChildItem, MenuGroup, MenuOfficeOption } from '../../../components/layout/menu.model';
 import { ApiMenu, MenuService } from '../../../services/menu.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
 const LOGIN_SESSION_KEY = 'loginSession';
 const USER_DETAILS_KEY = 'userDetails';
+const COMMON_MENU_SCOPE = 0;
+const FRONT_OFFICE_SCOPE = 1;
+const BACK_OFFICE_SCOPE = 2;
 
 @Component({
   selector: 'app-pos-workspace',
@@ -25,6 +28,7 @@ export class WorkspaceComponent implements OnInit {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly userDetails = this.getUserDetails();
+  private readonly routeScopeMap = new Map<string, number>();
   appName = this.userDetails.OrganizationName ?? 'Unity work POS';
   brandLogoUrl = '';
   currentUser = {
@@ -36,6 +40,8 @@ export class WorkspaceComponent implements OnInit {
   };
   readonly footerDescription = 'POS workspace for billing, stock tracking, and daily sales operations';
   sidebarMenus: MenuGroup[] = [];
+  officeOptions: MenuOfficeOption[] = [];
+  currentOfficeScope = BACK_OFFICE_SCOPE;
 
   sidebarOpen = true;
   activeMenuKey = 'dashboard';
@@ -62,10 +68,26 @@ export class WorkspaceComponent implements OnInit {
     this.menuService.getMenus().subscribe({
       next: (response) => {
         this.sidebarMenus = this.mapMenus(response.result ?? []);
-         this.changeDetector.detectChanges();
+        this.routeScopeMap.clear();
+        this.sidebarMenus.forEach((group) => {
+          group.items.forEach((item) => {
+            if (!this.routeScopeMap.has(item.route)) {
+              this.routeScopeMap.set(item.route, Number(group.sectionScope ?? COMMON_MENU_SCOPE));
+            }
+          });
+        });
+
+        this.officeOptions = this.buildOfficeOptions(this.sidebarMenus);
+        this.currentOfficeScope = this.resolveInitialOfficeScope();
+        this.applyOfficeScope(this.activeMenuKey);
+        this.changeDetector.detectChanges();
       },
       error: () => {
         this.sidebarMenus = [];
+        this.routeScopeMap.clear();
+        this.officeOptions = [];
+        this.currentOfficeScope = this.resolveInitialOfficeScope();
+        this.applyOfficeScope(this.activeMenuKey);
       }
     });
   }
@@ -88,6 +110,11 @@ export class WorkspaceComponent implements OnInit {
 
   toggleSidebar(): void { this.sidebarOpen = !this.sidebarOpen; }
 
+  onOfficeScopeChange(scope: number): void {
+    this.currentOfficeScope = scope;
+    this.applyOfficeScope(this.activeMenuKey);
+  }
+
   selectMenu(item: MenuChildItem | string): void {
     if (typeof item === 'string') {
       this.activeMenuKey = item;
@@ -103,6 +130,13 @@ export class WorkspaceComponent implements OnInit {
   private syncActiveMenu(url: string): void {
     const routeSegment = url.split('/').filter(Boolean).at(-1);
     this.activeMenuKey = routeSegment && routeSegment !== 'pos' ? routeSegment : 'dashboard';
+    const routeScope = Number(this.routeScopeMap.get(this.activeMenuKey) ?? COMMON_MENU_SCOPE);
+
+    if (routeScope === FRONT_OFFICE_SCOPE || routeScope === BACK_OFFICE_SCOPE) {
+      this.currentOfficeScope = routeScope;
+    }
+
+    this.applyOfficeScope(this.activeMenuKey);
   }
 
   async loadorganizationconfig(): Promise<void> {
@@ -135,22 +169,103 @@ export class WorkspaceComponent implements OnInit {
   }
 
   private mapMenus(menus: ApiMenu[]): MenuGroup[] {
-    return menus
-      // .filter((menu) => menu.IsActive)
-      .map((menu) => ({
-        key: String(menu.MenuId),
-        label: menu.MenuName,
-        icon: menu.MenuIcon ?? 'pi pi-circle',
-        items: (menu.SubMenus ?? [])
-          // .filter((subMenu) => subMenu.IsActive)
-          .map((subMenu) => ({
-            key: String(subMenu.SubMenuId),
-            label: subMenu.SubMenuName,
-            description: subMenu.Remarks ?? '',
-            route: subMenu.Route,
-            entityNo: Number(subMenu.EntityNo || 0)
-          }))
-      }));
+    const groupedMenus: MenuGroup[] = [];
+
+    menus.forEach((menu) => {
+      const commonItems = (menu.SubMenus ?? []).filter((subMenu) => this.getMenuScope(menu.Menuscope, subMenu.Menuscope) === COMMON_MENU_SCOPE);
+      const frontOfficeItems = (menu.SubMenus ?? []).filter((subMenu) => this.getMenuScope(menu.Menuscope, subMenu.Menuscope) === FRONT_OFFICE_SCOPE);
+      const backOfficeItems = (menu.SubMenus ?? []).filter((subMenu) => this.getMenuScope(menu.Menuscope, subMenu.Menuscope) === BACK_OFFICE_SCOPE);
+
+      if (commonItems.length) {
+        groupedMenus.push(this.createMenuGroup(menu, commonItems, COMMON_MENU_SCOPE, 'Common'));
+      }
+
+      if (frontOfficeItems.length) {
+        groupedMenus.push(this.createMenuGroup(menu, frontOfficeItems, FRONT_OFFICE_SCOPE, 'Front Office'));
+      }
+
+      if (backOfficeItems.length) {
+        groupedMenus.push(this.createMenuGroup(menu, backOfficeItems, BACK_OFFICE_SCOPE, 'Back Office'));
+      }
+    });
+
+    return groupedMenus;
+  }
+
+  private createMenuGroup(menu: ApiMenu, subMenus: any[], sectionScope: number, sectionLabel: string): MenuGroup {
+    return {
+      key: `${menu.MenuId}-${sectionScope}`,
+      label: menu.MenuName,
+      icon: menu.MenuIcon ?? 'pi pi-circle',
+      sectionScope,
+      sectionLabel,
+      items: subMenus.map((subMenu) => ({
+        key: String(subMenu.SubMenuId),
+        label: subMenu.SubMenuName,
+        description: subMenu.Remarks ?? '',
+        route: subMenu.Route,
+        entityNo: Number(subMenu.EntityNo || 0)
+      }))
+    };
+  }
+
+  private getMenuScope(menuScope: number | undefined, subMenuScope: number | undefined): number {
+    const scope = Number(subMenuScope ?? menuScope ?? COMMON_MENU_SCOPE);
+
+    if (scope === FRONT_OFFICE_SCOPE || scope === BACK_OFFICE_SCOPE) {
+      return scope;
+    }
+
+    return COMMON_MENU_SCOPE;
+  }
+
+  private applyOfficeScope(route: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const routeScope = Number(this.routeScopeMap.get(route) ?? COMMON_MENU_SCOPE);
+    const scope = routeScope === FRONT_OFFICE_SCOPE || routeScope === BACK_OFFICE_SCOPE
+      ? routeScope
+      : this.currentOfficeScope;
+    const officeScope = scope === FRONT_OFFICE_SCOPE
+      ? 'front-office'
+      : scope === BACK_OFFICE_SCOPE
+        ? 'back-office'
+        : 'common';
+
+    this.document.documentElement.setAttribute('data-office', officeScope);
+  }
+
+  private buildOfficeOptions(groups: MenuGroup[]): MenuOfficeOption[] {
+    const availableScopes = new Set<number>();
+
+    groups.forEach((group) => {
+      const scope = Number(group.sectionScope ?? COMMON_MENU_SCOPE);
+
+      if (scope === FRONT_OFFICE_SCOPE || scope === BACK_OFFICE_SCOPE) {
+        availableScopes.add(scope);
+      }
+    });
+
+    return [
+      ...(availableScopes.has(FRONT_OFFICE_SCOPE) ? [{ label: 'Front Office', value: FRONT_OFFICE_SCOPE }] : []),
+      ...(availableScopes.has(BACK_OFFICE_SCOPE) ? [{ label: 'Back Office', value: BACK_OFFICE_SCOPE }] : [])
+    ];
+  }
+
+  private resolveInitialOfficeScope(): number {
+    const routeScope = Number(this.routeScopeMap.get(this.activeMenuKey) ?? COMMON_MENU_SCOPE);
+
+    if (routeScope === FRONT_OFFICE_SCOPE || routeScope === BACK_OFFICE_SCOPE) {
+      return routeScope;
+    }
+
+    if (Number(this.userDetails.RoleId || 0) === 1 || this.userDetails.IsAdmin === true || this.userDetails.IsAdmin === 1) {
+      return BACK_OFFICE_SCOPE;
+    }
+
+    return FRONT_OFFICE_SCOPE;
   }
 
   private applyOrganizationTheme(themeColor = '#2f7d57', fontSize = 14): void {

@@ -12,7 +12,10 @@
       [sidebarOpen]="sidebarOpen"
       [activeMenuKey]="activeMenuKey"
       [menuItems]="menuItems"
+      [currentOfficeScope]="currentOfficeScope"
+      [officeOptions]="officeOptions"
       (menuSelect)="onMenuSelect($event)"
+      (officeScopeChange)="onOfficeScopeChange($event)"
     />
 
     <section class="content-panel">

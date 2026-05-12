@@ -39,6 +39,34 @@
   background: var(--app-scrollbar);
 }
 
+.office-switcher {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0.2rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.8rem;
+  background: var(--app-panel-bg);
+}
+
+.office-switcher-button {
+  padding: 0.42rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0.68rem;
+  background: transparent;
+  color: var(--app-text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.office-switcher-button.active {
+  border-color: rgba(var(--app-primary-rgb), 0.24);
+  background: var(--app-primary-soft);
+  color: var(--app-primary-strong);
+}
+
 .menu-search {
   display: flex;
   align-items: center;
@@ -89,7 +117,7 @@
 
 .menu-group-header strong {
   color: var(--app-text);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .menu-group-arrow {

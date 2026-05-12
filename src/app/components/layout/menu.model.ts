@@ -11,4 +11,11 @@ export interface MenuGroup {
   label: string;
   icon: string;
   items: MenuChildItem[];
+  sectionScope?: number;
+  sectionLabel?: string;
+}
+
+export interface MenuOfficeOption {
+  label: string;
+  value: number;
 }
