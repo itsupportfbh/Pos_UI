@@ -1,5 +1,12 @@
 <section class="shell-frame">
-  <app-header [appName]="appName" [appLogoUrl]="appLogoUrl" [user]="user" (menuToggle)="onMenuToggle()" (logoutClick)="onLogoutClick()" />
+  <app-header
+    [appName]="appName"
+    [appLogoUrl]="appLogoUrl"
+    [user]="user"
+    (menuToggle)="onMenuToggle()"
+    (changePasswordClick)="onChangePasswordClick()"
+    (logoutClick)="onLogoutClick()"
+  />
 
   <section class="workspace" [class.sidebar-visible]="sidebarOpen">
     @if (sidebarOpen) {

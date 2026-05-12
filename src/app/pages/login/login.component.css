@@ -101,6 +101,17 @@
   box-shadow: inset 0 0 0 1px rgba(255, 245, 237, 0.18);
 }
 
+.brand-icon-logo {
+  padding: 0.35rem;
+  overflow: hidden;
+}
+
+.brand-icon-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .brand-lockup strong {
   display: block;
   font-size: 1.02rem;
@@ -235,6 +246,24 @@
   text-align: left;
 }
 
+.logo-tile-image {
+  min-width: 0;
+  width: min(100%, 310px);
+  min-height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.4rem;
+}
+
+.logo-tile-image img {
+  width: 100%;
+  max-width: 250px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(61, 29, 14, 0.12));
+}
+
 .logo-tile-badge,
 .hero-product-mark span,
 .login-help span {
@@ -288,34 +317,18 @@
   min-height: 138px;
   padding: 1.15rem;
   margin-top: 1.2rem;
-  display: grid;
-  align-items: end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.mark-circle {
-  position: absolute;
-  top: -1.6rem;
-  right: -1.1rem;
-  width: 8rem;
-  height: 8rem;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(219, 247, 181, 0.48), rgba(255, 255, 255, 0.04));
-}
-
-.mark-card {
+.hero-product-logo {
   position: relative;
   z-index: 1;
-  display: grid;
-  gap: 0.35rem;
-}
-
-.hero-product-mark span {
-  color: rgba(234, 247, 238, 0.7);
-}
-
-.mark-card strong {
-  color: #fffef7;
-  font-size: 1.2rem;
+  width: min(100%, 280px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 24px rgba(61, 29, 14, 0.12));
 }
 
 .login-card {
@@ -378,6 +391,41 @@ label {
 .login-card button[pbutton] {
   margin-top: 0.2rem;
   min-height: 2.75rem;
+}
+
+.login-assist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.auth-link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-primary);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-link-button:hover {
+  color: var(--app-primary-strong);
+  text-decoration: underline;
+}
+
+.auth-dialog-body {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.auth-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding-top: 0.4rem;
 }
 
 .demo-access {
@@ -463,6 +511,14 @@ label {
 
 .role-card strong {
   font-size: 1.15rem;
+}
+
+@media (max-width: 640px) {
+  .login-assist-row,
+  .auth-dialog-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .role-card small {

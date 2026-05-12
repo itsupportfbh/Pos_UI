@@ -1,11 +1,19 @@
 import { ChangeDetectorRef, Component, Inject, OnInit, PLATFORM_ID, inject } from '@angular/core';
-import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, firstValueFrom } from 'rxjs';
 import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { InputTextModule } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
+import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { ShellComponent } from '../../../components/layout/shell.component';
 import { MenuChildItem, MenuGroup, MenuOfficeOption } from '../../../components/layout/menu.model';
+import { TextFieldComponent } from '../../../components/form/text-field.component';
+import { AppToastService } from '../../../services/app-toast.service';
 import { ApiMenu, MenuService } from '../../../services/menu.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
@@ -19,7 +27,7 @@ const BACK_OFFICE_SCOPE = 2;
 @Component({
   selector: 'app-pos-workspace',
   standalone: true,
-  imports: [RouterOutlet, ShellComponent, ConfirmDialogModule],
+  imports: [CommonModule, FormsModule, RouterOutlet, ShellComponent, ConfirmDialogModule, ButtonModule, DialogModule, InputTextModule, PasswordModule, TextFieldComponent, ActionButtonsComponent],
   providers: [ConfirmationService],
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.component.css'
@@ -27,6 +35,7 @@ const BACK_OFFICE_SCOPE = 2;
 export class WorkspaceComponent implements OnInit {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly toast = inject(AppToastService);
   private readonly userDetails = this.getUserDetails();
   private readonly routeScopeMap = new Map<string, number>();
   appName = this.userDetails.OrganizationName ?? 'Unity work POS';
@@ -42,6 +51,11 @@ export class WorkspaceComponent implements OnInit {
   sidebarMenus: MenuGroup[] = [];
   officeOptions: MenuOfficeOption[] = [];
   currentOfficeScope = BACK_OFFICE_SCOPE;
+  showChangePasswordDialog = false;
+  changePasswordSubmitted = false;
+  changePasswordCurrent = '';
+  changePasswordNew = '';
+  changePasswordConfirm = '';
 
   sidebarOpen = true;
   activeMenuKey = 'dashboard';
@@ -113,6 +127,42 @@ export class WorkspaceComponent implements OnInit {
   onOfficeScopeChange(scope: number): void {
     this.currentOfficeScope = scope;
     this.applyOfficeScope(this.activeMenuKey);
+  }
+
+  openChangePasswordDialog(): void {
+    this.changePasswordSubmitted = false;
+    this.changePasswordCurrent = '';
+    this.changePasswordNew = '';
+    this.changePasswordConfirm = '';
+    this.showChangePasswordDialog = true;
+  }
+
+  closeChangePasswordDialog(): void {
+    this.showChangePasswordDialog = false;
+  }
+
+  clearChangePasswordForm(): void {
+    this.changePasswordSubmitted = false;
+    this.changePasswordCurrent = '';
+    this.changePasswordNew = '';
+    this.changePasswordConfirm = '';
+  }
+
+  submitChangePassword(): void {
+    this.changePasswordSubmitted = true;
+
+    if (!this.changePasswordCurrent || !this.changePasswordNew || !this.changePasswordConfirm) {
+      this.toast.warn('Password Required', 'Enter the current password and confirm the new password.');
+      return;
+    }
+
+    if (this.changePasswordNew !== this.changePasswordConfirm) {
+      this.toast.error('Password Mismatch', 'New password and confirm password should match.');
+      return;
+    }
+
+    this.toast.info('Change Password Ready', 'The profile password screen is ready. Connect the backend API to complete password updates.');
+    this.closeChangePasswordDialog();
   }
 
   selectMenu(item: MenuChildItem | string): void {

@@ -43,10 +43,34 @@
     } @else {
       <p-avatar [label]="initials" shape="circle" size="large"></p-avatar>
     }
-    <div class="header-user-details">
-      <strong>{{ user.name }}</strong>
-      <span>{{ user.role }}</span>
-    </div>
-    <button pButton type="button" severity="danger" icon="pi pi-sign-out" text="true" (click)="onLogoutClick()"></button>
+    <button type="button" class="header-user-profile" (click)="onProfileToggle($event)">
+      <div class="header-user-details">
+        <strong>{{ user.name }}</strong>
+        <span>{{ user.role }}</span>
+      </div>
+      <i class="pi pi-chevron-down"></i>
+    </button>
+
+    @if (showProfileCard) {
+      <div class="profile-card" (click)="$event.stopPropagation()">
+        <div class="profile-card-header">
+          @if (user.imageUrl) {
+            <img class="profile-card-image" [src]="user.imageUrl" [alt]="user.name || 'User'" />
+          } @else {
+            <p-avatar [label]="initials" shape="circle" size="large"></p-avatar>
+          }
+
+          <div class="profile-card-copy">
+            <strong>{{ user.name }}</strong>
+            <span>{{ user.role }}</span>
+          </div>
+        </div>
+
+        <div class="profile-card-actions">
+          <button pButton type="button" severity="secondary" icon="pi pi-key" label="Change Password" text="true" (click)="onChangePasswordClick()"></button>
+          <button pButton type="button" severity="danger" icon="pi pi-sign-out" label="Logout" text="true" (click)="onLogoutClick()"></button>
+        </div>
+      </div>
+    }
   </div>
 </header>

@@ -32,6 +32,7 @@ export class ShellComponent {
   @Output() menuToggle = new EventEmitter<void>();
   @Output() menuSelect = new EventEmitter<MenuChildItem | string>();
   @Output() officeScopeChange = new EventEmitter<number>();
+  @Output() changePasswordClick = new EventEmitter<void>();
   @Output() logoutClick = new EventEmitter<void>();
 
   onMenuToggle(): void {
@@ -44,6 +45,10 @@ export class ShellComponent {
 
   onOfficeScopeChange(scope: number): void {
     this.officeScopeChange.emit(scope);
+  }
+
+  onChangePasswordClick(): void {
+    this.changePasswordClick.emit();
   }
 
   onLogoutClick(): void {

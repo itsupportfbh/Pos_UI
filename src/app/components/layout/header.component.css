@@ -1,4 +1,5 @@
 .app-header {
+  position: relative;
   z-index: 30;
   max-width: var(--app-shell-max-width);
   width: min(var(--app-shell-max-width), calc(100vw - 1rem));
@@ -10,6 +11,7 @@
   padding: 0.65rem 0;
   background: var(--app-header-bg);
   backdrop-filter: blur(14px);
+  overflow: visible;
 }
 
 .header-left {
@@ -59,6 +61,8 @@
 }
 
 .header-user {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -116,9 +120,81 @@
   gap: 0.12rem;
 }
 
+.header-user-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.header-user-profile > i {
+  color: var(--app-text-muted);
+  font-size: 0.72rem;
+}
+
 .header-user span {
   color: var(--app-text-muted);
   font-size: 0.74rem;
+}
+
+.profile-card {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  width: min(18rem, calc(100vw - 1rem));
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-surface-strong);
+  box-shadow: 0 18px 40px rgba(65, 35, 20, 0.12);
+  z-index: 80;
+}
+
+.profile-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-card-image {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-strong);
+  flex-shrink: 0;
+}
+
+.profile-card-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.profile-card-copy strong {
+  color: var(--app-text);
+  font-size: 0.94rem;
+}
+
+.profile-card-copy span {
+  color: var(--app-text-muted);
+  font-size: 0.76rem;
+}
+
+.profile-card-actions {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.profile-card-actions :is(.p-button, button) {
+  width: 100%;
+  justify-content: flex-start;
 }
 
 @media (max-width: 768px) {
@@ -172,6 +248,11 @@
 
   .header-user span {
     font-size: 0.68rem;
+  }
+
+  .profile-card {
+    right: auto;
+    left: 0;
   }
 }
 

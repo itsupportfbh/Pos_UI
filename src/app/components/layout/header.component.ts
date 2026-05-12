@@ -23,6 +23,7 @@ export class HeaderComponent implements OnInit, OnChanges {
   @Input() appLogoUrl = '';
   @Input({ required: true }) user!: HeaderUser;
   @Output() menuToggle = new EventEmitter<void>();
+  @Output() changePasswordClick = new EventEmitter<void>();
   @Output() logoutClick = new EventEmitter<void>();
   isOnline = true;
   initials = '';
@@ -30,6 +31,7 @@ export class HeaderComponent implements OnInit, OnChanges {
   isDarkMode = false;
   themeButtonLabel = 'Dark';
   themeButtonIcon = 'pi pi-moon';
+  showProfileCard = false;
 
   constructor(
     @Inject(DOCUMENT) private readonly document: Document,
@@ -57,7 +59,18 @@ export class HeaderComponent implements OnInit, OnChanges {
   }
 
   onLogoutClick(): void {
+    this.showProfileCard = false;
     this.logoutClick.emit();
+  }
+
+  onProfileToggle(event?: Event): void {
+    event?.stopPropagation();
+    this.showProfileCard = !this.showProfileCard;
+  }
+
+  onChangePasswordClick(): void {
+    this.showProfileCard = false;
+    this.changePasswordClick.emit();
   }
 
   onThemeToggle(): void {
@@ -80,6 +93,11 @@ export class HeaderComponent implements OnInit, OnChanges {
   onOffline(): void {
     this.isOnline = false;
     this.updateConnectionLabel();
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.showProfileCard = false;
   }
 
   private updateInitials(): void {

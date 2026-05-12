@@ -21,11 +21,14 @@ import { LoginService } from '../../services/login.service';
 })
 export class LoginComponent {
   readonly isMobileApp = Capacitor.isNativePlatform();
+  readonly loginLogoUrl = 'cspl-logo.webp';
   email = '';
   password = '';
+  forgotEmail = '';
   errorMessage = '';
   loginSaving = false;
   showRoleDialog = false;
+  showForgotPasswordDialog = false;
   loginSession: any = null;
   userDetailsList: any[] = [];
 
@@ -109,5 +112,26 @@ export class LoginComponent {
     this.showRoleDialog = false;
     this.userDetailsList = [];
     this.loginSession = null;
+  }
+
+  openForgotPasswordDialog(): void {
+    this.forgotEmail = this.email.trim();
+    this.showForgotPasswordDialog = true;
+  }
+
+  closeForgotPasswordDialog(): void {
+    this.showForgotPasswordDialog = false;
+  }
+
+  continueToResetPassword(): void {
+    const email = this.forgotEmail.trim();
+
+    if (!email) {
+      this.toast.warn('Email Required', 'Enter your email to continue with password reset.');
+      return;
+    }
+
+    this.showForgotPasswordDialog = false;
+    this.toast.info('Forgot Password Ready', `Password recovery is ready for ${email}. Connect the backend API to continue the actual reset flow.`);
   }
 }
