@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
@@ -9,7 +9,10 @@ export interface ComboMenu {
   RowNumber?: number;
   Code?: string;
   Name?: string;
-  Remarks?: string;
+  CategoryId?: number;
+  SubCategoryId?: number | null;
+  Price?: number | null;
+  OrgId?: number;
   IsActive?: boolean;
   Status?: string;
   CreatedBy?: number | null;
@@ -17,6 +20,24 @@ export interface ComboMenu {
   UpdatedBy?: number | null;
   UpdatedDate?: string | null;
   IsDeleted?: boolean;
+  ComboMenuItems?: ComboMenuItem[];
+  comboMenuItems?: ComboMenuItem[];
+  Items?: ComboMenuItem[];
+}
+
+export interface ComboMenuItem {
+  Id?: number;
+  ComboMenuId?: number;
+  FoodMenuId: number;
+  Qty: number;
+  Price?: number | null;
+  OrgId?: number;
+  IsActive?: boolean;
+  IsDeleted?: boolean;
+  CreatedBy?: number | null;
+  CreatedDate?: string;
+  UpdatedBy?: number | null;
+  UpdatedDate?: string | null;
 }
 
 @Injectable({
@@ -38,16 +59,26 @@ export class ComboMenuService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(): Observable<ApiListResponse<ComboMenu>> {
-    return this.http.get<ApiListResponse<ComboMenu>>(`${this.baseUrl}/${this.controllerPath}/GetAll`);
+  getAll(orgid: number): Observable<ApiListResponse<ComboMenu>> {
+    const params = new HttpParams().set('orgid', orgid.toString());
+
+    return this.http.get<ApiListResponse<ComboMenu>>(
+      `${this.baseUrl}/${this.controllerPath}/GetAllComboMenu`,
+      { params }
+    );
   }
 
   getById(id: number | string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetById?Id=${id}`);
+    const params = new HttpParams().set('Id', id.toString());
+
+    return this.http.get<any>(
+      `${this.baseUrl}/${this.controllerPath}/GetComboMenubyId`,
+      { params }
+    );
   }
 
   delete(id: number | string): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/Delete?Id=${id}`);
+    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`);
   }
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {

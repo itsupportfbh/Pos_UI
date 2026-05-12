@@ -71,15 +71,79 @@
 
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="50"
       [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
 
     <app-text-field label="Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter name"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="200"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="100"
       [model]="dialogName" (modelChange)="dialogName = $event"></app-text-field>
 
-    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Enter remarks" [maxlength]="250"
-      [model]="dialogRemarks" (modelChange)="dialogRemarks = $event"></app-text-field>
+    <app-multiselect-field label="Category" inputId="dialog-category" [showRequiredMark]="true"
+      placeholder="Choose categories" [options]="categoryOptions" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Category is required." [model]="dialogCategoryIds"
+      (modelChange)="onDialogCategoryChange($event)"></app-multiselect-field>
+
+    <app-multiselect-field label="Sub Category" inputId="dialog-subcategory" placeholder="Choose sub categories"
+      [options]="subCategoryOptions" [model]="dialogSubCategoryIds" [disabled]="!dialogCategoryIds.length"
+      (modelChange)="onDialogSubCategoryChange($event)"></app-multiselect-field>
+
+    <app-text-field label="Price" inputId="dialog-price" [showRequiredMark]="true" placeholder="Enter price"
+      type="number" [required]="true" [submitted]="dialogSubmitted" [min]="0" [step]="0.001" [readonly]="isEditMode"
+      errorMessage="Price is required." [model]="dialogPrice" (modelChange)="dialogPrice = $event"></app-text-field>
+  </section>
+
+  <section class="combo-items-panel">
+    <div class="combo-items-heading">
+      <h4>Combo Items</h4>
+    </div>
+
+    <div class="field-grid dialog-grid combo-item-entry">
+      <app-select-field label="Food Menu" inputId="dialog-food-menu" placeholder="Choose food menu"
+        [options]="foodMenuOptions" [numberValue]="true" [model]="selectedFoodMenuId"
+        [disabled]="!dialogSubCategoryIds.length"
+        (modelChange)="onFoodMenuChange($event)"></app-select-field>
+
+      <app-text-field label="Qty" inputId="dialog-food-menu-qty" type="number" placeholder="Qty" [min]="0"
+        [step]="0.001" [model]="selectedFoodMenuQty"
+        (modelChange)="selectedFoodMenuQty = $event"></app-text-field>
+
+      <app-text-field label="Item Price" inputId="dialog-food-menu-price" type="number" placeholder="Price"
+        [min]="0" [step]="0.001" [readonly]="true" [model]="selectedFoodMenuPrice ?? ''"></app-text-field>
+
+      <div class="combo-item-add">
+        <button pButton type="button" icon="pi pi-plus" label="Add Item" (click)="addComboItem()"></button>
+      </div>
+    </div>
+
+    <div class="combo-items-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Food Menu</th>
+            <th>Qty</th>
+            <th>Price</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of dialogItems; track item.FoodMenuId) {
+          <tr>
+            <td>{{ item.FoodMenuName }}</td>
+            <td>{{ item.Qty }}</td>
+            <td>{{ item.Price ?? '-' }}</td>
+            <td>
+              <button pButton type="button" icon="pi pi-trash" [text]="true" severity="danger"
+                (click)="removeComboItem(item)"></button>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="4" class="empty-items">No food menu items added.</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <div class="dialog-actions">
