@@ -50,6 +50,27 @@
 
 @media (max-width: 768px) {
   .app-footer {
+    width: min(var(--app-shell-max-width), calc(100vw - 0.75rem));
+    margin-top: 0.35rem;
+    gap: 0.55rem;
+    padding: 0.45rem 0.6rem;
     flex-direction: column;
+    font-size: 0.74rem;
+  }
+
+  .footer-brand {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-footer {
+    padding: 0.38rem 0.5rem;
+  }
+
+  .footer-logo,
+  .footer-icon {
+    width: 1.75rem;
+    height: 1.75rem;
   }
 }

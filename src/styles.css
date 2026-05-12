@@ -414,10 +414,31 @@ label {
     padding-inline: 0;
   }
 
+  .feature-page,
+  .overview-page {
+    gap: 0.45rem !important;
+    padding-top: 0.35rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .hero-panel,
+  .hero-strip {
+    gap: 0.4rem !important;
+    padding: 0.55rem 0.65rem !important;
+  }
+
   .page-header.hero-panel > div {
     align-items: flex-start;
     flex-direction: column;
     gap: 0.2rem;
+  }
+
+  .page-header.hero-panel h1 {
+    font-size: 1.1rem !important;
+  }
+
+  .page-header.hero-panel .page-subtitle {
+    font-size: 0.78rem !important;
   }
 
   .summary-grid,
@@ -428,6 +449,65 @@ label {
   .dialog-actions,
   .filter-panel-header {
     flex-direction: column;
+  }
+
+  .card-search-field {
+    min-width: 100%;
+  }
+
+  .p-card .p-card-body {
+    padding: 0.65rem;
+  }
+
+  .p-button {
+    padding-block: 0.4rem;
+    padding-inline: 0.65rem;
+  }
+
+  .p-dialog:not(.filter-drawer-dialog) {
+    width: min(100vw - 0.75rem, 40rem) !important;
+    max-width: calc(100vw - 0.75rem) !important;
+  }
+
+  .p-dialog:not(.filter-drawer-dialog) .p-dialog-content {
+    max-height: calc(100dvh - 8.5rem);
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --app-font-size: 13px;
+  }
+
+  .feature-page,
+  .overview-page {
+    gap: 0.35rem !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.4rem !important;
+  }
+
+  .hero-panel,
+  .hero-strip {
+    padding: 0.45rem 0.55rem !important;
+  }
+
+  .section-heading {
+    margin-bottom: 0.42rem !important;
+  }
+
+  .section-heading h2,
+  .filter-panel-header h2,
+  .dialog-copy h3 {
+    font-size: 1rem !important;
+  }
+
+  .p-card .p-card-body {
+    padding: 0.55rem;
+  }
+
+  .p-dialog:not(.filter-drawer-dialog) {
+    width: calc(100vw - 0.5rem) !important;
+    max-width: calc(100vw - 0.5rem) !important;
   }
 }
 

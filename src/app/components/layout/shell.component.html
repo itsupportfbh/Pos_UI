@@ -2,6 +2,10 @@
   <app-header [appName]="appName" [appLogoUrl]="appLogoUrl" [user]="user" (menuToggle)="onMenuToggle()" (logoutClick)="onLogoutClick()" />
 
   <section class="workspace" [class.sidebar-visible]="sidebarOpen">
+    @if (sidebarOpen) {
+      <button type="button" class="sidebar-backdrop" aria-label="Close menu" (click)="onMenuToggle()"></button>
+    }
+
     <app-menu
       [appName]="appName"
       [appLogoUrl]="appLogoUrl"

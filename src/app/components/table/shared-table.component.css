@@ -17,6 +17,10 @@
   overflow: visible;
 }
 
+:host ::ng-deep .p-datatable-table-container {
+  overflow-x: auto;
+}
+
 :host ::ng-deep .p-datatable .p-datatable-header {
   background: transparent;
   border: 0;
@@ -206,9 +210,20 @@
 }
 
 @media (max-width: 768px) {
+  :host ::ng-deep .p-datatable .p-datatable-header {
+    padding: 0.4rem 0.45rem 0.25rem;
+  }
+
+  :host ::ng-deep .p-datatable .p-datatable-thead > tr > th,
+  :host ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
+    padding: 0.34rem 0.45rem;
+    font-size: 0.76rem;
+  }
+
   .table-toolbar {
     align-items: stretch;
     flex-direction: column;
+    gap: 0.45rem;
   }
 
   .table-search-actions {

@@ -164,14 +164,22 @@
 @media (max-width: 768px) {
   .sidebar,
   .sidebar.sidebar-open {
-    width: 100%;
-    height: auto;
-    overflow: visible;
+    position: fixed;
+    top: 4.25rem;
+    left: 0.5rem;
+    width: min(18.5rem, calc(100vw - 1rem));
+    height: calc(100dvh - 5.25rem);
+    z-index: 40;
+    overflow: hidden;
+    border-radius: 0.9rem;
+    background: var(--app-panel-bg);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
   }
 
   .menu-list {
-    height: auto;
-    overflow: visible;
+    height: 100%;
+    overflow: auto;
     padding-right: 0;
+    padding: 0.35rem;
   }
 }

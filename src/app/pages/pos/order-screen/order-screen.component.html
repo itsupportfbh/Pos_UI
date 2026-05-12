@@ -17,7 +17,7 @@
     </article>
     <article class="summary-card">
       <span>Customer</span>
-      <strong>{{ customerName || '-' }}</strong>
+      <strong>{{ customerName }}</strong>
     </article>
     <article class="summary-card">
       <span>Total</span>
@@ -45,6 +45,26 @@
               </button>
             }
           </div>
+        </div>
+      </div>
+
+      <div class="customer-tools">
+        <div class="tool-block">
+          <span class="tool-label">Customer Name</span>
+          <label class="search-field" for="customer-name">
+            <i class="pi pi-user"></i>
+            <input id="customer-name" type="text" placeholder="Enter customer name" [value]="customerName"
+              (input)="updateCustomerName($event)" />
+          </label>
+        </div>
+
+        <div class="tool-block">
+          <span class="tool-label">Phone Number</span>
+          <label class="search-field" for="customer-phone">
+            <i class="pi pi-phone"></i>
+            <input id="customer-phone" type="text" placeholder="Enter phone number" [value]="customerPhone"
+              (input)="updateCustomerPhone($event)" />
+          </label>
         </div>
       </div>
 
@@ -124,58 +144,10 @@
         <div class="cart-header">
           <div>
             <p class="eyebrow">Current Order</p>
-            <h2>{{ activeOrderType }}</h2>
-            @if (currentOrderNumber) {
-              <span>{{ currentOrderNumber }}</span>
-            }
+            <h2>{{ selectedTable }}</h2>
           </div>
-          <span class="cart-customer-name">{{ customerName || '-' }}</span>
+          <span class="cart-customer-name">{{ activeOrderType }}</span>
         </div>
-
-        <section class="customer-details">
-          <div>
-            <span>Customer</span>
-            <strong>{{ currentCustomerDetails.customerName || '-' }}</strong>
-          </div>
-          <div>
-            <span>Order No</span>
-            <strong>{{ currentCustomerDetails.orderNumber || '-' }}</strong>
-          </div>
-          <div>
-            <span>Order Type</span>
-            <strong>{{ currentCustomerDetails.orderType }}</strong>
-          </div>
-          <div>
-            <span>Table</span>
-            <strong>{{ currentCustomerDetails.table || selectedTable }}</strong>
-          </div>
-          <div>
-            <span>Guests</span>
-            <strong>{{ currentCustomerDetails.guestCount }}</strong>
-          </div>
-          <div>
-            <span>Status</span>
-            <strong>{{ currentCustomerDetails.orderStatus || '-' }}</strong>
-          </div>
-          @if (currentCustomerDetails.mobileNo) {
-            <div>
-              <span>Mobile</span>
-              <strong>{{ currentCustomerDetails.mobileNo }}</strong>
-            </div>
-          }
-          @if (currentCustomerDetails.emailId) {
-            <div>
-              <span>Email</span>
-              <strong>{{ currentCustomerDetails.emailId }}</strong>
-            </div>
-          }
-          @if (currentCustomerDetails.addressLine1) {
-            <div class="customer-details-wide">
-              <span>Address</span>
-              <strong>{{ currentCustomerDetails.addressLine1 }}</strong>
-            </div>
-          }
-        </section>
 
         <div class="cart-section-title">
           <span>Selected Items</span>
@@ -233,7 +205,7 @@
 
         <div class="cart-actions">
           <button pButton type="button" icon="pi pi-pause" label="Hold" severity="secondary" [outlined]="true"
-            [disabled]="isHoldingOrder" [loading]="isHoldingOrder" (click)="holdOrder()"></button>
+            (click)="holdOrder()"></button>
           <button pButton type="button" icon="pi pi-send" label="Kitchen" (click)="sendToKitchen()"></button>
           <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>
         </div>
