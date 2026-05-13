@@ -10,27 +10,34 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { firstValueFrom } from 'rxjs';
+import { TextFieldComponent } from '../../components/form/text-field.component';
 import { AppToastService } from '../../services/app-toast.service';
 import { LoginService } from '../../services/login.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, DialogModule, InputTextModule, PasswordModule, ButtonModule, MessageModule],
+  imports: [CommonModule, FormsModule, CardModule, DialogModule, InputTextModule, PasswordModule, ButtonModule, MessageModule, TextFieldComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
 export class LoginComponent {
   readonly isMobileApp = Capacitor.isNativePlatform();
   readonly loginLogoUrl = 'cspl-logo.webp';
+  readonly forgotPasswordEmailMessage = 'Enter a valid email address to continue.';
   email = '';
   password = '';
   forgotEmail = '';
+  forgotPasswordSubmitted = false;
   errorMessage = '';
   loginSaving = false;
   showRoleDialog = false;
   showForgotPasswordDialog = false;
   loginSession: any = null;
   userDetailsList: any[] = [];
+
+  get isForgotPasswordEmailValid(): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.forgotEmail.trim());
+  }
 
   constructor(
     private readonly router: Router,
@@ -115,19 +122,27 @@ export class LoginComponent {
   }
 
   openForgotPasswordDialog(): void {
+    this.forgotPasswordSubmitted = false;
     this.forgotEmail = this.email.trim();
     this.showForgotPasswordDialog = true;
   }
 
   closeForgotPasswordDialog(): void {
+    this.forgotPasswordSubmitted = false;
     this.showForgotPasswordDialog = false;
   }
 
   continueToResetPassword(): void {
+    this.forgotPasswordSubmitted = true;
     const email = this.forgotEmail.trim();
 
     if (!email) {
       this.toast.warn('Email Required', 'Enter your email to continue with password reset.');
+      return;
+    }
+
+    if (!this.isForgotPasswordEmailValid) {
+      this.toast.warn('Invalid Email', this.forgotPasswordEmailMessage);
       return;
     }
 

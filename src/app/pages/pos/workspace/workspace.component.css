@@ -10,6 +10,13 @@
   gap: 0.8rem !important;
 }
 
+.dialog-validation-error {
+  display: block;
+  margin-top: -0.2rem;
+  color: #dc2626;
+  font-size: 0.82rem;
+}
+
 .auth-dialog-actions {
   display: flex;
   justify-content: flex-end;

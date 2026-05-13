@@ -48,6 +48,7 @@ export class WorkspaceComponent implements OnInit {
     location: this.userDetails.BranchName ?? ''
   };
   readonly footerDescription = 'POS workspace for billing, stock tracking, and daily sales operations';
+  readonly passwordRuleMessage = 'Password must be at least 6 characters and include uppercase, lowercase, number, and one special character (@ # $ % & *).';
   sidebarMenus: MenuGroup[] = [];
   officeOptions: MenuOfficeOption[] = [];
   currentOfficeScope = BACK_OFFICE_SCOPE;
@@ -56,6 +57,17 @@ export class WorkspaceComponent implements OnInit {
   changePasswordCurrent = '';
   changePasswordNew = '';
   changePasswordConfirm = '';
+
+  get showNewPasswordRuleError(): boolean {
+    return this.changePasswordSubmitted && !!this.changePasswordNew.trim() && !this.isPasswordValid(this.changePasswordNew);
+  }
+
+  get showConfirmPasswordMismatch(): boolean {
+    return this.changePasswordSubmitted &&
+      !!this.changePasswordConfirm.trim() &&
+      !!this.changePasswordNew.trim() &&
+      this.changePasswordNew !== this.changePasswordConfirm;
+  }
 
   sidebarOpen = true;
   activeMenuKey = 'dashboard';
@@ -153,6 +165,11 @@ export class WorkspaceComponent implements OnInit {
 
     if (!this.changePasswordCurrent || !this.changePasswordNew || !this.changePasswordConfirm) {
       this.toast.warn('Password Required', 'Enter the current password and confirm the new password.');
+      return;
+    }
+
+    if (!this.isPasswordValid(this.changePasswordNew)) {
+      this.toast.warn('Invalid Password', this.passwordRuleMessage);
       return;
     }
 
@@ -501,5 +518,18 @@ export class WorkspaceComponent implements OnInit {
     } catch {
       return {};
     }
+  }
+
+  private isPasswordValid(password: string): boolean {
+    const value = password.trim();
+
+    if (value.length < 6) {
+      return false;
+    }
+
+    return /[A-Z]/.test(value) &&
+      /[a-z]/.test(value) &&
+      /[0-9]/.test(value) &&
+      /[@#$%&*]/.test(value);
   }
 }

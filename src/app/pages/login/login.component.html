@@ -199,10 +199,19 @@
   </ng-template>
 
   <section class="auth-dialog-body">
-    <div class="field">
-      <label for="forgot-email">Email</label>
-      <input pInputText id="forgot-email" type="email" [(ngModel)]="forgotEmail" placeholder="Enter email" />
-    </div>
+    <app-text-field
+      label="Email"
+      inputId="forgot-email"
+      type="email"
+      placeholder="Enter email"
+      [required]="true"
+      [showRequiredMark]="true"
+      [submitted]="forgotPasswordSubmitted"
+      [emailOnly]="true"
+      [formatErrorMessage]="forgotPasswordEmailMessage"
+      [model]="forgotEmail"
+      (modelChange)="forgotEmail = $event"
+    />
 
     <div class="auth-dialog-actions">
       <button type="button" pButton label="Continue" (click)="continueToResetPassword()"></button>

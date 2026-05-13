@@ -62,6 +62,9 @@
           [model]="changePasswordNew"
           (modelChange)="changePasswordNew = $event"
         />
+        @if (showNewPasswordRuleError) {
+          <small class="dialog-validation-error">{{ passwordRuleMessage }}</small>
+        }
 
         <app-text-field
           label="Confirm Password"
@@ -75,6 +78,9 @@
           [model]="changePasswordConfirm"
           (modelChange)="changePasswordConfirm = $event"
         />
+        @if (showConfirmPasswordMismatch) {
+          <small class="dialog-validation-error">Confirm password should match the new password.</small>
+        }
       </section>
 
       <app-action-buttons
