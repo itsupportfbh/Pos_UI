@@ -10,12 +10,22 @@ export interface OrderHold {
   orderId?: number;
   Ordernumber?: string;
   ordernumber?: string;
-  Tableid?: string;
-  tableid?: string;
+  Tableid?: number;
+  tableid?: number;
+  TableId?: number;
+  tableId?: number;
+  ComboMenuId?: number;
+  comboMenuId?: number;
+  Combomenuid?: number;
+  combomenuid?: number;
   Ordertype?: string;
   ordertype?: string;
   Orderstatus?: string;
   orderstatus?: string;
+  CustomerName?: string;
+  customerName?: string;
+  CustomerPhone?: string;
+  customerPhone?: string;
   Itemcount?: number;
   itemcount?: number;
   ItemCount?: number;
@@ -30,10 +40,14 @@ export interface OrderHold {
   discountAmount?: number;
   TotalAmount?: number;
   totalAmount?: number;
-  Shiftid?: string;
-  shiftid?: string;
+  Shiftid?: number;
+  shiftid?: number;
+  ShiftId?: number;
+  shiftId?: number;
   OrgId?: number;
   orgId?: number;
+  BranchId?: number;
+  branchId?: number;
   IsActive?: boolean;
   isActive?: boolean;
   IsDeleted?: boolean;
@@ -60,6 +74,14 @@ export interface OrderHoldItem {
   orderid?: number;
   Menuitemid?: string;
   menuitemid?: string;
+  ComboMenuId?: number;
+  comboMenuId?: number;
+  Combomenuid?: number;
+  combomenuid?: number;
+  ComboMenuItemId?: number;
+  comboMenuItemId?: number;
+  Combomenuitemid?: number;
+  combomenuitemid?: number;
   Itemname?: string;
   itemname?: string;
   Quantity?: number;
@@ -80,6 +102,8 @@ export interface OrderHoldItem {
   notes?: string | null;
   OrgId?: number;
   orgId?: number;
+  BranchId?: number;
+  branchId?: number;
   IsActive?: boolean;
   isActive?: boolean;
   IsDeleted?: boolean;
@@ -140,11 +164,3 @@ export class OrderHoldService {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
-
-
-
-
-
-
-
-

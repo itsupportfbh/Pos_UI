@@ -1,64 +1,12 @@
 .workflow-layout {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(20rem, 24rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
 
 .workflow-summary-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.workflow-preview-card {
-  height: 100%;
-}
-
-.workflow-preview-surface {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-height: 16rem;
-  padding: 1.25rem;
-  border: 1px solid rgba(var(--app-primary-rgb), 0.14);
-  border-radius: 1rem;
-  background:
-    linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.08), rgba(255, 255, 255, 0.98)),
-    #fff;
-}
-
-.workflow-preview-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  color: var(--app-text-muted);
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.workflow-preview-copy {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.workflow-preview-title {
-  margin: 0;
-  color: var(--app-text-muted);
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.workflow-preview-copy h3 {
-  margin: 0;
-  color: var(--app-text-color);
-  font-size: 1.55rem;
-  line-height: 1.2;
-}
-
-.workflow-preview-copy p {
-  margin: 0;
-  color: var(--app-text-muted);
-  line-height: 1.5;
 }
 
 .status-badge {
@@ -97,7 +45,4 @@
     grid-template-columns: 1fr;
   }
 
-  .workflow-preview-surface {
-    min-height: auto;
-  }
 }

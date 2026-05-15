@@ -1,374 +1,368 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
-import { MenuItem, ConfirmationService } from 'primeng/api';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { DialogModule } from 'primeng/dialog';
-import { MenuModule } from 'primeng/menu';
+import { catchError, forkJoin, map, of } from 'rxjs';
 
-import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
-import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
-import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
 
-type DisplayMenuItemsRow = {
-  Id: number;
-  ScreenCode: string;
-  ScreenName: string;
-  StationName: string;
-  ThemeName: string;
-  KitchenMessage: string;
-  IsActive: boolean;
-  Status: string;
-  RowNumber: number;
+type KitchenOrderItem = {
+  id: number;
+  cartKey: string;
+  itemType: string;
+  name: string;
+  quantity: number;
+  price: number;
+  lineTotal: number;
+  category?: string;
+  subCategory?: string;
+  comboItems?: any[];
 };
 
-const DISPLAY_MENU_ITEMS_COLUMNS: SharedTableColumn<DisplayMenuItemsRow>[] = [
-  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'ScreenCode', header: 'Screen Code', sortable: true, width: '10rem' },
-  { field: 'ScreenName', header: 'Screen Name', sortable: true, width: '14rem' },
-  { field: 'StationName', header: 'Station', sortable: true, width: '12rem' },
-  { field: 'ThemeName', header: 'Theme', sortable: true, width: '10rem' },
-  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
-];
+type KitchenOrder = {
+  id: number;
+  orderNo: string;
+  orderType: string;
+  table: string;
+  customerName: string;
+  customerPhone?: string;
+  status: string;
+  sentAt: string;
+  itemCount: number;
+  grandTotal: number;
+  items: KitchenOrderItem[];
+};
 
 @Component({
   selector: 'app-display-menu-items',
   standalone: true,
   imports: [
     CommonModule,
-    ConfirmDialogModule,
-    ButtonModule,
-    CardModule,
-    DialogModule,
-    TextFieldComponent,
-    ActionButtonsComponent,
-    MenuModule,
-    SharedTableComponent,
-    SharedTableCellTemplateDirective
+    ButtonModule
   ],
-  providers: [ConfirmationService],
   templateUrl: './display-menu-items.component.html',
-  styleUrl: './display-menu-items.component.css'
+  styleUrls: ['./display-menu-items.component.css']
 })
-export class DisplayMenuItemsComponent {
-  private readonly toast = inject(AppToastService);
-  private readonly confirmationService = inject(ConfirmationService);
+export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
-  @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  userDetails: any = {};
+  kitchenOrders: KitchenOrder[] = [];
+  searchTicketText = '';
+  totalKitchenOrders = 0;
+  totalKitchenItems = 0;
+  isLoadingOrders = false;
 
-  showAddDialog = false;
-  showFilterSidebar = false;
-  isEditMode = false;
-  dialogSubmitted = false;
-  selectedRow: DisplayMenuItemsRow | null = null;
-  rowActionItems: MenuItem[] = [];
-  allRows: DisplayMenuItemsRow[] = [];
-  tableRows: DisplayMenuItemsRow[] = [];
-
-  filterSearchText = '';
-
-  dialogId = 0;
-  dialogScreenCode = '';
-  dialogScreenName = '';
-  dialogStationName = '';
-  dialogThemeName = '';
-  dialogKitchenMessage = '';
-
-  totalScreens = 0;
-  activeScreens = 0;
-  previewScreenName = 'Kitchen Expo Board';
-  previewStationName = 'Hot Kitchen';
-  previewThemeName = 'Production Mode';
-  previewKitchenMessage = '2 tickets waiting for preparation';
-
-  readonly pageEyebrow = 'Displays';
-  readonly pageTitle = 'Kitchen Display';
-  readonly pageSubtitle = 'Control kitchen-facing menu item visibility and service flow settings.';
-  readonly filterTitle = this.pageTitle + ' Filters';
-  readonly primaryActionLabel = 'Search ' + this.pageTitle;
-  readonly secondaryActionLabel = 'Clear Filters';
-  readonly showSecondaryAction = true;
-  dialogTitle = 'Create Kitchen Display';
-  dialogSubtitle = 'Capture kitchen display details for prep flow and station visibility.';
-  dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Kitchen Display Profiles';
-  readonly tableCaption = 'Kitchen Display Profiles';
-  tableColumns = DISPLAY_MENU_ITEMS_COLUMNS;
-  readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add Kitchen Screen';
-  readonly showFilterButton = true;
-  readonly showRowActions = true;
-  readonly rowActionHeader = 'Actions';
+  constructor(
+    private readonly toast: AppToastService,
+    private readonly displayMenuItemsService: DisplayMenuItemsService
+  ) {}
 
   ngOnInit(): void {
-    this.loadRows();
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.loadKitchenOrders();
+   // this.refreshTimer = setInterval(() => this.loadKitchenOrders(), 5000);
   }
 
-  loadRows(): void {
-    this.allRows = [];
-    this.tableRows = [];
-    this.updateSummary();
-    this.updatePreview();
+  ngOnDestroy(): void {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+    }
   }
 
-  searchRows(): void {
-    const searchText = this.filterSearchText.trim().toLowerCase();
+  get filteredKitchenOrders(): KitchenOrder[] {
+    const searchText = this.searchTicketText.trim().toLowerCase();
 
     if (!searchText) {
-      this.tableRows = [...this.allRows];
-      return;
+      return this.kitchenOrders;
     }
 
-    this.tableRows = this.allRows.filter((row) =>
-      row.ScreenCode.toLowerCase().includes(searchText) ||
-      row.ScreenName.toLowerCase().includes(searchText) ||
-      row.StationName.toLowerCase().includes(searchText) ||
-      row.ThemeName.toLowerCase().includes(searchText) ||
-      row.KitchenMessage.toLowerCase().includes(searchText)
+    return this.kitchenOrders.filter((order) =>
+      String(order.orderNo ?? '').toLowerCase().includes(searchText) ||
+      String(order.table ?? '').toLowerCase().includes(searchText) ||
+      String(order.orderType ?? '').toLowerCase().includes(searchText) ||
+      String(order.customerName ?? '').toLowerCase().includes(searchText)
     );
   }
 
-  resetForm(): void {
-    this.filterSearchText = '';
-    this.tableRows = [...this.allRows];
+  loadKitchenOrders(): void {
+    this.isLoadingOrders = true;
+    const OrgId = this.getUserOrgId();
+    const BranchId = this.getUserBranchId();
+
+    this.displayMenuItemsService.getAll(OrgId, BranchId).subscribe({
+      next: (response: any) => {
+        const kitchenOrderRows = this.getResponseList(response)
+          .filter((order: any) => this.isKitchenOrder(order));
+
+        this.loadKitchenOrderDetails(kitchenOrderRows);
+      },
+      error: () => {
+        this.isLoadingOrders = false;
+        this.toast.error('Load Failed', 'Unable to load kitchen orders.');
+      }
+    });
   }
 
-  openFilterSidebar(): void {
-    this.resetForm();
-    this.showFilterSidebar = true;
+  updateSearchTicket(event: Event): void {
+    this.searchTicketText = (event.target as HTMLInputElement).value;
   }
 
-  closeFilterSidebar(): void {
-    this.showFilterSidebar = false;
+  clearKitchenOrders(): void {
+    this.toast.info('API Required', 'Clear kitchen orders from the saved order list.');
   }
 
-  openAddDialog(): void {
-    this.resetDialogForm();
-    this.isEditMode = false;
-    this.dialogTitle = 'Create Kitchen Display';
-    this.dialogSubtitle = 'Capture kitchen display details for prep flow and station visibility.';
-    this.dialogPrimaryActionLabel = 'Save';
-    this.showAddDialog = true;
+  markKitchenOrderReady(order: KitchenOrder): void {
+    this.kitchenOrders = this.kitchenOrders.map((item) =>
+      item.id === order.id ? { ...item, status: 'Ready' } : item
+    );
+    this.updateKitchenTotals();
+    this.toast.success('Ready', `${order.orderNo} marked ready.`);
   }
 
-  closeAddDialog(): void {
-    this.resetDialogForm();
-    this.isEditMode = false;
-    this.dialogSubmitted = false;
-    this.showAddDialog = false;
+  getTicketNumber(order: KitchenOrder): string {
+    const digits = String(order.orderNo ?? '').match(/\d+/g)?.join('') ?? '';
+    return digits ? digits.slice(-3) : String(order.id).slice(-3);
   }
 
-  submitAddDialog(): void {
-    this.dialogSubmitted = true;
+  getTicketTitle(order: KitchenOrder): string {
+    if (order.table && order.table !== 'Counter') {
+      return `Table No. ${order.table}`;
+    }
 
-    if (!this.isDialogFormValid()) {
+    return order.orderType?.toLowerCase().includes('take') ? 'Take Out' : order.orderType || 'Take Out';
+  }
+
+  isReady(order: KitchenOrder): boolean {
+    return String(order.status ?? '').trim().toLowerCase() === 'ready';
+  }
+
+  private mapApiOrderToKitchenOrder(order: any): KitchenOrder {
+    const items = this.getOrderItems(order).map((item: any, index: number) => this.mapApiOrderItem(item, index));
+
+    return {
+      id: this.getNumberValue(order, 'Orderid', 'orderid', 'OrderId', 'orderId', 'Id', 'id'),
+      orderNo: this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber'),
+      orderType: this.getStringValue(order, 'OrderType', 'orderType', 'Ordertype', 'ordertype'),
+      table: this.getStringValue(order, 'TableName', 'tableName', 'TableCode', 'tableCode', 'TableId', 'tableId') || 'Counter',
+      customerName: this.getStringValue(order, 'CustomerName', 'customerName') || 'Walk-in Guest',
+      customerPhone: this.getStringValue(order, 'CustomerPhone', 'customerPhone'),
+      status: this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus') || 'In Kitchen',
+      sentAt: this.getStringValue(order, 'CreatedDate', 'createdDate', 'UpdatedDate', 'updatedDate') || new Date().toISOString(),
+      itemCount: this.getNumberValue(order, 'ItemCount', 'itemCount') || items.length,
+      grandTotal: this.getNumberValue(order, 'TotalAmount', 'totalAmount', 'GrandTotal', 'grandTotal'),
+      items
+    };
+  }
+
+  private mapApiOrderItem(item: any, index: number): KitchenOrderItem {
+    const menuItemId = this.getNumberValue(item, 'Menuitemid', 'menuitemid', 'MenuItemId', 'menuItemId');
+    const comboMenuItemId = this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId');
+    const quantity = this.getNumberValue(item, 'Quantity', 'quantity') || 1;
+    const price = this.getNumberValue(item, 'Unitprice', 'unitprice', 'UnitPrice', 'unitPrice');
+
+    return {
+      id: this.getNumberValue(item, 'Itemid', 'itemid', 'Id', 'id') || index + 1,
+      cartKey: `${comboMenuItemId ? 'combo' : 'menu'}-${comboMenuItemId || menuItemId || index}`,
+      itemType: comboMenuItemId ? 'Combo' : 'Menu',
+      name: this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName') || 'Order item',
+      quantity,
+      price,
+      lineTotal: this.getNumberValue(item, 'Totalprice', 'totalprice', 'TotalPrice', 'totalPrice') || quantity * price,
+      comboItems: this.parseComboDetails(this.getStringValue(item, 'Modifierdetails', 'modifierdetails'))
+    };
+  }
+
+  private updateKitchenTotals(): void {
+    this.totalKitchenOrders = this.kitchenOrders.length;
+    this.totalKitchenItems = this.kitchenOrders.reduce((total, order) => total + Number(order.itemCount || 0), 0);
+  }
+
+  private loadKitchenOrderDetails(orderRows: any[]): void {
+    if (!orderRows.length) {
+      this.kitchenOrders = [];
+      this.updateKitchenTotals();
+      this.isLoadingOrders = false;
       return;
     }
 
-    if (this.isEditMode && this.dialogId) {
-      this.allRows = this.allRows.map((row) => {
-        if (row.Id === this.dialogId) {
-          row.ScreenCode = this.dialogScreenCode;
-          row.ScreenName = this.dialogScreenName;
-          row.StationName = this.dialogStationName;
-          row.ThemeName = this.dialogThemeName;
-          row.KitchenMessage = this.dialogKitchenMessage;
-        }
+    const requests = orderRows.map((order: any) => {
+      if (this.getOrderItems(order).length) {
+        return of(order);
+      }
 
-        return row;
-      });
+      const orderId = this.getNumberValue(order, 'Orderid', 'orderid', 'OrderId', 'orderId', 'Id', 'id');
 
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
-    } else {
-      this.allRows.unshift({
-        Id: Date.now(),
-        ScreenCode: this.dialogScreenCode,
-        ScreenName: this.dialogScreenName,
-        StationName: this.dialogStationName,
-        ThemeName: this.dialogThemeName,
-        KitchenMessage: this.dialogKitchenMessage,
-        IsActive: true,
-        Status: 'Active',
-        RowNumber: 0
-      });
+      if (!orderId) {
+        return of(order);
+      }
 
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
+      return this.displayMenuItemsService.getById(orderId).pipe(
+        map((response: any) => this.mergeOrderWithDetails(order, response)),
+        catchError(() => of(order))
+      );
+    });
+
+    forkJoin(requests).subscribe({
+      next: (orders: any[]) => {
+        this.kitchenOrders = orders
+          .map((order: any) => this.mapApiOrderToKitchenOrder(order))
+          .filter((order: KitchenOrder) => this.isVisibleKitchenStatus(order.status));
+        this.updateKitchenTotals();
+      },
+      error: () => {
+        this.toast.error('Load Failed', 'Unable to load kitchen order details.');
+      },
+      complete: () => {
+        this.isLoadingOrders = false;
+      }
+    });
+  }
+
+  private getOrderItems(order: any): any[] {
+    const items = order?.Items ??
+      order?.items ??
+      order?.Orderitems ??
+      order?.orderitems ??
+      order?.OrderItems ??
+      order?.orderItems ??
+      order?.OrderDetails ??
+      order?.orderDetails ??
+      order?.Details ??
+      order?.details ??
+      [];
+    return Array.isArray(items) ? items : [];
+  }
+
+  private mergeOrderWithDetails(listOrder: any, response: any): any {
+    const result = response?.result ?? response?.Result ?? response ?? null;
+    const detailHeader = this.extractOrderHeader(result) ?? {};
+    const detailItems = this.extractOrderItems(result, detailHeader);
+
+    return {
+      ...listOrder,
+      ...detailHeader,
+      Items: detailItems.length ? detailItems : this.getOrderItems(listOrder),
+      items: detailItems.length ? detailItems : this.getOrderItems(listOrder)
+    };
+  }
+
+  private extractOrderHeader(result: any): any {
+    if (!result) {
+      return null;
     }
 
-    this.refreshRows();
-    this.closeAddDialog();
-  }
-
-  editRow(row: DisplayMenuItemsRow): void {
-    this.isEditMode = true;
-    this.dialogId = row.Id;
-    this.dialogScreenCode = row.ScreenCode;
-    this.dialogScreenName = row.ScreenName;
-    this.dialogStationName = row.StationName;
-    this.dialogThemeName = row.ThemeName;
-    this.dialogKitchenMessage = row.KitchenMessage;
-    this.dialogTitle = 'Edit Kitchen Display';
-    this.dialogSubtitle = 'Update the selected kitchen display setup.';
-    this.dialogPrimaryActionLabel = 'Update';
-    this.showAddDialog = true;
-  }
-
-  deleteRow(row: DisplayMenuItemsRow): void {
-    this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
-    this.refreshRows();
-    this.toast.success('Deleted', row.ScreenName + ' deleted successfully.');
-  }
-
-  activateRow(row: DisplayMenuItemsRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = true;
-        item.Status = 'Active';
-      }
-
-      return item;
-    });
-
-    this.refreshRows();
-    this.toast.success('Activated', row.ScreenName + ' activated successfully.');
-  }
-
-  deactivateRow(row: DisplayMenuItemsRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = false;
-        item.Status = 'Inactive';
-      }
-
-      return item;
-    });
-
-    this.refreshRows();
-    this.toast.success('Deactivated', row.ScreenName + ' deactivated successfully.');
-  }
-
-  openRowActions(menu: any, event: Event, row: DisplayMenuItemsRow): void {
-    this.selectedRow = row;
-    this.rowActionItems = this.getRowActionItems(row);
-    menu.toggle(event);
-  }
-
-  confirmDeleteRow(row: DisplayMenuItemsRow): void {
-    this.confirmationService.confirm({
-      header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.ScreenName + '?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Yes',
-      rejectLabel: 'No',
-      acceptButtonStyleClass: 'p-button-danger',
-      rejectButtonStyleClass: 'p-button-secondary',
-      accept: () => {
-        this.deleteRow(row);
-      }
-    });
-  }
-
-  confirmActivateRow(row: DisplayMenuItemsRow): void {
-    this.confirmationService.confirm({
-      header: 'Activate Confirmation',
-      message: 'Are you sure you want to activate ' + row.ScreenName + '?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Yes',
-      rejectLabel: 'No',
-      acceptButtonStyleClass: 'p-button-success',
-      rejectButtonStyleClass: 'p-button-secondary',
-      accept: () => {
-        this.activateRow(row);
-      }
-    });
-  }
-
-  confirmDeactivateRow(row: DisplayMenuItemsRow): void {
-    this.confirmationService.confirm({
-      header: 'Deactivate Confirmation',
-      message: 'Are you sure you want to deactivate ' + row.ScreenName + '?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Yes',
-      rejectLabel: 'No',
-      acceptButtonStyleClass: 'p-button-warn',
-      rejectButtonStyleClass: 'p-button-secondary',
-      accept: () => {
-        this.deactivateRow(row);
-      }
-    });
-  }
-
-  resetDialogForm(): void {
-    this.dialogSubmitted = false;
-    this.dialogId = 0;
-    this.dialogScreenCode = '';
-    this.dialogScreenName = '';
-    this.dialogStationName = '';
-    this.dialogThemeName = '';
-    this.dialogKitchenMessage = '';
-  }
-
-  private refreshRows(): void {
-    this.allRows = this.allRows.map((row, index) => {
-      row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
-      return row;
-    });
-
-    this.searchRows();
-    this.updateSummary();
-    this.updatePreview();
-  }
-
-  private updateSummary(): void {
-    this.totalScreens = this.allRows.length;
-    this.activeScreens = this.allRows.filter((row) => row.IsActive).length;
-  }
-
-  private updatePreview(): void {
-    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
-
-    this.previewScreenName = activeRow?.ScreenName ?? 'Kitchen Expo Board';
-    this.previewStationName = activeRow?.StationName ?? 'Hot Kitchen';
-    this.previewThemeName = activeRow?.ThemeName ?? 'Production Mode';
-    this.previewKitchenMessage = activeRow?.KitchenMessage ?? '2 tickets waiting for preparation';
-  }
-
-  private isDialogFormValid(): boolean {
-    return this.textFields?.toArray().every((field) => field.isValid) ?? true;
-  }
-
-  private getRowActionItems(row: DisplayMenuItemsRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
-
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (Array.isArray(result)) {
+      return result.find((item: any) => this.isOrderHeaderLike(item)) ?? result[0] ?? null;
     }
 
-    return items;
+    const nestedHeader = result.Order ??
+      result.order ??
+      result.OrderHeader ??
+      result.orderHeader ??
+      result.Header ??
+      result.header ??
+      result.Master ??
+      result.master;
+
+    if (Array.isArray(nestedHeader)) {
+      return nestedHeader.find((item: any) => this.isOrderHeaderLike(item)) ?? nestedHeader[0] ?? null;
+    }
+
+    return nestedHeader && typeof nestedHeader === 'object' ? nestedHeader : result;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
-    if (!this.selectedRow) {
-      return;
+  private extractOrderItems(result: any, header: any): any[] {
+    const resultItems = this.getOrderItems(result);
+    const headerItems = this.getOrderItems(header);
+
+    if (resultItems.length) {
+      return resultItems;
     }
 
-    if (action === 'edit') {
-      this.editRow(this.selectedRow);
-    } else if (action === 'delete') {
-      this.confirmDeleteRow(this.selectedRow);
-    } else if (action === 'activate') {
-      this.confirmActivateRow(this.selectedRow);
-    } else {
-      this.confirmDeactivateRow(this.selectedRow);
+    if (headerItems.length) {
+      return headerItems;
     }
+
+    if (Array.isArray(result)) {
+      return result.filter((item: any) => this.isOrderItemLike(item));
+    }
+
+    return [];
+  }
+
+  private isKitchenOrder(order: any): boolean {
+    return this.isVisibleKitchenStatus(this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus'));
+  }
+
+  private isVisibleKitchenStatus(status: string): boolean {
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    return normalizedStatus === 'in kitchen' || normalizedStatus === 'ready';
+  }
+
+  private isOrderHeaderLike(value: any): boolean {
+    return Boolean(value && typeof value === 'object' && (
+      value.Orderid !== undefined ||
+      value.orderid !== undefined ||
+      value.OrderId !== undefined ||
+      value.orderId !== undefined ||
+      value.OrderNumber !== undefined ||
+      value.orderNumber !== undefined ||
+      value.Ordernumber !== undefined ||
+      value.ordernumber !== undefined
+    ));
+  }
+
+  private isOrderItemLike(value: any): boolean {
+    return Boolean(value && typeof value === 'object' && (
+      value.Menuitemid !== undefined ||
+      value.menuitemid !== undefined ||
+      value.ComboMenuItemId !== undefined ||
+      value.comboMenuItemId !== undefined ||
+      value.Itemname !== undefined ||
+      value.itemname !== undefined ||
+      value.Quantity !== undefined ||
+      value.quantity !== undefined
+    ));
+  }
+
+  private getResponseList(response: any): any[] {
+    const result = response?.result ?? response?.Result ?? response;
+    return Array.isArray(result) ? result : [];
+  }
+
+  private parseComboDetails(value: string): any[] {
+    if (!value) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private getStringValue(source: any, ...keys: string[]): string {
+    const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
+    return value?.toString() ?? '';
+  }
+
+  private getNumberValue(source: any, ...keys: string[]): number {
+    const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
+    return Number(value ?? 0);
+  }
+
+  private getUserOrgId(): number {
+    return Number(this.userDetails.RoleId || 0) === 1
+      ? 0
+      : this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
+  }
+
+  private getUserBranchId(): number {
+    return Number(this.userDetails.IsAdmin || 0) === 1 || Number(this.userDetails.RoleId || 0) === 1
+      ? 0
+      : this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
   }
 }
-

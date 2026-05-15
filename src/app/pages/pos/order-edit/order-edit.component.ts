@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -10,7 +11,10 @@ import { MenuModule } from 'primeng/menu';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+const ACTIVE_HELD_ORDER_STORAGE_KEY = 'activeHeldOrder';
 
 type OrderEditRow = {
   Id: number;
@@ -24,6 +28,7 @@ type OrderEditRow = {
   IsActive: boolean;
   Status: string;
   RowNumber: number;
+  RawOrder?: any;
 };
 
 const ORDER_EDIT_COLUMNS: SharedTableColumn<OrderEditRow>[] = [
@@ -58,6 +63,8 @@ const ORDER_EDIT_COLUMNS: SharedTableColumn<OrderEditRow>[] = [
 })
 export class OrderEditComponent {
   private readonly toast = inject(AppToastService);
+  private readonly displayMenuItemsService = inject(DisplayMenuItemsService);
+  private readonly router = inject(Router);
   private readonly confirmationService = inject(ConfirmationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
@@ -70,6 +77,8 @@ export class OrderEditComponent {
   rowActionItems: MenuItem[] = [];
   allRows: OrderEditRow[] = [];
   tableRows: OrderEditRow[] = [];
+  userDetails: any = {};
+  isLoading = false;
 
   filterSearchText = '';
 
@@ -103,21 +112,41 @@ export class OrderEditComponent {
   readonly tableTitle = 'Edit Queue';
   readonly tableCaption = 'Edit Orders';
   tableColumns = ORDER_EDIT_COLUMNS;
-  readonly showAddNewButton = true;
+  readonly showAddNewButton = false;
   readonly addNewButtonLabel = 'Add Edit Request';
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
 
   ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.loadRows();
   }
 
   loadRows(): void {
-    this.allRows = [];
-    this.tableRows = [];
-    this.updateSummary();
-    this.updatePreview();
+    this.isLoading = true;
+
+    this.displayMenuItemsService.getAll(this.getUserOrgId(), this.getUserBranchId()).subscribe({
+      next: (response: any) => {
+        const orders = this.getResponseList(response)
+          .filter((order: any) => !this.getBooleanValue(order, 'IsDeleted', 'isDeleted'));
+
+        this.allRows = orders.map((order: any, index: number) => this.mapOrderToRow(order, index));
+        this.tableRows = [...this.allRows];
+        this.updateSummary();
+        this.updatePreview();
+      },
+      error: () => {
+        this.allRows = [];
+        this.tableRows = [];
+        this.updateSummary();
+        this.updatePreview();
+        this.toast.error('Load Failed', 'Unable to load edit orders.');
+      },
+      complete: () => {
+        this.isLoading = false;
+      }
+    });
   }
 
   searchRows(): void {
@@ -213,19 +242,7 @@ export class OrderEditComponent {
   }
 
   editRow(row: OrderEditRow): void {
-    this.isEditMode = true;
-    this.dialogId = row.Id;
-    this.dialogOrderNo = row.OrderNo;
-    this.dialogTableName = row.TableName;
-    this.dialogGuestName = row.GuestName;
-    this.dialogItemCount = String(row.ItemCount);
-    this.dialogOrderTotal = String(row.OrderTotal);
-    this.dialogUpdatedBy = row.UpdatedBy;
-    this.dialogNotes = row.Notes;
-    this.dialogTitle = 'Edit Order Ticket';
-    this.dialogSubtitle = 'Update the selected edit request before service continues.';
-    this.dialogPrimaryActionLabel = 'Update';
-    this.showAddDialog = true;
+    this.openOrderForEdit(row);
   }
 
   deleteRow(row: OrderEditRow): void {
@@ -313,6 +330,35 @@ export class OrderEditComponent {
     });
   }
 
+  private openOrderForEdit(row: OrderEditRow): void {
+    const orderId = row.Id;
+
+    if (!orderId) {
+      this.toast.error('Invalid Order', 'Unable to open this order for edit.');
+      return;
+    }
+
+    this.displayMenuItemsService.getById(orderId).subscribe({
+      next: (response: any) => {
+        const orderDetails = this.buildOpenOrderDetails(row.RawOrder ?? row, response);
+        this.openOrderScreen(orderDetails);
+      },
+      error: () => {
+        const orderDetails = this.buildOpenOrderDetails(row.RawOrder ?? row, null);
+        this.openOrderScreen(orderDetails);
+      }
+    });
+  }
+
+  private openOrderScreen(orderDetails: any): void {
+    try {
+      localStorage.setItem(ACTIVE_HELD_ORDER_STORAGE_KEY, JSON.stringify(this.toSerializableOrder(orderDetails)));
+      this.router.navigate(['/pos/order-screen']);
+    } catch {
+      this.toast.error('Open Failed', 'Unable to open this order.');
+    }
+  }
+
   resetDialogForm(): void {
     this.dialogSubmitted = false;
     this.dialogId = 0;
@@ -356,18 +402,9 @@ export class OrderEditComponent {
   }
 
   private getRowActionItems(row: OrderEditRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+    return [
+      { label: 'Edit Order', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') }
     ];
-
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Close', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Reopen', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
-    }
-
-    return items;
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
@@ -384,5 +421,245 @@ export class OrderEditComponent {
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  private mapOrderToRow(order: any, index: number): OrderEditRow {
+    const status = this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus') || 'Open';
+
+    return {
+      Id: this.getNumberValue(order, 'Orderid', 'orderid', 'OrderId', 'orderId', 'Id', 'id'),
+      OrderNo: this.getOrderNumber(order) || '-',
+      TableName: this.getStringValue(order, 'TableName', 'tableName', 'TableCode', 'tableCode', 'TableId', 'tableId') || 'Counter',
+      GuestName: this.getStringValue(order, 'CustomerName', 'customerName', 'GuestName', 'guestName') || 'Walk-in Guest',
+      ItemCount: this.getNumberValue(order, 'ItemCount', 'itemCount', 'Itemcount', 'itemcount') || this.getOrderItems(order).length,
+      OrderTotal: this.getNumberValue(order, 'TotalAmount', 'totalAmount', 'GrandTotal', 'grandTotal'),
+      UpdatedBy: this.getStringValue(order, 'UpdatedBy', 'updatedBy', 'CreatedBy', 'createdBy') || '-',
+      Notes: this.getStringValue(order, 'Notes', 'notes', 'Remarks', 'remarks') || status,
+      IsActive: status.trim().toLowerCase() !== 'completed' && !this.getBooleanValue(order, 'IsDeleted', 'isDeleted'),
+      Status: status,
+      RowNumber: index + 1,
+      RawOrder: order
+    };
+  }
+
+  private buildOpenOrderDetails(listOrder: any, response: any): any {
+    const apiResult = response?.result ?? response?.Result ?? response ?? null;
+    const apiOrderDetails = this.extractOrderHeader(apiResult) ?? listOrder;
+    const detailItems = this.extractOrderItems(apiResult, apiOrderDetails, listOrder);
+
+    return {
+      ...listOrder,
+      ...apiOrderDetails,
+      Items: detailItems,
+      items: detailItems,
+      OrderHoldItems: detailItems,
+      orderHoldItems: detailItems
+    };
+  }
+
+  private toSerializableOrder(order: any): any {
+    const source = order as any;
+    const orderId = this.getOrderId(order);
+    const items = this.getOrderItems(order).map((item: any) => ({
+      Id: this.getNumberValue(item, 'Id', 'id', 'Itemid', 'itemid'),
+      itemid: this.getNumberValue(item, 'itemid', 'Itemid', 'Id', 'id'),
+      Orderid: this.getNumberValue(item, 'Orderid', 'orderid', 'OrderId', 'orderId') || orderId,
+      Menuitemid: this.getStringValue(item, 'Menuitemid', 'menuitemid', 'MenuItemId', 'menuItemId', 'FoodMenuId', 'foodMenuId'),
+      ComboMenuId: this.getNumberValue(item, 'ComboMenuId', 'comboMenuId', 'Combomenuid', 'combomenuid'),
+      ComboMenuItemId: this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid'),
+      Itemname: this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName', 'name', 'Name'),
+      Quantity: this.getNumberValue(item, 'Quantity', 'quantity', 'Qty', 'qty') || 1,
+      Unitprice: this.getNumberValue(item, 'Unitprice', 'unitprice', 'UnitPrice', 'unitPrice', 'price', 'Price'),
+      Totalprice: this.getNumberValue(item, 'Totalprice', 'totalprice', 'TotalPrice', 'totalPrice'),
+      DiscountAmount: this.getNumberValue(item, 'DiscountAmount', 'discountAmount'),
+      TaxAmount: this.getNumberValue(item, 'TaxAmount', 'taxAmount'),
+      Modifierdetails: this.getStringValue(item, 'Modifierdetails', 'modifierdetails') || null,
+      Itemstatus: this.getStringValue(item, 'Itemstatus', 'itemstatus') || this.getOrderStatus(order),
+      Notes: this.getStringValue(item, 'Notes', 'notes') || null,
+      OrgId: this.getNumberValue(item, 'OrgId', 'orgId') || this.getNumberValue(source, 'OrgId', 'orgId') || this.getUserOrgId(),
+      BranchId: this.getNumberValue(item, 'BranchId', 'branchId') || this.getNumberValue(source, 'BranchId', 'branchId') || this.getUserBranchId()
+    }));
+
+    return {
+      ...source,
+      Id: orderId,
+      id: orderId,
+      SavedOrderId: orderId,
+      Orderid: orderId,
+      orderId,
+      Ordernumber: this.getOrderNumber(order),
+      OrderNumber: this.getOrderNumber(order),
+      Tableid: this.getNumberValue(source, 'Tableid', 'tableid', 'TableId', 'tableId'),
+      TableId: this.getNumberValue(source, 'Tableid', 'tableid', 'TableId', 'tableId'),
+      Ordertype: this.getStringValue(source, 'Ordertype', 'ordertype', 'OrderType', 'orderType'),
+      OrderType: this.getStringValue(source, 'Ordertype', 'ordertype', 'OrderType', 'orderType'),
+      Orderstatus: this.getOrderStatus(order),
+      OrderStatus: this.getOrderStatus(order),
+      CustomerName: this.getStringValue(source, 'CustomerName', 'customerName', 'GuestName', 'guestName'),
+      CustomerPhone: this.getStringValue(source, 'CustomerPhone', 'customerPhone', 'Phone', 'phone'),
+      Itemcount: this.getNumberValue(source, 'ItemCount', 'itemCount', 'Itemcount', 'itemcount') || items.length,
+      SubtotalAmount: this.getNumberValue(source, 'SubtotalAmount', 'subtotalAmount', 'Subtotal', 'subtotal'),
+      TaxAmount: this.getNumberValue(source, 'TaxAmount', 'taxAmount'),
+      DiscountAmount: this.getNumberValue(source, 'DiscountAmount', 'discountAmount'),
+      TotalAmount: this.getNumberValue(source, 'TotalAmount', 'totalAmount', 'GrandTotal', 'grandTotal'),
+      Shiftid: this.getNumberValue(source, 'Shiftid', 'shiftid', 'ShiftId', 'shiftId'),
+      OrgId: this.getNumberValue(source, 'OrgId', 'orgId') || this.getUserOrgId(),
+      BranchId: this.getNumberValue(source, 'BranchId', 'branchId') || this.getUserBranchId(),
+      orderNo: this.getOrderNumber(order),
+      table: this.getStringValue(source, 'TableName', 'tableName', 'TableCode', 'tableCode'),
+      customerName: this.getStringValue(source, 'CustomerName', 'customerName', 'GuestName', 'guestName'),
+      Items: items,
+      items,
+      OrderHoldItems: items,
+      orderHoldItems: items
+    };
+  }
+
+  private extractOrderHeader(apiResult: any): any | null {
+    if (!apiResult) {
+      return null;
+    }
+
+    if (Array.isArray(apiResult)) {
+      return apiResult.find((row: any) => this.isOrderLikeObject(row)) ?? apiResult[0] ?? null;
+    }
+
+    const source = apiResult as any;
+    const nestedHeader = source.Order ??
+      source.order ??
+      source.OrderHeader ??
+      source.orderHeader ??
+      source.Header ??
+      source.header ??
+      source.Master ??
+      source.master;
+
+    if (Array.isArray(nestedHeader)) {
+      return nestedHeader.find((row: any) => this.isOrderLikeObject(row)) ?? nestedHeader[0] ?? null;
+    }
+
+    return nestedHeader && typeof nestedHeader === 'object' ? nestedHeader : apiResult;
+  }
+
+  private extractOrderItems(apiResult: any, apiOrderDetails: any, listOrder: any): any[] {
+    const resultItems = this.getOrderItems(apiResult);
+    const detailItems = this.getOrderItems(apiOrderDetails);
+    const listItems = this.getOrderItems(listOrder);
+
+    if (resultItems.length) {
+      return resultItems;
+    }
+
+    if (detailItems.length) {
+      return detailItems;
+    }
+
+    if (Array.isArray(apiResult)) {
+      const itemRows = apiResult.filter((item: any) => this.isOrderItemLikeObject(item));
+
+      if (itemRows.length) {
+        return itemRows;
+      }
+    }
+
+    return listItems;
+  }
+
+  private getOrderItems(order: any): any[] {
+    const items = order?.Items ??
+      order?.items ??
+      order?.OrderItems ??
+      order?.orderItems ??
+      order?.Orderitems ??
+      order?.orderitems ??
+      order?.OrderDetails ??
+      order?.orderDetails ??
+      order?.Details ??
+      order?.details ??
+      order?.OrderHoldItems ??
+      order?.orderHoldItems ??
+      [];
+
+    return Array.isArray(items) ? items : [];
+  }
+
+  private getResponseList(response: any): any[] {
+    const result = response?.result ?? response?.Result ?? response;
+    return Array.isArray(result) ? result : [];
+  }
+
+  private getOrderId(order: any): number {
+    return this.getNumberValue(order, 'Orderid', 'orderid', 'OrderId', 'orderId', 'Id', 'id');
+  }
+
+  private getOrderNumber(order: any): string {
+    return this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo');
+  }
+
+  private getOrderStatus(order: any): string {
+    return this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus') || 'Open';
+  }
+
+  private isOrderLikeObject(value: any): boolean {
+    return Boolean(value && typeof value === 'object' && (
+      value.Orderid !== undefined ||
+      value.orderid !== undefined ||
+      value.OrderId !== undefined ||
+      value.orderId !== undefined ||
+      value.OrderNumber !== undefined ||
+      value.orderNumber !== undefined ||
+      value.Ordernumber !== undefined ||
+      value.ordernumber !== undefined
+    ));
+  }
+
+  private isOrderItemLikeObject(value: any): boolean {
+    return Boolean(value && typeof value === 'object' && (
+      value.Menuitemid !== undefined ||
+      value.menuitemid !== undefined ||
+      value.MenuItemId !== undefined ||
+      value.ComboMenuItemId !== undefined ||
+      value.comboMenuItemId !== undefined ||
+      value.Itemname !== undefined ||
+      value.itemname !== undefined ||
+      value.Quantity !== undefined ||
+      value.quantity !== undefined
+    ));
+  }
+
+  private getUserOrgId(): number {
+    return Number(this.userDetails.RoleId || 0) === 1
+      ? 0
+      : this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
+  }
+
+  private getUserBranchId(): number {
+    return Number(this.userDetails.IsAdmin || 0) === 1 || Number(this.userDetails.RoleId || 0) === 1
+      ? 0
+      : this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
+  }
+
+  private getStringValue(source: any, ...keys: string[]): string {
+    const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
+    return value?.toString() ?? '';
+  }
+
+  private getNumberValue(source: any, ...keys: string[]): number {
+    const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
+    return Number(value ?? 0);
+  }
+
+  private getBooleanValue(source: any, ...keys: string[]): boolean {
+    const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'number') {
+      return value === 1;
+    }
+
+    return String(value ?? '').toLowerCase() === 'true' || String(value ?? '') === '1';
   }
 }

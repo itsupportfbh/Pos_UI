@@ -97,13 +97,34 @@
 
       <div class="filter-group">
         <div class="filter-group-label">
+          <span>Floors</span>
+        </div>
+      <section class="floor-strip" aria-label="Floors">
+        @if (isFloorLoading && floors.length === 1) {
+          <span class="strip-loading">Loading floors...</span>
+        } @else {
+          @for (floor of floors; track floor.id) {
+            <button type="button" [class.active]="activeFloorId === floor.id" (click)="selectFloor(floor)">
+              {{ floor.name }}
+            </button>
+          }
+        }
+      </section>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-group-label">
           <span>Tables</span>
         </div>
       <section class="table-strip" aria-label="Tables">
-        @for (table of tables; track table) {
-          <button type="button" [class.active]="selectedTable === table" (click)="selectTable(table)">
-            {{ table }}
-          </button>
+        @if (isTableLoading && tables.length === 1) {
+          <span class="strip-loading">Loading tables...</span>
+        } @else {
+          @for (table of tables; track table) {
+            <button type="button" [class.active]="selectedTable === table" (click)="selectTable(table)">
+              {{ table }}
+            </button>
+          }
         }
       </section>
       </div>
@@ -112,10 +133,13 @@
         @if (isMenuLoading && !allMenuItems.length) {
           <div class="empty-state">Loading menu items...</div>
         } @else {
-          @for (item of filteredMenuItems; track item.id) {
+          @for (item of filteredMenuItems; track item.cartKey) {
           <article class="menu-card">
             <div class="menu-card-top">
               <span>{{ item.category }} / {{ item.subCategory }}</span>
+              @if (item.itemType === 'Combo') {
+                <p-tag value="Combo" severity="info"></p-tag>
+              }
               @if (item.isPopular) {
                 <p-tag value="Popular" severity="success"></p-tag>
               }
@@ -143,17 +167,28 @@
       <p-card class="feature-card">
         <div class="cart-header">
           <div>
-            <p class="eyebrow">Current Order</p>
-            <h2>{{ selectedTable }}</h2>
+            <p class="eyebrow">Order No: {{ currentOrderNumber || '-' }}</p>
+            <h2>{{ selectedTableWithFloorName }}</h2>
           </div>
           <span class="cart-customer-name">{{ activeOrderType }}</span>
+        </div>
+
+        <div class="order-context">
+          <div>
+            <span>Organization</span>
+            <strong>{{ organizationName || 'Organization' }}</strong>
+          </div>
+          <div>
+            <span>Branch</span>
+            <strong>{{ branchName || 'Branch' }}</strong>
+          </div>
         </div>
 
         <div class="cart-section-title">
           <span>Selected Items</span>
         </div>
         <section class="cart-list">
-          @for (item of cartItems; track item.id) {
+          @for (item of cartItems; track item.cartKey) {
             <article class="cart-item">
               <div class="cart-item-main">
                 <strong>{{ item.name }}</strong>
@@ -161,18 +196,18 @@
               </div>
 
               <div class="quantity-control">
-                <button type="button" aria-label="Decrease quantity" (click)="decreaseQuantity(item.id)">
+                <button type="button" aria-label="Decrease quantity" (click)="decreaseQuantity(item.cartKey)">
                   <i class="pi pi-minus"></i>
                 </button>
                 <span>{{ item.quantity }}</span>
-                <button type="button" aria-label="Increase quantity" (click)="increaseQuantity(item.id)">
+                <button type="button" aria-label="Increase quantity" (click)="increaseQuantity(item.cartKey)">
                   <i class="pi pi-plus"></i>
                 </button>
               </div>
 
               <strong class="line-total">{{ item.price * item.quantity | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
 
-              <button type="button" class="remove-button" aria-label="Remove item" (click)="removeItem(item.id)">
+              <button type="button" class="remove-button" aria-label="Remove item" (click)="removeItem(item.cartKey)">
                 <i class="pi pi-trash"></i>
               </button>
             </article>
@@ -204,9 +239,11 @@
         </section>
 
         <div class="cart-actions">
-          <button pButton type="button" icon="pi pi-pause" label="Hold" severity="secondary" [outlined]="true"
+          <button pButton type="button" icon="pi pi-pause" [label]="isHoldingOrder ? 'Holding' : 'Hold'" severity="secondary" [outlined]="true"
+            [disabled]="isHoldingOrder || !cartItems.length"
             (click)="holdOrder()"></button>
-          <button pButton type="button" icon="pi pi-send" label="Kitchen" (click)="sendToKitchen()"></button>
+          <button pButton type="button" icon="pi pi-send" [label]="isSendingToKitchen ? 'Sending' : 'Kitchen'"
+            [disabled]="isSendingToKitchen || !cartItems.length" (click)="sendToKitchen()"></button>
           <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>
         </div>
 

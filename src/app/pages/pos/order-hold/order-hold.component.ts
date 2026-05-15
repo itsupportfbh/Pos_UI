@@ -41,8 +41,8 @@ type HeldOrder = {
   orderid?: number;
   ordernumber?: string;
   Ordernumber?: string;
-  tableid?: string;
-  Tableid?: string;
+  tableid?: string | number;
+  Tableid?: string | number;
   ordertype?: string;
   Ordertype?: string;
   orderstatus?: string;
@@ -59,8 +59,8 @@ type HeldOrder = {
   DiscountAmount?: number;
   totalAmount?: number;
   TotalAmount?: number;
-  shiftid?: string;
-  Shiftid?: string;
+  shiftid?: string | number;
+  Shiftid?: string | number;
   orgId?: number;
   OrgId?: number;
   IsDeleted?: boolean;
@@ -246,25 +246,24 @@ export class OrderHoldComponent implements OnInit {
   }
 
   openHeldOrder(order: HeldOrder | HeldOrderRow): void {
+    
+    
     const orderId = this.getOrderDetailId(order);
 
     if (!orderId) {
       const orderDetails = this.buildOpenOrderDetails(order, null);
-      localStorage.setItem(ACTIVE_HELD_ORDER_STORAGE_KEY, JSON.stringify(orderDetails));
-      this.router.navigate(['/pos/order-screen']);
+      this.openOrderScreen(orderDetails);
       return;
     }
 
     this.orderHoldService.getAllHoldorderDetails(orderId).subscribe({
       next: (response: any) => {
         const orderDetails = this.buildOpenOrderDetails(order, response);
-        localStorage.setItem(ACTIVE_HELD_ORDER_STORAGE_KEY, JSON.stringify(orderDetails));
-        this.router.navigate(['/pos/order-screen']);
+        this.openOrderScreen(orderDetails);
       },
       error: () => {
         const orderDetails = this.buildOpenOrderDetails(order, null);
-        localStorage.setItem(ACTIVE_HELD_ORDER_STORAGE_KEY, JSON.stringify(orderDetails));
-        this.router.navigate(['/pos/order-screen']);
+        this.openOrderScreen(orderDetails);
         this.toast.warn('Details Not Loaded', 'Opened the held order from list data. Item details may be incomplete.');
       }
     });
@@ -432,6 +431,78 @@ export class OrderHoldComponent implements OnInit {
     return Array.isArray(items) ? items : [];
   }
 
+  private openOrderScreen(orderDetails: HeldOrder): void {
+    try {
+      localStorage.setItem(ACTIVE_HELD_ORDER_STORAGE_KEY, JSON.stringify(this.toSerializableHeldOrder(orderDetails)));
+      this.router.navigate(['/pos/order-screen']);
+    } catch {
+      this.toast.error('Open Failed', 'Unable to open this held order.');
+    }
+  }
+
+  private toSerializableHeldOrder(order: HeldOrder): HeldOrder {
+    const source = order as any;
+    const items = this.getOrderItems(order).map((item: any) => ({
+      Id: item.Id ?? item.id ?? item.itemid ?? item.Itemid ?? 0,
+      itemid: item.itemid ?? item.Itemid ?? item.Id ?? item.id ?? 0,
+      Orderid: item.Orderid ?? item.orderid ?? item.OrderId ?? item.orderId ?? this.getOrderDetailId(order),
+      Menuitemid: item.Menuitemid ?? item.menuitemid ?? item.MenuItemId ?? item.menuItemId ?? item.FoodMenuId ?? item.foodMenuId ?? '',
+      ComboMenuId: item.ComboMenuId ?? item.comboMenuId ?? item.Combomenuid ?? item.combomenuid ?? 0,
+      ComboMenuItemId: item.ComboMenuItemId ?? item.comboMenuItemId ?? item.Combomenuitemid ?? item.combomenuitemid ?? 0,
+      Itemname: item.Itemname ?? item.itemname ?? item.ItemName ?? item.itemName ?? item.name ?? '',
+      Quantity: item.Quantity ?? item.quantity ?? item.Qty ?? item.qty ?? 1,
+      Unitprice: item.Unitprice ?? item.unitprice ?? item.UnitPrice ?? item.unitPrice ?? item.price ?? 0,
+      Totalprice: item.Totalprice ?? item.totalprice ?? item.TotalPrice ?? item.totalPrice ?? item.lineTotal ?? 0,
+      DiscountAmount: item.DiscountAmount ?? item.discountAmount ?? 0,
+      TaxAmount: item.TaxAmount ?? item.taxAmount ?? 0,
+      Modifierdetails: item.Modifierdetails ?? item.modifierdetails ?? null,
+      Itemstatus: item.Itemstatus ?? item.itemstatus ?? source.Orderstatus ?? source.orderstatus ?? 'Hold',
+      Notes: item.Notes ?? item.notes ?? null,
+      OrgId: item.OrgId ?? item.orgId ?? source.OrgId ?? source.orgId ?? 0,
+      BranchId: item.BranchId ?? item.branchId ?? source.BranchId ?? source.branchId ?? 0
+    }));
+
+    return ({
+      Id: this.getOrderId(order),
+      id: this.getOrderId(order),
+      Orderid: this.getOrderDetailId(order),
+      orderId: this.getOrderDetailId(order),
+      Ordernumber: this.getOrderNumber(order),
+      Tableid: source.Tableid ?? source.tableid ?? source.tableId ?? source.TableId ?? 0,
+      Ordertype: this.getOrderType(order),
+      Orderstatus: this.getOrderStatus(order),
+      CustomerName: source.CustomerName ?? source.customerName ?? source.GuestName ?? source.guestName ?? '',
+      CustomerPhone: source.CustomerPhone ?? source.customerPhone ?? source.Phone ?? source.phone ?? '',
+      Itemcount: this.getItemCount(order),
+      Guestcount: source.Guestcount ?? source.guestcount ?? this.getItemCount(order),
+      SubtotalAmount: this.getOrderSubtotal(order),
+      TaxAmount: this.getOrderTax(order),
+      DiscountAmount: this.getOrderDiscount(order),
+      TotalAmount: this.getOrderTotal(order),
+      Shiftid: source.Shiftid ?? source.shiftid ?? source.ShiftId ?? source.shiftId ?? 0,
+      OrgId: source.OrgId ?? source.orgId ?? this.orgId,
+      IsDeleted: source.IsDeleted ?? source.isDeleted ?? false,
+      CreatedBy: source.CreatedBy ?? source.createdBy ?? '',
+      CreatedDate: source.CreatedDate ?? source.createdDate ?? source.heldAt ?? '',
+      UpdatedBy: source.UpdatedBy ?? source.updatedBy ?? null,
+      UpdatedDate: source.UpdatedDate ?? source.updatedDate ?? null,
+      orderNo: this.getOrderNumber(order),
+      orderType: this.getOrderType(order),
+      table: this.getOrderTable(order),
+      customerName: source.CustomerName ?? source.customerName ?? '',
+      heldAt: source.CreatedDate ?? source.createdDate ?? source.heldAt ?? '',
+      Items: items,
+      items,
+      OrderHoldItems: items,
+      orderHoldItems: items,
+      subtotal: this.getOrderSubtotal(order),
+      discountPercent: 0,
+      discountAmount: this.getOrderDiscount(order),
+      taxAmount: this.getOrderTax(order),
+      grandTotal: this.getOrderTotal(order)
+    } as unknown) as HeldOrder;
+  }
+
   private buildOpenOrderDetails(listOrder: HeldOrder | HeldOrderRow, response: any): HeldOrder {
     const apiResult = response?.result ?? response?.Result ?? response ?? null;
     const apiOrderDetails = (this.extractOrderHeader(apiResult) ?? listOrder) as HeldOrder;
@@ -480,6 +551,7 @@ export class OrderHoldComponent implements OnInit {
   }
 
   private extractOrderItems(apiResult: any, apiOrderDetails: HeldOrder, listOrder: HeldOrder | HeldOrderRow): any[] {
+    debugger
     const resultItems = this.getOrderItems(apiResult as HeldOrder);
     const detailItems = this.getOrderItems(apiOrderDetails);
     const listItems = this.getOrderItems(listOrder);

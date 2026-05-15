@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
@@ -23,23 +23,27 @@ export interface DisplayMenuItems {
   providedIn: 'root'
 })
 export class DisplayMenuItemsService {
-  private readonly controllerPath = 'DisplayMenuItems';
+  private readonly controllerPath = 'Orders';
 
   constructor(
     private readonly http: HttpClient,
     private readonly runtimeConfig: RuntimeConfigService
   ) { }
 
-  create(payload: DisplayMenuItems): Observable<any> {
+  create(payload: any): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/${this.controllerPath}/Create`, payload);
   }
 
-  update(payload: DisplayMenuItems): Observable<any> {
+  update(payload: any): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(): Observable<ApiListResponse<DisplayMenuItems>> {
-    return this.http.get<ApiListResponse<DisplayMenuItems>>(`${this.baseUrl}/${this.controllerPath}/GetAll`);
+  getAll(orgid: number, branchid: number): Observable<ApiListResponse<DisplayMenuItems>> {
+    const params = new HttpParams()
+      .set('orgid', orgid.toString())
+      .set('branchid', branchid.toString());
+
+    return this.http.get<ApiListResponse<DisplayMenuItems>>(`${this.baseUrl}/${this.controllerPath}/GetAll`, { params });
   }
 
   getById(id: number | string): Observable<any> {
