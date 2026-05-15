@@ -10,6 +10,7 @@
     [menuItems]="sidebarMenus"
     [currentOfficeScope]="currentOfficeScope"
     [officeOptions]="officeOptions"
+    [chromeHidden]="isDisplayChromeHidden"
     (menuToggle)="toggleSidebar()"
     (menuSelect)="selectMenu($event)"
     (officeScopeChange)="onOfficeScopeChange($event)"

@@ -72,6 +72,10 @@ export class WorkspaceComponent implements OnInit {
   sidebarOpen = true;
   activeMenuKey = 'dashboard';
 
+  get isDisplayChromeHidden(): boolean {
+    return this.activeMenuKey === 'customer-display';
+  }
+
   constructor(
     private readonly router: Router,
     private readonly menuService: MenuService,

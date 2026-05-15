@@ -28,6 +28,7 @@ export class ShellComponent {
   @Input() menuItems: MenuGroup[] = [];
   @Input() currentOfficeScope = 2;
   @Input() officeOptions: MenuOfficeOption[] = [];
+  @Input() chromeHidden = false;
 
   @Output() menuToggle = new EventEmitter<void>();
   @Output() menuSelect = new EventEmitter<MenuChildItem | string>();
