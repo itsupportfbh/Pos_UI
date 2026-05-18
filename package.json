@@ -6,7 +6,8 @@
     "appId": "com.unitywork.pos",
     "productName": "Unity Work POS",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icons/cspl-logo.ico"
     },
     "files": [
       "dist/**/*",

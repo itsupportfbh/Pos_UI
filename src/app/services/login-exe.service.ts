@@ -3,9 +3,8 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { RuntimeConfigService } from './runtime-config.service';
 
-export interface LoginRequest {
-  Email: string;
-  Password: string;
+export interface LoginexeRequest {
+  Pin: number;
 }
 
 export interface LoginResponse {
@@ -33,8 +32,8 @@ export class LoginService {
     private readonly runtimeConfig: RuntimeConfigService
   ) { }
 
-  login(payload: LoginRequest): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.baseUrl}/${this.controllerPath}/Login`, payload);
+  login(payload: LoginexeRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.baseUrl}/${this.controllerPath}/Loginwithpin`, payload);
   }
 
   private get baseUrl(): string {

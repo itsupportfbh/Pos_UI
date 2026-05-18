@@ -1,4 +1,9 @@
 <section class="billing-page">
+  <app-shift-assignment 
+    [(visible)]="showShiftAssignment"
+    (shiftAssigned)="showShiftAssignment = false">
+  </app-shift-assignment>
+
   <header class="page-header hero-panel billing-header">
     <div>
       <h1>{{ pageTitle }}</h1>

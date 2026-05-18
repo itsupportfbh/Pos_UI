@@ -571,7 +571,7 @@ export class BranchesComponent implements OnInit {
 
     try {
       const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, 0));
-
+      console.log('Latest Terminal Code Response:', response.result);
       this.dialogCode = response?.result ?? '';
     } catch {
       this.dialogCode = '';

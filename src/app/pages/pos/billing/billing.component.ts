@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { AutocompleteFieldComponent } from '../../../components/form/autocomplete-field.component';
 import { FieldOption, SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+import { ShiftAssignmentComponent } from '../components/shift-assignment/shift-assignment.component';
+import { ShiftAssignmentService } from '../../../services/shift-assignment.service';
 
 type Product = { id: number; name: string; category: string; price: number; stock: number; barcode: string };
 type CartItem = Product & { quantity: number };
@@ -12,11 +14,14 @@ type CartItem = Product & { quantity: number };
 @Component({
   selector: 'app-billing',
   standalone: true,
-  imports: [CommonModule, CardModule, ButtonModule, TextFieldComponent, SelectFieldComponent, AutocompleteFieldComponent],
+  imports: [CommonModule, CardModule, ButtonModule, TextFieldComponent, SelectFieldComponent, AutocompleteFieldComponent, ShiftAssignmentComponent],
   templateUrl: './billing.component.html',
   styleUrl: './billing.component.css'
 })
 export class BillingComponent implements OnInit {
+  private readonly shiftService = inject(ShiftAssignmentService);
+
+  showShiftAssignment = false;
   readonly customers: string[] = [];
   readonly paymentModes: FieldOption[] = [];
   readonly products: Product[] = [];
@@ -37,6 +42,15 @@ export class BillingComponent implements OnInit {
   grandTotal = 0;
 
   ngOnInit(): void {
+    // Check if shift is assigned
+    console.log('Checking shift assignment on billing page load');
+    const shiftAssigned = this.shiftService.isShiftAssigned();
+    console.log('Shift assigned:', shiftAssigned);
+    this.shiftService.isShiftAssigned();
+    if (!this.shiftService.isShiftAssigned()) {
+      this.showShiftAssignment = true;
+    }
+
     this.updateFilteredProducts();
     this.updateBillingSummary();
   }

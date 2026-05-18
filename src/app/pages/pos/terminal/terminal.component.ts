@@ -16,6 +16,7 @@ import { BranchService } from '../../../services/branch.service';
 import { CounterService } from '../../../services/counter.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
+import { OrganizationService } from '../../../services/organization.service';
 
 type TerminalRow = {
     id: number;
@@ -68,6 +69,7 @@ export class TerminalComponent implements OnInit {
     private readonly counterService = inject(CounterService);
     private readonly changeDetector = inject(ChangeDetectorRef);
     private readonly confirmationService = inject(ConfirmationService);
+    private readonly organizationService = inject(OrganizationService);
 
     @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
     @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -129,6 +131,7 @@ export class TerminalComponent implements OnInit {
     readonly showRowActions = true;
     readonly rowActionHeader = 'Actions';
     rowActionItems: MenuItem[] = [];
+    branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
     ngOnInit(): void {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -137,7 +140,7 @@ export class TerminalComponent implements OnInit {
         this.BranchId = Number(this.userDetails.BranchId || 0);
         this.isAdmin = this.userDetails.IsAdmin == true || this.userDetails.IsAdmin == 1;
         this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
-        
+
         this.tableColumns = TERMINAL_COLUMNS.map((x: any) => {
             if (x.field === 'organizationname') {
                 x.hidden = this.userDetails.RoleId !== 1;
@@ -234,6 +237,22 @@ export class TerminalComponent implements OnInit {
         }
     }
 
+    private async loadLatestTerminalCode(orgId: number): Promise<void> {
+        if (!this.branchEntityNo || !orgId) {
+            this.dialogModel.code = '';
+            return;
+        }
+
+        try {
+            const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+            console.log('Latest Terminal Code Response:', response.result);
+            this.dialogModel.code = response?.result ?? '';
+        } catch {
+            this.dialogModel.code = '';
+            this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+        }
+    }
+
     searchTerminals(): void {
         const branchIds = this.selectedBranchIds.map((id) => Number(id));
         const counterIds = this.selectedCounterIds.map((id) => Number(id));
@@ -293,6 +312,7 @@ export class TerminalComponent implements OnInit {
         this.showFilterSidebar = false;
     }
     async openAddDialog(): Promise<void> {
+        
         this.isEditMode = false;
         this.editingTerminalId = null;
         await this.resetDialogForm();
@@ -308,7 +328,10 @@ export class TerminalComponent implements OnInit {
             await this.loadDialogCounters(Number(this.BranchId));
         }
 
+        await this.loadLatestTerminalCode(Number(this.userDetails.OrgId || 0));
+
         this.showAddDialog = true;
+        this.changeDetector.detectChanges();
     }
 
     closeAddDialog(): void {

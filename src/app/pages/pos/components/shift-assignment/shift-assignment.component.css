@@ -1,0 +1,55 @@
+.dialog-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid rgba(var(--app-primary-rgb), 0.2);
+}
+
+.dialog-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--app-primary);
+  font-weight: 700;
+}
+
+.dialog-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--app-text-muted);
+}
+
+.shift-assignment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 0;
+}
+
+.info-box {
+  padding: 1rem;
+  background-color: rgba(var(--app-primary-rgb), 0.08);
+  border: 1px solid rgba(var(--app-primary-rgb), 0.14);
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.info-box p {
+  margin: 0.5rem 0;
+}
+
+.info-box strong {
+  color: var(--app-text-color);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(var(--app-text-color), 0.1);
+}
+
+.dialog-footer button {
+  min-width: 120px;
+}

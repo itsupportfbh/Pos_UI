@@ -106,6 +106,7 @@ export class DiningTableComponent implements OnInit {
   readonly showFilterButton = false;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -220,6 +221,24 @@ export class DiningTableComponent implements OnInit {
         this.dialogBranchId = Number(this.userDetails.BranchId || 0);
         await this.loadFloors(Number(this.userDetails.OrgId || 0), Number(this.dialogBranchId || 0));
       }
+    }
+
+    await this.loadLatestTableCode(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
+  }
+
+  private async loadLatestTableCode(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogCode = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));   
+      this.dialogCode = response?.result ?? '';
+    } catch {
+      this.dialogCode = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
     }
   }
 

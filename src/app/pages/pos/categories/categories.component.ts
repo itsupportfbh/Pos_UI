@@ -11,6 +11,8 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 import { AppToastService } from '../../../services/app-toast.service';
 import { Category, CategoryService } from '../../../services/Category.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { firstValueFrom } from 'rxjs';
+import { OrganizationService } from '../../../services/organization.service';
 
 type CategoryRow = {
   id: number;
@@ -53,6 +55,7 @@ export class CategoriesComponent {
   private readonly categoryService = inject(CategoryService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly organizationService = inject(OrganizationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -109,6 +112,8 @@ export class CategoriesComponent {
     { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
     { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
   ];
+
+  branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -178,7 +183,7 @@ export class CategoriesComponent {
   closeFilterSidebar(): void {
     this.showFilterSidebar = false;
   }
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.isEditMode = false;
     this.editingCategoryId = null;
     this.resetDialogForm();
@@ -186,6 +191,25 @@ export class CategoriesComponent {
     this.dialogTitle = 'Create Category';
     this.dialogSubtitle = 'Create a new category.';
     this.dialogPrimaryActionLabel = 'Save';
+
+    await this.loadLatestTableCode(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
+  }
+
+  private async loadLatestTableCode(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogModel.code = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+      
+      this.dialogModel.code = response?.result ?? '';
+    } catch {
+      this.dialogModel.code = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
   }
 
   closeAddDialog(): void {
@@ -196,7 +220,7 @@ export class CategoriesComponent {
     this.dialogSubmitted = false;
   }
 
-  submitAddDialog(): void {
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {

@@ -13,10 +13,12 @@ import { firstValueFrom } from 'rxjs';
 import { TextFieldComponent } from '../../components/form/text-field.component';
 import { AppToastService } from '../../services/app-toast.service';
 import { LoginService } from '../../services/login.service';
+import { ShiftAssignmentComponent } from '../pos/components/shift-assignment/shift-assignment.component';
+
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, DialogModule, InputTextModule, PasswordModule, ButtonModule, MessageModule, TextFieldComponent],
+  imports: [CommonModule, FormsModule, CardModule, DialogModule, InputTextModule, PasswordModule, ButtonModule, MessageModule, TextFieldComponent, ShiftAssignmentComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
@@ -34,6 +36,8 @@ export class LoginComponent {
   showForgotPasswordDialog = false;
   loginSession: any = null;
   userDetailsList: any[] = [];
+  showShiftAssignmentDialog = false;
+  selectedUserDetails: any = null;
 
   get isForgotPasswordEmailValid(): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.forgotEmail.trim());
@@ -82,7 +86,7 @@ export class LoginComponent {
         this.toast.error('Login Failed', 'No role details found for this login.');
         return;
       }
-     
+
       this.toast.error('Login Failed', 'Invalid email or password.');
     } catch {
       this.toast.error('Login Failed', 'Unable to login. Please check your credentials and try again.');
@@ -92,6 +96,7 @@ export class LoginComponent {
   }
 
   selectUserDetails(selectedUserDetails: any): void {
+    console.log('Selected User Details:', selectedUserDetails);
     const userDetails = {
       IsAdmin: selectedUserDetails.IsAdmin ?? false,
       UserId: selectedUserDetails.UserId ?? '',
@@ -111,7 +116,29 @@ export class LoginComponent {
     localStorage.setItem('userDetails', JSON.stringify(userDetails));
 
     this.showRoleDialog = false;
-    this.toast.success('Login Successful', `Welcome back, ${userDetails.UserName || 'User'}.`);
+    //this.toast.success('Login Successful', `Welcome back, ${userDetails.UserName || 'User'}.`);
+    //this.router.navigate(['/pos']);
+    this.selectedUserDetails = userDetails;
+
+    // Save login session + user details first
+    localStorage.setItem('loginSession', JSON.stringify(this.loginSession));
+    localStorage.setItem('userDetails', JSON.stringify(userDetails));
+
+    // Open mandatory shift assignment popup
+    this.showShiftAssignmentDialog = true;
+    this.changeDetector.detectChanges();
+  }
+
+  onShiftAssigned(event: any): void {
+    localStorage.setItem('shiftAssignment', JSON.stringify(event));
+
+    this.showShiftAssignmentDialog = false;
+
+    this.toast.success(
+      'Login Successful',
+      `Welcome back, ${this.selectedUserDetails?.UserName || 'User'}.`
+    );
+
     this.router.navigate(['/pos']);
   }
 

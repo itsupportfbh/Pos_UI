@@ -14,6 +14,8 @@ import { subCategory, subCategoryService } from '../../../services/SubCategory.s
 import { CategoryService } from '../../../services/Category.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
+import { OrganizationService } from '../../../services/organization.service';
+import { firstValueFrom } from 'rxjs';
 
 type SubCategoryRow = {
   id: number;
@@ -60,6 +62,7 @@ export class SubCategoryComponent {
   private readonly categoryService = inject(CategoryService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly organizationService = inject(OrganizationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -120,8 +123,9 @@ export class SubCategoryComponent {
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
   rowActionItems: MenuItem[] = [];
+  branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
-  ngOnInit(): void { 
+  ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.dialogModel.CreatedBy = Number(this.userDetails.UserId || 0);
     this.OrgId = Number(this.userDetails.OrgId || 0);
@@ -132,7 +136,7 @@ export class SubCategoryComponent {
 
       return x;
     });
-    
+
     this.loadSubCategories();
     this.loadCategories();
     this.loadFilterCategories();
@@ -219,7 +223,7 @@ export class SubCategoryComponent {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.isEditMode = false;
     this.editingSubCategoryId = null;
     this.resetDialogForm();
@@ -227,6 +231,25 @@ export class SubCategoryComponent {
     this.dialogTitle = 'Create SubCategory';
     this.dialogSubtitle = 'Create a new subcategory.';
     this.dialogPrimaryActionLabel = 'Save';
+
+    await this.loadLatestSubCategoryCode(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
+  }
+
+  private async loadLatestSubCategoryCode(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogModel.code = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+
+      this.dialogModel.code = response?.result ?? '';
+    } catch {
+      this.dialogModel.code = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
   }
 
   closeAddDialog(): void {

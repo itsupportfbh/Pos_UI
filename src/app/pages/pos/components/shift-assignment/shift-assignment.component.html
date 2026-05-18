@@ -1,0 +1,65 @@
+<p-dialog [(visible)]="visible" [modal]="true" [style]="{ width: '36rem' }" [draggable]="false"
+  [resizable]="false" [closable]="false" [dismissableMask]="false" [closeOnEscape]="false">
+  <ng-template pTemplate="header">
+    <div class="dialog-header">
+      <h2>Assign Shift (Required)</h2>
+      <p class="dialog-subtitle">You must enter your shift details to proceed</p>
+    </div>
+  </ng-template>
+
+  <section class="shift-assignment-form">
+    <app-text-field 
+      label="Employee Name" 
+      inputId="employee-name" 
+      placeholder="Enter your name"
+      [model]="userName"
+      (modelChange)="userName = $event"
+      [disabled]="true">
+    </app-text-field>
+
+    <app-select-field
+      label="Shift"
+      inputId="shift-select"
+      [options]="shifts"
+      [required]="true"
+      [submitted]="submitted"
+      errorMessage="Please select a shift"
+      placeholder="Select shift"
+      [model]="selectedShift"
+      (modelChange)="selectedShift = $event">
+    </app-select-field>
+
+    <app-select-field
+      label="Terminal"
+      inputId="terminal-select"
+      [options]="terminals"
+      [required]="true"
+      [submitted]="submitted"
+      errorMessage="Please select a terminal"
+      placeholder="Select terminal"
+      [model]="terminal"
+      (modelChange)="terminal = $event">
+    </app-select-field>
+
+    <app-text-field
+      label="Device Name"
+      inputId="device-name"
+      placeholder="Device name"
+      [readonly]="true"
+      [model]="deviceName"
+      (modelChange)="deviceName = $event">
+    </app-text-field>
+
+    <div class="info-box">
+      <p><strong>User ID:</strong> {{ userId }}</p>
+      <p><strong>Assigned At:</strong> {{ currentDateTime }}</p>
+    </div>
+  </section>
+
+  <ng-template pTemplate="footer">
+    <div class="dialog-footer">
+      <button pButton type="button" label="Assign Shift" icon="pi pi-check" class="p-button-primary"
+        (click)="submitShift()"></button>
+    </div>
+  </ng-template>
+</p-dialog>

@@ -1,0 +1,160 @@
+.exe-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: radial-gradient(circle at top, #f3f5f7 0%, #dee2e7 45%, #b2bac3 100%);
+}
+
+.exe-login-shell {
+  width: min(100%, 600px);
+}
+
+.exe-login-card {
+  border-radius: 1.5rem;
+  padding: 2rem;
+  background: #ffffff;
+  box-shadow: 0 18px 60px rgba(9, 30, 66, 0.12);
+}
+
+.exe-login-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.exe-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.exe-brand img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f8fafb;
+}
+
+.exe-brand strong {
+  font-size: 1.25rem;
+  display: block;
+}
+
+.exe-brand span {
+  font-size: 0.9rem;
+  color: #5f6d7a;
+}
+
+.exe-version {
+  font-size: 0.85rem;
+  color: #6c7682;
+}
+
+.exe-login-body {
+  display: grid;
+  gap: 1.75rem;
+}
+
+.exe-lock-panel {
+  display: grid;
+  gap: 1rem;
+  align-items: center;
+  text-align: center;
+}
+
+.lock-icon {
+  width: 140px;
+  height: 140px;
+  margin: 0 auto;
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, #f8fafb, #e8edf2);
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.lock-icon::before {
+  content: '';
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #2f3b4d;
+  position: relative;
+  display: block;
+}
+
+.lock-icon::after {
+  content: '';
+  width: 24px;
+  height: 32px;
+  border-radius: 0.5rem;
+  background: #f8fafb;
+  position: absolute;
+  transform: translateY(2px);
+}
+
+.exe-lock-panel p {
+  margin: 0;
+  color: #3b4757;
+  font-weight: 600;
+}
+
+.pin-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.pin-box {
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 2px solid #d7dae0;
+  border-radius: 1rem;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+}
+
+.pin-box.filled {
+  background: #2d3f5e;
+  border-color: #2d3f5e;
+}
+
+.exe-keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.pin-key {
+  min-height: 4.25rem;
+  font-size: 1.25rem;
+  border-radius: 1rem;
+  font-weight: 700;
+}
+
+.login-key {
+  grid-column: 1 / span 2;
+  background: #1f5bb5;
+  color: #ffffff;
+}
+
+.zero-key {
+  grid-column: 3 / span 1;
+}
+
+.clear-key {
+  grid-column: 1 / span 3;
+  background: #f5f5f5;
+  color: #2d3f5e;
+}
+
+.p-message {
+  margin-top: 0.5rem;
+}
