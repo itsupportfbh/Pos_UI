@@ -46,6 +46,7 @@
     "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "^8.3.0",
     "@primeuix/themes": "^2.0.3",
+    "better-sqlite3": "^12.10.0",
     "express": "^5.1.0",
     "primeicons": "^7.0.0",
     "primeng": "^21.1.5",

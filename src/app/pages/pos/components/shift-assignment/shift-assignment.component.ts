@@ -56,13 +56,17 @@ export class ShiftAssignmentComponent implements OnInit, OnChanges {
 
   loadTerminals(): void {
 
-    this.terminalService.getAll(this.OrgId, this.branchId, 0).subscribe((res: any) => {
-      this.terminals = (res.result || []).map((item: any) => ({
-        label: item.name,
-        value: item.id
-      }));
-    });
-
+    // this.terminalService.getAll(this.OrgId, this.branchId, 0).subscribe((res: any) => {
+    //   this.terminals = (res.result || []).map((item: any) => ({
+    //     label: item.name,
+    //     value: item.id
+    //   }));
+    // });
+    this.terminals = [
+      { label: 'Terminal 1', value: 'T-1' },
+      { label: 'Terminal 2', value: 'T-2' },
+      { label: 'Terminal 3', value: 'T-3' }
+    ];
   }
 
   loadUsers(): void {

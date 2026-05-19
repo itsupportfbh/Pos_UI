@@ -20,6 +20,7 @@ type ReservationRow = {
   VisitDate: string;
   VisitTime: string;
   TableName: string;
+  Email: string;
   GuestCount: number;
   Notes: string;
   IsActive: boolean;
@@ -84,7 +85,8 @@ export class ReservationComponent {
   dialogTableName = '';
   dialogGuestCount = '';
   dialogNotes = '';
-
+  dialogEmail = '';
+  
   totalReservations = 0;
   upcomingReservations = 0;
   totalGuests = 0;
@@ -204,6 +206,7 @@ export class ReservationComponent {
         TableName: this.dialogTableName,
         GuestCount: Number(this.dialogGuestCount || 0),
         Notes: this.dialogNotes,
+        Email: this.dialogEmail,
         IsActive: true,
         Status: 'Upcoming',
         RowNumber: 0
@@ -227,6 +230,7 @@ export class ReservationComponent {
     this.dialogTableName = row.TableName;
     this.dialogGuestCount = String(row.GuestCount);
     this.dialogNotes = row.Notes;
+    this.dialogEmail = row.Email;
     this.dialogTitle = 'Edit Reservation';
     this.dialogSubtitle = 'Update the selected guest booking before arrival.';
     this.dialogPrimaryActionLabel = 'Update';
