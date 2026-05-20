@@ -4,10 +4,7 @@ import { ButtonModule } from 'primeng/button';
 import { catchError, forkJoin, map, of } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
-import { BranchService } from '../../../services/branch.service';
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
-import { OrganizationService } from '../../../services/organization.service';
-import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
 type KitchenOrderItem = {
   id: number;
@@ -55,33 +52,16 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   totalKitchenOrders = 0;
   totalKitchenItems = 0;
   isLoadingOrders = false;
-  readyKitchenOrders: KitchenOrder[] = [];
-  inKitchenOrders: KitchenOrder[] = [];
-  readyKitchenOrderCount = 0;
-  inKitchenOrderCount = 0;
-  currentTime = new Date();
-  organizationName = 'Unity work POS';
-  branchName = '';
-  organizationLogoUrl = '';
 
   constructor(
     private readonly toast: AppToastService,
-    private readonly displayMenuItemsService: DisplayMenuItemsService,
-    private readonly organizationService: OrganizationService,
-    private readonly branchService: BranchService,
-    private readonly runtimeConfig: RuntimeConfigService
+    private readonly displayMenuItemsService: DisplayMenuItemsService
   ) {}
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.organizationName = this.getStringValue(this.userDetails, 'OrganizationName', 'organizationName', 'OrgName', 'orgName') || 'Unity work POS';
-    this.branchName = this.getStringValue(this.userDetails, 'BranchName', 'branchName') || '';
-    this.loadDisplayHeaderDetails();
     this.loadKitchenOrders();
-    this.refreshTimer = setInterval(() => {
-      this.currentTime = new Date();
-      this.loadKitchenOrders();
-    }, 5000);
+   // this.refreshTimer = setInterval(() => this.loadKitchenOrders(), 5000);
   }
 
   ngOnDestroy(): void {
@@ -103,14 +83,6 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
       String(order.orderType ?? '').toLowerCase().includes(searchText) ||
       String(order.customerName ?? '').toLowerCase().includes(searchText)
     );
-  }
-
-  get filteredInKitchenOrders(): KitchenOrder[] {
-    return this.filteredKitchenOrders.filter((order) => !this.isReady(order));
-  }
-
-  get filteredReadyKitchenOrders(): KitchenOrder[] {
-    return this.filteredKitchenOrders.filter((order) => this.isReady(order));
   }
 
   loadKitchenOrders(): void {
@@ -161,63 +133,6 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
     return order.orderType?.toLowerCase().includes('take') ? 'Take Out' : order.orderType || 'Take Out';
   }
 
-  getTableDisplay(order: KitchenOrder): string {
-    const table = String(order.table || '').trim();
-
-    if (!table || table === '0') {
-      return 'Counter';
-    }
-
-    return table.toLowerCase().includes('table') ? table : `Table ${table}`;
-  }
-
-  getOrderNumberDisplay(order: KitchenOrder): string {
-    return order.orderNo.startsWith('#') ? order.orderNo : `#${order.orderNo}`;
-  }
-
-  getElapsedMinutes(order: KitchenOrder): string {
-    const sentTime = new Date(order.sentAt).getTime();
-
-    if (Number.isNaN(sentTime)) {
-      return '';
-    }
-
-    const elapsedMinutes = Math.max(Math.floor((this.currentTime.getTime() - sentTime) / 60000), 0);
-    return `${elapsedMinutes} min`;
-  }
-
-  getOrderIcon(order: KitchenOrder): string {
-    const orderType = String(order.orderType || '').toLowerCase();
-
-    if (orderType.includes('take')) {
-      return 'pi pi-shopping-bag';
-    }
-
-    if (orderType.includes('delivery')) {
-      return 'pi pi-truck';
-    }
-
-    return 'pi pi-utensils';
-  }
-
-  getOrderToneClass(order: KitchenOrder, index: number): string {
-    const orderType = String(order.orderType || '').toLowerCase();
-
-    if (orderType.includes('take')) {
-      return 'tone-teal';
-    }
-
-    if (orderType.includes('delivery')) {
-      return 'tone-orange';
-    }
-
-    if (this.isReady(order)) {
-      return index % 5 === 0 ? 'tone-black' : 'tone-green';
-    }
-
-    return ['tone-teal', 'tone-orange', 'tone-green', 'tone-red', 'tone-black'][index % 5];
-  }
-
   isReady(order: KitchenOrder): boolean {
     return String(order.status ?? '').trim().toLowerCase() === 'ready';
   }
@@ -261,10 +176,6 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   private updateKitchenTotals(): void {
     this.totalKitchenOrders = this.kitchenOrders.length;
     this.totalKitchenItems = this.kitchenOrders.reduce((total, order) => total + Number(order.itemCount || 0), 0);
-    this.readyKitchenOrders = this.kitchenOrders.filter((order) => this.isReady(order));
-    this.inKitchenOrders = this.kitchenOrders.filter((order) => !this.isReady(order));
-    this.readyKitchenOrderCount = this.readyKitchenOrders.length;
-    this.inKitchenOrderCount = this.inKitchenOrders.length;
   }
 
   private loadKitchenOrderDetails(orderRows: any[]): void {
@@ -433,89 +344,6 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadDisplayHeaderDetails(): void {
-    const orgId = this.getSessionOrgId();
-    const branchId = this.getSessionBranchId();
-
-    forkJoin({
-      organization: orgId ? this.organizationService.getById(orgId).pipe(catchError(() => of(null))) : of(null),
-      branch: branchId ? this.branchService.getById(branchId).pipe(catchError(() => of(null))) : of(null),
-      config: orgId ? this.organizationService.GetOrganizationConfigByOrgId(orgId).pipe(catchError(() => of(null))) : of(null)
-    }).subscribe(({ organization, branch, config }) => {
-      const organizationRow = this.getResponseObject(organization);
-      const branchRow = this.getResponseObject(branch);
-      const configRow = this.getResponseObject(config);
-
-      this.organizationName = this.getStringValue(organizationRow, 'Name', 'name', 'OrganizationName', 'organizationName') ||
-        this.organizationName;
-      this.branchName = this.getStringValue(branchRow, 'Name', 'name', 'BranchName', 'branchName') ||
-        this.branchName;
-      this.organizationLogoUrl = this.getOrganizationLogoUrl(
-        this.getStringValue(configRow, 'Image', 'image') ||
-        this.getStringValue(organizationRow, 'Image', 'image', 'Logo', 'logo')
-      );
-    });
-  }
-
-  private getResponseObject(response: any): any {
-    const result = response?.result ?? response?.Result ?? response;
-
-    if (Array.isArray(result)) {
-      return result[0] ?? {};
-    }
-
-    return result && typeof result === 'object' ? result : {};
-  }
-
-  private getOrganizationLogoUrl(image: string): string {
-    const imagePath = this.normalizeOrganizationImageValue(image);
-
-    if (!imagePath) {
-      return '';
-    }
-
-    if (/^https?:\/\//i.test(imagePath) || imagePath.startsWith('data:')) {
-      return imagePath;
-    }
-
-    if (imagePath.startsWith('Organization/')) {
-      return `${this.runtimeConfig.apiBaseUrl}/FileUpload/${imagePath}`;
-    }
-
-    if (imagePath.includes('/')) {
-      return `${this.runtimeConfig.apiBaseUrl}/FileUpload/${imagePath}`;
-    }
-
-    return `${this.runtimeConfig.apiBaseUrl}/FileUpload/Organization/${imagePath}`;
-  }
-
-  private normalizeOrganizationImageValue(image: string): string {
-    let imagePath = image.trim();
-
-    if (!imagePath || imagePath.startsWith('data:')) {
-      return imagePath;
-    }
-
-    const fileUploadMarker = '/FileUpload/';
-    const markerIndex = imagePath.indexOf(fileUploadMarker);
-
-    if (markerIndex >= 0) {
-      imagePath = imagePath.substring(markerIndex + fileUploadMarker.length);
-    }
-
-    imagePath = imagePath.replace(/^\/+/, '');
-
-    while (imagePath.startsWith('FileUpload/')) {
-      imagePath = imagePath.substring('FileUpload/'.length);
-    }
-
-    if (imagePath.startsWith('Organization/Organization/')) {
-      imagePath = imagePath.substring('Organization/'.length);
-    }
-
-    return imagePath;
-  }
-
   private getStringValue(source: any, ...keys: string[]): string {
     const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
     return value?.toString() ?? '';
@@ -538,11 +366,4 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
       : this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
   }
 
-  private getSessionOrgId(): number {
-    return this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
-  }
-
-  private getSessionBranchId(): number {
-    return this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
-  }
 }
