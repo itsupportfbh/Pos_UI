@@ -22,7 +22,7 @@ import { BranchService } from '../../../services/branch.service';
 import { CounterService } from '../../../services/counter.service';
 import { Printer, PrinterService } from '../../../services/printer.service';
 import { TerminalService } from '../../../services/terminal.service';
-
+import { OrganizationService } from '../../../services/organization.service';
 type SelectOption = { label: string | number; value: string | number };
 
 type PrinterRow = Printer & {
@@ -75,6 +75,7 @@ export class PrintersComponent implements OnInit {
   private readonly printerService = inject(PrinterService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly organizationService = inject(OrganizationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -132,6 +133,7 @@ export class PrintersComponent implements OnInit {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+   branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -181,6 +183,24 @@ export class PrintersComponent implements OnInit {
     this.showFilterSidebar = false;
   }
 
+private async loadLatestTableCode(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogPrinterCode = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+      
+      this.dialogPrinterCode = response?.result ?? '';
+    } catch {
+      this.dialogPrinterCode = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
+  }
+
+
+
   async openAddDialog(): Promise<void> {
     await this.resetDialogForm();
     if (!this.branchOptions.length) {
@@ -190,7 +210,8 @@ export class PrintersComponent implements OnInit {
     this.dialogTitle = 'Create Printer';
     this.dialogSubtitle = 'Create a new printer configuration for restaurant operations.';
     this.dialogPrimaryActionLabel = 'Save';
-
+    await this.loadLatestTableCode(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
     if (this.isBranchSelectionLocked && Number(this.userDetails.BranchId || 0) > 0) {
       this.dialogBranch = Number(this.userDetails.BranchId);
       await this.loadDialogCounters(Number(this.userDetails.BranchId));

@@ -51,19 +51,19 @@
       <div class="customer-tools">
         <div class="tool-block">
           <span class="tool-label">Customer Name</span>
-          <label class="search-field" for="customer-name">
+          <label class="search-field" [class.field-invalid]="isCustomerNameInvalid" for="customer-name">
             <i class="pi pi-user"></i>
             <input id="customer-name" type="text" placeholder="Enter customer name" [value]="customerName"
-              (input)="updateCustomerName($event)" />
+              [attr.aria-invalid]="isCustomerNameInvalid" (input)="updateCustomerName($event)" />
           </label>
         </div>
 
         <div class="tool-block">
           <span class="tool-label">Phone Number</span>
-          <label class="search-field" for="customer-phone">
+          <label class="search-field" [class.field-invalid]="isPhoneNumberInvalid" for="customer-phone">
             <i class="pi pi-phone"></i>
-            <input id="customer-phone" type="text" placeholder="Enter phone number" [value]="customerPhone"
-              (input)="updateCustomerPhone($event)" />
+            <input id="customer-phone" type="text" inputmode="numeric" maxlength="13" placeholder="Enter phone number"
+              [value]="ContactNumber || ''" [attr.aria-invalid]="isPhoneNumberInvalid" (input)="updateCustomerPhone($event)" />
           </label>
         </div>
       </div>
@@ -116,7 +116,7 @@
         <div class="filter-group-label">
           <span>Tables</span>
         </div>
-      <section class="table-strip" aria-label="Tables">
+      <section class="table-strip" [class.field-invalid]="isTableSelectionInvalid" aria-label="Tables">
         @if (isTableLoading && tables.length === 1) {
           <span class="strip-loading">Loading tables...</span>
         } @else {
@@ -167,7 +167,7 @@
       <p-card class="feature-card">
         <div class="cart-header">
           <div>
-            <p class="eyebrow">Order No: {{ currentOrderNumber || '-' }}</p>
+            <p class="eyebrow">Order No: {{ currentOrderNumber }}</p>
             <h2>{{ selectedTableWithFloorName }}</h2>
           </div>
           <span class="cart-customer-name">{{ activeOrderType }}</span>
@@ -251,4 +251,28 @@
       </p-card>
     </aside>
   </section>
+
+  <p-dialog [(visible)]="showOrderValidationDialog" [modal]="true" [draggable]="false" [resizable]="false"
+    [closable]="true" [dismissableMask]="true" styleClass="order-validation-dialog"
+    [style]="{ width: '28rem', maxWidth: '94vw' }" (onHide)="closeOrderValidationDialog()">
+    <ng-template pTemplate="header">
+      <div class="validation-dialog-header">
+        <i class="pi pi-exclamation-triangle"></i>
+        <div>
+          <h3>{{ orderValidationTitle }}</h3>
+          <p>Complete the required details to continue.</p>
+        </div>
+      </div>
+    </ng-template>
+
+    <ul class="validation-list">
+      @for (message of orderValidationMessages; track message) {
+        <li>{{ message }}</li>
+      }
+    </ul>
+
+    <div class="validation-actions">
+      <button pButton type="button" label="OK" icon="pi pi-check" (click)="closeOrderValidationDialog()"></button>
+    </div>
+  </p-dialog>
 </section>

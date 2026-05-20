@@ -15,7 +15,7 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 import { AppToastService } from '../../../services/app-toast.service';
 import { CommonService } from '../../../services/common.service';
 import { Customer, CustomerService } from '../../../services/customer.service';
-
+import { OrganizationService } from '../../../services/organization.service';
 type CustomerRow = Customer & {
   RowNumber: number;
   Status: string;
@@ -72,6 +72,7 @@ export class CustomersComponent implements OnInit {
   private readonly commonService = inject(CommonService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+ private readonly organizationService = inject(OrganizationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -89,7 +90,8 @@ export class CustomersComponent implements OnInit {
   tableRows: CustomerRow[] = [];
   allRows: CustomerRow[] = [];
   userDetails: any = {};
-
+ OrgId = 0;
+  BranchId = 0;
   dialogId = 0;
   dialogCode = '';
   dialogCustomerName = '';
@@ -131,10 +133,27 @@ export class CustomersComponent implements OnInit {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-
+ branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+   this.OrgId = Number(this.userDetails.OrgId || 0);
+    this.BranchId = Number(this.userDetails.BranchId || 0);
     this.loadCustomers();
+  }
+private async loadLatestTableCode(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogCode = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+      
+      this.dialogCode = response?.result ?? '';
+    } catch {
+      this.dialogCode = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
   }
 
   loadCustomers(): void {
@@ -220,6 +239,9 @@ export class CustomersComponent implements OnInit {
     this.dialogSubtitle = 'Capture new customer profiles.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+
+   this.loadLatestTableCode(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
     void this.loadCountries();
   }
 

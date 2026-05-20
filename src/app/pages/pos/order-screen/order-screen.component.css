@@ -129,6 +129,12 @@
   color: var(--app-text-muted);
 }
 
+.search-field.field-invalid,
+.table-strip.field-invalid {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12);
+}
+
 .filter-group {
   margin-top: 0.28rem;
 }
@@ -488,6 +494,56 @@
   background: var(--app-empty-bg);
   color: var(--app-text-muted);
   text-align: center;
+}
+
+.validation-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.validation-dialog-header i {
+  display: inline-grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.validation-dialog-header h3,
+.validation-dialog-header p {
+  margin: 0;
+}
+
+.validation-dialog-header h3 {
+  color: var(--app-text);
+  font-size: 1rem;
+}
+
+.validation-dialog-header p {
+  margin-top: 0.12rem;
+  color: var(--app-text-muted);
+  font-size: 0.82rem;
+}
+
+.validation-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.35rem 0 0.2rem 1.1rem;
+  color: var(--app-text);
+}
+
+.validation-list li::marker {
+  color: #dc2626;
+}
+
+.validation-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 @media (max-width: 1200px) {

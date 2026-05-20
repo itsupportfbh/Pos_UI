@@ -1,90 +1,114 @@
-<section class="kitchen-board-page">
-  <header class="kitchen-topbar">
-    <div class="kitchen-topbar-left">
-      <button type="button" aria-label="Orders">
-        <i class="pi pi-box"></i>
-      </button>
-      <button type="button" aria-label="Home">
-        <i class="pi pi-home"></i>
-      </button>
+<section class="kitchen-display-page">
+  <header class="kitchen-display-topbar">
+    <label class="ticket-search" for="ticket-search">
+      <i class="pi pi-search"></i>
+      <input id="ticket-search" type="search" placeholder="Search ticket" [value]="searchTicketText"
+        (input)="updateSearchTicket($event)" />
+    </label>
+
+    <div class="brand-mark">
+      @if (organizationLogoUrl) {
+        <img class="brand-logo" [src]="organizationLogoUrl" [alt]="organizationName" />
+      } @else {
+        <span class="brand-icon">{{ organizationName.charAt(0) }}{{ branchName.charAt(0) }}</span>
+      }
+      <span class="brand-text">
+        {{ organizationName }}
+        @if (branchName) {
+          <br />
+          {{ branchName }}
+        }
+      </span>
+    </div>
+
+    <div class="kitchen-display-actions">
+      <span>{{ totalKitchenOrders }} tickets</span>
       <button type="button" aria-label="Refresh" (click)="loadKitchenOrders()">
         <i class="pi pi-refresh"></i>
       </button>
-      <strong>Recall</strong>
-    </div>
-
-    <label class="ticket-search" for="ticket-search">
-      <input id="ticket-search" type="search" placeholder="Search Ticket" [value]="searchTicketText"
-        (input)="updateSearchTicket($event)" />
-      <i class="pi pi-search"></i>
-    </label>
-
-    <div class="kitchen-topbar-right">
-      <span>{{ totalKitchenOrders }} tickets</span>
-      <strong>Kitchen</strong>
-      <button type="button" aria-label="Clear" [disabled]="!kitchenOrders.length" (click)="clearKitchenOrders()">
-        <i class="pi pi-trash"></i>
-      </button>
-      <button type="button" aria-label="Menu">
-        <i class="pi pi-bars"></i>
-      </button>
-      <button type="button" aria-label="Settings">
-        <i class="pi pi-cog"></i>
-      </button>
+      <time>{{ currentTime | date: 'hh:mm a' }}</time>
     </div>
   </header>
 
-  <section class="kitchen-ticket-board">
-    @for (order of filteredKitchenOrders; track order.id) {
-      <article class="kitchen-ticket" [class.ticket-ready]="isReady(order)">
-        <header class="ticket-header">
-          <div>
-            <strong>#{{ getTicketNumber(order) }}</strong>
-            <span>{{ order.itemCount || order.items.length }}/{{ order.items.length }}</span>
-          </div>
-          <div>
-            <span>{{ order.sentAt | date: 'hh:mm:ss a' }}</span>
-            <small>{{ order.customerName || 'Walk-in Guest' }}</small>
-          </div>
-        </header>
+  <section class="kitchen-order-board">
+    <article class="kitchen-order-column progress-column">
+      <header>
+        <h2>In Kitchen</h2>
+        <span>{{ inKitchenOrderCount }}</span>
+      </header>
 
-        <h2>{{ getTicketTitle(order) }}</h2>
-
-        <section class="ticket-items">
-          <p class="ticket-course">{{ order.orderType || 'Order' }}</p>
-
-          @for (item of order.items; track item.cartKey) {
-            <div class="ticket-item">
-              <strong>{{ item.quantity }} x {{ item.name }}</strong>
-              @if (item.itemType === 'Combo') {
-                <span>Combo</span>
+      <section class="kitchen-order-list">
+        @for (order of filteredInKitchenOrders; track order.id; let orderIndex = $index) {
+          <div class="kitchen-order-row">
+            <div class="kitchen-order-summary">
+              <span class="order-type-icon" [class]="getOrderToneClass(order, orderIndex)">
+                <i [class]="getOrderIcon(order)"></i>
+              </span>
+              <strong>{{ getTicketTitle(order) }}</strong>
+              <span class="table-label">{{ getTableDisplay(order) }}</span>
+              <small>{{ getOrderNumberDisplay(order) }}</small>
+              @if (getElapsedMinutes(order)) {
+                <em>{{ getElapsedMinutes(order) }}</em>
               }
-              @if (item.comboItems?.length) {
-                <small>{{ item.comboItems?.length }} combo item(s)</small>
-              }
+              <button type="button" aria-label="Mark ready" (click)="markKitchenOrderReady(order)">
+                <i class="pi pi-check"></i>
+              </button>
             </div>
-          }
-        </section>
 
-        <div class="ticket-note">
-          <strong>Notes:</strong>
-          <span>{{ order.status }}</span>
-        </div>
+            <section class="kitchen-item-list">
+              @for (item of order.items; track item.cartKey) {
+                <p>
+                  <strong>{{ item.quantity }} x {{ item.name }}</strong>
+                  @if (item.itemType === 'Combo') {
+                    <span>Combo</span>
+                  }
+                </p>
+              } @empty {
+                <p class="empty-items">No menu items</p>
+              }
+            </section>
+          </div>
+        } @empty {
+          <div class="kitchen-order-empty">No orders in kitchen</div>
+        }
+      </section>
+    </article>
 
-        <button pButton type="button" icon="pi pi-check" [label]="isReady(order) ? 'Ready' : 'Done'"
-          [disabled]="isReady(order)" (click)="markKitchenOrderReady(order)"></button>
-      </article>
-    } @empty {
-      <div class="kitchen-empty">
-        <strong>No kitchen orders sent yet.</strong>
-        <span>Orders sent from the order screen will appear here.</span>
-      </div>
-    }
+    <article class="kitchen-order-column ready-column">
+      <header>
+        <h2>Ready for Collection!</h2>
+        <span>{{ readyKitchenOrderCount }}</span>
+      </header>
+
+      <section class="kitchen-order-list">
+        @for (order of filteredReadyKitchenOrders; track order.id; let orderIndex = $index) {
+          <div class="kitchen-order-row ready-row">
+            <div class="kitchen-order-summary ready-summary">
+              <span class="order-type-icon" [class]="getOrderToneClass(order, orderIndex)">
+                <i [class]="getOrderIcon(order)"></i>
+              </span>
+              <strong>{{ getTicketTitle(order) }}</strong>
+              <span class="table-label">{{ getTableDisplay(order) }}</span>
+              <small>{{ getOrderNumberDisplay(order) }}</small>
+            </div>
+
+            <section class="kitchen-item-list">
+              @for (item of order.items; track item.cartKey) {
+                <p>
+                  <strong>{{ item.quantity }} x {{ item.name }}</strong>
+                  @if (item.itemType === 'Combo') {
+                    <span>Combo</span>
+                  }
+                </p>
+              } @empty {
+                <p class="empty-items">No menu items</p>
+              }
+            </section>
+          </div>
+        } @empty {
+          <div class="kitchen-order-empty">No ready orders</div>
+        }
+      </section>
+    </article>
   </section>
-
-  <footer class="kitchen-pager">
-    <button type="button" class="active">Page 1</button>
-    <button type="button">Page 2</button>
-    <button type="button">Page 3</button>
-  </footer>
 </section>

@@ -77,7 +77,7 @@
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" inputId="dialog-code" placeholder="Customer Code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogCode"
-      (modelChange)="dialogCode = $event" />
+      (modelChange)="dialogCode = $event" [readonly]="true"/>
 
     <app-text-field label="Name" inputId="dialog-name" placeholder="Customer Name" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."

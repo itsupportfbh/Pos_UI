@@ -16,7 +16,7 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 import { AppToastService } from '../../../services/app-toast.service';
 import { BranchService } from '../../../services/branch.service';
 import { Counter, CounterService } from '../../../services/counter.service';
-
+import { OrganizationService } from '../../../services/organization.service';
 type CounterRow = Counter & {
   RowNumber: number;
   Status: string;
@@ -61,6 +61,7 @@ export class CountersComponent implements OnInit {
   private readonly branchService = inject(BranchService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly organizationService = inject(OrganizationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -70,6 +71,8 @@ export class CountersComponent implements OnInit {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
+  OrgId = 0;
+  BranchId = 0;
 
   selectedBranchIds: MultiSelectFieldValue = [];
 
@@ -87,7 +90,6 @@ export class CountersComponent implements OnInit {
   userDetails: any = {};
   branchOptions = BRANCH_OPTIONS;
   public isBranchSelectionLocked = false;
-
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Counters';
   readonly pageSubtitle = 'Maintain restaurant billing and service counters.';
@@ -106,9 +108,12 @@ export class CountersComponent implements OnInit {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.OrgId = Number(this.userDetails.OrgId || 0);
+    this.BranchId = Number(this.userDetails.BranchId || 0);
     this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
     this.tableColumns = COUNTER_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
@@ -140,6 +145,21 @@ export class CountersComponent implements OnInit {
     this.showFilterSidebar = false;
   }
 
+  private async loadLatestTableCode(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogCounterCode = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+
+      this.dialogCounterCode = response?.result ?? '';
+    } catch {
+      this.dialogCounterCode = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
+  }
   async openAddDialog(): Promise<void> {
     await this.resetDialogForm();
     this.isEditMode = false;
@@ -147,6 +167,8 @@ export class CountersComponent implements OnInit {
     this.dialogSubtitle = 'Create a new Counter for the Branch.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+    await this.loadLatestTableCode(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
     if (!this.isBranchSelectionLocked) {
       this.loadBranches();
     }
@@ -266,17 +288,18 @@ export class CountersComponent implements OnInit {
   }
 
   loadCounter(): void {
-    const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+    this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
 
-    const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+    this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
 
-    this.counterService.getAll(OrgId, BranchId).subscribe({
+    this.counterService.getAll(this.OrgId, this.BranchId).subscribe({
       next: (response: any) => {
         let RowNumber = 1;
 
         this.tableRows = (response.result ?? []).map((x: any) => {
           x.RowNumber = RowNumber++;
           x.BranchName = x.BranchName ?? x.Branch ?? x.branchName ?? '';
+          x.IsActive = x.IsActive ?? x.isActive ?? x.isactive ?? false;
           x.Status = x.IsActive ? 'Active' : 'Inactive';
           return x;
         });

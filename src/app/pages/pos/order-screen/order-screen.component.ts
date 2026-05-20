@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { firstValueFrom } from 'rxjs';
 
@@ -16,6 +16,7 @@ import { DisplayMenuItemsService } from '../../../services/display-menu-items.se
 import { FloorService } from '../../../services/floor.service';
 import { MenuService } from '../../../services/FoodMenu.service';
 import { OrderHold, OrderHoldItem, OrderHoldService } from '../../../services/order-hold.service';
+import { OrganizationService } from '../../../services/organization.service';
 import { subCategoryService } from '../../../services/SubCategory.service';
 import { TaxService } from '../../../services/tax.service';
 
@@ -24,6 +25,8 @@ const ALL_SUBCATEGORY = { id: 0, name: 'All', categoryId: 0 };
 const ALL_FLOOR = { id: 0, name: 'All' };
 const ALL_TABLE = 'All';
 const ACTIVE_HELD_ORDER_STORAGE_KEY = 'activeHeldOrder';
+const ORDER_SCREEN_TEMPLATE_NAME = 'Order Screen';
+const ORDER_HOLD_TEMPLATE_NAME = 'Order Hold List';
 
 const CATEGORY_ICON_MAP: Record<string, string> = {
   breakfast: 'pi pi-sun',
@@ -38,18 +41,19 @@ const DEFAULT_CATEGORY_ICON = 'pi pi-shopping-bag';
 @Component({
   selector: 'app-order-screen',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, TagModule],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TagModule],
   templateUrl: './order-screen.component.html',
   styleUrl: './order-screen.component.css'
 })
 export class OrderScreenComponent implements OnInit {
   private readonly changeDetector = inject(ChangeDetectorRef);
-  private readonly router = inject(Router);
+
   readonly orderTypes = ['Dine In', 'Take Away', 'Delivery'];
 
   userDetails: any = {};
   orgId = 0;
   branchId = 0;
+
   organizationName = '';
   branchName = '';
 
@@ -60,6 +64,7 @@ export class OrderScreenComponent implements OnInit {
   allDiningTables: any[] = [];
   tables: string[] = [ALL_TABLE];
   tableIdByName: Record<string, number> = {};
+
   allMenuItems: any[] = [];
   menuItems: any[] = [];
   filteredMenuItems: any[] = [];
@@ -74,6 +79,12 @@ export class OrderScreenComponent implements OnInit {
   isTableLoading = false;
   isHoldingOrder = false;
   isSendingToKitchen = false;
+  orderValidationSubmitted = false;
+  showOrderValidationDialog = false;
+  orderValidationTitle = 'Complete Order Details';
+  orderValidationMessages: string[] = [];
+  private currentHoldOrderEntityNo = 0;
+  private readonly orderEntityNoCache = new Map<string, number>();
 
   activeCategoryId = 0;
   activeSubCategoryId = 0;
@@ -83,7 +94,7 @@ export class OrderScreenComponent implements OnInit {
   currentOrderNumber = '';
   searchText = '';
   customerName = '';
-  customerPhone = '';
+  ContactNumber = '';
 
   itemCount = 0;
   subtotal = 0;
@@ -104,8 +115,11 @@ export class OrderScreenComponent implements OnInit {
     private readonly subCategoryService: subCategoryService,
     private readonly foodmenuService: MenuService,
     private readonly orderHoldService: OrderHoldService,
+    private readonly organizationService: OrganizationService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
     private readonly taxService: TaxService
+    
+
   ) {}
 
   ngOnInit(): void {
@@ -114,7 +128,6 @@ export class OrderScreenComponent implements OnInit {
     this.branchId = this.userDetails.IsAdmin === true || Number(this.userDetails.RoleId || 0) === 1
       ? 0
       : Number(this.userDetails.BranchId || 0);
-    this.currentOrderNumber = this.generateHoldOrderNumber();
 
     setTimeout(async () => {
       await this.loadOrderContextNames();
@@ -129,17 +142,17 @@ export class OrderScreenComponent implements OnInit {
   async loadOrderContextNames(): Promise<void> {
     this.organizationName = this.getStringValue(this.userDetails, 'OrgName', 'OrganizationName', 'organizationName');
     this.branchName = this.getStringValue(this.userDetails, 'BranchName', 'branchName');
+
     const counterOrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : this.orgId;
-    const counterBranchId = Number(this.userDetails.IsAdmin || 0) === 1
+    const counterBranchId = Number(this.userDetails.IsAdmin || 0) === 1 || Number(this.userDetails.RoleId || 0) === 1
       ? 0
-      : Number(this.userDetails.RoleId || 0) === 1
-        ? 0
-        : Number(this.userDetails.BranchId || 0);
+      : Number(this.userDetails.BranchId || 0);
 
     try {
       const response: any = await firstValueFrom(this.counterService.getAll(counterOrgId, counterBranchId));
       const counterRows = response?.result ?? [];
       const counterRow = counterRows.find((row: any) => Number(row.BranchId || 0) === this.branchId) ?? counterRows[0] ?? null;
+
       this.organizationName = this.getStringValue(counterRow, 'OrganizationName', 'OrgName', 'organizationName') || this.organizationName;
       this.branchName = this.getStringValue(counterRow, 'BranchName', 'Branch', 'branchName') || this.branchName;
     } catch {
@@ -193,10 +206,10 @@ export class OrderScreenComponent implements OnInit {
       this.applyMenuSelection();
     } catch {
       this.toast.error('Load Failed', 'Unable to load categories.');
+    } finally {
+      this.isCategoryLoading = false;
+      this.isLoading = false;
     }
-
-    this.isCategoryLoading = false;
-    this.isLoading = false;
   }
 
   async loadSubCategories(): Promise<void> {
@@ -221,10 +234,10 @@ export class OrderScreenComponent implements OnInit {
       this.applyMenuSelection();
     } catch {
       this.toast.error('Load Failed', 'Unable to load subcategories.');
+    } finally {
+      this.isSubCategoryLoading = false;
+      this.isLoading = false;
     }
-
-    this.isSubCategoryLoading = false;
-    this.isLoading = false;
   }
 
   async loadMenus(): Promise<void> {
@@ -253,10 +266,10 @@ export class OrderScreenComponent implements OnInit {
       this.applyMenuSelection();
     } catch {
       this.toast.error('Load Failed', 'Unable to load menu items.');
+    } finally {
+      this.isMenuLoading = false;
+      this.isLoading = false;
     }
-
-    this.isMenuLoading = false;
-    this.isLoading = false;
   }
 
   async loadComboMenus(): Promise<void> {
@@ -267,6 +280,7 @@ export class OrderScreenComponent implements OnInit {
       const response: any = await firstValueFrom(this.comboMenuService.getAll(this.orgId));
       const combos = this.getResponseList(response);
       const activeCombos = combos.filter((x: any) => this.getBooleanValue(x, 'isactive', 'IsActive', 'isActive'));
+
       const comboMenuItems = activeCombos.map((combo: any) => {
         const id = this.getNumberValue(combo, 'id', 'Id');
         const categoryId = this.getNumberValue(combo, 'categoryId', 'CategoryId');
@@ -294,36 +308,10 @@ export class OrderScreenComponent implements OnInit {
       this.applyMenuSelection();
     } catch {
       this.toast.error('Load Failed', 'Unable to load combo menu items.');
+    } finally {
+      this.isMenuLoading = false;
+      this.isLoading = false;
     }
-
-    this.isMenuLoading = false;
-    this.isLoading = false;
-  }
-
-  async loadDiningTables(): Promise<void> {
-    this.isTableLoading = true;
-    this.isLoading = true;
-
-    try {
-      const response: any = await firstValueFrom(this.diningTableService.getAll(this.getScopedOrgId(), this.getScopedBranchId()));
-      const diningTables = response?.result ?? [];
-      const activeDiningTables = diningTables.filter((x: any) => this.getBooleanValue(x, 'isactive', 'IsActive', 'isActive'));
-      const currentBranchDiningTables = activeDiningTables.filter((x: any) =>
-        !this.getScopedBranchId() || this.getNumberValue(x, 'branchid', 'branchId', 'BranchId') === this.getScopedBranchId()
-      );
-
-      this.allDiningTables = currentBranchDiningTables;
-      this.updateVisibleTables();
-    } catch {
-      this.allDiningTables = [];
-      this.tables = [ALL_TABLE];
-      this.tableIdByName = {};
-      this.selectedTable = ALL_TABLE;
-      this.toast.error('Load Failed', 'Unable to load dining tables.');
-    }
-
-    this.isTableLoading = false;
-    this.isLoading = false;
   }
 
   async loadFloors(): Promise<void> {
@@ -354,18 +342,44 @@ export class OrderScreenComponent implements OnInit {
       this.floors = [ALL_FLOOR];
       this.activeFloorId = 0;
       this.toast.error('Load Failed', 'Unable to load floors.');
+    } finally {
+      this.isFloorLoading = false;
+      this.isLoading = false;
     }
+  }
 
-    this.isFloorLoading = false;
-    this.isLoading = false;
+  async loadDiningTables(): Promise<void> {
+    this.isTableLoading = true;
+    this.isLoading = true;
+
+    try {
+      const response: any = await firstValueFrom(this.diningTableService.getAll(this.getScopedOrgId(), this.getScopedBranchId()));
+      const diningTables = response?.result ?? [];
+      const activeDiningTables = diningTables.filter((x: any) => this.getBooleanValue(x, 'isactive', 'IsActive', 'isActive'));
+      const currentBranchDiningTables = activeDiningTables.filter((x: any) =>
+        !this.getScopedBranchId() || this.getNumberValue(x, 'branchid', 'branchId', 'BranchId') === this.getScopedBranchId()
+      );
+
+      this.allDiningTables = currentBranchDiningTables;
+      this.updateVisibleTables();
+    } catch {
+      this.allDiningTables = [];
+      this.tables = [ALL_TABLE];
+      this.tableIdByName = {};
+      this.selectedTable = ALL_TABLE;
+      this.toast.error('Load Failed', 'Unable to load dining tables.');
+    } finally {
+      this.isTableLoading = false;
+      this.isLoading = false;
+    }
   }
 
   async loadTaxPercentage(): Promise<void> {
     try {
       const response: any = await firstValueFrom(this.taxService.getAll(this.orgId));
       const taxes = response?.result ?? [];
-      const activeTax = taxes.find((x: any) => x.IsActive === true);
-      const percentage = Number(activeTax?.Percentage || 0);
+      const activeTax = taxes.find((x: any) => x.IsActive === true || x.isActive === true || x.isactive === true);
+      const percentage = Number(activeTax?.Percentage || activeTax?.percentage || 0);
 
       if (percentage > 0) {
         this.taxPercent = percentage;
@@ -377,14 +391,14 @@ export class OrderScreenComponent implements OnInit {
   }
 
   selectCategory(category: any): void {
-    this.activeCategoryId = category.id ?? 0;
+    this.activeCategoryId = Number(category?.id || 0);
     this.activeSubCategoryId = 0;
     this.updateVisibleSubCategories();
     this.applyMenuSelection();
   }
 
   selectSubCategory(subCategory: any): void {
-    this.activeSubCategoryId = subCategory.id ?? 0;
+    this.activeSubCategoryId = Number(subCategory?.id || 0);
     this.applyMenuSelection();
   }
 
@@ -416,11 +430,11 @@ export class OrderScreenComponent implements OnInit {
   }
 
   updateCustomerName(event: Event): void {
-    this.customerName = (event.target as HTMLInputElement).value;
+    this.customerName = this.normalizeInputText((event.target as HTMLInputElement).value);
   }
 
   updateCustomerPhone(event: Event): void {
-    this.customerPhone = (event.target as HTMLInputElement).value;
+    this.ContactNumber = this.normalizeInputText((event.target as HTMLInputElement).value).replace(/\D/g, '').slice(0, 13);
   }
 
   applyMenuSelection(): void {
@@ -447,6 +461,7 @@ export class OrderScreenComponent implements OnInit {
     this.cartItems = this.cartItems.map((x: any) =>
       x.cartKey === itemKey ? { ...x, quantity: x.quantity + 1 } : x
     );
+
     this.updateBillingSummary();
   }
 
@@ -466,15 +481,17 @@ export class OrderScreenComponent implements OnInit {
   clearOrder(): void {
     this.cartItems = [];
     this.currentHeldOrder = null;
-    this.currentOrderNumber = this.generateHoldOrderNumber();
+    this.currentOrderNumber = '';
     this.discountPercent = 5;
     this.customerName = '';
-    this.customerPhone = '';
+    this.ContactNumber = '';
+    this.orderValidationSubmitted = false;
+    this.orderValidationMessages = [];
+    this.showOrderValidationDialog = false;
     this.updateBillingSummary();
   }
 
-  sendToKitchen(): void {
-    
+  async sendToKitchen(): Promise<void> {
     if (!this.cartItems.length) {
       this.toast.warn('No Items', 'Add at least one item before sending to kitchen.');
       return;
@@ -484,96 +501,253 @@ export class OrderScreenComponent implements OnInit {
       return;
     }
 
-    this.isSendingToKitchen = true;
     this.updateBillingSummary();
 
-    let orderPayload: any;
-    let request: any;
-
-    try {
-      orderPayload = this.buildOrderApiPayload('In Kitchen');
-      request = Number(orderPayload?.Orderid || 0) > 0
-        ? this.displayMenuItemsService.update(orderPayload)
-        : this.displayMenuItemsService.create(orderPayload);
-    } catch (error) {
-      this.isSendingToKitchen = false;
-      console.error('Kitchen payload build failed', error);
-      this.toast.error('Kitchen Failed', 'Unable to prepare this order for kitchen.');
+    if (!this.validateOrderBeforeSubmit('send to kitchen')) {
       return;
     }
 
-    request.subscribe({
-      next: () => {
-        const orderNumber = orderPayload?.OrderNumber || orderPayload?.orderNumber || this.generateKitchenOrderNumber();
-        this.toast.success('Sent to Kitchen', `${orderNumber} sent to kitchen display.`);
-        this.clearOrder();
-        //this.router.navigate(['/pos/kitchen-display']);
-      },
-      error: () => {
-        this.isSendingToKitchen = false;
-        this.toast.error('Kitchen Failed', 'Unable to save order status as In Kitchen.');
-      },
-      complete: () => {
-        this.isSendingToKitchen = false;
-      }
-    });
+    this.isSendingToKitchen = true;
+
+    let orderPayload: any;
+
+    try {
+      await this.ensureKitchenOrderNumber();
+      orderPayload = this.buildOrderApiPayload('In Kitchen');
+
+      const request = Number(orderPayload?.Orderid || 0) > 0
+        ? this.displayMenuItemsService.update(orderPayload)
+        : this.displayMenuItemsService.create(orderPayload);
+
+      request.subscribe({
+        next: (response: any) => {
+          const orderNumber = this.getApiOrderNumber(response) || 'Order';
+          this.toast.success('Sent to Kitchen', `${orderNumber} sent to kitchen display.`);
+          this.clearOrder();
+        },
+        error: (err: any) => {
+          const message = err?.error?.message
+            || err?.error?.Message
+            || err?.message
+            || 'Unable to save order status as In Kitchen.';
+
+          this.toast.error('Kitchen Failed', message);
+          this.isSendingToKitchen = false;
+        },
+        complete: () => {
+          this.isSendingToKitchen = false;
+        }
+      });
+    } catch {
+      this.toast.error('Kitchen Failed', 'Unable to prepare this order for kitchen.');
+      this.isSendingToKitchen = false;
+    }
   }
 
   settlePayment(): void {
     this.toast.info('Pending', 'You can add payment logic later.');
   }
 
-  holdOrder(): void {
-  debugger;
-
-  if (!this.cartItems.length) {
-    this.toast.warn('No Items', 'Add at least one item before holding the order.');
-    return;
-  }
-
-  if (this.isHoldingOrder) {
-    return;
-  }
-
-  this.updateBillingSummary();
-  this.isHoldingOrder = true;
-
-  const payload = this.buildHoldOrderPayload();
-
-  // ✅ If Orderid exists, update. Otherwise, create.
-  const request$ = payload.Orderid && payload.Orderid > 0
-    ? this.orderHoldService.update(payload)
-    : this.orderHoldService.create(payload);
-
-  request$.subscribe({
-    next: () => {
-      const msg = payload.Orderid && payload.Orderid > 0
-        ? `${payload.Ordernumber} updated in hold orders.`
-        : `${payload.Ordernumber} saved to hold orders.`;
-
-      this.toast.success('Order Held', msg);
-      this.clearOrder();
-    },
-    error: () => {
-      this.isHoldingOrder = false;
-      this.toast.error('Hold Failed', 'Unable to save this order to hold.');
-    },
-    complete: () => {
-      this.isHoldingOrder = false;
+  async holdOrder(): Promise<void> {
+    
+    if (!this.cartItems.length) {
+      this.toast.warn('No Items', 'Add at least one item before holding the order.');
+      return;
     }
-  });
-}
+
+    if (this.isHoldingOrder) {
+      return;
+    }
+
+    this.updateBillingSummary();
+
+    if (!this.validateOrderBeforeSubmit('hold')) {
+      return;
+    }
+
+    this.isHoldingOrder = true;
+
+    try {
+      await this.ensureHoldOrderNumber();
+      const payload = this.buildHoldOrderPayload();
+      const existingOrderId = Number(payload?.OrderId || payload?.Orderid || payload?.orderId || 0);
+      const request = existingOrderId > 0
+        ? this.orderHoldService.update(payload)
+        : this.orderHoldService.create(payload);
+
+      request.subscribe({
+        next: (response: any) => {
+          const orderNumber = this.getApiOrderNumber(response) || (existingOrderId > 0 ? payload.ordernumber : '') || 'Order';
+          const msg = existingOrderId > 0
+            ? `${orderNumber} updated in hold orders.`
+            : `${orderNumber} saved to hold orders.`;
+
+          this.toast.success('Order Held', msg);
+          this.clearOrder();
+        },
+        error: (err: any) => {
+          const message = err?.error?.message
+            || err?.error?.Message
+            || err?.message
+            || 'Unable to save this order to hold.';
+
+          this.isHoldingOrder = false;
+          this.toast.error('Hold Failed', message);
+        },
+        complete: () => {
+          this.isHoldingOrder = false;
+        }
+      });
+    } catch (error) {
+      console.error('Hold payload build failed', error);
+      this.isHoldingOrder = false;
+      this.toast.error('Hold Failed', 'Unable to prepare this order for hold.');
+    }
+  }
+
+  private buildOrderApiPayload(status: 'Hold' | 'In Kitchen' = 'In Kitchen'): any {
+    const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
+    const orderId = this.getKitchenOrderId();
+    const orderNumber = this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder);
+    const now = new Date().toISOString();
+
+    return {
+      Orderid: orderId,
+      OrderNumber: orderNumber || null,
+      Ordernumber: orderNumber || null,
+      orderNumber: orderNumber || null,
+      TableId: String(this.getSelectedTableId()),
+      OrderType: this.activeOrderType,
+      OrderStatus: status,
+      CustomerName: this.customerName,
+      ContactNumber: this.ContactNumber,
+      CustomerPhone: this.ContactNumber,
+      ItemCount: this.itemCount,
+      SubtotalAmount: this.subtotal,
+      TaxAmount: this.taxAmount,
+      DiscountAmount: this.discountAmount,
+      TotalAmount: this.grandTotal,
+      ShiftId: String(this.getCurrentShiftId()),
+      CreatedBy: userId || 0,
+      CreatedDate: now,
+      UpdatedBy: userId || 0,
+      UpdatedDate: now,
+      IsDeleted: false,
+      OrgId: this.orgId,
+      BranchId: this.branchId,
+      Items: this.cartItems.map((item: any) => this.buildKitchenOrderItem(item, orderId, userId, now))
+    };
+  }
+
+  closeOrderValidationDialog(): void {
+    this.showOrderValidationDialog = false;
+  }
+
+  get isCustomerNameInvalid(): boolean {
+    return this.orderValidationSubmitted && !this.customerName.trim();
+  }
+
+  get isPhoneNumberInvalid(): boolean {
+    return this.orderValidationSubmitted && !this.isPhoneNumberValid();
+  }
+
+  get isTableSelectionInvalid(): boolean {
+    return this.orderValidationSubmitted && !this.isTableSelected();
+  }
+
+  private validateOrderBeforeSubmit(actionLabel: string): boolean {
+    const messages: string[] = [];
+
+    this.orderValidationSubmitted = true;
+    this.customerName = this.normalizeInputText(this.customerName);
+    this.ContactNumber = this.normalizeInputText(this.ContactNumber).replace(/\D/g, '').slice(0, 13);
+
+    if (!this.customerName) {
+      messages.push('Enter customer name.');
+    }
+
+    if (!this.ContactNumber) {
+      messages.push('Enter phone number.');
+    } else if (!this.isPhoneNumberValid()) {
+      messages.push('Enter a valid phone number with 10 to 13 digits.');
+    }
+
+    if (!this.isTableSelected()) {
+      messages.push('Select a table.');
+    }
+
+    if (!this.activeOrderType) {
+      messages.push('Select order type.');
+    }
+
+    if (!this.cartItems.length) {
+      messages.push('Add at least one item.');
+    }
+
+    this.orderValidationMessages = messages;
+
+    if (!messages.length) {
+      this.showOrderValidationDialog = false;
+      return true;
+    }
+
+    this.orderValidationTitle = `Before ${actionLabel}`;
+    this.showOrderValidationDialog = true;
+    return false;
+  }
+
+  private isTableSelected(): boolean {
+    return Boolean(this.selectedTable && this.selectedTable !== ALL_TABLE && this.getSelectedTableId() > 0);
+  }
+
+  private isPhoneNumberValid(): boolean {
+    return /^\d{10,13}$/.test(this.ContactNumber);
+  }
+
+  private buildKitchenOrderItem(item: any, orderId: number, userId: number, timestamp: string): any {
+    const quantity = Number(item.quantity || 0);
+    const unitPrice = Number(item.price || 0);
+    const isCombo = item.itemType === 'Combo';
+    const comboMenuItemId = isCombo
+      ? this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid', 'ComboMenuId', 'comboMenuId', 'id', 'Id')
+      : 0;
+
+    return {
+      Itemid: 0,
+      Orderid: orderId,
+      Menuitemid: isCombo ? 0 : Number(item.id || 0),
+      ComboMenuItemId: comboMenuItemId,
+      Itemname: item.name || '',
+      Quantity: quantity,
+      Unitprice: unitPrice,
+      Totalprice: quantity * unitPrice,
+      DiscountAmount: 0,
+      TaxAmount: 0,
+      Modifierdetails: isCombo && item.comboItems?.length ? JSON.stringify(item.comboItems) : null,
+      Itemstatus: 'In Kitchen',
+      Notes: isCombo ? 'Combo Menu' : '',
+      OrgId: this.orgId,
+      CreatedBy: userId,
+      CreatedDate: timestamp,
+      UpdatedBy: userId,
+      UpdatedDate: timestamp,
+      IsDeleted: false
+    };
+  }
 
   private updateVisibleSubCategories(): void {
     const rows = this.activeCategoryId === 0
       ? this.subCategories.filter((x: any) => x.id !== 0)
       : this.subCategories.filter((x: any) => x.categoryId === this.activeCategoryId);
 
-    this.visibleSubCategories = [ALL_SUBCATEGORY, ...rows.map((subCategory: any) => ({
-      id: subCategory.id ?? 0,
-      name: subCategory.name ?? '',
-      categoryId: subCategory.categoryId ?? 0
-    }))];
+    this.visibleSubCategories = [
+      ALL_SUBCATEGORY,
+      ...rows.map((subCategory: any) => ({
+        id: subCategory.id ?? 0,
+        name: subCategory.name ?? '',
+        categoryId: subCategory.categoryId ?? 0
+      }))
+    ];
   }
 
   private updateFilteredMenuItems(): void {
@@ -598,7 +772,8 @@ export class OrderScreenComponent implements OnInit {
 
     this.tables = [
       ALL_TABLE,
-      ...diningTables.map((table: any) => this.getStringValue(table, 'code', 'Code', 'name', 'Name'))
+      ...diningTables
+        .map((table: any) => this.getStringValue(table, 'code', 'Code', 'name', 'Name'))
         .filter((x: string) => x !== '')
     ];
 
@@ -625,7 +800,7 @@ export class OrderScreenComponent implements OnInit {
 
   private updateBillingSummary(): void {
     this.itemCount = this.cartItems.reduce((total: number, x: any) => total + Number(x.quantity || 0), 0);
-    this.subtotal = this.cartItems.reduce((total: number, x: any) => total + (Number(x.price || 0) * Number(x.quantity || 0)), 0);
+    this.subtotal = this.cartItems.reduce((total: number, x: any) => total + Number(x.price || 0) * Number(x.quantity || 0), 0);
     this.discountAmount = this.subtotal * (this.discountPercent / 100);
     this.taxAmount = Math.max(this.subtotal - this.discountAmount, 0) * (this.taxPercent / 100);
     this.grandTotal = this.subtotal - this.discountAmount + this.taxAmount;
@@ -644,8 +819,8 @@ export class OrderScreenComponent implements OnInit {
       this.currentOrderNumber = this.getOrderNumber(heldOrder) || this.currentOrderNumber;
       this.activeOrderType = this.getStringValue(heldOrder, 'Ordertype', 'ordertype', 'orderType', 'OrderType') || this.activeOrderType;
       this.selectedTable = this.getTableDisplayValue(heldOrder) || ALL_TABLE;
-      this.customerName = this.getStringValue(heldOrder, 'customerName', 'CustomerName', 'GuestName', 'guestName');
-      this.customerPhone = this.getStringValue(heldOrder, 'customerPhone', 'CustomerPhone', 'Phone', 'phone');
+      this.customerName = this.getStringValue(heldOrder, 'CustomerName', 'customerName', 'GuestName', 'guestName');
+      this.ContactNumber = this.getStringValue(heldOrder, 'ContactNumber', 'contactNumber', 'CustomerPhone', 'customerPhone', 'Phone', 'phone');
 
       if (this.selectedTable && !this.tables.includes(this.selectedTable)) {
         this.tables = [...this.tables, this.selectedTable];
@@ -664,30 +839,32 @@ export class OrderScreenComponent implements OnInit {
     const items = this.getHeldOrderItems(heldOrder);
 
     return items.map((item: any, index: number) => {
-
       const menuItemId = this.getStringValue(item, 'Menuitemid', 'menuitemid', 'MenuItemId', 'menuItemId', 'FoodMenuId', 'foodMenuId');
       const comboMenuId = this.getNumberValue(item, 'ComboMenuId', 'comboMenuId', 'Combomenuid', 'combomenuid');
       const comboMenuItemId = this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid');
+      const itemName = this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName', 'name', 'Name');
       const isCombo = comboMenuId > 0
         || comboMenuItemId > 0
         || menuItemId.startsWith('combo-')
         || this.getStringValue(item, 'Notes', 'notes').toLowerCase().includes('combo');
       const numericId = isCombo
-        ? (comboMenuId || comboMenuItemId || this.parseMenuItemId(menuItemId))
-        : (this.parseMenuItemId(menuItemId) || this.getNumberValue(item, 'FoodMenuId', 'foodMenuId', 'MenuItemId', 'menuItemId'));
+        ? comboMenuId || comboMenuItemId || this.parseMenuItemId(menuItemId)
+        : this.parseMenuItemId(menuItemId) || this.getNumberValue(item, 'FoodMenuId', 'foodMenuId', 'MenuItemId', 'menuItemId');
       const quantity = this.getNumberValue(item, 'Quantity', 'quantity', 'Qty', 'qty') || 1;
       const unitPrice = this.getNumberValue(item, 'Unitprice', 'unitprice', 'UnitPrice', 'unitPrice', 'price', 'Price');
       const cartKey = isCombo
-        ? (menuItemId.startsWith('combo-') ? menuItemId : 'combo-' + (numericId || index + 1))
+        ? menuItemId.startsWith('combo-') ? menuItemId : 'combo-' + (numericId || index + 1)
         : 'menu-' + numericId;
       const existingMenuItem = this.allMenuItems.find((menuItem: any) =>
         menuItem.cartKey === cartKey ||
         (menuItem.itemType === (isCombo ? 'Combo' : 'Menu') && Number(menuItem.id) === numericId) ||
-        (numericId === 0 && menuItem.itemType === (isCombo ? 'Combo' : 'Menu') && menuItem.name === this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName', 'name', 'Name'))
+        (numericId === 0 && menuItem.itemType === (isCombo ? 'Combo' : 'Menu') && menuItem.name === itemName)
       );
 
       return {
         ...(existingMenuItem ?? {}),
+        heldItemId: this.getNumberValue(item, 'itemid', 'Itemid', 'ItemId', 'itemId', 'Id', 'id'),
+        orderid: this.getNumberValue(item, 'orderid', 'Orderid', 'OrderId', 'orderId'),
         id: numericId || existingMenuItem?.id || 0,
         cartKey: numericId ? cartKey : existingMenuItem?.cartKey || cartKey,
         itemType: isCombo ? 'Combo' : 'Menu',
@@ -695,7 +872,7 @@ export class OrderScreenComponent implements OnInit {
         Combomenuid: isCombo ? comboMenuId || numericId || existingMenuItem?.comboMenuId || 0 : 0,
         ComboMenuItemId: isCombo ? comboMenuItemId || numericId || existingMenuItem?.comboMenuId || 0 : 0,
         Combomenuitemid: isCombo ? comboMenuItemId || numericId || existingMenuItem?.comboMenuId || 0 : 0,
-        name: this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName', 'name', 'Name') || existingMenuItem?.name || 'Held item',
+        name: itemName || existingMenuItem?.name || 'Held item',
         category: existingMenuItem?.category ?? '',
         subCategory: existingMenuItem?.subCategory ?? '',
         price: unitPrice || existingMenuItem?.price || 0,
@@ -706,13 +883,13 @@ export class OrderScreenComponent implements OnInit {
   }
 
   private getHeldOrderItems(heldOrder: any): any[] {
-    const items = heldOrder?.Items ??
-      heldOrder?.items ??
-      heldOrder?.OrderHoldItems ??
-      heldOrder?.orderHoldItems ??
-      heldOrder?.OrderholdItems ??
-      heldOrder?.orderholdItems ??
-      [];
+    const items = heldOrder?.Items
+      ?? heldOrder?.items
+      ?? heldOrder?.OrderHoldItems
+      ?? heldOrder?.orderHoldItems
+      ?? heldOrder?.OrderholdItems
+      ?? heldOrder?.orderholdItems
+      ?? [];
 
     return Array.isArray(items) ? items : [];
   }
@@ -722,11 +899,16 @@ export class OrderScreenComponent implements OnInit {
     const heldDiscountAmount = this.getNumberValue(heldOrder, 'DiscountAmount', 'discountAmount');
     const heldTaxAmount = this.getNumberValue(heldOrder, 'TaxAmount', 'taxAmount');
 
-    if (heldSubtotal > 0) {
-      this.discountPercent = heldDiscountAmount > 0 ? (heldDiscountAmount / heldSubtotal) * 100 : 0;
-      const taxableAmount = Math.max(heldSubtotal - heldDiscountAmount, 0);
-      this.taxPercent = taxableAmount > 0 && heldTaxAmount > 0 ? (heldTaxAmount / taxableAmount) * 100 : this.taxPercent;
+    if (heldSubtotal <= 0) {
+      return;
     }
+
+    this.discountPercent = heldDiscountAmount > 0 ? (heldDiscountAmount / heldSubtotal) * 100 : 0;
+
+    const taxableAmount = Math.max(heldSubtotal - heldDiscountAmount, 0);
+    this.taxPercent = taxableAmount > 0 && heldTaxAmount > 0
+      ? (heldTaxAmount / taxableAmount) * 100
+      : this.taxPercent;
   }
 
   private parseMenuItemId(value: string): number {
@@ -749,166 +931,173 @@ export class OrderScreenComponent implements OnInit {
     }
   }
 
-  private buildOrderApiPayload(status: 'Hold' | 'In Kitchen' = 'In Kitchen'): any {
-    const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
-    const orderId = this.getCurrentOrderId();
-    const orderNumber = this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder) || this.generateHoldOrderNumber();
-    const now = new Date().toISOString();
-
-    return {
-      Orderid: orderId || 0,
-      OrderNumber: orderNumber,
-      TableId: String(this.getSelectedTableId()),
-      OrderType: this.activeOrderType,
-      OrderStatus: status,
-      ItemCount: this.itemCount,
-      SubtotalAmount: this.subtotal,
-      TaxAmount: this.taxAmount,
-      DiscountAmount: this.discountAmount,
-      TotalAmount: this.grandTotal,
-      ShiftId: String(this.getCurrentShiftId()),
-      CreatedBy: userId || 0,
-      CreatedDate: now,
-      UpdatedBy: userId || 0,
-      UpdatedDate: now,
-      IsDeleted: false,
-      OrgId: this.orgId,
-      BranchId: this.branchId,
-      Items: this.buildOrderApiItems(userId, status, orderId || 0, now)
-    };
-  }
-
-  private buildOrderApiItems(userId: number, status: 'Hold' | 'In Kitchen', orderId: number, timestamp: string): any[] {
-    return this.cartItems.map((item: any) => {
-      const quantity = Number(item.quantity || 0);
-      const unitPrice = Number(item.price || 0);
-      const isCombo = item.itemType === 'Combo';
-      const comboMenuItemId = isCombo
-        ? this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid', 'ComboMenuId', 'comboMenuId', 'id', 'Id') || this.parseMenuItemId(item.cartKey ?? '')
-        : 0;
-      const modifierDetails = isCombo ? this.buildModifierDetailsJson(item) : null;
-
-      return {
-        Itemid: 0,
-        Orderid: orderId || 0,
-        Menuitemid: isCombo ? 0 : this.getNumberValue(item, 'id', 'Id'),
-        ComboMenuItemId: comboMenuItemId,
-        Itemname: item.name ?? '',
-        Quantity: quantity,
-        Unitprice: unitPrice,
-        Totalprice: quantity * unitPrice,
-        DiscountAmount: 0,
-        TaxAmount: 0,
-        Modifierdetails: modifierDetails,
-        Itemstatus: status,
-        Notes: isCombo ? 'Combo Menu' : '',
-        OrgId: this.orgId,
-        CreatedBy: userId || 0,
-        CreatedDate: timestamp,
-        UpdatedBy: userId || 0,
-        UpdatedDate: timestamp,
-        IsDeleted: false
-      };
-    });
-  }
-
-  private generateKitchenOrderNumber(): string {
-    const timestamp = new Date();
-    const datePart = [
-      timestamp.getFullYear(),
-      String(timestamp.getMonth() + 1).padStart(2, '0'),
-      String(timestamp.getDate()).padStart(2, '0')
-    ].join('');
-    const timePart = [
-      String(timestamp.getHours()).padStart(2, '0'),
-      String(timestamp.getMinutes()).padStart(2, '0'),
-      String(timestamp.getSeconds()).padStart(2, '0')
-    ].join('');
-
-    return `KOT-${datePart}-${timePart}`;
-  }
-
   private buildHoldOrderPayload(status: 'Hold' | 'In Kitchen' = 'Hold'): OrderHold {
     const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
     const holdOrderId = this.getCurrentHeldOrderId();
     const orderDetailId = this.getCurrentHeldOrderDetailId();
-    const orderNumber = this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder) || this.generateHoldOrderNumber();
-    const items = this.buildHoldOrderItems(userId, status, orderDetailId);
+    const existingOrderId = orderDetailId || holdOrderId || 0;
+    const orderNumber = this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder);
+    const requestOrderNumber = orderNumber || `PENDING-${Date.now()}`;
+    const now = new Date().toISOString();
+    const items = this.buildHoldOrderItems(userId, status, existingOrderId || 0, now);
     const tableId = this.getSelectedTableId();
     const shiftId = this.getCurrentShiftId();
-    const comboMenuId = this.getCurrentComboMenuId();
 
-    return {
-      Id: holdOrderId || undefined,
-      Orderid: orderDetailId || holdOrderId || 0,
-      Ordernumber: orderNumber,
-      Tableid: tableId,
-      TableId: tableId,
-      ComboMenuId: comboMenuId,
-      Combomenuid: comboMenuId,
-      
-      Ordertype: this.activeOrderType,
-      Orderstatus: status,
-      CustomerName: this.customerName,
-      CustomerPhone: this.customerPhone,
-      Itemcount: this.itemCount,
-      Guestcount: this.itemCount,
-      SubtotalAmount: this.subtotal,
-      TaxAmount: this.taxAmount,
-      DiscountAmount: this.discountAmount,
-      TotalAmount: this.grandTotal,
-      Shiftid: shiftId,
-      ShiftId: shiftId,
-      OrgId: this.orgId,
-      BranchId: this.branchId,
-      IsActive: true,
-      IsDeleted: false,
-      CreatedBy: userId || null,
-      OrderholdItems: items,
-      OrderHoldItems: items,
-      Items: items
+    const payload: OrderHold = {
+      orderId: existingOrderId,
+      ordernumber: requestOrderNumber,
+      tableid: tableId,
+      ordertype: this.activeOrderType,
+      orderstatus: status,
+      itemcount: this.itemCount,
+      subtotalAmount: this.subtotal,
+      taxAmount: this.taxAmount,
+      discountAmount: this.discountAmount,
+      totalAmount: this.grandTotal,
+      customerName: this.customerName,
+      contactNumber: this.ContactNumber,
+      shiftid: shiftId,
+      orgId: this.orgId,
+      createdBy: userId || 0,
+      createdDate: now,
+      updatedBy: userId || 0,
+      updatedDate: now,
+      isDeleted: false,
+      branchId: this.branchId,
+      items,
+      entityNo: this.currentHoldOrderEntityNo
     };
+
+    return payload;
   }
 
-  private buildHoldOrderItems(userId: number, status: 'Hold' | 'In Kitchen', orderId: number): OrderHoldItem[] {
-    
+  private async ensureHoldOrderNumber(): Promise<void> {
+    this.currentHoldOrderEntityNo = await this.resolveOrderEntityNo(ORDER_HOLD_TEMPLATE_NAME, Number(this.userDetails.OrgId || this.orgId || 0));
+
+    const existingOrderNumber = this.isCurrentHeldOrder()
+      ? this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder)
+      : '';
+
+    if (existingOrderNumber) {
+      this.currentOrderNumber = existingOrderNumber;
+      return;
+    }
+
+    const holdCode = await this.loadLatestOrderNumber(ORDER_HOLD_TEMPLATE_NAME, Number(this.userDetails.OrgId || this.orgId || 0));
+    this.currentHoldOrderEntityNo = holdCode.entityNo;
+    this.currentOrderNumber = holdCode.orderNumber;
+  }
+
+  private async ensureKitchenOrderNumber(): Promise<void> {
+    const existingKitchenOrderNumber = this.isCurrentHeldOrder()
+      ? ''
+      : this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder);
+
+    if (existingKitchenOrderNumber) {
+      this.currentOrderNumber = existingKitchenOrderNumber;
+      return;
+    }
+
+    const kitchenCode = await this.loadLatestOrderNumber(ORDER_SCREEN_TEMPLATE_NAME, Number(this.userDetails.OrgId || this.orgId || 0));
+    this.currentOrderNumber = kitchenCode.orderNumber;
+  }
+
+  private async loadLatestOrderNumber(templateName: string, orgId: number): Promise<{ orderNumber: string; entityNo: number }> {
+    const entityNo = await this.resolveOrderEntityNo(templateName, orgId);
+
+    if (!entityNo || !orgId) {
+      throw new Error('Code template context is missing.');
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(entityNo, orgId, this.getCodeTemplateBranchId()));
+      const orderNumber = String(response?.result ?? '').trim();
+
+      if (!orderNumber) {
+        throw new Error('Code template did not return an order number.');
+      }
+
+      return { orderNumber, entityNo };
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load order number. Please check and try again.');
+      throw new Error('Unable to load order number.');
+    }
+  }
+
+
+
+
+
+
+  
+  private async resolveOrderEntityNo(templateName: string, orgId: number): Promise<number> {
+    const branchId = this.getCodeTemplateBranchId();
+    const cacheKey = `${orgId}:${branchId}:${this.normalizeTemplateName(templateName)}`;
+    const cachedEntityNo = this.orderEntityNoCache.get(cacheKey);
+
+    if (cachedEntityNo) {
+      return cachedEntityNo;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetAllCodeTemplate(orgId, branchId, false));
+      const templates = response?.result ?? [];
+      const template = templates.find((item: any) =>
+        this.normalizeTemplateName(item?.Name ?? item?.name) === this.normalizeTemplateName(templateName)
+      );
+      const entityNo = Number(template?.EntityNo ?? template?.entityNo ?? 0);
+
+      if (!entityNo) {
+        throw new Error(`${templateName} code template is missing.`);
+      }
+
+      this.orderEntityNoCache.set(cacheKey, entityNo);
+      return entityNo;
+    } catch {
+      this.toast.error('Load Failed', `Unable to load ${templateName} code template. Please check organization setup.`);
+      throw new Error(`Unable to load ${templateName} entity number.`);
+    }
+  }
+
+  private getCodeTemplateBranchId(): number {
+    return Number(this.userDetails.BranchId || this.userDetails.branchId || this.branchId || 0);
+  }
+
+  private normalizeTemplateName(value: unknown): string {
+    return String(value ?? '').trim().toLowerCase();
+  }
+
+  private buildHoldOrderItems(userId: number, status: 'Hold' | 'In Kitchen', orderId: number, timestamp: string): OrderHoldItem[] {
     return this.cartItems.map((item: any) => {
       const quantity = Number(item.quantity || 0);
       const unitPrice = Number(item.price || 0);
       const lineTotal = quantity * unitPrice;
       const isCombo = item.itemType === 'Combo';
-      const comboMenuId = isCombo
-        ? this.getNumberValue(item, 'ComboMenuId', 'comboMenuId', 'Combomenuid', 'combomenuid', 'id', 'Id') || this.parseMenuItemId(item.cartKey ?? '')
-        : 0;
       const comboMenuItemId = isCombo
         ? this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid', 'ComboMenuId', 'comboMenuId', 'id', 'Id') || this.parseMenuItemId(item.cartKey ?? '')
         : 0;
 
-      const payloadItem: OrderHoldItem = {
-        itemid: 0,
-        Orderid: orderId || 0,
-        Menuitemid: String(isCombo ? 0 : item.id),
-        ComboMenuId: comboMenuId,
-        Combomenuid: comboMenuId,
-        ComboMenuItemId: comboMenuItemId,
-        Combomenuitemid: comboMenuItemId,
-        Itemname: item.name ?? '',
-        Quantity: quantity,
-        Unitprice: unitPrice,
-        Totalprice: lineTotal,
-        DiscountAmount: 0,
-        TaxAmount: 0,
-        Modifierdetails: isCombo ? JSON.stringify(this.buildComboModifierDetails(item)) : null,
-        Itemstatus: status,
-        Notes: isCombo ? 'Combo Menu' : null,
-        OrgId: this.orgId,
-        BranchId: this.branchId,
-        IsActive: true,
-        IsDeleted: false,
-        CreatedBy: userId || null
+      return {
+        itemid: this.getNumberValue(item, 'heldItemId', 'itemid', 'Itemid', 'ItemId', 'itemId'),
+        orderid: orderId || 0,
+        menuitemid: isCombo ? 0 : Number(item.id || 0),
+        comboMenuItemId,
+        itemname: item.name ?? '',
+        quantity,
+        unitprice: unitPrice,
+        totalprice: lineTotal,
+        discountAmount: 0,
+        taxAmount: 0,
+        modifierdetails: isCombo ? JSON.stringify(this.buildComboModifierDetails(item)) : '',
+        itemstatus: status,
+        notes: isCombo ? 'Combo Menu' : '',
+        orgId: this.orgId,
+        createdBy: userId || 0,
+        createdDate: timestamp,
+        updatedBy: userId || 0,
+        updatedDate: timestamp,
+        isDeleted: false
       };
-
-      return payloadItem;
     });
   }
 
@@ -984,6 +1173,11 @@ export class OrderScreenComponent implements OnInit {
     return this.getStringValue(source, 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo', 'orderNumber', 'OrderNumber');
   }
 
+  private getApiOrderNumber(response: any): string {
+    const result = response?.result ?? response?.Result ?? response;
+    return this.getOrderNumber(result) || this.getOrderNumber(response);
+  }
+
   private buildComboModifierDetails(item: any): any[] {
     const comboItems = Array.isArray(item.comboItems) ? item.comboItems : [];
 
@@ -995,16 +1189,6 @@ export class OrderScreenComponent implements OnInit {
       Price: this.getNumberValue(comboItem, 'Price', 'price'),
       Name: this.getStringValue(comboItem, 'Name', 'name', 'FoodMenuName', 'foodMenuName')
     }));
-  }
-
-  private buildModifierDetailsJson(item: any): string | null {
-    const modifierDetails = this.buildComboModifierDetails(item);
-
-    if (!modifierDetails.length) {
-      return null;
-    }
-
-    return JSON.stringify(modifierDetails);
   }
 
   private getCurrentHeldOrderId(): number {
@@ -1028,16 +1212,26 @@ export class OrderScreenComponent implements OnInit {
     ) || this.getCurrentHeldOrderId();
   }
 
-  private getCurrentOrderId(): number {
-    return this.getNumberValue(
-      this.currentHeldOrder,
-      'OrdersId',
-      'ordersId',
-      'SavedOrderId',
-      'savedOrderId',
-      'KitchenOrderId',
-      'kitchenOrderId'
-    );
+ private getKitchenOrderId(): number {
+  if (this.isCurrentHeldOrder()) {
+    return 0;
+  }
+
+  return this.getNumberValue(
+    this.currentHeldOrder,
+    'SavedOrderId',
+    'savedOrderId',
+    'KitchenOrderId',
+    'kitchenOrderId',
+    'OrdersId',
+    'ordersId',
+    'Ordersid'
+  ) || 0;
+}
+
+  private isCurrentHeldOrder(): boolean {
+    const status = this.getStringValue(this.currentHeldOrder, 'Orderstatus', 'orderstatus', 'OrderStatus', 'orderStatus');
+    return status.trim().toLowerCase() === 'hold';
   }
 
   private getScopedOrgId(): number {
@@ -1048,22 +1242,6 @@ export class OrderScreenComponent implements OnInit {
     return this.userDetails.IsAdmin === true || Number(this.userDetails.RoleId || 0) === 1
       ? 0
       : this.branchId;
-  }
-
-  private generateHoldOrderNumber(): string {
-    const timestamp = new Date();
-    const datePart = [
-      timestamp.getFullYear(),
-      String(timestamp.getMonth() + 1).padStart(2, '0'),
-      String(timestamp.getDate()).padStart(2, '0')
-    ].join('');
-    const timePart = [
-      String(timestamp.getHours()).padStart(2, '0'),
-      String(timestamp.getMinutes()).padStart(2, '0'),
-      String(timestamp.getSeconds()).padStart(2, '0')
-    ].join('');
-
-    return `HOLD-${datePart}-${timePart}`;
   }
 
   private getCategoryName(categoryId: number): string {
@@ -1090,7 +1268,14 @@ export class OrderScreenComponent implements OnInit {
 
   private getStringValue(source: any, ...keys: string[]): string {
     const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
-    return value?.toString() ?? '';
+    return this.normalizeInputText(value?.toString() ?? '');
+  }
+
+  private normalizeInputText(value: string): string {
+    const normalizedValue = String(value ?? '').trim();
+    return normalizedValue.toLowerCase() === 'undefined' || normalizedValue.toLowerCase() === 'null'
+      ? ''
+      : normalizedValue;
   }
 
   private getNumberValue(source: any, ...keys: string[]): number {

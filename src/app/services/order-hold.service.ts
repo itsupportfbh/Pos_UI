@@ -6,10 +6,13 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface OrderHold {
   Id?: number;
+  OrderId?: number;
   Orderid?: number;
   orderId?: number;
-  Ordernumber?: string;
-  ordernumber?: string;
+  Ordernumber?: string | null;
+  OrderNumber?: string | null;
+  ordernumber?: string | null;
+  orderNumber?: string | null;
   Tableid?: number;
   tableid?: number;
   TableId?: number;
@@ -24,8 +27,9 @@ export interface OrderHold {
   orderstatus?: string;
   CustomerName?: string;
   customerName?: string;
-  CustomerPhone?: string;
-  customerPhone?: string;
+  ContactNumber?: string;
+  contactNumber?: string;
+ 
   Itemcount?: number;
   itemcount?: number;
   ItemCount?: number;
@@ -65,6 +69,7 @@ export interface OrderHold {
   OrderholdItems?: OrderHoldItem[];
   orderHoldItems?: OrderHoldItem[];
   OrderHoldItems?: OrderHoldItem[];
+  entityNo?: number;
 }
 
 export interface OrderHoldItem {
@@ -72,8 +77,10 @@ export interface OrderHoldItem {
   itemid?: number;
   Orderid?: number;
   orderid?: number;
-  Menuitemid?: string;
-  menuitemid?: string;
+  Menuitemid?: string | number;
+  menuitemid?: string | number;
+  MenuItemId?: string | number;
+  menuItemId?: string | number;
   ComboMenuId?: number;
   comboMenuId?: number;
   Combomenuid?: number;
@@ -131,6 +138,7 @@ export class OrderHoldService {
   ) { }
 
   create(payload: OrderHold): Observable<any> {
+  
     return this.http.post<any>(`${this.baseUrl}/${this.controllerPath}/Create`, payload);
   }
 

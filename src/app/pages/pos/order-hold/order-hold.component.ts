@@ -15,8 +15,16 @@ type HeldOrderItem = {
   itemid?: number;
   Itemid?: number;
   itemId?: number;
-  menuitemid?: string;
-  Menuitemid?: string;
+  orderid?: number;
+  Orderid?: number;
+  orderId?: number;
+  OrderId?: number;
+  menuitemid?: string | number;
+  Menuitemid?: string | number;
+  menuItemId?: string | number;
+  MenuItemId?: string | number;
+  comboMenuItemId?: number;
+  ComboMenuItemId?: number;
   itemname?: string;
   Itemname?: string;
   Quantity?: number;
@@ -47,6 +55,15 @@ type HeldOrder = {
   Ordertype?: string;
   orderstatus?: string;
   Orderstatus?: string;
+  CustomerName?: string;
+  GuestName?: string;
+  guestName?: string;
+  ContactNumber?: string;
+  contactNumber?: string;
+  CustomerPhone?: string;
+  customerPhone?: string;
+  Phone?: string;
+  phone?: string;
   itemcount?: number;
   Itemcount?: number;
   itemCount?: number;
@@ -256,9 +273,13 @@ export class OrderHoldComponent implements OnInit {
       return;
     }
 
-    this.orderHoldService.getAllHoldorderDetails(orderId).subscribe({
-      next: (response: any) => {
-        const orderDetails = this.buildOpenOrderDetails(order, response);
+    forkJoin({
+      header: this.orderHoldService.getById(orderId),
+      details: this.orderHoldService.getAllHoldorderDetails(orderId)
+    }).subscribe({
+      next: ({ header, details }: any) => {
+        const headerDetails = this.getResultObject(header) ?? {};
+        const orderDetails = this.buildOpenOrderDetails({ ...order, ...headerDetails } as HeldOrder, details);
         this.openOrderScreen(orderDetails);
       },
       error: () => {
@@ -442,54 +463,91 @@ export class OrderHoldComponent implements OnInit {
 
   private toSerializableHeldOrder(order: HeldOrder): HeldOrder {
     const source = order as any;
+    const customerName = this.getCustomerName(source);
+    const contactNumber = this.getContactNumber(source);
+    const orderId = this.getOrderDetailId(order);
     const items = this.getOrderItems(order).map((item: any) => ({
       Id: item.Id ?? item.id ?? item.itemid ?? item.Itemid ?? 0,
       itemid: item.itemid ?? item.Itemid ?? item.Id ?? item.id ?? 0,
-      Orderid: item.Orderid ?? item.orderid ?? item.OrderId ?? item.orderId ?? this.getOrderDetailId(order),
+      Orderid: item.Orderid ?? item.orderid ?? item.OrderId ?? item.orderId ?? orderId,
+      orderid: item.orderid ?? item.Orderid ?? item.orderId ?? item.OrderId ?? orderId,
       Menuitemid: item.Menuitemid ?? item.menuitemid ?? item.MenuItemId ?? item.menuItemId ?? item.FoodMenuId ?? item.foodMenuId ?? '',
+      menuitemid: item.menuitemid ?? item.Menuitemid ?? item.menuItemId ?? item.MenuItemId ?? item.FoodMenuId ?? item.foodMenuId ?? '',
       ComboMenuId: item.ComboMenuId ?? item.comboMenuId ?? item.Combomenuid ?? item.combomenuid ?? 0,
       ComboMenuItemId: item.ComboMenuItemId ?? item.comboMenuItemId ?? item.Combomenuitemid ?? item.combomenuitemid ?? 0,
+      comboMenuItemId: item.comboMenuItemId ?? item.ComboMenuItemId ?? item.combomenuitemid ?? item.Combomenuitemid ?? 0,
       Itemname: item.Itemname ?? item.itemname ?? item.ItemName ?? item.itemName ?? item.name ?? '',
+      itemname: item.itemname ?? item.Itemname ?? item.itemName ?? item.ItemName ?? item.name ?? '',
       Quantity: item.Quantity ?? item.quantity ?? item.Qty ?? item.qty ?? 1,
+      quantity: item.quantity ?? item.Quantity ?? item.Qty ?? item.qty ?? 1,
       Unitprice: item.Unitprice ?? item.unitprice ?? item.UnitPrice ?? item.unitPrice ?? item.price ?? 0,
+      unitprice: item.unitprice ?? item.Unitprice ?? item.unitPrice ?? item.UnitPrice ?? item.price ?? 0,
       Totalprice: item.Totalprice ?? item.totalprice ?? item.TotalPrice ?? item.totalPrice ?? item.lineTotal ?? 0,
+      totalprice: item.totalprice ?? item.Totalprice ?? item.totalPrice ?? item.TotalPrice ?? item.lineTotal ?? 0,
       DiscountAmount: item.DiscountAmount ?? item.discountAmount ?? 0,
+      discountAmount: item.discountAmount ?? item.DiscountAmount ?? 0,
       TaxAmount: item.TaxAmount ?? item.taxAmount ?? 0,
+      taxAmount: item.taxAmount ?? item.TaxAmount ?? 0,
       Modifierdetails: item.Modifierdetails ?? item.modifierdetails ?? null,
+      modifierdetails: item.modifierdetails ?? item.Modifierdetails ?? null,
       Itemstatus: item.Itemstatus ?? item.itemstatus ?? source.Orderstatus ?? source.orderstatus ?? 'Hold',
+      itemstatus: item.itemstatus ?? item.Itemstatus ?? source.orderstatus ?? source.Orderstatus ?? 'Hold',
       Notes: item.Notes ?? item.notes ?? null,
+      notes: item.notes ?? item.Notes ?? null,
       OrgId: item.OrgId ?? item.orgId ?? source.OrgId ?? source.orgId ?? 0,
-      BranchId: item.BranchId ?? item.branchId ?? source.BranchId ?? source.branchId ?? 0
+      orgId: item.orgId ?? item.OrgId ?? source.orgId ?? source.OrgId ?? 0,
+      BranchId: item.BranchId ?? item.branchId ?? source.BranchId ?? source.branchId ?? 0,
+      branchId: item.branchId ?? item.BranchId ?? source.branchId ?? source.BranchId ?? 0
     }));
 
     return ({
       Id: this.getOrderId(order),
       id: this.getOrderId(order),
-      Orderid: this.getOrderDetailId(order),
-      orderId: this.getOrderDetailId(order),
+      Orderid: orderId,
+      orderId,
       Ordernumber: this.getOrderNumber(order),
+      ordernumber: this.getOrderNumber(order),
       Tableid: source.Tableid ?? source.tableid ?? source.tableId ?? source.TableId ?? 0,
+      tableid: source.tableid ?? source.Tableid ?? source.tableId ?? source.TableId ?? 0,
       Ordertype: this.getOrderType(order),
+      ordertype: this.getOrderType(order),
       Orderstatus: this.getOrderStatus(order),
-      CustomerName: source.CustomerName ?? source.customerName ?? source.GuestName ?? source.guestName ?? '',
-      CustomerPhone: source.CustomerPhone ?? source.customerPhone ?? source.Phone ?? source.phone ?? '',
+      orderstatus: this.getOrderStatus(order),
+      CustomerName: customerName,
+      customerName,
+      ContactNumber: contactNumber,
+      contactNumber,
+      CustomerPhone: contactNumber,
+      customerPhone: contactNumber,
       Itemcount: this.getItemCount(order),
+      itemcount: this.getItemCount(order),
       Guestcount: source.Guestcount ?? source.guestcount ?? this.getItemCount(order),
       SubtotalAmount: this.getOrderSubtotal(order),
+      subtotalAmount: this.getOrderSubtotal(order),
       TaxAmount: this.getOrderTax(order),
+      taxAmount: this.getOrderTax(order),
       DiscountAmount: this.getOrderDiscount(order),
+      discountAmount: this.getOrderDiscount(order),
       TotalAmount: this.getOrderTotal(order),
+      totalAmount: this.getOrderTotal(order),
       Shiftid: source.Shiftid ?? source.shiftid ?? source.ShiftId ?? source.shiftId ?? 0,
+      shiftid: source.shiftid ?? source.Shiftid ?? source.shiftId ?? source.ShiftId ?? 0,
       OrgId: source.OrgId ?? source.orgId ?? this.orgId,
+      orgId: source.orgId ?? source.OrgId ?? this.orgId,
       IsDeleted: source.IsDeleted ?? source.isDeleted ?? false,
+      isDeleted: source.isDeleted ?? source.IsDeleted ?? false,
       CreatedBy: source.CreatedBy ?? source.createdBy ?? '',
+      createdBy: source.createdBy ?? source.CreatedBy ?? '',
       CreatedDate: source.CreatedDate ?? source.createdDate ?? source.heldAt ?? '',
+      createdDate: source.createdDate ?? source.CreatedDate ?? source.heldAt ?? '',
       UpdatedBy: source.UpdatedBy ?? source.updatedBy ?? null,
+      updatedBy: source.updatedBy ?? source.UpdatedBy ?? null,
       UpdatedDate: source.UpdatedDate ?? source.updatedDate ?? null,
+      updatedDate: source.updatedDate ?? source.UpdatedDate ?? null,
+      branchId: source.branchId ?? source.BranchId ?? 0,
       orderNo: this.getOrderNumber(order),
       orderType: this.getOrderType(order),
       table: this.getOrderTable(order),
-      customerName: source.CustomerName ?? source.customerName ?? '',
       heldAt: source.CreatedDate ?? source.createdDate ?? source.heldAt ?? '',
       Items: items,
       items,
@@ -497,8 +555,6 @@ export class OrderHoldComponent implements OnInit {
       orderHoldItems: items,
       subtotal: this.getOrderSubtotal(order),
       discountPercent: 0,
-      discountAmount: this.getOrderDiscount(order),
-      taxAmount: this.getOrderTax(order),
       grandTotal: this.getOrderTotal(order)
     } as unknown) as HeldOrder;
   }
@@ -507,10 +563,18 @@ export class OrderHoldComponent implements OnInit {
     const apiResult = response?.result ?? response?.Result ?? response ?? null;
     const apiOrderDetails = (this.extractOrderHeader(apiResult) ?? listOrder) as HeldOrder;
     const detailItems = this.extractOrderItems(apiResult, apiOrderDetails, listOrder);
+    const customerName = this.getCustomerName(apiOrderDetails) || this.getCustomerName(listOrder);
+    const contactNumber = this.getContactNumber(apiOrderDetails) || this.getContactNumber(listOrder);
 
     return {
       ...listOrder,
       ...apiOrderDetails,
+      CustomerName: customerName,
+      customerName,
+      ContactNumber: contactNumber,
+      contactNumber,
+      CustomerPhone: contactNumber,
+      customerPhone: contactNumber,
       Items: detailItems,
       items: detailItems,
       OrderHoldItems: detailItems,
@@ -551,7 +615,6 @@ export class OrderHoldComponent implements OnInit {
   }
 
   private extractOrderItems(apiResult: any, apiOrderDetails: HeldOrder, listOrder: HeldOrder | HeldOrderRow): any[] {
-    debugger
     const resultItems = this.getOrderItems(apiResult as HeldOrder);
     const detailItems = this.getOrderItems(apiOrderDetails);
     const listItems = this.getOrderItems(listOrder);
@@ -573,6 +636,28 @@ export class OrderHoldComponent implements OnInit {
     }
 
     return listItems;
+  }
+
+  private getCustomerName(source: any): string {
+    return this.normalizeText(source?.CustomerName ?? source?.customerName ?? source?.GuestName ?? source?.guestName);
+  }
+
+  private getContactNumber(source: any): string {
+    return this.normalizeText(
+      source?.ContactNumber ??
+      source?.contactNumber ??
+      source?.CustomerPhone ??
+      source?.customerPhone ??
+      source?.Phone ??
+      source?.phone
+    );
+  }
+
+  private normalizeText(value: unknown): string {
+    const normalizedValue = String(value ?? '').trim();
+    return normalizedValue.toLowerCase() === 'undefined' || normalizedValue.toLowerCase() === 'null'
+      ? ''
+      : normalizedValue;
   }
 
   private findOrderLikeObject(rows: any[]): HeldOrder | null {

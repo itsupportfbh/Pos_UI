@@ -18,7 +18,7 @@ import { ComboMenu, ComboMenuItem, ComboMenuService } from '../../../services/co
 import { CategoryService } from '../../../services/Category.service';
 import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
 import { MenuService } from '../../../services/FoodMenu.service';
-
+import { OrganizationService } from '../../../services/organization.service';
 type ComboMenuRow = {
   id: number;
   code: string;
@@ -83,6 +83,7 @@ export class ComboMenuComponent {
   private readonly menuService = inject(MenuService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
+ private readonly organizationService = inject(OrganizationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -100,6 +101,7 @@ export class ComboMenuComponent {
 
   filterSearchText = '';
   OrgId = 0;
+  BranchId=0;
   userDetails: any = {};
   dialogId = 0;
   dialogCode = '';
@@ -136,12 +138,29 @@ export class ComboMenuComponent {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-
+ branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
   async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
+    this.BranchId = Number(this.userDetails.BranchId || 0);
     this.loadRows();
     await this.loadLookupOptions();
+  }
+
+  private async loadLatestTableCode(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogCode = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+      
+      this.dialogCode = response?.result ?? '';
+    } catch {
+      this.dialogCode = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
   }
 
   loadRows(): void {
@@ -230,6 +249,8 @@ export class ComboMenuComponent {
     this.dialogSubtitle = 'Create a new combo menu.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+    await this.loadLatestTableCode(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
     await this.loadLookupOptions();
   }
 

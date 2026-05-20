@@ -228,6 +228,8 @@ export class FloorComponent implements OnInit {
     if (this.userDetails.RoleId === 1) {
       void this.loadAllBranches();
     }
+
+    this.changeDetector.detectChanges();
   }
 
   closeAddDialog(): void {
