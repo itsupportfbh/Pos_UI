@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
@@ -38,12 +38,17 @@ export class ReservationService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(): Observable<ApiListResponse<Reservation>> {
-    return this.http.get<ApiListResponse<Reservation>>(`${this.baseUrl}/${this.controllerPath}/GetAll`);
+  getAll(orgid: number): Observable<ApiListResponse<Reservation>> {
+    const params = new HttpParams().set('orgid', orgid.toString());
+
+    return this.http.get<ApiListResponse<Reservation>>(
+      `${this.baseUrl}/${this.controllerPath}/GetAllReservation`,
+      { params }
+    );
   }
 
   getById(id: number | string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetById?Id=${id}`);
+    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetReservationbyId?Id=${id}`);
   }
 
   delete(id: number | string): Observable<any> {

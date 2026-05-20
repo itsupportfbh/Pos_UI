@@ -98,7 +98,7 @@
       </section>
 
       <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (primaryClick)="searchRows()"
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchReservations()"
         (secondaryClick)="resetForm()"></app-action-buttons>
     </section>
   </p-card>
@@ -141,6 +141,9 @@
       placeholder="Enter visit time" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Visit time is required." [model]="dialogVisitTime"
       (modelChange)="dialogVisitTime = $event"></app-text-field>
+
+    <!-- <app-multiselect-field label="Category" inputId="counter-branch-filter" placeholder="Choose categories"
+      [options]="categoryfilterOptions" [model]="selectedCategoryIds" (modelChange)="onfilterCategoryChange($event)" /> -->
 
     <app-text-field label="Table" inputId="dialog-table-name" [showRequiredMark]="true" placeholder="Enter table name"
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Table is required." [maxlength]="100"

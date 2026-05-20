@@ -1,16 +1,20 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, ViewChildren, inject } from '@angular/core';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
-
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { ReservationService } from '../../../services/reservation.service';
+import { firstValueFrom } from 'rxjs';
+import { OrganizationService } from '../../../services/organization.service';
+import { DiningTableService } from '../../../services/diningtable.service';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 
 type ReservationRow = {
   Id: number;
@@ -53,7 +57,8 @@ const RESERVATION_COLUMNS: SharedTableColumn<ReservationRow>[] = [
     ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
-    SharedTableCellTemplateDirective
+    SharedTableCellTemplateDirective,
+    MultiSelectFieldComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './reservation.component.html',
@@ -62,8 +67,12 @@ const RESERVATION_COLUMNS: SharedTableColumn<ReservationRow>[] = [
 export class ReservationComponent {
   private readonly toast = inject(AppToastService);
   private readonly confirmationService = inject(ConfirmationService);
-
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly reservationService = inject(ReservationService);
+  private readonly organizationService = inject(OrganizationService);
+  private readonly diningTableService = inject(DiningTableService);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  @ViewChildren(MultiSelectFieldComponent) private readonly multiSelectFields?: QueryList<MultiSelectFieldComponent>;
 
   showAddDialog = false;
   showFilterSidebar = false;
@@ -86,7 +95,15 @@ export class ReservationComponent {
   dialogGuestCount = '';
   dialogNotes = '';
   dialogEmail = '';
-  
+  dialogCreatedBy = 0;
+
+  isLoading = false;
+  OrgId = 0;
+  BranchId = 0;
+  userDetails: any = {};
+  allReservations: ReservationRow[] = [];
+  tablesOptions: any[] = [];
+
   totalReservations = 0;
   upcomingReservations = 0;
   totalGuests = 0;
@@ -112,27 +129,93 @@ export class ReservationComponent {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.dialogCreatedBy = Number(this.userDetails.UserId || 0);
+    this.OrgId = Number(this.userDetails.OrgId || 0);
+    this.tableColumns = RESERVATION_COLUMNS.map((x: any) => {
+      if (x.field === 'organizationname') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+
     this.loadRows();
   }
 
   loadRows(): void {
-    this.allRows = [];
-    this.tableRows = [];
+    this.loadReservations();
     this.updateSummary();
     this.updatePreview();
   }
 
-  searchRows(): void {
-    const searchText = this.filterSearchText.trim().toLowerCase();
+  loadReservations(): void {
+    this.isLoading = true;
 
-    if (!searchText) {
-      this.tableRows = [...this.allRows];
+    this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+    this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+
+    this.reservationService.getAll(this.OrgId).subscribe({
+      next: (response: any) => {
+        const result = response?.result ?? response ?? [];
+        let RowNumber = 1;
+        this.allReservations = (response.result ?? []).map((x: any) => {
+          x.RowNumber = RowNumber++;
+          x.Status = x.isactive ? 'Active' : 'Inactive';
+          return x;
+        });
+        this.tableRows = [...this.allReservations];
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.toast.error(
+          'Load Failed',
+          'Unable to load reservations. Please check API and try again.'
+        );
+      },
+      complete: () => {
+        this.isLoading = false;
+      }
+    });
+  }
+
+  loadDinineTables() {
+    this.diningTableService.getAll(this.OrgId).subscribe((res: any) => {
+      this.tablesOptions = (res.result || []).map((item: any) => ({
+        label: item.name,
+        value: item.id
+      }));
+    });
+  }
+
+  private async loadLatestReservationNo(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogReservationNo = '';
       return;
     }
 
-    this.tableRows = this.allRows.filter((row) =>
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+
+      this.dialogReservationNo = response?.result ?? '';
+    } catch {
+      this.dialogReservationNo = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
+  }
+
+  searchReservations(): void {
+    const searchText = this.filterSearchText.trim().toLowerCase();
+
+    if (!searchText) {
+      this.tableRows = [...this.allReservations];
+      return;
+    }
+
+    this.tableRows = this.allReservations.filter((row) =>
       row.ReservationNo.toLowerCase().includes(searchText) ||
       row.GuestName.toLowerCase().includes(searchText) ||
       row.ContactNo.toLowerCase().includes(searchText) ||
@@ -143,7 +226,7 @@ export class ReservationComponent {
 
   resetForm(): void {
     this.filterSearchText = '';
-    this.tableRows = [...this.allRows];
+    this.tableRows = [...this.allReservations];
   }
 
   openFilterSidebar(): void {
@@ -155,13 +238,16 @@ export class ReservationComponent {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Reservation';
     this.dialogSubtitle = 'Capture guest booking details and reserve the right table in advance.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+
+    await this.loadLatestReservationNo(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
   }
 
   closeAddDialog(): void {
@@ -179,7 +265,7 @@ export class ReservationComponent {
     }
 
     if (this.isEditMode && this.dialogId) {
-      this.allRows = this.allRows.map((row) => {
+      this.allReservations = this.allReservations.map((row) => {
         if (row.Id === this.dialogId) {
           row.ReservationNo = this.dialogReservationNo;
           row.GuestName = this.dialogGuestName;
@@ -196,7 +282,7 @@ export class ReservationComponent {
 
       this.toast.success('Updated', 'Reservation updated successfully.');
     } else {
-      this.allRows.unshift({
+      this.allReservations.unshift({
         Id: Date.now(),
         ReservationNo: this.dialogReservationNo,
         GuestName: this.dialogGuestName,
@@ -333,27 +419,28 @@ export class ReservationComponent {
     this.dialogTableName = '';
     this.dialogGuestCount = '';
     this.dialogNotes = '';
+    this.dialogEmail = '';
   }
 
   private refreshRows(): void {
-    this.allRows = this.allRows.map((row, index) => {
+    this.allReservations = this.allReservations.map((row, index) => {
       row.RowNumber = index + 1;
       return row;
     });
 
-    this.searchRows();
+    this.searchReservations();
     this.updateSummary();
     this.updatePreview();
   }
 
   private updateSummary(): void {
-    this.totalReservations = this.allRows.length;
-    this.upcomingReservations = this.allRows.filter((row) => row.IsActive).length;
-    this.totalGuests = this.allRows.reduce((total, row) => total + row.GuestCount, 0);
+    this.totalReservations = this.allReservations.length;
+    this.upcomingReservations = this.allReservations.filter((row) => row.IsActive).length;
+    this.totalGuests = this.allReservations.reduce((total, row) => total + row.GuestCount, 0);
   }
 
   private updatePreview(): void {
-    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+    const activeRow = this.allReservations.find((row) => row.IsActive) ?? null;
 
     this.previewGuestName = activeRow?.GuestName ?? 'Rahul Family';
     this.previewVisitSlot = activeRow ? activeRow.VisitDate + ' ' + activeRow.VisitTime : '19 May, 8:00 PM';
@@ -364,16 +451,16 @@ export class ReservationComponent {
     return this.textFields?.toArray().every((field) => field.isValid) ?? true;
   }
 
-  private getRowActionItems(row: ReservationRow): MenuItem[] {
+  private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
 
-    if (row.IsActive) {
+    if (row['isactive'] === true) {
       items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Seated', icon: 'pi pi-check-circle', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
     } else {
-      items.push({ label: 'Reopen', icon: 'pi pi-refresh', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
     }
 
     return items;
