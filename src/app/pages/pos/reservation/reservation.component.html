@@ -57,23 +57,17 @@
         </div>
       </div>
 
-      <app-shared-table
-        [showFilterButton]="showFilterButton"
-        (filterButtonClick)="openFilterSidebar()"
-        [caption]="tableCaption"
-        [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
-        [columns]="tableColumns"
-        [value]="tableRows"
-        [showAddNewButton]="showAddNewButton"
-        [toolbarButtonLabel]="addNewButtonLabel"
-        [showRowActions]="showRowActions"
-        [rowActionHeader]="rowActionHeader"
+      <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+        [caption]="tableCaption" [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
+        [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+        [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
         (toolbarButtonClick)="openAddDialog()">
         <ng-template #rowActions let-row>
-          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body"
+            styleClass="row-action-menu"></p-menu>
 
-          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
-            (click)="openRowActions(rowMenu, $event, row)"></button>
+          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true"
+            class="row-action-trigger" (click)="openRowActions(rowMenu, $event, row)"></button>
         </ng-template>
 
         <ng-template appTableCellTemplate="Status" let-row>
@@ -130,10 +124,13 @@
       errorMessage="Guest name is required." [maxlength]="200" [model]="dialogGuestName"
       (modelChange)="dialogGuestName = $event"></app-text-field>
 
-    <app-text-field label="Phone" inputId="dialog-contact-no" [showRequiredMark]="true"
-      placeholder="Enter phone number" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Phone number is required." [maxlength]="15" [model]="dialogContactNo"
-      (modelChange)="dialogContactNo = $event"></app-text-field>
+    <app-text-field label="Phone" inputId="dialog-contact-no" [showRequiredMark]="true" placeholder="Enter phone number"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Phone number is required." [maxlength]="15"
+      [model]="dialogContactNo" (modelChange)="dialogContactNo = $event"></app-text-field>
+
+    <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [required]="true" [showRequiredMark]="true"
+      [submitted]="dialogSubmitted" errorMessage="Email is required." [emailOnly]="true"
+      formatErrorMessage="Enter a valid Email." [model]="dialogEmail" (modelChange)="dialogEmail = $event" />
 
     <app-text-field label="Visit Date" inputId="dialog-visit-date" type="date" [showRequiredMark]="true"
       placeholder="Enter visit date" [required]="true" [submitted]="dialogSubmitted"
@@ -145,10 +142,9 @@
       errorMessage="Visit time is required." [model]="dialogVisitTime"
       (modelChange)="dialogVisitTime = $event"></app-text-field>
 
-    <app-text-field label="Table" inputId="dialog-table-name" [showRequiredMark]="true"
-      placeholder="Enter table name" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Table is required." [maxlength]="100" [model]="dialogTableName"
-      (modelChange)="dialogTableName = $event"></app-text-field>
+    <app-text-field label="Table" inputId="dialog-table-name" [showRequiredMark]="true" placeholder="Enter table name"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Table is required." [maxlength]="100"
+      [model]="dialogTableName" (modelChange)="dialogTableName = $event"></app-text-field>
 
     <app-text-field label="Guest Count" inputId="dialog-guest-count" type="number" [showRequiredMark]="true"
       placeholder="Enter guest count" [required]="true" [submitted]="dialogSubmitted"
