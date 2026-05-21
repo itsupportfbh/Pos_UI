@@ -83,6 +83,7 @@ export class OrderScreenComponent implements OnInit {
   showOrderValidationDialog = false;
   orderValidationTitle = 'Complete Order Details';
   orderValidationMessages: string[] = [];
+  private currentOrderEntityNo = 0;
   private currentHoldOrderEntityNo = 0;
   private readonly orderEntityNoCache = new Map<string, number>();
 
@@ -492,6 +493,9 @@ export class OrderScreenComponent implements OnInit {
   }
 
   async sendToKitchen(): Promise<void> {
+
+    debugger
+
     if (!this.cartItems.length) {
       this.toast.warn('No Items', 'Add at least one item before sending to kitchen.');
       return;
@@ -515,7 +519,7 @@ export class OrderScreenComponent implements OnInit {
       await this.ensureKitchenOrderNumber();
       orderPayload = this.buildOrderApiPayload('In Kitchen');
 
-      const request = Number(orderPayload?.Orderid || 0) > 0
+      const request = Number(orderPayload?.orderid || 0) > 0
         ? this.displayMenuItemsService.update(orderPayload)
         : this.displayMenuItemsService.create(orderPayload);
 
@@ -524,6 +528,7 @@ export class OrderScreenComponent implements OnInit {
           const orderNumber = this.getApiOrderNumber(response) || 'Order';
           this.toast.success('Sent to Kitchen', `${orderNumber} sent to kitchen display.`);
           this.clearOrder();
+          this.refreshOrderScreenPage();
         },
         error: (err: any) => {
           const message = err?.error?.message
@@ -546,6 +551,10 @@ export class OrderScreenComponent implements OnInit {
 
   settlePayment(): void {
     this.toast.info('Pending', 'You can add payment logic later.');
+  }
+
+  private refreshOrderScreenPage(): void {
+    window.location.reload();
   }
 
   async holdOrder(): Promise<void> {
@@ -584,6 +593,7 @@ export class OrderScreenComponent implements OnInit {
 
           this.toast.success('Order Held', msg);
           this.clearOrder();
+          this.refreshOrderScreenPage();
         },
         error: (err: any) => {
           const message = err?.error?.message
@@ -607,36 +617,40 @@ export class OrderScreenComponent implements OnInit {
 
   private buildOrderApiPayload(status: 'Hold' | 'In Kitchen' = 'In Kitchen'): any {
     const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
-    const orderId = this.getKitchenOrderId();
+    const existingOrderId = this.getKitchenOrderId();
     const orderNumber = this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder);
+    const requestOrderNumber = orderNumber || `PENDING-${Date.now()}`;
     const now = new Date().toISOString();
+    const items = this.cartItems.map((item: any) => this.buildKitchenOrderItem(item, existingOrderId, userId, now, status));
+    const tableId = this.getSelectedTableId();
+    const shiftId = this.getCurrentShiftId();
 
-    return {
-      Orderid: orderId,
-      OrderNumber: orderNumber || null,
-      Ordernumber: orderNumber || null,
-      orderNumber: orderNumber || null,
-      TableId: String(this.getSelectedTableId()),
-      OrderType: this.activeOrderType,
-      OrderStatus: status,
-      CustomerName: this.customerName,
-      ContactNumber: this.ContactNumber,
-      CustomerPhone: this.ContactNumber,
-      ItemCount: this.itemCount,
-      SubtotalAmount: this.subtotal,
-      TaxAmount: this.taxAmount,
-      DiscountAmount: this.discountAmount,
-      TotalAmount: this.grandTotal,
-      ShiftId: String(this.getCurrentShiftId()),
-      CreatedBy: userId || 0,
-      CreatedDate: now,
-      UpdatedBy: userId || 0,
-      UpdatedDate: now,
-      IsDeleted: false,
-      OrgId: this.orgId,
-      BranchId: this.branchId,
-      Items: this.cartItems.map((item: any) => this.buildKitchenOrderItem(item, orderId, userId, now))
+    const payload = {
+      orderid: existingOrderId,
+      orderNumber: requestOrderNumber,
+      tableId,
+      orderType: this.activeOrderType,
+      orderStatus: status,
+      itemCount: this.itemCount,
+      subtotalAmount: this.subtotal,
+      taxAmount: this.taxAmount,
+      discountAmount: this.discountAmount,
+      totalAmount: this.grandTotal,
+      customerName: this.customerName,
+      contactNumber: this.ContactNumber,
+      shiftId,
+      createdBy: userId || 0,
+      createdDate: now,
+      updatedBy: userId || 0,
+      updatedDate: now,
+      isDeleted: false,
+      orgId: this.orgId,
+      branchId: this.branchId,
+      items,
+      entityNo: this.currentOrderEntityNo
     };
+
+    return payload;
   }
 
   closeOrderValidationDialog(): void {
@@ -704,7 +718,7 @@ export class OrderScreenComponent implements OnInit {
     return /^\d{10,13}$/.test(this.ContactNumber);
   }
 
-  private buildKitchenOrderItem(item: any, orderId: number, userId: number, timestamp: string): any {
+  private buildKitchenOrderItem(item: any, orderId: number, userId: number, timestamp: string, status: 'Hold' | 'In Kitchen'): any {
     const quantity = Number(item.quantity || 0);
     const unitPrice = Number(item.price || 0);
     const isCombo = item.itemType === 'Combo';
@@ -713,25 +727,25 @@ export class OrderScreenComponent implements OnInit {
       : 0;
 
     return {
-      Itemid: 0,
-      Orderid: orderId,
-      Menuitemid: isCombo ? 0 : Number(item.id || 0),
-      ComboMenuItemId: comboMenuItemId,
-      Itemname: item.name || '',
-      Quantity: quantity,
-      Unitprice: unitPrice,
-      Totalprice: quantity * unitPrice,
-      DiscountAmount: 0,
-      TaxAmount: 0,
-      Modifierdetails: isCombo && item.comboItems?.length ? JSON.stringify(item.comboItems) : null,
-      Itemstatus: 'In Kitchen',
-      Notes: isCombo ? 'Combo Menu' : '',
-      OrgId: this.orgId,
-      CreatedBy: userId,
-      CreatedDate: timestamp,
-      UpdatedBy: userId,
-      UpdatedDate: timestamp,
-      IsDeleted: false
+      itemid: this.getNumberValue(item, 'heldItemId', 'itemid', 'Itemid', 'ItemId', 'itemId'),
+      orderid: orderId,
+      menuitemid: isCombo ? 0 : Number(item.id || 0),
+      comboMenuItemId,
+      itemname: item.name || '',
+      quantity,
+      unitprice: unitPrice,
+      totalprice: quantity * unitPrice,
+      discountAmount: 0,
+      taxAmount: 0,
+      modifierdetails: isCombo && item.comboItems?.length ? JSON.stringify(item.comboItems) : '',
+      itemstatus: status,
+      notes: isCombo ? 'Combo Menu' : '',
+      orgId: this.orgId,
+      createdBy: userId || 0,
+      createdDate: timestamp,
+      updatedBy: userId || 0,
+      updatedDate: timestamp,
+      isDeleted: false
     };
   }
 
@@ -839,7 +853,7 @@ export class OrderScreenComponent implements OnInit {
     const items = this.getHeldOrderItems(heldOrder);
 
     return items.map((item: any, index: number) => {
-      const menuItemId = this.getStringValue(item, 'Menuitemid', 'menuitemid', 'MenuItemId', 'menuItemId', 'FoodMenuId', 'foodMenuId');
+      const menuItemId = this.getStringValue(item, 'Menuitemid', 'menuitemid', 'MenuItemId', 'menuItemId', 'MenuId', 'menuId', 'FoodMenuId', 'foodMenuId', 'Foodmenuid', 'foodmenuid');
       const comboMenuId = this.getNumberValue(item, 'ComboMenuId', 'comboMenuId', 'Combomenuid', 'combomenuid');
       const comboMenuItemId = this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid');
       const itemName = this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName', 'name', 'Name');
@@ -849,12 +863,13 @@ export class OrderScreenComponent implements OnInit {
         || this.getStringValue(item, 'Notes', 'notes').toLowerCase().includes('combo');
       const numericId = isCombo
         ? comboMenuId || comboMenuItemId || this.parseMenuItemId(menuItemId)
-        : this.parseMenuItemId(menuItemId) || this.getNumberValue(item, 'FoodMenuId', 'foodMenuId', 'MenuItemId', 'menuItemId');
+        : this.parseMenuItemId(menuItemId) || this.getNumberValue(item, 'FoodMenuId', 'foodMenuId', 'Foodmenuid', 'foodmenuid', 'MenuItemId', 'menuItemId', 'MenuId', 'menuId');
       const quantity = this.getNumberValue(item, 'Quantity', 'quantity', 'Qty', 'qty') || 1;
       const unitPrice = this.getNumberValue(item, 'Unitprice', 'unitprice', 'UnitPrice', 'unitPrice', 'price', 'Price');
+      const heldItemId = this.getNumberValue(item, 'itemid', 'Itemid', 'ItemId', 'itemId', 'Id', 'id');
       const cartKey = isCombo
-        ? menuItemId.startsWith('combo-') ? menuItemId : 'combo-' + (numericId || index + 1)
-        : 'menu-' + numericId;
+        ? menuItemId.startsWith('combo-') ? menuItemId : 'combo-' + (numericId || heldItemId || index + 1)
+        : 'menu-' + (numericId || heldItemId || index + 1);
       const existingMenuItem = this.allMenuItems.find((menuItem: any) =>
         menuItem.cartKey === cartKey ||
         (menuItem.itemType === (isCombo ? 'Combo' : 'Menu') && Number(menuItem.id) === numericId) ||
@@ -863,7 +878,7 @@ export class OrderScreenComponent implements OnInit {
 
       return {
         ...(existingMenuItem ?? {}),
-        heldItemId: this.getNumberValue(item, 'itemid', 'Itemid', 'ItemId', 'itemId', 'Id', 'id'),
+        heldItemId,
         orderid: this.getNumberValue(item, 'orderid', 'Orderid', 'OrderId', 'orderId'),
         id: numericId || existingMenuItem?.id || 0,
         cartKey: numericId ? cartKey : existingMenuItem?.cartKey || cartKey,
@@ -889,6 +904,16 @@ export class OrderScreenComponent implements OnInit {
       ?? heldOrder?.orderHoldItems
       ?? heldOrder?.OrderholdItems
       ?? heldOrder?.orderholdItems
+      ?? heldOrder?.OrderHoldDetails
+      ?? heldOrder?.orderHoldDetails
+      ?? heldOrder?.Orderholddetails
+      ?? heldOrder?.orderholddetails
+      ?? heldOrder?.OrderItems
+      ?? heldOrder?.orderItems
+      ?? heldOrder?.OrderDetails
+      ?? heldOrder?.orderDetails
+      ?? heldOrder?.Details
+      ?? heldOrder?.details
       ?? [];
 
     return Array.isArray(items) ? items : [];
@@ -965,7 +990,8 @@ export class OrderScreenComponent implements OnInit {
       isDeleted: false,
       branchId: this.branchId,
       items,
-      entityNo: this.currentHoldOrderEntityNo
+      EntityNo: this.currentHoldOrderEntityNo,
+    
     };
 
     return payload;
@@ -989,6 +1015,9 @@ export class OrderScreenComponent implements OnInit {
   }
 
   private async ensureKitchenOrderNumber(): Promise<void> {
+    
+    this.currentOrderEntityNo = await this.resolveOrderEntityNo(ORDER_SCREEN_TEMPLATE_NAME, Number(this.userDetails.OrgId || this.orgId || 0));
+
     const existingKitchenOrderNumber = this.isCurrentHeldOrder()
       ? ''
       : this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder);
@@ -999,6 +1028,7 @@ export class OrderScreenComponent implements OnInit {
     }
 
     const kitchenCode = await this.loadLatestOrderNumber(ORDER_SCREEN_TEMPLATE_NAME, Number(this.userDetails.OrgId || this.orgId || 0));
+    this.currentOrderEntityNo = kitchenCode.entityNo;
     this.currentOrderNumber = kitchenCode.orderNumber;
   }
 

@@ -69,6 +69,7 @@ export interface OrderHold {
   OrderholdItems?: OrderHoldItem[];
   orderHoldItems?: OrderHoldItem[];
   OrderHoldItems?: OrderHoldItem[];
+  EntityNo?: number;
   entityNo?: number;
 }
 

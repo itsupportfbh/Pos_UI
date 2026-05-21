@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -51,6 +51,8 @@ type HeldOrder = {
   Ordernumber?: string;
   tableid?: string | number;
   Tableid?: string | number;
+  TableName?: string;
+  tableName?: string;
   ordertype?: string;
   Ordertype?: string;
   orderstatus?: string;
@@ -130,7 +132,7 @@ const ORDER_HOLD_COLUMNS: SharedTableColumn<HeldOrderRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
   { field: 'OrderNo', header: 'Order No', sortable: true, width: '13rem' },
   { field: 'Type', header: 'Type', sortable: true, width: '10rem' },
-  { field: 'Table', header: 'Table', sortable: true, width: '8rem' },
+  { field: 'TableName', header: 'Table', sortable: true, width: '8rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' },
   { field: 'Items', header: 'NOofItems', sortable: true, width: '7rem' },
   { field: 'Subtotal', header: 'Subtotal', sortable: true, width: '10rem' },
@@ -263,8 +265,6 @@ export class OrderHoldComponent implements OnInit {
   }
 
   openHeldOrder(order: HeldOrder | HeldOrderRow): void {
-    
-    
     const orderId = this.getOrderDetailId(order);
 
     if (!orderId) {
@@ -274,18 +274,13 @@ export class OrderHoldComponent implements OnInit {
     }
 
     forkJoin({
-      header: this.orderHoldService.getById(orderId),
-      details: this.orderHoldService.getAllHoldorderDetails(orderId)
+      header: this.orderHoldService.getById(orderId).pipe(catchError(() => of(null))),
+      details: this.orderHoldService.getAllHoldorderDetails(orderId).pipe(catchError(() => of(null)))
     }).subscribe({
       next: ({ header, details }: any) => {
         const headerDetails = this.getResultObject(header) ?? {};
         const orderDetails = this.buildOpenOrderDetails({ ...order, ...headerDetails } as HeldOrder, details);
         this.openOrderScreen(orderDetails);
-      },
-      error: () => {
-        const orderDetails = this.buildOpenOrderDetails(order, null);
-        this.openOrderScreen(orderDetails);
-        this.toast.warn('Details Not Loaded', 'Opened the held order from list data. Item details may be incomplete.');
       }
     });
   }
@@ -331,6 +326,11 @@ export class OrderHoldComponent implements OnInit {
   getOrderTable(order: HeldOrder): string {
     const source = order as any;
     return source.Tableid ?? source.tableid ?? source.tableId ?? source.TableId ?? source.table ?? '-';
+  }
+
+  getOrderTableName(order: HeldOrder): string {
+    const source = order as any;
+    return source.TableName ?? source.tableName ?? source.TableCode ?? source.tableCode ?? source.Table ?? source.table ?? this.getOrderTable(order);
   }
 
   getOrderHeldDate(order: HeldOrder): string {
@@ -396,7 +396,7 @@ export class OrderHoldComponent implements OnInit {
       RowNumber: index + 1,
       OrderNo: this.getOrderNumber(order),
       Type: this.getOrderType(order),
-      Table: this.getOrderTable(order),
+      Table: this.getOrderTableName(order),
       Status: this.getOrderStatus(order),
       Items: itemCount,
       Subtotal: this.getOrderSubtotal(order),
@@ -444,6 +444,16 @@ export class OrderHoldComponent implements OnInit {
       source.orderholditems ??
       source.orderHoldItem ??
       source.OrderHoldItem ??
+      source.orderHoldDetails ??
+      source.OrderHoldDetails ??
+      source.Orderholddetails ??
+      source.orderholddetails ??
+      source.orderHoldDetail ??
+      source.OrderHoldDetail ??
+      source.orderItems ??
+      source.OrderItems ??
+      source.orderItem ??
+      source.OrderItem ??
       source.orderDetails ??
       source.OrderDetails ??
       source.details ??
@@ -466,6 +476,7 @@ export class OrderHoldComponent implements OnInit {
     const customerName = this.getCustomerName(source);
     const contactNumber = this.getContactNumber(source);
     const orderId = this.getOrderDetailId(order);
+    const tableName = this.getOrderTableName(order);
     const items = this.getOrderItems(order).map((item: any) => ({
       Id: item.Id ?? item.id ?? item.itemid ?? item.Itemid ?? 0,
       itemid: item.itemid ?? item.Itemid ?? item.Id ?? item.id ?? 0,
@@ -509,6 +520,8 @@ export class OrderHoldComponent implements OnInit {
       ordernumber: this.getOrderNumber(order),
       Tableid: source.Tableid ?? source.tableid ?? source.tableId ?? source.TableId ?? 0,
       tableid: source.tableid ?? source.Tableid ?? source.tableId ?? source.TableId ?? 0,
+      TableName: tableName,
+      tableName,
       Ordertype: this.getOrderType(order),
       ordertype: this.getOrderType(order),
       Orderstatus: this.getOrderStatus(order),
@@ -547,7 +560,7 @@ export class OrderHoldComponent implements OnInit {
       branchId: source.branchId ?? source.BranchId ?? 0,
       orderNo: this.getOrderNumber(order),
       orderType: this.getOrderType(order),
-      table: this.getOrderTable(order),
+      table: tableName,
       heldAt: source.CreatedDate ?? source.createdDate ?? source.heldAt ?? '',
       Items: items,
       items,
