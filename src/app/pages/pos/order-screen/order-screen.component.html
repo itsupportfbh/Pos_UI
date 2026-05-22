@@ -89,7 +89,8 @@
       <nav class="subcategory-strip" aria-label="Menu subcategories">
         @for (subCategory of visibleSubCategories; track subCategory.id) {
           <button type="button" [class.active]="activeSubCategoryId === subCategory.id" (click)="selectSubCategory(subCategory)">
-            {{ subCategory.name }}
+            <i [class]="getSubCategoryIcon(subCategory)"></i>
+            <span>{{ subCategory.name }}</span>
           </button>
         }
       </nav>
@@ -105,7 +106,8 @@
         } @else {
           @for (floor of floors; track floor.id) {
             <button type="button" [class.active]="activeFloorId === floor.id" (click)="selectFloor(floor)">
-              {{ floor.name }}
+              <i [class]="getFloorIcon(floor)"></i>
+              <span>{{ floor.name }}</span>
             </button>
           }
         }
@@ -122,7 +124,8 @@
         } @else {
           @for (table of tables; track table) {
             <button type="button" [class.active]="selectedTable === table" (click)="selectTable(table)">
-              {{ table }}
+              <i [class]="getTableIcon(table)"></i>
+              <span>{{ table }}</span>
             </button>
           }
         }
@@ -275,4 +278,5 @@
       <button pButton type="button" label="OK" icon="pi pi-check" (click)="closeOrderValidationDialog()"></button>
     </div>
   </p-dialog>
+
 </section>

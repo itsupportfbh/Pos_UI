@@ -37,6 +37,19 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
 };
 
 const DEFAULT_CATEGORY_ICON = 'pi pi-shopping-bag';
+const SUBCATEGORY_ICON_MAP: Record<string, string> = {
+  south: 'pi pi-map-marker',
+  chinese: 'pi pi-globe',
+  north: 'pi pi-compass',
+  grill: 'pi pi-fire',
+  starter: 'pi pi-sparkles',
+  soup: 'pi pi-filter',
+  bread: 'pi pi-stop',
+  rice: 'pi pi-th-large',
+  curry: 'pi pi-circle-fill'
+};
+
+const DEFAULT_SUBCATEGORY_ICON = 'pi pi-tags';
 
 @Component({
   selector: 'app-order-screen',
@@ -83,6 +96,7 @@ export class OrderScreenComponent implements OnInit {
   showOrderValidationDialog = false;
   orderValidationTitle = 'Complete Order Details';
   orderValidationMessages: string[] = [];
+ 
   private currentOrderEntityNo = 0;
   private currentHoldOrderEntityNo = 0;
   private readonly orderEntityNoCache = new Map<string, number>();
@@ -525,7 +539,7 @@ export class OrderScreenComponent implements OnInit {
           const orderNumber = this.getApiOrderNumber(response) || 'Order';
           this.toast.success('Sent to Kitchen', `${orderNumber} sent to kitchen display.`);
           this.clearOrder();
-          this.refreshOrderScreenPage();
+          setTimeout(() => this.refreshOrderScreenPage(), 1200);
         },
         error: (err: any) => {
           const message = err?.error?.message
@@ -534,6 +548,7 @@ export class OrderScreenComponent implements OnInit {
             || 'Unable to save order status as In Kitchen.';
 
           this.toast.error('Kitchen Failed', message);
+          
           this.isSendingToKitchen = false;
         },
         complete: () => {
@@ -590,7 +605,7 @@ export class OrderScreenComponent implements OnInit {
 
           this.toast.success('Order Held', msg);
           this.clearOrder();
-          this.refreshOrderScreenPage();
+          setTimeout(() => this.refreshOrderScreenPage(), 1200);
         },
         error: (err: any) => {
           const message = err?.error?.message
@@ -625,6 +640,7 @@ export class OrderScreenComponent implements OnInit {
     const payload = {
       orderid: existingOrderId,
       orderNumber: requestOrderNumber,
+      holdOrderId: this.isCurrentHeldOrder() ? this.getCurrentHeldOrderId() : 0,
       tableId,
       orderType: this.activeOrderType,
       orderStatus: status,
@@ -653,6 +669,8 @@ export class OrderScreenComponent implements OnInit {
   closeOrderValidationDialog(): void {
     this.showOrderValidationDialog = false;
   }
+
+ 
 
   get isCustomerNameInvalid(): boolean {
     return this.orderValidationSubmitted && !this.customerName.trim();
@@ -1281,6 +1299,26 @@ export class OrderScreenComponent implements OnInit {
 
   private getCategoryIcon(categoryName: string): string {
     return CATEGORY_ICON_MAP[categoryName.trim().toLowerCase()] ?? DEFAULT_CATEGORY_ICON;
+  }
+
+  getSubCategoryIcon(subCategory: any): string {
+    const subCategoryName = this.getStringValue(subCategory, 'name', 'Name').trim().toLowerCase();
+
+    if (!subCategoryName || subCategoryName === 'all') {
+      return 'pi pi-th-large';
+    }
+
+    const matchedKey = Object.keys(SUBCATEGORY_ICON_MAP).find((key) => subCategoryName.includes(key));
+    return matchedKey ? SUBCATEGORY_ICON_MAP[matchedKey] : DEFAULT_SUBCATEGORY_ICON;
+  }
+
+  getFloorIcon(floor: any): string {
+    const floorId = this.getNumberValue(floor, 'id', 'Id');
+    return floorId ? 'pi pi-building' : 'pi pi-th-large';
+  }
+
+  getTableIcon(table: string): string {
+    return table === ALL_TABLE ? 'pi pi-th-large' : 'pi pi-table';
   }
 
   private getComboItems(source: any): any[] {

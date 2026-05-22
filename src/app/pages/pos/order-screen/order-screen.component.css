@@ -243,6 +243,21 @@
   font-weight: 800;
 }
 
+.category-strip button i,
+.subcategory-strip button i,
+.floor-strip button i,
+.table-strip button i {
+  font-size: 0.92rem;
+  line-height: 1;
+}
+
+.category-strip button span,
+.subcategory-strip button span,
+.floor-strip button span,
+.table-strip button span {
+  min-width: 0;
+}
+
 .menu-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
