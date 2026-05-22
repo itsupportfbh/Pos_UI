@@ -8,47 +8,18 @@ import { AutocompleteFieldComponent } from '../../../components/form/autocomplet
 import { DateFieldComponent } from '../../../components/form/date-field.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { SharedTableComponent } from '../../../components/table/shared-table.component';
-import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
+import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
-const BRANCH_OPTIONS = [
-  { label: 'Head Office', value: 'Head Office' },
-  { label: 'City Center', value: 'City Center' },
-  { label: 'Airport Kiosk', value: 'Airport Kiosk' }
-];
-const CUSTOMER_FIELDS: FeatureFieldConfig[] = [
+const BRANCH_OPTIONS: { label: string | number; value: string | number }[] = [];
+const CUSTOMER_FIELDS: any[] = [
   { key: 'customerName', label: 'Customer', type: 'autocomplete', placeholder: 'Search customer', suggestions: ['Asha Retail', 'Kiran Traders', 'Vijay Kumar'] },
   { key: 'branch', label: 'Branch', type: 'select', placeholder: 'Choose branch', options: BRANCH_OPTIONS }
 ];
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
+const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
 ];
-
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Customers',
-  title: 'Credit Tracking',
-  subtitle: 'Track due balance and outstanding accounts.',
-  formTitle: `${'Credit Tracking'} Filters`,
-  formDescription: `Static ${'Credit Tracking'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Credit Tracking',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'CUS-1002', name: 'Kiran Traders', status: 'Partial' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Customers', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: CUSTOMER_FIELDS,
-  primaryActionLabel: `Search ${'Credit Tracking'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Credit Tracking',
-  rows: [{ code: 'CUS-1002', name: 'Kiran Traders', status: 'Partial' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
-
 
 @Component({
   selector: 'app-credit-tracking',
@@ -57,35 +28,31 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
   templateUrl: './credit-tracking.component.html',
   styleUrl: './credit-tracking.component.css'
 })
-export class CreditTrackingComponent {
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
-  readonly formState = this.createEmptyState(this.config);
-  readonly dialogFormState = this.addDialogConfig ? this.createEmptyState(this.addDialogConfig) : {};
+export class CreditTrackingComponent {  readonly formState: Record<string, string | Date | null> = {};
+  readonly dialogFormState: Record<string, string | Date | null> = {};
   showAddDialog = false;
   showFilterSidebar = false;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
-  readonly customerSuggestions = ['Asha Retail', 'Kiran Traders', 'Vijay Kumar'];
-  readonly branchOptions = BRANCH_OPTIONS;  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
-  readonly dialogFields = this.addDialogConfig?.fields ?? [];
+  readonly pageEyebrow = 'Customers';
+  readonly pageTitle = 'Credit Tracking';
+  readonly pageSubtitle = 'Track due balance and outstanding accounts.';
+  readonly customerSuggestions: string[] = [];
+  readonly branchOptions = BRANCH_OPTIONS;  
+  readonly filterTitle = `${'Credit Tracking'} Filters`;
+  readonly filterDescription = `API data will be loaded for ${'Credit Tracking'.toLowerCase()}.`;
+  readonly fields: any[] = CUSTOMER_FIELDS;
+  readonly primaryActionLabel = `Search ${'Credit Tracking'}`;
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  readonly dialogTitle = '';
+  readonly dialogSubtitle = '';
+  readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
+  readonly tableTitle = 'Credit Tracking';
+  readonly tableCaption = 'Credit Tracking';
+  readonly tableColumns = CODE_NAME_COLUMNS;
+  tableRows: Record<string, unknown>[] = [];
+    readonly showAddNewButton = false;
+    readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
     readonly showFilterButton = true;
 
   getFieldValue(fieldKey: string): string | Date | null {
@@ -118,10 +85,11 @@ export class CreditTrackingComponent {
   }
 
   resetForm(): void {
-    this.resetState(this.formState, this.config);
+    this.resetState(this.formState, this.fields);
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 
@@ -129,11 +97,11 @@ export class CreditTrackingComponent {
     this.showFilterSidebar = false;
   }
   openAddDialog(): void {
-    if (!this.addDialogConfig) {
+    if (!this.showAddNewButton) {
       return;
     }
 
-    this.resetState(this.dialogFormState, this.addDialogConfig);
+    this.resetState(this.dialogFormState, this.dialogFields);
     this.showAddDialog = true;
   }
 
@@ -145,27 +113,21 @@ export class CreditTrackingComponent {
     this.closeAddDialog();
   }
 
-  trackByField(_: number, field: FeatureFieldConfig): string {
+  trackByField(_: number, field: any): string {
     return field.key;
   }
 
-  private createEmptyState(config: FeaturePageConfig): Record<string, string | Date | null> {
-    return config.fields.reduce<Record<string, string | Date | null>>((state, field) => {
-      state[field.key] = null;
-      return state;
-    }, {});
-  }
-
-  private resetState(state: Record<string, string | Date | null>, config: FeaturePageConfig): void {
+  private resetState(state: Record<string, string | Date | null>, fields: any[]): void {
     for (const key of Object.keys(state)) {
       delete state[key];
     }
 
-    for (const field of config.fields) {
+    for (const field of fields) {
       state[field.key] = null;
     }
   }
 }
+
 
 
 

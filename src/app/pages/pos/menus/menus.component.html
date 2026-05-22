@@ -1,4 +1,6 @@
 <section class="feature-page">
+  <p-confirmDialog />
+
   <header class="page-header hero-panel">
     <div>
       <p class="eyebrow">{{ pageEyebrow }}</p>
@@ -10,95 +12,94 @@
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">Static Data</p>
         <h2>{{ tableTitle }}</h2>
-        @if (tableDescription) {
-          <p class="section-copy">{{ tableDescription }}</p>
-        }</div>
+      </div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()" [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton" [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader" (toolbarButtonClick)="openAddDialog()">
+    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
+      (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
-        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
-        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger" (click)="openRowActions(rowMenu, $event, row)"></button>
+        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+
+        <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
+          (click)="openRowActions(rowMenu, $event, row)"></button>
+      </ng-template>
+      <ng-template appTableCellTemplate="Status" let-row>
+        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+          [class.status-inactive]="row.Status === 'Inactive'">
+          {{ row.Status }}
+        </span>
       </ng-template>
     </app-shared-table>
   </p-card>
 </section>
 
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false" [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog" [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
+<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+  [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
+  [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
   <p-card class="feature-card filter-drawer-card">
-      <section class="filter-panel filter-panel-compact">
-        <div class="filter-panel-header">
-          <div>
-            <h2>{{ filterTitle }}</h2>
-          </div>
+    <section class="filter-panel filter-panel-compact">
+      <div class="filter-panel-header">
+        <div>
+          <h2>{{ filterTitle }}</h2>
         </div>
-
-        <section class="field-grid">
-          <app-text-field
-            label="Product Code"
-            inputId="productCode"
-            placeholder="Search SKU or code"
-            [model]="filterProductCode"
-            (modelChange)="filterProductCode = $event"
-          />
-
-          <app-select-field
-            label="Category"
-            inputId="category"
-            placeholder="Choose category"
-            [options]="categoryOptions"
-            [model]="filterCategory"
-            (modelChange)="filterCategory = $event"
-          />
-        </section>
-
-        <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel" [showSecondary]="showSecondaryAction" (secondaryClick)="resetForm()" />
-      </section>
-    </p-card>
-</p-dialog>
-@if (addDialogConfig) {
-  <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
-    <ng-template pTemplate="header">
-      <div class="dialog-copy">
-        <p class="eyebrow">Create Master</p>
-        <h3>{{ dialogTitle }}</h3>
-        <p>{{ dialogSubtitle }}</p>
       </div>
-    </ng-template>
 
-    <section class="field-grid dialog-grid">
-      <app-text-field
-        label="Product Code"
-        inputId="dialog-productCode"
-        placeholder="SKU-2301"
-        [model]="dialogProductCode"
-        (modelChange)="dialogProductCode = $event"
-      />
+      <section class="field-grid">
+        <app-multiselect-field label="Category" inputId="counter-branch-filter" placeholder="Choose categories"
+          [options]="categoryfilterOptions" [model]="selectedCategoryIds"
+          (modelChange)="onfilterCategoryChange($event)" />
+      </section>
 
-      <app-select-field
-        label="Category"
-        inputId="dialog-category"
-        placeholder="Choose category"
-        [options]="categoryOptions"
-        [model]="dialogCategory"
-        (modelChange)="dialogCategory = $event"
-      />
+      <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchMenus()" (secondaryClick)="resetForm()" />
     </section>
-
-    <div class="dialog-actions">
-      <app-action-buttons
-        [primaryLabel]="dialogPrimaryActionLabel"
-        secondaryLabel="Cancel"
-        primaryIcon="pi pi-save"
-        secondaryIcon="pi pi-times"
-        [secondaryText]="true"
-        [secondaryOutlined]="false"
-        (primaryClick)="submitAddDialog()"
-        (secondaryClick)="closeAddDialog()"
-      />
+  </p-card>
+</p-dialog>
+@if (showAddNewButton) {
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+  [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
+  <ng-template pTemplate="header">
+    <div class="dialog-copy">
+      <h3>{{ dialogTitle }}</h3>
+      <p>{{ dialogSubtitle }}</p>
     </div>
-  </p-dialog>
-}
+  </ng-template>
 
+  <section class="field-grid dialog-grid">
+    <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-menuCode" placeholder="Enter menu code"
+      [required]="true" [maxlength]="50" [submitted]="dialogSubmitted" errorMessage="Code is required."
+      [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
+
+    <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-menuName" placeholder="Enter menu name"
+      [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Name is required."
+      [model]="dialogModel.name ?? ''" (modelChange)="dialogModel.name = $event" />
+
+    <app-select-field label="Category" [showRequiredMark]="true" inputId="dialog-category" placeholder="Choose category"
+      [options]="categoryOptions" [numberValue]="true" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Category is required." [model]="dialogModel.categoryId ?? 0"
+      (modelChange)="onDialogCategoryChange($event)" />
+
+      <app-select-field label="Sub Category" [showRequiredMark]="true" inputId="dialog-subcategory" placeholder="Choose sub category"
+      [options]="subCategoryOptions" [numberValue]="true" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Sub category is required." [model]="dialogModel.subCategoryId ?? 0"
+      (modelChange)="dialogModel.subCategoryId = $event" />
+
+    <app-text-field label="Price" inputId="dialog-price" [showRequiredMark]="true"
+      placeholder="Enter price" type="number" [required]="true" [submitted]="dialogSubmitted"
+      [min]="0" [step]="0.01" errorMessage="Price is required and must be a positive number."
+      [model]="dialogModel.price" (modelChange)="dialogModel.price = $event" />
+
+  </section>
+
+
+
+  <div class="dialog-actions">
+    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)" />
+  </div>
+</p-dialog>
+}

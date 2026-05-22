@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { AutocompleteFieldComponent } from '../../../components/form/autocomplete-field.component';
-import { SelectFieldComponent } from '../../../components/form/select-field.component';
+import { FieldOption, SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { Option } from '../config/models';
+import { ShiftAssignmentComponent } from '../components/shift-assignment/shift-assignment.component';
+import { ShiftAssignmentService } from '../../../services/shift-assignment.service';
 
 type Product = { id: number; name: string; category: string; price: number; stock: number; barcode: string };
 type CartItem = Product & { quantity: number };
@@ -13,46 +14,119 @@ type CartItem = Product & { quantity: number };
 @Component({
   selector: 'app-billing',
   standalone: true,
-  imports: [CommonModule, CardModule, ButtonModule, TextFieldComponent, SelectFieldComponent, AutocompleteFieldComponent],
+  imports: [CommonModule, CardModule, ButtonModule, TextFieldComponent, SelectFieldComponent, AutocompleteFieldComponent, ShiftAssignmentComponent],
   templateUrl: './billing.component.html',
   styleUrl: './billing.component.css'
 })
-export class BillingComponent {
-  readonly customers = ['Walk-in Customer', 'Asha Retail', 'Kiran Traders', 'Vijay Kumar'];
-  readonly paymentModes: Option[] = [{ label: 'Cash', value: 'Cash' }, { label: 'UPI', value: 'UPI' }, { label: 'Card', value: 'Card' }, { label: 'Credit', value: 'Credit' }];
-  readonly products: Product[] = [
-    { id: 1, name: 'Arabica Coffee 250g', category: 'Beverages', price: 12.5, stock: 42, barcode: '8901002001010' },
-    { id: 2, name: 'Brown Bread Loaf', category: 'Bakery', price: 3.25, stock: 19, barcode: '8901002001011' },
-    { id: 3, name: 'Organic Milk 1L', category: 'Dairy', price: 2.75, stock: 28, barcode: '8901002001012' },
-    { id: 4, name: 'Chocolate Cookies', category: 'Snacks', price: 4.5, stock: 35, barcode: '8901002001013' }
-  ];
+export class BillingComponent implements OnInit {
+  private readonly shiftService = inject(ShiftAssignmentService);
+
+  showShiftAssignment = false;
+  readonly customers: string[] = [];
+  readonly paymentModes: FieldOption[] = [];
+  readonly products: Product[] = [];
+  readonly pageTitle = 'Billing';
+  readonly pageSubtitle = 'Search menus, add them to cart, apply discount, choose customer and payment mode, and generate the bill.';
 
   productSearch = '';
   barcodeSearch = '';
-  selectedCustomer: string | null = 'Walk-in Customer';
-  selectedPaymentMode: string | null = 'Cash';
+  selectedCustomer: string | null = null;
+  selectedPaymentMode: string | null = null;
   discountInput = '0';
-  cartItems: CartItem[] = [{ ...this.products[0], quantity: 1 }, { ...this.products[1], quantity: 2 }];
+  cartItems: CartItem[] = [];
+  filteredProducts: Product[] = [];
+  totalItems = 0;
+  subtotal = 0;
+  discountAmount = 0;
+  tax = 0;
+  grandTotal = 0;
+
+  ngOnInit(): void {
+    // Check if shift is assigned
+    console.log('Checking shift assignment on billing page load');
+    const shiftAssigned = this.shiftService.isShiftAssigned();
+    console.log('Shift assigned:', shiftAssigned);
+    this.shiftService.isShiftAssigned();
+    if (!this.shiftService.isShiftAssigned()) {
+      this.showShiftAssignment = true;
+    }
+
+    this.updateFilteredProducts();
+    this.updateBillingSummary();
+  }
 
   addToCart(product: Product): void {
     const existing = this.cartItems.find((item) => item.id === product.id);
-    if (existing) { existing.quantity += 1; return; }
+    if (existing) {
+      existing.quantity += 1;
+      this.updateBillingSummary();
+      return;
+    }
     this.cartItems = [...this.cartItems, { ...product, quantity: 1 }];
+    this.updateBillingSummary();
   }
-  increaseQuantity(itemId: number): void { this.cartItems = this.cartItems.map((item) => item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item); }
-  decreaseQuantity(itemId: number): void { this.cartItems = this.cartItems.map((item) => item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item).filter((item) => item.quantity > 0); }
-  removeCartItem(itemId: number): void { this.cartItems = this.cartItems.filter((item) => item.id !== itemId); }
+
+  increaseQuantity(itemId: number): void {
+    this.cartItems = this.cartItems.map((item) =>
+      item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
+    );
+    this.updateBillingSummary();
+  }
+
+  decreaseQuantity(itemId: number): void {
+    this.cartItems = this.cartItems
+      .map((item) => item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item)
+      .filter((item) => item.quantity > 0);
+    this.updateBillingSummary();
+  }
+
+  removeCartItem(itemId: number): void {
+    this.cartItems = this.cartItems.filter((item) => item.id !== itemId);
+    this.updateBillingSummary();
+  }
+
+  clearBill(): void {
+    this.cartItems = [];
+    this.selectedCustomer = null;
+    this.selectedPaymentMode = null;
+    this.discountInput = '0';
+    this.updateBillingSummary();
+  }
+
   printBill(): void { window.print(); }
 
-  get filteredProducts(): Product[] {
-    const search = this.productSearch.toLowerCase().trim();
-    const barcode = this.barcodeSearch.toLowerCase().trim();
-    return this.products.filter((product) => (!search || product.name.toLowerCase().includes(search) || product.category.toLowerCase().includes(search)) && (!barcode || product.barcode.toLowerCase().includes(barcode)));
+  onProductSearchChange(value: string): void {
+    this.productSearch = value;
+    this.updateFilteredProducts();
   }
 
-  get totalItems(): number { return this.cartItems.reduce((sum, item) => sum + item.quantity, 0); }
-  get subtotal(): number { return this.cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0); }
-  get discountAmount(): number { const value = Number(this.discountInput); return Number.isFinite(value) && value > 0 ? value : 0; }
-  get tax(): number { return Math.max(this.subtotal - this.discountAmount, 0) * 0.05; }
-  get grandTotal(): number { return Math.max(this.subtotal - this.discountAmount, 0) + this.tax; }
+  onBarcodeSearchChange(value: string): void {
+    this.barcodeSearch = value;
+    this.updateFilteredProducts();
+  }
+
+  onDiscountChange(value: string): void {
+    this.discountInput = value;
+    this.updateBillingSummary();
+  }
+
+  private updateFilteredProducts(): void {
+    const search = this.productSearch.toLowerCase().trim();
+    const barcode = this.barcodeSearch.toLowerCase().trim();
+
+    this.filteredProducts = this.products.filter((product) =>
+      (!search || product.name.toLowerCase().includes(search) || product.category.toLowerCase().includes(search))
+      && (!barcode || product.barcode.toLowerCase().includes(barcode))
+    );
+  }
+
+  private updateBillingSummary(): void {
+    this.totalItems = this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    this.subtotal = this.cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    const discountValue = Number(this.discountInput || 0);
+    this.discountAmount = Number.isFinite(discountValue) && discountValue > 0 ? discountValue : 0;
+    this.tax = Math.max(this.subtotal - this.discountAmount, 0) * 0.05;
+    this.grandTotal = Math.max(this.subtotal - this.discountAmount, 0) + this.tax;
+  }
 }

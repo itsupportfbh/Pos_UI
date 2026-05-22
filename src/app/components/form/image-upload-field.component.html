@@ -1,0 +1,41 @@
+<div class="image-upload-field">
+  <label [for]="inputId" class="field-label">
+    {{ label }}
+    <span *ngIf="showRequiredMark" class="required-mark">*</span>
+  </label>
+  
+  <div class="upload-container">
+    <div class="preview-section" *ngIf="previewUrl">
+      <img [src]="previewUrl" alt="Preview" class="image-preview" />
+      <button 
+        pButton 
+        type="button" 
+        icon="pi pi-times" 
+        [text]="true" 
+        [rounded]="true" 
+        class="clear-btn"
+        (click)="clearImage()"
+        [disabled]="disabled">
+      </button>
+    </div>
+    
+    <div class="upload-input-wrapper" *ngIf="!previewUrl">
+      <input 
+        type="file" 
+        [id]="inputId"
+        accept="image/*"
+        (change)="onFileSelected($event)"
+        [disabled]="disabled"
+        class="file-input"
+      />
+      <label [for]="inputId" class="upload-label">
+        <i class="pi pi-cloud-upload"></i>
+        <span>Click to upload image</span>
+      </label>
+    </div>
+  </div>
+
+  <div *ngIf="showRequiredError" class="error-message">
+    {{ errorMessage || 'Image is required.' }}
+  </div>
+</div>

@@ -1,193 +1,616 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
-import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
-import { AutocompleteFieldComponent } from '../../../components/form/autocomplete-field.component';
-import { SelectFieldComponent } from '../../../components/form/select-field.component';
-import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableComponent } from '../../../components/table/shared-table.component';
-import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
+
+import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
+import { TextFieldComponent } from '../../../components/form/text-field.component';
+import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
-
-const BRANCH_OPTIONS = [
-  { label: 'Head Office', value: 'Head Office' },
-  { label: 'City Center', value: 'City Center' },
-  { label: 'Airport Kiosk', value: 'Airport Kiosk' }
-];
-const CUSTOMER_SUGGESTIONS = ['Asha Retail', 'Kiran Traders', 'Vijay Kumar'];
-const CUSTOMER_FIELDS: FeatureFieldConfig[] = [
-  { key: 'customerName', label: 'Customer', type: 'autocomplete', placeholder: 'Search customer', suggestions: CUSTOMER_SUGGESTIONS },
-  { key: 'branch', label: 'Branch', type: 'select', placeholder: 'Choose branch', options: BRANCH_OPTIONS }
-];
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
-  { field: 'code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
-];
-
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Customers',
-  title: 'Customer List',
-  subtitle: 'Manage customer master details.',
-  formTitle: `${'Customer List'} Filters`,
-  formDescription: `Static ${'Customer List'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Customer List',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'CUS-1001', name: 'Asha Retail', status: 'Active' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Customers', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: CUSTOMER_FIELDS,
-  primaryActionLabel: `Search ${'Customer List'}`,
-  secondaryActionLabel: 'Clear Filters',
-  showAddNewButton: true,
-  addNewLabel: 'Add New',
-  tableCaption: 'Customer List',
-  rows: [{ code: 'CUS-1001', name: 'Asha Retail', status: 'Active' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
-  eyebrow: 'Customers',
-  title: 'Create Customer',
-  subtitle: 'Capture new customer profiles.',
-  formTitle: `${'Create Customer'} Filters`,
-  formDescription: `Static ${'Create Customer'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Create Customer',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'CUS-1101', name: 'Nila Stores', status: 'Draft' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Customers', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: CUSTOMER_FIELDS,
-  primaryActionLabel: `Search ${'Create Customer'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Create Customer',
-  rows: [{ code: 'CUS-1101', name: 'Nila Stores', status: 'Draft' }],
-  columns: CODE_NAME_COLUMNS
+import { CommonService } from '../../../services/common.service';
+import { Customer, CustomerService } from '../../../services/customer.service';
+import { OrganizationService } from '../../../services/organization.service';
+type CustomerRow = Customer & {
+  RowNumber: number;
+  Status: string;
+  GenderLabel?: string;
 };
 
+const cityOptions: any[] = [];
+const stateOptions: any[] = [];
+const countryOptions: any[] = [];
+const memberOptions = [
+  { label: 'Yes', value: 1 },
+  { label: 'No', value: 0 }
+];
+const genderOptions = [
+  { label: 'Male', value: 'Male' },
+  { label: 'Female', value: 'Female' },
+  { label: 'Other', value: 'Other' }
+];
+
+const CUSTOMER_COLUMNS: SharedTableColumn<CustomerRow>[] = [
+  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
+  { field: 'Code', header: 'Code', sortable: true, width: '9rem' },
+  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
+  { field: 'MobileNo', header: 'Mobile', sortable: true, width: '12rem' },
+  { field: 'EmailId', header: 'Email', sortable: true, width: '18rem' },
+  { field: 'OpeningBalance', header: 'OpeningBalance', sortable: true, width: '18rem' },
+  { field: 'IsMember', header: 'Membership', sortable: true, width: '18rem' },
+  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
+];
 
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, SelectFieldComponent, AutocompleteFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
+  imports: [
+    CommonModule,
+    ConfirmDialogModule,
+    ButtonModule,
+    CardModule,
+    DialogModule,
+    TextFieldComponent,
+    SelectFieldComponent,
+    ActionButtonsComponent,
+    MenuModule,
+    SharedTableComponent,
+    SharedTableCellTemplateDirective
+  ],
+  providers: [ConfirmationService],
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css'
 })
-export class CustomersComponent {
+export class CustomersComponent implements OnInit {
   private readonly toast = inject(AppToastService);
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
+  private readonly customerService = inject(CustomerService);
+  private readonly commonService = inject(CommonService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+ private readonly organizationService = inject(OrganizationService);
+
+  @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+
   showAddDialog = false;
   showFilterSidebar = false;
-  filterCustomerName: string | null = null;
-  filterBranch: string | null = null;
-  dialogCustomerName: string | null = null;
-  dialogBranch: string | null = null;
-  selectedRow: Record<string, unknown> | null = null;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
-  readonly customerSuggestions = CUSTOMER_SUGGESTIONS;
-  readonly branchOptions = BRANCH_OPTIONS;
-  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
-  readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
-    readonly showFilterButton = true;
+  isEditMode = false;
+  dialogSubmitted = false;
+  dialogSaving = false;
+  isLoading = false;
+
+  filterCustomerName = '';
+  selectedRow: CustomerRow | null = null;
+  rowActionItems: MenuItem[] = [];
+  tableRows: CustomerRow[] = [];
+  allRows: CustomerRow[] = [];
+  userDetails: any = {};
+ OrgId = 0;
+  BranchId = 0;
+  dialogId = 0;
+  dialogCode = '';
+  dialogCustomerName = '';
+  dialogMobileNo = '';
+  dialogEmailId = '';
+  dialogAddressLine1 = '';
+  dialogCountry: SelectFieldValue = null;
+  dialogState: SelectFieldValue = null;
+  dialogCity: SelectFieldValue = null;
+  dialogPincode = '';
+  dialogDateOfBirth = '';
+  dialogGender: SelectFieldValue = null;
+  dialogMemberNo = '';
+  dialogOpeningBalance = '';
+  dialogIsMember: SelectFieldValue = null;
+  dialogRemarks = '';
+
+  cityOptions = cityOptions;
+  stateOptions = stateOptions;
+  countryOptions = countryOptions;
+  readonly genderOptions = genderOptions;
+  readonly memberOptions = memberOptions;
+
+  readonly pageEyebrow = 'Customers';
+  readonly pageTitle = 'Customer List';
+  readonly pageSubtitle = 'Manage customer master details.';
+  readonly filterTitle = 'Customer Filters';
+  readonly primaryActionLabel = 'Search Customers';
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  dialogTitle = 'Create Customer';
+  dialogSubtitle = 'Capture new customer profiles.';
+  dialogPrimaryActionLabel = 'Save';
+  readonly tableTitle = 'Customer List';
+  readonly tableCaption = 'Customer List';
+  readonly tableColumns = CUSTOMER_COLUMNS;
+  readonly showAddNewButton = true;
+  readonly addNewButtonLabel = 'Add New';
+  readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-  readonly rowActionItems: MenuItem[] = [
-    { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
-    { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
-    { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
-    { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
-  ];
+ branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+   this.OrgId = Number(this.userDetails.OrgId || 0);
+    this.BranchId = Number(this.userDetails.BranchId || 0);
+    this.loadCustomers();
+  }
+private async loadLatestTableCode(orgId: number): Promise<void> {
+    if (!this.branchEntityNo || !orgId) {
+      this.dialogCode = '';
+      return;
+    }
 
-  resetForm(): void {
-    this.filterCustomerName = null;
-    this.filterBranch = null;
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+      
+      this.dialogCode = response?.result ?? '';
+    } catch {
+      this.dialogCode = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
   }
 
+  loadCustomers(): void {
+    this.isLoading = true;
+
+    const orgId = Number(this.userDetails?.OrgId || 0);
+
+    this.customerService.getAll(orgId).subscribe({
+      next: (response: any) => {
+        let rowNumber = 1;
+        this.allRows = (response.result ?? []).map((customer: any) => {
+          customer.Id = customer.Id ?? customer.id ?? 0;
+          customer.Code = customer.Code ?? customer.code ?? '';
+          customer.Name = customer.Name ?? customer.name ?? '';
+          customer.MobileNo = customer.MobileNo ?? customer.mobileNo ?? '';
+          customer.EmailId = customer.EmailId ?? customer.emailId ?? '';
+          customer.AddressLine1 = customer.AddressLine1 ?? customer.addressLine1 ?? '';
+          customer.CityId = customer.CityId ?? customer.cityId ?? null;
+          customer.StateId = customer.StateId ?? customer.stateId ?? null;
+          customer.CountryId = customer.CountryId ?? customer.countryId ?? null;
+          customer.Pincode = customer.Pincode ?? customer.pincode ?? '';
+          customer.DateOfBirth = customer.DateOfBirth ?? customer.dateOfBirth ?? null;
+          customer.Gender = customer.Gender ?? customer.gender ?? '';
+          customer.MemberNo = customer.MemberNo ?? customer.memberNo ?? '';
+          customer.OpeningBalance = customer.OpeningBalance ?? customer.openingBalance ?? 0;
+          customer.IsMember = customer.IsMember ?? customer.isMember ?? false;
+          customer.Remarks = customer.Remarks ?? customer.remarks ?? '';
+          customer.OrgId = customer.OrgId ?? customer.orgId ?? 0;
+          customer.IsActive = customer.IsActive ?? customer.isActive ?? false;
+          customer.RowNumber = rowNumber++;
+          customer.Status = customer.IsActive ? 'Active' : 'Inactive';
+          customer.GenderLabel = customer.Gender;
+          return customer;
+        });
+
+        this.tableRows = [...this.allRows];
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.toast.error('Load Failed', 'Unable to load customers. Please check API and try again.');
+      },
+      complete: () => {
+        this.isLoading = false;
+      }
+    });
+  }
+
+  resetForm(): void {
+    this.filterCustomerName = '';
+    this.applyCustomerFilters();
+    this.closeFilterSidebar();
+  }
+
+  searchCustomers(): void {
+    this.applyCustomerFilters();
+    this.closeFilterSidebar();
+  }
+
+  onFilterCustomerNameChange(value: string): void {
+    this.filterCustomerName = value;
+  }
+
+  onMemberChange(value: SelectFieldValue): void {
+    this.dialogIsMember = Number(value || 0);
+
+    if (this.dialogIsMember !== 1) {
+      this.dialogMemberNo = '';
+    }
+  }
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 
   closeFilterSidebar(): void {
     this.showFilterSidebar = false;
   }
-  openAddDialog(): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
 
+  openAddDialog(): void {
     this.resetDialogForm();
+    this.isEditMode = false;
+    this.dialogTitle = 'Create Customer';
+    this.dialogSubtitle = 'Capture new customer profiles.';
+    this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+
+   this.loadLatestTableCode(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
+    void this.loadCountries();
   }
 
   closeAddDialog(): void {
+    this.loadCustomers();
+    this.isEditMode = false;
+    this.dialogSubmitted = false;
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
-    this.toast.success('Saved', `${this.dialogTitle || this.pageTitle} saved successfully.`);
-    this.closeAddDialog();
+  async loadCountries(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetCountry());
+      const countries = response?.result ?? [];
+
+      this.countryOptions = countries.map((country: any) => ({
+        label: country.Name ?? '',
+        value: country.Id ?? 0
+      }));
+    } catch {
+      this.countryOptions = [];
+      this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
+    }
   }
 
-  editRow(row: Record<string, unknown>): void {
-    if (!this.addDialogConfig) {
+  onCountryChange(value: SelectFieldValue): void {
+    this.dialogCountry = value;
+    this.dialogState = null;
+    this.dialogCity = null;
+    this.stateOptions = [];
+    this.cityOptions = [];
+
+    if (!value || Number(value) === 0) {
       return;
     }
 
-    this.dialogCustomerName = typeof row['customerName'] === 'string' ? row['customerName'] : String(row['name'] ?? '');
-    this.dialogBranch = typeof row['branch'] === 'string' ? row['branch'] : null;
-    this.showAddDialog = true;
-    this.toast.info('Edit Mode', `Editing ${String(row['name'] ?? row['code'] ?? this.pageTitle)}.`);
+    void this.loadStates(Number(value));
   }
 
-  deleteRow(row: Record<string, unknown>): void {
-    const rowIndex = this.tableRows.indexOf(row);
+  async loadStates(countryId: number): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetStateByCountryId(countryId));
+      const states = response?.result ?? [];
 
-    if (rowIndex >= 0) {
-      this.tableRows.splice(rowIndex, 1);
+      this.stateOptions = states.map((state: any) => ({
+        label: state.Name ?? '',
+        value: state.Id ?? 0
+      }));
+    } catch {
+      this.stateOptions = [];
+      this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
+    }
+  }
+
+  onStateChange(value: SelectFieldValue): void {
+    this.dialogState = value;
+    this.dialogCity = null;
+    this.cityOptions = [];
+
+    if (!value || Number(value) === 0) {
+      return;
     }
 
-    this.toast.warn('Deleted', `${String(row['name'] ?? row['code'] ?? 'Record')} removed successfully.`);
+    void this.loadCities(Number(value));
   }
 
-  activateRow(row: Record<string, unknown>): void {
-    row['status'] = 'Active';
-    this.toast.success('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as active.`);
+  async loadCities(stateId: number): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetCityByStateId(stateId));
+      const cities = response?.result ?? [];
+
+      this.cityOptions = cities.map((city: any) => ({
+        label: city.Name ?? '',
+        value: city.Id ?? 0
+      }));
+    } catch {
+      this.cityOptions = [];
+      this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
+    }
   }
 
-  deactivateRow(row: Record<string, unknown>): void {
-    row['status'] = 'Inactive';
-    this.toast.info('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as inactive.`);
+
+
+
+  
+  async submitAddDialog(): Promise<void> {
+    this.dialogSubmitted = true;
+
+    if (!this.isDialogFormValid()) {
+      return;
+    }
+
+    this.dialogSaving = true;
+
+    const payload: Customer = {
+      Id: this.dialogId,
+      Code: this.dialogCode.trim(),
+      Name: this.dialogCustomerName.trim(),
+      MobileNo: this.dialogMobileNo.trim(),
+      EmailId: this.dialogEmailId.trim(),
+      AddressLine1: this.dialogAddressLine1.trim(),
+      CountryId: Number(this.dialogCountry || 0) || null,
+      StateId: Number(this.dialogState || 0) || null,
+      CityId: Number(this.dialogCity || 0) || null,
+      Pincode: this.dialogPincode.trim(),
+      DateOfBirth: this.dialogDateOfBirth || null,
+      Gender: String(this.dialogGender || ''),
+      MemberNo: Number(this.dialogIsMember || 0) === 1 ? this.dialogMemberNo.trim() : '',
+      OpeningBalance: Number(this.dialogOpeningBalance || 0),
+      IsMember: Number(this.dialogIsMember || 0) === 1,
+      Remarks: this.dialogRemarks.trim(),
+      OrgId: Number(this.userDetails?.OrgId || 0),
+      IsActive: true,
+      CreatedBy: Number(this.userDetails?.UserId || 0),
+      CreatedDate: new Date().toISOString(),
+      UpdatedBy: Number(this.userDetails?.UserId || 0),
+      UpdatedDate: this.dialogId ? new Date().toISOString() : null,
+      IsDeleted: false
+    };
+
+    try {
+      let response: any;
+
+      if (!payload.Id) {
+        response = await firstValueFrom(this.customerService.create(payload));
+      } else {
+        response = await firstValueFrom(this.customerService.update(payload));
+      }
+
+      if (response.ErrorInfo.Message === true && response.result === 'AlreadyExists') {
+        this.toast.warn('Already Exists', `${payload.Name || this.pageTitle} already exists. Please use a different name.`);
+        this.dialogCustomerName = '';
+        return;
+      }
+
+      if (response.ErrorInfo.Message === true && !payload.Id) {
+        this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      if (response.ErrorInfo.Message === true && payload.Id) {
+        this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', response.ErrorInfo.Message || 'Unable to save customer.');
+    } catch {
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save customer.');
+    } finally {
+      this.dialogSaving = false;
+    }
   }
 
-  openRowActions(menu: any, event: Event, row: Record<string, unknown>): void {
+  async editRow(row: CustomerRow): Promise<void> {
+    this.resetDialogForm();
+    this.isEditMode = true;
+    this.dialogTitle = 'Edit Customer';
+    this.dialogSubtitle = 'Update the selected customer profile.';
+    this.dialogPrimaryActionLabel = 'Update';
+    this.showAddDialog = true;
+
+    try {
+      const response: any = await firstValueFrom(this.customerService.getById(row.Id ?? 0));
+      const result = response.result ?? {};
+      const customer = Array.isArray(result) ? (result[0] ?? {}) : result;
+
+      this.dialogId = customer.Id ?? customer.id ?? 0;
+      this.dialogCode = customer.Code ?? customer.code ?? '';
+      this.dialogCustomerName = customer.Name ?? customer.name ?? '';
+      this.dialogMobileNo = customer.MobileNo ?? customer.mobileNo ?? '';
+      this.dialogEmailId = customer.EmailId ?? customer.emailId ?? '';
+      this.dialogAddressLine1 = customer.AddressLine1 ?? customer.addressLine1 ?? '';
+      this.dialogPincode = customer.Pincode ?? customer.pincode ?? '';
+      const dateOfBirth = customer.DateOfBirth ?? customer.dateOfBirth ?? null;
+      this.dialogDateOfBirth = dateOfBirth ? String(dateOfBirth).split('T')[0] : '';
+      this.dialogGender = customer.Gender ?? customer.gender ?? null;
+      this.dialogMemberNo = customer.MemberNo ?? customer.memberNo ?? '';
+      const openingBalance = customer.OpeningBalance ?? customer.openingBalance;
+      this.dialogOpeningBalance = openingBalance != null ? String(openingBalance) : '';
+      this.dialogIsMember = (customer.IsMember ?? customer.isMember) ? 1 : 0;
+      this.dialogRemarks = customer.Remarks ?? customer.remarks ?? '';
+
+      await this.loadCountries();
+      this.dialogCountry = customer.CountryId ?? customer.countryId ?? null;
+
+      if (this.dialogCountry) {
+        await this.loadStates(Number(this.dialogCountry));
+      }
+
+      this.dialogState = customer.StateId ?? customer.stateId ?? null;
+
+      if (this.dialogState) {
+        await this.loadCities(Number(this.dialogState));
+      }
+
+      this.dialogCity = customer.CityId ?? customer.cityId ?? null;
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load customers. Please check and try again.');
+    }
+  }
+
+  async deleteRow(row: CustomerRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.customerService.delete(row.Id ?? 0));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deleted', `${String(row.Name ?? row.Code ?? 'Record')} deleted successfully.`);
+        this.loadCustomers();
+        return;
+      }
+
+      this.toast.error('Delete Failed', response.ErrorInfo.Message || `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Delete Failed', `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
+  }
+
+  async activateRow(row: CustomerRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.customerService.activeInActive(row.Id ?? 0, true));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Activated', `${String(row.Name ?? row.Code ?? 'Record')} activated successfully.`);
+        this.loadCustomers();
+        return;
+      }
+
+      this.toast.error('Activation Failed', response.ErrorInfo.Message || `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Activation Failed', `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
+  }
+
+  async deactivateRow(row: CustomerRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.customerService.activeInActive(row.Id ?? 0, false));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deactivated', `${String(row.Name ?? row.Code ?? 'Record')} deactivated successfully.`);
+        this.loadCustomers();
+        return;
+      }
+
+      this.toast.error('Deactivation Failed', response.ErrorInfo.Message || `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
+  }
+
+  openRowActions(menu: any, event: Event, row: CustomerRow): void {
     this.selectedRow = row;
+    this.rowActionItems = this.getRowActionItems(row);
     menu.toggle(event);
+  }
+
+  confirmDeleteRow(row: CustomerRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this customer');
+
+    this.confirmationService.confirm({
+      header: 'Delete Confirmation',
+      message: `Are you sure you want to delete ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.deleteRow(row);
+      }
+    });
+  }
+
+  confirmActivateRow(row: CustomerRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this customer');
+
+    this.confirmationService.confirm({
+      header: 'Activate Confirmation',
+      message: `Are you sure you want to activate ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-success',
+      accept: () => {
+        this.activateRow(row);
+      }
+    });
+  }
+
+  confirmDeactivateRow(row: CustomerRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this customer');
+
+    this.confirmationService.confirm({
+      header: 'Deactivate Confirmation',
+      message: `Are you sure you want to deactivate ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-warn',
+      accept: () => {
+        this.deactivateRow(row);
+      }
+    });
+  }
+
+  resetDialogForm(keepCode: boolean = false): void {
+    this.dialogSubmitted = false;
+    this.dialogSaving = false;
+    this.dialogId = 0;
+    if (!keepCode) {
+      this.dialogCode = '';
+    }
+    this.dialogCustomerName = '';
+    this.dialogMobileNo = '';
+    this.dialogEmailId = '';
+    this.dialogAddressLine1 = '';
+    this.dialogCountry = null;
+    this.dialogState = null;
+    this.dialogCity = null;
+    this.dialogPincode = '';
+    this.dialogDateOfBirth = '';
+    this.dialogGender = null;
+    this.dialogMemberNo = '';
+    this.dialogOpeningBalance = '';
+    this.dialogIsMember = null;
+    this.dialogRemarks = '';
+  }
+
+  private isDialogFormValid(): boolean {
+    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+
+    return areTextFieldsValid && areSelectFieldsValid;
+  }
+
+  private applyCustomerFilters(): void {
+    const searchText = this.filterCustomerName.trim().toLowerCase();
+
+    if (!searchText) {
+      this.tableRows = [...this.allRows];
+      this.changeDetector.detectChanges();
+      return;
+    }
+
+    this.tableRows = this.allRows.filter((row) =>
+      String(row.Name ?? '').toLowerCase().includes(searchText) ||
+      String(row.Code ?? '').toLowerCase().includes(searchText) ||
+      String(row.MobileNo ?? '').toLowerCase().includes(searchText) ||
+      String(row.EmailId ?? '').toLowerCase().includes(searchText) ||
+      String(row.MemberNo ?? '').toLowerCase().includes(searchText) ||
+      String(row.Status ?? '').toLowerCase().includes(searchText)
+    );
+
+    this.changeDetector.detectChanges();
+  }
+
+  private getRowActionItems(row: CustomerRow): MenuItem[] {
+    const items: MenuItem[] = [
+      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+    ];
+
+    if (row.IsActive === true) {
+      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+    } else {
+      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    return items;
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
@@ -198,29 +621,11 @@ export class CustomersComponent {
     if (action === 'edit') {
       this.editRow(this.selectedRow);
     } else if (action === 'delete') {
-      this.deleteRow(this.selectedRow);
+      this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
-      this.activateRow(this.selectedRow);
+      this.confirmActivateRow(this.selectedRow);
     } else {
-      this.deactivateRow(this.selectedRow);
+      this.confirmDeactivateRow(this.selectedRow);
     }
   }
-
-  private resetDialogForm(): void {
-    this.dialogCustomerName = null;
-    this.dialogBranch = null;
-  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

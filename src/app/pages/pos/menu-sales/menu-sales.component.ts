@@ -8,45 +8,14 @@ import { AutocompleteFieldComponent } from '../../../components/form/autocomplet
 import { DateFieldComponent } from '../../../components/form/date-field.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { SharedTableComponent } from '../../../components/table/shared-table.component';
-import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
+import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
-const CATEGORY_OPTIONS = [
-  { label: 'Beverages', value: 'Beverages' },
-  { label: 'Bakery', value: 'Bakery' },
-  { label: 'Dairy', value: 'Dairy' },
-  { label: 'Snacks', value: 'Snacks' },
-  { label: 'Groceries', value: 'Groceries' }
-];
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
+const CATEGORY_OPTIONS: { label: string | number; value: string | number }[] = [];
+const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
 ];
-
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Reports',
-  title: 'Menu wise Sales',
-  subtitle: 'Identify the highest moving menu items.',
-  formTitle: `${'Menu wise Sales'} Filters`,
-  formDescription: `Static ${'Menu wise Sales'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Menu wise Sales',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'SKU-101', name: 'Arabica Coffee 250g', status: 'Posted' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Reports', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'category', label: 'Category', type: 'select', placeholder: 'Choose category', options: CATEGORY_OPTIONS }],
-  primaryActionLabel: `Search ${'Menu wise Sales'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Menu wise Sales',
-  rows: [{ code: 'SKU-101', name: 'Arabica Coffee 250g', status: 'Posted' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
-
 
 @Component({
   selector: 'app-menu-sales',
@@ -55,35 +24,31 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
   templateUrl: './menu-sales.component.html',
   styleUrl: './menu-sales.component.css'
 })
-export class MenuSalesComponent {
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
-  readonly formState = this.createEmptyState(this.config);
-  readonly dialogFormState = this.addDialogConfig ? this.createEmptyState(this.addDialogConfig) : {};
+export class MenuSalesComponent {  readonly formState: Record<string, string | Date | null> = {};
+  readonly dialogFormState: Record<string, string | Date | null> = {};
   showAddDialog = false;
   showFilterSidebar = false;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
+  readonly pageEyebrow = 'Reports';
+  readonly pageTitle = 'Menu wise Sales';
+  readonly pageSubtitle = 'Identify the highest moving menu items.';
   readonly categoryOptions = CATEGORY_OPTIONS;
-  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
-  readonly dialogFields = this.addDialogConfig?.fields ?? [];
+  
+  readonly filterTitle = `${'Menu wise Sales'} Filters`;
+  readonly filterDescription = `API data will be loaded for ${'Menu wise Sales'.toLowerCase()}.`;
+  readonly fields: any[] = [{ key: 'category', label: 'Category', type: 'select', placeholder: 'Choose category', options: CATEGORY_OPTIONS }];
+  readonly primaryActionLabel = `Search ${'Menu wise Sales'}`;
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  readonly dialogTitle = '';
+  readonly dialogSubtitle = '';
+  readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
+  readonly tableTitle = 'Menu wise Sales';
+  readonly tableCaption = 'Menu wise Sales';
+  readonly tableColumns = CODE_NAME_COLUMNS;
+  tableRows: Record<string, unknown>[] = [];
+    readonly showAddNewButton = false;
+    readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
     readonly showFilterButton = true;
 
   getFieldValue(fieldKey: string): string | Date | null {
@@ -109,10 +74,11 @@ export class MenuSalesComponent {
   }
 
   resetForm(): void {
-    this.resetState(this.formState, this.config);
+    this.resetState(this.formState, this.fields);
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 
@@ -120,11 +86,11 @@ export class MenuSalesComponent {
     this.showFilterSidebar = false;
   }
   openAddDialog(): void {
-    if (!this.addDialogConfig) {
+    if (!this.showAddNewButton) {
       return;
     }
 
-    this.resetState(this.dialogFormState, this.addDialogConfig);
+    this.resetState(this.dialogFormState, this.dialogFields);
     this.showAddDialog = true;
   }
 
@@ -136,27 +102,21 @@ export class MenuSalesComponent {
     this.closeAddDialog();
   }
 
-  trackByField(_: number, field: FeatureFieldConfig): string {
+  trackByField(_: number, field: any): string {
     return field.key;
   }
 
-  private createEmptyState(config: FeaturePageConfig): Record<string, string | Date | null> {
-    return config.fields.reduce<Record<string, string | Date | null>>((state, field) => {
-      state[field.key] = null;
-      return state;
-    }, {});
-  }
-
-  private resetState(state: Record<string, string | Date | null>, config: FeaturePageConfig): void {
+  private resetState(state: Record<string, string | Date | null>, fields: any[]): void {
     for (const key of Object.keys(state)) {
       delete state[key];
     }
 
-    for (const field of config.fields) {
+    for (const field of fields) {
       state[field.key] = null;
     }
   }
 }
+
 
 
 

@@ -1,33 +1,290 @@
-:host { display: block; }
-.billing-page { display: grid; gap: 1rem; padding: 1.1rem 0.2rem 1.25rem; }
-.hero-panel { display: grid; gap: 1rem; padding: 1.2rem 1.3rem; border: 1px solid var(--app-border); border-radius: 1.25rem; background: linear-gradient(135deg, rgba(231, 243, 237, 0.96), rgba(255, 255, 255, 0.98)); }
-.hero-panel h1, .section-heading h2, .product-card h3 { margin: 0; }
-.page-subtitle { margin: 0.45rem 0 0; color: var(--app-text-muted); max-width: 52rem; }
-.summary-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
-.summary-strip article, .product-card { border: 1px solid var(--app-border); border-radius: 1rem; background: rgba(255, 255, 255, 0.97); padding: 1rem; box-shadow: 0 8px 18px rgba(24, 55, 37, 0.04); }
-.summary-strip span, .totals-card span, .product-card p, .cart-item p { color: var(--app-text-muted); }
-.summary-strip strong { display: block; margin-top: 0.35rem; font-size: 1.4rem; }
-.billing-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.95fr); gap: 1rem; align-items: start; }
-.section-heading { margin-bottom: 1rem; }
-.lookup-grid, .payment-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; margin-bottom: 1rem; }
-.product-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
-.product-top, .product-footer, .cart-item, .totals-card div, .action-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.product-category { font-size: 0.78rem; font-weight: 700; color: var(--app-primary); }
-.product-stock { font-size: 0.75rem; font-weight: 600; color: var(--app-primary-strong); }
-.product-stock.low-stock { color: #dc2626; }
-.product-footer { margin-top: 1rem; }
-.barcode-text { margin: 0.45rem 0 0; font-size: 0.8rem; }
-.cart-list { display: grid; gap: 0.75rem; }
-.cart-item { padding: 0.9rem; border: 1px solid var(--app-border); border-radius: 1rem; background: rgba(255, 255, 255, 0.98); }
-.qty-actions { display: inline-flex; align-items: center; gap: 0.55rem; }
-.qty-actions button { width: 2rem; height: 2rem; border: 1px solid var(--app-border); border-radius: 999px; background: #fff; cursor: pointer; }
-.remove-link { border: 0; background: transparent; color: #dc2626; font-weight: 700; cursor: pointer; }
-.totals-card { margin-top: 1rem; display: grid; gap: 0.7rem; }
-.grand-total { padding-top: 0.75rem; border-top: 1px solid var(--app-border); }
-.action-row { margin-top: 1rem; justify-content: flex-end; }
-.payment-card { overflow: hidden; }
-.payment-summary { display: grid; align-content: center; gap: 0.2rem; padding: 0.85rem 1rem; border: 1px solid var(--app-border); border-radius: 1rem; background: rgba(255, 255, 255, 0.98); }
-.payment-summary span { font-size: 0.78rem; color: var(--app-text-muted); }
-.empty-state { padding: 1rem; border: 1px dashed var(--app-border-strong); border-radius: 1rem; text-align: center; color: var(--app-text-muted); }
-@media (max-width: 1100px) { .billing-layout { grid-template-columns: 1fr; } .lookup-grid, .payment-grid, .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 768px) { .billing-page { padding-inline: 0; } .summary-strip, .lookup-grid, .payment-grid, .product-grid, .cart-item { grid-template-columns: 1fr; } .cart-item { display: grid; } }
+:host {
+  display: block;
+}
+
+.billing-page {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.55rem 0 0.85rem;
+}
+
+.billing-header h1,
+.product-card h3,
+.section-heading h2,
+.cart-header h2 {
+  margin: 0;
+}
+
+.page-subtitle {
+  margin: 0.15rem 0 0;
+  color: var(--app-text-muted);
+  max-width: 60rem;
+}
+
+.billing-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.summary-card {
+  position: relative;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-surface);
+  padding: 0.85rem 0.95rem;
+  box-shadow: var(--app-shadow);
+}
+
+.summary-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.28rem;
+  border-radius: 1rem 0 0 1rem;
+  background: rgba(var(--app-primary-rgb), 0.9);
+}
+
+.summary-card span,
+.totals-card span,
+.product-card p,
+.cart-item p,
+.payment-summary span {
+  color: var(--app-text-muted);
+}
+
+.summary-card strong {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 1.05rem;
+  color: var(--app-text);
+}
+
+.billing-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.section-heading {
+  margin-bottom: 0.7rem;
+}
+
+.billing-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr);
+  gap: 0.6rem;
+  padding: 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.04), rgba(var(--app-primary-rgb), 0.02));
+}
+
+.tool-block {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.tool-label,
+.cart-section-title span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.55rem;
+}
+
+.product-card {
+  display: grid;
+  gap: 0.45rem;
+  min-height: 8.4rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-surface);
+  padding: 0.75rem;
+  box-shadow: var(--app-shadow);
+}
+
+.product-top,
+.product-footer,
+.cart-item,
+.totals-card div,
+.action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.product-category {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--app-primary);
+}
+
+.product-stock {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--app-primary-strong);
+}
+
+.product-stock.low-stock {
+  color: #dc2626;
+}
+
+.barcode-text {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.cart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.45rem;
+}
+
+.cart-customer-name {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(var(--app-primary-rgb), 0.1);
+  color: rgb(var(--app-primary-rgb));
+  font-weight: 700;
+}
+
+.cart-section-title {
+  margin-top: 0.55rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--app-border);
+}
+
+.cart-list {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+}
+
+.cart-item {
+  padding: 0.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-surface);
+}
+
+.cart-item-main {
+  min-width: 0;
+}
+
+.qty-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qty-actions button {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface-strong);
+  color: var(--app-text);
+  cursor: pointer;
+}
+
+.remove-link {
+  border: 0;
+  background: transparent;
+  color: #dc2626;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.totals-card {
+  margin-top: 0.45rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.grand-total {
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--app-border);
+}
+
+.grand-total strong {
+  font-size: 1.06rem;
+}
+
+.payment-card {
+  overflow: hidden;
+}
+
+.payment-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.payment-summary {
+  display: grid;
+  align-content: center;
+  gap: 0.2rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-surface);
+}
+
+.empty-state {
+  padding: 1rem;
+  border: 1px dashed var(--app-border-strong);
+  border-radius: 1rem;
+  text-align: center;
+  color: var(--app-text-muted);
+}
+
+.action-row {
+  margin-top: 0.9rem;
+  justify-content: flex-end;
+}
+
+.clear-order-button {
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 1100px) {
+  .billing-stats,
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .billing-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .billing-stats,
+  .billing-tools,
+  .product-grid,
+  .payment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-header,
+  .cart-item {
+    display: grid;
+  }
+}

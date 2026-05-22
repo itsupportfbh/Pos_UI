@@ -15,7 +15,10 @@
 
 .field-input {
   width: 100%;
-  resize: vertical;
+  min-height: 6.5rem;
+  line-height: 1.5;
+  resize: vertical !important;
+  overflow: auto !important;
 }
 
 .field-input.field-invalid {

@@ -6,7 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 type TextFieldRule = {
   enabled: boolean;
   message: string;
-  pattern: RegExp;
+  isValid: (value: string) => boolean;
 };
 
 @Component({
@@ -32,6 +32,7 @@ export class TextFieldComponent {
   @Input() emailOnly = false;
   @Input() textOnly = false;
   @Input() textWithNumbersOnly = false;
+  @Input() percentageOnly = false;
   @Input() numbersWithSpecialCharactersOnly = false;
   @Input() textWithSpecialCharactersOnly = false;
   @Input() formatErrorMessage = '';
@@ -40,8 +41,12 @@ export class TextFieldComponent {
   @Input() readonly = false;
   @Input() minlength?: number;
   @Input() maxlength?: number;
-  @Input() model = '';
-  @Output() modelChange = new EventEmitter<string>();
+  @Input() inputMode = '';
+  @Input() step?: string | number;
+  @Input() min?: number;
+  @Input() max?: number;
+  @Input() model: string | number = '';
+  @Output() modelChange = new EventEmitter<any>();
 
   get showRequiredError(): boolean {
     return this.submitted && this.isRequiredValueMissing;
@@ -67,8 +72,17 @@ export class TextFieldComponent {
     return this.formatErrorMessage || this.activeFormatRule?.message || `${this.label} format is invalid.`;
   }
 
-  onModelChange(value: string): void {
-    this.modelChange.emit(value);
+  onModelChange(value: string | number): void {
+    if (this.type === 'number') {
+      const numericValue = typeof value === 'number' ? value : Number(value);
+      this.modelChange.emit(Number.isNaN(numericValue) ? value : numericValue);
+    } else {
+      this.modelChange.emit(value);
+    }
+  }
+
+  private get modelValue(): string {
+    return String(this.model ?? '');
   }
 
   private get activeFormatRule(): TextFieldRule | null {
@@ -76,32 +90,40 @@ export class TextFieldComponent {
       {
         enabled: this.numbersOnly,
         message: `${this.label} allows numbers only.`,
-        pattern: /^[0-9]+$/
+        isValid: (value) => /^[0-9]+$/.test(value)
       },
       {
         enabled: this.emailOnly,
         message: `Enter a valid ${this.label.toLowerCase()}.`,
-        pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        isValid: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
       },
       {
         enabled: this.textOnly,
         message: `${this.label} allows text only.`,
-        pattern: /^[A-Za-z\s]+$/
+        isValid: (value) => /^[A-Za-z\s]+$/.test(value)
       },
       {
         enabled: this.textWithNumbersOnly,
         message: `${this.label} allows text and numbers only.`,
-        pattern: /^[A-Za-z0-9\s]+$/
+        isValid: (value) => /^[A-Za-z0-9\s]+$/.test(value)
+      },
+      {
+        enabled: this.percentageOnly,
+        message: `${this.label} should be between 0 and 100.`,
+        isValid: (value) => {
+          const percentage = Number(value);
+          return !Number.isNaN(percentage) && percentage >= 0 && percentage <= 100;
+        }
       },
       {
         enabled: this.numbersWithSpecialCharactersOnly,
         message: `${this.label} allows numbers and special characters only.`,
-        pattern: /^[0-9\s!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/
+        isValid: (value) => /^[0-9\s!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(value)
       },
       {
         enabled: this.textWithSpecialCharactersOnly,
         message: `${this.label} allows text and special characters only.`,
-        pattern: /^[A-Za-z\s!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/
+        isValid: (value) => /^[A-Za-z\s!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+$/.test(value)
       }
     ];
 
@@ -109,13 +131,13 @@ export class TextFieldComponent {
   }
 
   private get isRequiredValueMissing(): boolean {
-    return this.required && !this.model.trim();
+    return this.required && !this.modelValue.trim();
   }
 
   private get isFormatInvalid(): boolean {
-    const value = this.model.trim();
+    const value = this.modelValue.trim();
     const activeRule = this.activeFormatRule;
 
-    return !!value && !!activeRule && !activeRule.pattern.test(value);
+    return !!value && !!activeRule && !activeRule.isValid(value);
   }
 }

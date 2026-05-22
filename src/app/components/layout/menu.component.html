@@ -1,7 +1,32 @@
 @if (sidebarOpen) {
   <aside class="sidebar sidebar-open">
     <nav class="menu-list">
-      @for (group of menuItems; track group.key) {
+      @if (officeOptions.length > 1) {
+        <section class="office-switcher">
+          @for (option of officeOptions; track option.value) {
+            <button
+              type="button"
+              class="office-switcher-button"
+              [class.active]="currentOfficeScope === option.value"
+              (click)="onOfficeScopeSelect(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </section>
+      }
+
+      <section class="menu-search">
+        <i class="pi pi-search"></i>
+        <input
+          type="text"
+          placeholder="Search menu"
+          [value]="menuSearchText"
+          (input)="onMenuSearchChange($any($event.target).value)"
+        />
+      </section>
+
+      @for (group of filteredMenuItems; track group.key) {
         <section class="menu-group">
           <button type="button" class="menu-group-header" (click)="toggleGroup(group.key)">
             <i [class]="group.icon"></i>
@@ -17,8 +42,8 @@
                 <button
                   type="button"
                   class="menu-item"
-                  [class.active]="activeMenuKey === item.key"
-                  (click)="onSelect(item.key)"
+                  [class.active]="activeMenuKey === item.route"
+                  (click)="onSelect(item)"
                 >
                   <span>
                     <strong>{{ item.label }}</strong>
@@ -28,6 +53,12 @@
               }
             </div>
           }
+        </section>
+      }
+
+      @if (!filteredMenuItems.length) {
+        <section class="menu-empty-state">
+          <span>No menus found.</span>
         </section>
       }
     </nav>

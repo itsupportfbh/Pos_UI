@@ -1,13 +1,33 @@
-<section class="shell-frame">
-  <app-header [appName]="appName" [user]="user" (menuToggle)="onMenuToggle()" (logoutClick)="onLogoutClick()" />
-
-  <section class="workspace" [class.sidebar-visible]="sidebarOpen">
-    <app-menu
-      [sidebarOpen]="sidebarOpen"
-      [activeMenuKey]="activeMenuKey"
-      [menuItems]="menuItems"
-      (menuSelect)="onMenuSelect($event)"
+<section class="shell-frame" [class.shell-frame-display]="chromeHidden">
+  @if (!chromeHidden) {
+    <app-header
+      [appName]="appName"
+      [appLogoUrl]="appLogoUrl"
+      [user]="user"
+      (menuToggle)="onMenuToggle()"
+      (changePasswordClick)="onChangePasswordClick()"
+      (logoutClick)="onLogoutClick()"
     />
+  }
+
+  <section class="workspace" [class.sidebar-visible]="sidebarOpen && !chromeHidden" [class.workspace-display]="chromeHidden">
+    @if (sidebarOpen && !chromeHidden) {
+      <button type="button" class="sidebar-backdrop" aria-label="Close menu" (click)="onMenuToggle()"></button>
+    }
+
+    @if (!chromeHidden) {
+      <app-menu
+        [appName]="appName"
+        [appLogoUrl]="appLogoUrl"
+        [sidebarOpen]="sidebarOpen"
+        [activeMenuKey]="activeMenuKey"
+        [menuItems]="menuItems"
+        [currentOfficeScope]="currentOfficeScope"
+        [officeOptions]="officeOptions"
+        (menuSelect)="onMenuSelect($event)"
+        (officeScopeChange)="onOfficeScopeChange($event)"
+      />
+    }
 
     <section class="content-panel">
       <div class="content-scroll">
@@ -16,5 +36,7 @@
     </section>
   </section>
 
-  <app-footer [appName]="appName" [description]="footerDescription" />
+  @if (!chromeHidden) {
+    <app-footer [appName]="appName" [appLogoUrl]="appLogoUrl" [description]="footerDescription" />
+  }
 </section>

@@ -1,4 +1,6 @@
 <section class="feature-page">
+  <p-confirmDialog />
+
   <header class="page-header hero-panel">
     <div>
       <p class="eyebrow">{{ pageEyebrow }}</p>
@@ -10,100 +12,85 @@
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">Static Data</p>
         <h2>{{ tableTitle }}</h2>
-        @if (tableDescription) {
-          <p class="section-copy">{{ tableDescription }}</p>
-        }</div>
+      </div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()" [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton" [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader" (toolbarButtonClick)="openAddDialog()">
+    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
+      (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
-        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger" (click)="openRowActions(rowMenu, $event, row)"></button>
+        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
+          (click)="openRowActions(rowMenu, $event, row)"></button>
       </ng-template>
     </app-shared-table>
   </p-card>
 </section>
 
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false" [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog" [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
+<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+  [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
+  [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
   <p-card class="feature-card filter-drawer-card">
-      <section class="filter-panel filter-panel-compact">
-        <div class="filter-panel-header">
-          <div>
-            <h2>{{ filterTitle }}</h2>
-          </div>
+    <section class="filter-panel filter-panel-compact">
+      <div class="filter-panel-header">
+        <div>
+          <h2>{{ filterTitle }}</h2>
         </div>
-
-        <section class="field-grid">
-          <app-select-field
-            label="Role"
-            inputId="role"
-            placeholder="Choose role"
-            [options]="roleOptions"
-            [model]="filterRole"
-            (modelChange)="filterRole = $event"
-          />
-
-          <app-select-field
-            label="Branch"
-            inputId="branch"
-            placeholder="Choose branch"
-            [options]="branchOptions"
-            [model]="filterBranch"
-            (modelChange)="filterBranch = $event"
-          />
-        </section>
-
-        <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel" [showSecondary]="showSecondaryAction" (secondaryClick)="resetForm()" />
-      </section>
-    </p-card>
-</p-dialog>
-@if (addDialogConfig) {
-  <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
-    <ng-template pTemplate="header">
-      <div class="dialog-copy">
-        <p class="eyebrow">Create Master</p>
-        <h3>{{ dialogTitle }}</h3>
-        <p>{{ dialogSubtitle }}</p>
       </div>
-    </ng-template>
 
-    <section class="field-grid dialog-grid">
-      <app-text-field
-        label="Role Name"
-        inputId="dialog-roleName"
-        placeholder="Senior Cashier"
-        [model]="dialogRoleName"
-        (modelChange)="dialogRoleName = $event"
-      />
+      <section class="field-grid">
+        <app-multiselect-field label="Organization" inputId="filter-organizations" placeholder="Choose organizations"
+          [options]="organizationOptions" [model]="filterOrganizations" (modelChange)="filterOrganizations = $event" />
+      </section>
 
-      <app-select-field
-        label="Branch"
-        inputId="dialog-branch"
-        placeholder="Choose branch"
-        [options]="branchOptions"
-        [model]="dialogBranch"
-        (modelChange)="dialogBranch = $event"
-      />
+      <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
+        [showSecondary]="showSecondaryAction" (primaryClick)="searchRoles()" (secondaryClick)="resetForm()" />
     </section>
+  </p-card>
+</p-dialog>
 
-    <div class="dialog-actions">
-      <app-action-buttons
-        [primaryLabel]="dialogPrimaryActionLabel"
-        secondaryLabel="Cancel"
-        primaryIcon="pi pi-save"
-        secondaryIcon="pi pi-times"
-        [secondaryText]="true"
-        [secondaryOutlined]="false"
-        (primaryClick)="submitAddDialog()"
-        (secondaryClick)="closeAddDialog()"
-      />
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+  [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
+  <ng-template pTemplate="header">
+    <div class="dialog-copy">
+      <h3>{{ dialogTitle }}</h3>
+      <p>{{ dialogSubtitle }}</p>
     </div>
-  </p-dialog>
-}
+  </ng-template>
 
-<p-dialog [(visible)]="showPermissionsDialog" [modal]="true" [style]="{ width: '82rem', maxWidth: '98vw' }" styleClass="permissions-dialog" [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closePermissionsDialog()">
+  <section class="field-grid dialog-grid">
+      @if (userDetails.RoleId === 1) {
+        <app-select-field label="Organization" inputId="dialog-organization" placeholder="Choose organization"
+          [options]="organizationOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+          errorMessage="Organization is required." [numberValue]="true" [model]="dialogOrganization"
+          (modelChange)="onDialogOrganizationChange($event)" />
+      }
+
+    <app-text-field label="Code" inputId="dialog-code" placeholder="Role Code" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required."
+      [model]="dialogCode" (modelChange)="dialogCode = $event" />
+
+    <app-text-field label="Name" inputId="dialog-name" placeholder="Role Name" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."
+      [textWithNumbersOnly]="true" formatErrorMessage="Name allows text and numbers only."
+      [model]="dialogName" (modelChange)="dialogName = $event" />
+
+    <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks"
+      [model]="dialogRemarks" (modelChange)="dialogRemarks = $event" />
+  </section>
+
+  <div class="dialog-actions">
+    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)" />
+  </div>
+</p-dialog>
+
+<p-dialog [(visible)]="showPermissionsDialog" [modal]="true" [style]="{ width: '82rem', maxWidth: '98vw' }"
+  styleClass="permissions-dialog" [draggable]="false" [resizable]="false" [closable]="true"
+  (onHide)="closePermissionsDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
       <p class="eyebrow">Role Permissions</p>
@@ -119,13 +106,8 @@
     </div>
 
     <div class="permissions-search">
-      <app-text-field
-        label="Search Permissions"
-        inputId="permissions-search"
-        placeholder="Search module or page"
-        [model]="permissionSearchText"
-        (modelChange)="permissionSearchText = $event"
-      />
+      <app-text-field label="Search Permissions" inputId="permissions-search" placeholder="Search module or page"
+        [model]="permissionSearchText" (modelChange)="permissionSearchText = $event" />
     </div>
 
     <div class="permissions-table">
@@ -162,15 +144,8 @@
   </section>
 
   <div class="permissions-actions">
-    <app-action-buttons
-      primaryLabel="Save Permissions"
-      secondaryLabel="Cancel"
-      primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times"
-      [secondaryText]="true"
-      [secondaryOutlined]="false"
-      (primaryClick)="savePermissionsDialog()"
-      (secondaryClick)="closePermissionsDialog()"
-    />
+    <app-action-buttons primaryLabel="Save Permissions" secondaryLabel="Clear" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="savePermissionsDialog()" (secondaryClick)="closePermissionsDialog()" />
   </div>
 </p-dialog>

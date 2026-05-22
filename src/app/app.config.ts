@@ -1,19 +1,23 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
+import { HashLocationStrategy, LocationStrategy } from '@angular/common';
 import { MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
 
 import { routes } from './app.routes';
+import { authTokenInterceptor } from './services/auth-token.interceptor';
 import { RuntimeConfigService } from './services/runtime-config.service';
+import { unauthorizedInterceptor } from './services/unauthorized.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([authTokenInterceptor, unauthorizedInterceptor])),
     provideAppInitializer(() => inject(RuntimeConfigService).load()),
     provideRouter(routes),
+    { provide: LocationStrategy, useClass: HashLocationStrategy },
     MessageService,
     providePrimeNG({
       ripple: true,

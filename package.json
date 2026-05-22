@@ -1,9 +1,26 @@
 {
   "name": "unity-work-pos",
   "version": "0.0.0",
+  "main": "main.js",
+  "build": {
+    "appId": "com.unitywork.pos",
+    "productName": "Unity Work POS",
+    "win": {
+      "target": "nsis",
+      "icon": "build/icons/cspl-logo.ico"
+    },
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "package.json"
+    ]
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "electron": "electron .",
+    "dist": "electron-builder",
+    "electron:build": "ng build && electron .",
     "build": "ng build",
     "build:mobile": "ng build",
     "watch": "ng build --watch --configuration development",
@@ -29,10 +46,12 @@
     "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "^8.3.0",
     "@primeuix/themes": "^2.0.3",
+    "better-sqlite3": "^12.10.0",
     "express": "^5.1.0",
     "primeicons": "^7.0.0",
     "primeng": "^21.1.5",
     "rxjs": "~7.8.0",
+    "sqlite3": "^6.0.1",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
@@ -41,6 +60,8 @@
     "@angular/compiler-cli": "^21.2.0",
     "@types/express": "^5.0.1",
     "@types/node": "^20.17.19",
+    "electron": "^41.2.1",
+    "electron-builder": "^26.8.1",
     "jsdom": "^28.0.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",

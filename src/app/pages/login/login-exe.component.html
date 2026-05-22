@@ -1,0 +1,43 @@
+<main class="exe-login-page">
+  <section class="exe-login-shell">
+    <p-card class="exe-login-card">
+      <div class="exe-login-header">
+        <div class="exe-brand">
+          <img [src]="loginLogoUrl" alt="Logo" />
+          <div>
+            <strong>Unity POS</strong>
+            <span>Windows EXE login</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="exe-login-body">
+        <div class="exe-lock-panel">
+          <div class="lock-icon"></div>
+          <p>Enter the password</p>
+          <div class="pin-row">
+            @for (digit of pinDigits; track $index) {
+            <span class="pin-box" [class.filled]="!!digit"></span>
+            }
+          </div>
+        </div>
+
+        <div class="exe-keypad-grid">
+          @for (key of keypadKeys; track key) {
+          <button pButton type="button" class="pin-key" (click)="appendDigit(key)">{{ key }}</button>
+          }
+          <button pButton type="button" class="pin-key login-key" (click)="submit()"
+            [disabled]="loginSaving">LOGIN</button>
+          <button pButton type="button" class="pin-key zero-key" (click)="appendDigit('0')">0</button>
+          <button pButton type="button" class="pin-key clear-key" (click)="clearPin()">CLEAR</button>
+        </div>
+
+        <p-message *ngIf="errorMessage" severity="error" [text]="errorMessage"></p-message>
+      </div>
+    </p-card>
+    @if (showShiftAssignmentDialog) {
+    <app-shift-assignment *ngIf="showShiftAssignmentDialog" [(visible)]="showShiftAssignmentDialog"
+      (shiftAssigned)="onShiftAssigned($event)" [currentUser]="selectedUserDetails"></app-shift-assignment>
+    }
+  </section>
+</main>

@@ -1,75 +1,223 @@
 <section class="feature-page">
-  <header class="page-header hero-panel">
-    <div>
-      <p class="eyebrow">{{ pageEyebrow }}</p>
-      <h1>{{ pageTitle }}</h1>
-      <p class="page-subtitle">{{ pageSubtitle }}</p>
+  <p-confirmDialog />
+
+  <header class="organization-page-header">
+    <div class="organization-page-title">
+      <div class="organization-page-heading">
+        <h1>{{ pageTitle }}</h1>
+        <p>{{ pageSubtitle }}</p>
+      </div>
     </div>
   </header>
 
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">Static Data</p>
         <h2>{{ tableTitle }}</h2>
-        @if (tableDescription) {
-        <p class="section-copy">{{ tableDescription }}</p>
+      </div>
+      <div class="organization-card-actions">
+        <label class="card-search-field" for="organization-card-search">
+          <i class="pi pi-search"></i>
+          <input id="organization-card-search" type="text" placeholder="Search organizations"
+            [value]="cardSearchText" (input)="onCardSearchChange($any($event.target).value)" />
+        </label>
+          <button pButton type="button" icon="pi pi-list" [label]="addCodeTemplateButtonLabel" class="p-button-outlined"
+            (click)="openCodeTemplateDialog()"></button>
+        @if (showAddNewButton) {
+          <button pButton type="button" icon="pi pi-plus" [label]="addNewButtonLabel" (click)="openAddDialog()"></button>
         }
       </div>
     </div>
 
-    <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
-      (toolbarButtonClick)="openAddDialog()">
-      <ng-template #rowActions let-row>
+    <section class="organization-card-grid">
+      @for (row of tableRows; track row.Id) {
+        <article class="organization-card">
+          <div class="organization-card-head">
+            <div class="organization-card-top">
+              @if (row.ImageUrl) {
+                <img class="organization-card-image" [src]="row.ImageUrl" [alt]="row.Name || 'Organization'" />
+              } @else {
+                <div class="organization-card-mark">
+                  {{ (row.Name || 'O').charAt(0).toUpperCase() }}
+                </div>
+              }
+
+              <div class="organization-card-copy">
+                <h3 [title]="row.Name || '-'">{{ row.Name || '-' }}</h3>
+                <div class="organization-card-subline">
+                  <span class="organization-card-code">{{ row.Code || '-' }}</span>
+                  @if (row.Website) {
+                    <span class="organization-card-dot"></span>
+                    <a class="organization-card-website" [href]="getWebsiteUrl(row.Website)" target="_blank" rel="noopener noreferrer">
+                      {{ row.Website }}
+                    </a>
+                  }
+                </div>
+              </div>
+            </div>
+            <div class="organization-card-menu">
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
         <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
           (click)="openRowActions(rowMenu, $event, row)"></button>
-      </ng-template>
-    </app-shared-table>
+            </div>
+          </div>
+
+          <div class="organization-card-body">
+            <div class="organization-card-meta-row organization-card-meta-wide">
+              <span class="organization-card-meta-label">Email</span>
+              <strong [title]="row.Email || '-'">{{ row.Email || '-' }}</strong>
+            </div>
+
+            <div class="organization-card-meta-row">
+              <span class="organization-card-meta-label">Phone</span>
+              <strong>{{ row.Phone || '-' }}</strong>
+            </div>
+
+            <div class="organization-card-meta-row organization-card-status-row">
+              <span class="organization-card-meta-label">Status</span>
+              <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+                [class.status-inactive]="row.Status === 'Inactive'">
+                {{ row.Status }}
+              </span>
+            </div>
+          </div>
+        </article>
+      } @empty {
+        <div class="organization-card-empty">
+          No organizations found.
+        </div>
+      }
+    </section>
   </p-card>
 </section>
 
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+<p-dialog [(visible)]="showViewSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
   [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
-  [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
+  [style]="{ width: '34rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeViewSidebar()">
   <p-card class="feature-card filter-drawer-card">
     <section class="filter-panel filter-panel-compact">
       <div class="filter-panel-header">
         <div>
-          <h2>{{ filterTitle }}</h2>
+          <h2>Organization Details</h2>
         </div>
       </div>
 
-      <section class="field-grid">
-        <app-text-field label="Organization Name" inputId="companyName" placeholder="Unity Work Restaurants"
-          [model]="filterCompanyName" (modelChange)="filterCompanyName = $event" />
-      </section>
+      @if (viewOrganization) {
+        <section class="organization-view-shell">
+          <div class="organization-view-hero">
+            @if (viewOrganization.ImageUrl) {
+              <img class="organization-view-image" [src]="viewOrganization.ImageUrl" [alt]="viewOrganization.Name || 'Organization'" />
+            } @else {
+              <div class="organization-view-mark">
+                {{ (viewOrganization.Name || 'O').charAt(0).toUpperCase() }}
+              </div>
+            }
+            <div class="organization-view-copy">
+              <p>Organization</p>
+              <h3 [title]="viewOrganization.Name || '-'">{{ viewOrganization.Name || '-' }}</h3>
+              <div class="organization-view-subline">
+                <span class="organization-view-code">{{ viewOrganization.Code || '-' }}</span>
+                <span class="status-badge" [class.status-active]="viewOrganization.Status === 'Active'"
+                  [class.status-inactive]="viewOrganization.Status === 'Inactive'">
+                  {{ viewOrganization.Status || '-' }}
+                </span>
+              </div>
+            </div>
+          </div>
 
-      <app-action-buttons [primaryLabel]="primaryActionLabel" [secondaryLabel]="secondaryActionLabel"
-        [showSecondary]="showSecondaryAction" (secondaryClick)="resetForm()" />
+          <div class="organization-view-section">
+            <div class="organization-view-section-head">
+              <h3>Primary Details</h3>
+            </div>
+            <div class="organization-view-grid">
+              <div class="organization-view-item organization-view-item-wide">
+                <span>Email</span>
+                <strong [title]="viewOrganization.Email || '-'">{{ viewOrganization.Email || '-' }}</strong>
+              </div>
+              <div class="organization-view-item">
+                <span>Phone</span>
+                <strong>{{ viewOrganization.Phone || '-' }}</strong>
+              </div>
+              <div class="organization-view-item">
+                <span>Website</span>
+                <strong>
+                  @if (viewOrganization.Website) {
+                    <a class="website-link" [href]="getWebsiteUrl(viewOrganization.Website)" target="_blank" rel="noopener noreferrer">
+                      {{ viewOrganization.Website }}
+                    </a>
+                  } @else {
+                    -
+                  }
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="organization-view-section">
+            <div class="organization-view-section-head">
+              <h3>Registration Details</h3>
+            </div>
+            <div class="organization-view-grid">
+              <div class="organization-view-item">
+                <span>GST Number</span>
+                <strong>{{ viewOrganization.GSTNo || '-' }}</strong>
+              </div>
+              <div class="organization-view-item">
+                <span>Registration Number</span>
+                <strong>{{ viewOrganization.RegistrationNo || '-' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="organization-view-section">
+            <div class="organization-view-section-head">
+              <h3>Contact Details</h3>
+            </div>
+            <div class="organization-view-grid">
+              <div class="organization-view-item">
+                <span>Contact Person</span>
+                <strong>{{ viewOrganization.ContactPerson || '-' }}</strong>
+              </div>
+              <div class="organization-view-item">
+                <span>Contact Phone</span>
+                <strong>{{ viewOrganization.ContactMobileNo || '-' }}</strong>
+              </div>
+              <div class="organization-view-item organization-view-item-wide">
+                <span>Contact Email</span>
+                <strong [title]="viewOrganization.ContactEmail || '-'">{{ viewOrganization.ContactEmail || '-' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="organization-view-section">
+            <div class="organization-view-section-head">
+              <h3>Remarks</h3>
+            </div>
+            <div class="organization-view-note">
+              {{ viewOrganization.Remarks || '-' }}
+            </div>
+          </div>
+        </section>
+      }
     </section>
   </p-card>
 </p-dialog>
-@if (addDialogConfig) {
 <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '70rem', maxWidth: '100vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
-      <p class="eyebrow">Create Master</p>
       <h3>{{ dialogTitle }}</h3>
       <p>{{ dialogSubtitle }}</p>
     </div>
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Code" inputId="dialog-code" placeholder="Organization Code" [model]="dialogCode"
+    <app-text-field label="Code" inputId="dialog-code" placeholder="Organization Code" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true" [model]="dialogCode"
       (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Name" inputId="dialog-companyName" placeholder="Organization Name" [required]="true"
-      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Company name is required."
-      [textWithNumbersOnly]="true" formatErrorMessage="Company name allows text and numbers only."
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."
       [model]="dialogCompanyName" (modelChange)="dialogCompanyName = $event" />
 
     <app-text-field label="GST Number" inputId="dialog-gstNumber" placeholder="GST Number" [submitted]="dialogSubmitted"
@@ -78,32 +226,36 @@
 
     <app-text-field label="Registration Number" inputId="dialog-registrationNumber" placeholder="Registration Number"
       [submitted]="dialogSubmitted" [textWithNumbersOnly]="true"
-      formatErrorMessage="Registration Number allows text and numbers only."
-      [model]="dialogRegistrationNumber" (modelChange)="dialogRegistrationNumber = $event" />
+      formatErrorMessage="Registration Number allows text and numbers only." [model]="dialogRegistrationNumber"
+      (modelChange)="dialogRegistrationNumber = $event" />
 
-    <app-text-field label="Phone Number" inputId="dialog-phoneNumber" placeholder="Phone Number"
-      [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only."
-      [model]="dialogPhoneNumber" (modelChange)="dialogPhoneNumber = $event" />
+    <app-text-field label="Phone Number" inputId="dialog-phoneNumber" placeholder="Phone Number" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Phone Number is required."
+      [numbersOnly]="true" formatErrorMessage="Phone Number allows numbers only." [model]="dialogPhoneNumber" [minlength]="10" [maxlength]="13"
+      (modelChange)="dialogPhoneNumber = $event" />
 
-    <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [submitted]="dialogSubmitted"
-      [emailOnly]="true" formatErrorMessage="Enter a valid Email."
-      [model]="dialogEmail"
-      (modelChange)="dialogEmail = $event" />
+    <app-text-field label="Email" inputId="dialog-email" placeholder="Email" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Email is required." [emailOnly]="true"
+      formatErrorMessage="Enter a valid Email." [model]="dialogEmail" (modelChange)="dialogEmail = $event" />
 
     <app-text-field label="Website" inputId="dialog-website" placeholder="Website" [model]="dialogWebsite"
       (modelChange)="dialogWebsite = $event" />
 
     <app-text-field label="Contact Person" inputId="dialog-contactPerson" placeholder="Contact Person"
-      [submitted]="dialogSubmitted" [textOnly]="true" formatErrorMessage="Contact Person allows text only."
-      [model]="dialogContactPerson" (modelChange)="dialogContactPerson = $event" />
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Contact Person is required." [textOnly]="true"
+      formatErrorMessage="Contact Person allows text only." [model]="dialogContactPerson"
+      (modelChange)="dialogContactPerson = $event" />
 
     <app-text-field label="Contact Person Phone" inputId="dialog-contactPersonPhone" placeholder="Contact Person Phone"
-      [submitted]="dialogSubmitted" [numbersOnly]="true"
-      formatErrorMessage="Contact Person Phone allows numbers only."
-      [model]="dialogContactPersonPhone" (modelChange)="dialogContactPersonPhone = $event" />
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Contact Person Phone is required." [numbersOnly]="true"
+      formatErrorMessage="Contact Person Phone allows numbers only." [model]="dialogContactPersonPhone" [minlength]="10" [maxlength]="13"
+      (modelChange)="dialogContactPersonPhone = $event" />
 
     <app-text-field label="Contact Person Email" inputId="dialog-contactPersonEmail" placeholder="Contact Person Email"
-      [submitted]="dialogSubmitted" [emailOnly]="true" formatErrorMessage="Enter a valid Contact Person Email."
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Contact Person Email is required."
+      [emailOnly]="true" formatErrorMessage="Enter a valid Contact Person Email."
       [model]="dialogContactPersonEmail" (modelChange)="dialogContactPersonEmail = $event" />
 
     <app-text-field label="Address Line 1" inputId="dialog-addressLine1" placeholder="Address Line 1"
@@ -112,40 +264,40 @@
     <app-text-field label="Address Line 2" inputId="dialog-addressLine2" placeholder="Address Line 2"
       [model]="dialogAddressLine2" (modelChange)="dialogAddressLine2 = $event" />
 
-    <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
-      [model]="dialogCity" (modelChange)="dialogCity = $event" />
+    <app-select-field label="Country" inputId="dialog-country" placeholder="Choose country" [options]="countryOptions"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Country is required." [numberValue]="true" [model]="dialogCountry"
+      (modelChange)="onCountryChange($event)" />
 
     <app-select-field label="State" inputId="dialog-state" placeholder="Choose state" [options]="stateOptions"
-      [model]="dialogState" (modelChange)="dialogState = $event" />
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="State is required."
+      [numberValue]="true" [model]="dialogState" (modelChange)="onStateChange($event)" />
 
-    <app-select-field label="Country" inputId="dialog-country" placeholder="Choose country" [options]="countryOptions"
-      [model]="dialogCountry" (modelChange)="dialogCountry = $event" />
+    <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="City is required."
+      [numberValue]="true" [model]="dialogCity" (modelChange)="dialogCity = $event" />
 
-    <app-text-field label="Postal Code" inputId="dialog-postalCode" placeholder="Postal Code"
-      [submitted]="dialogSubmitted" [numbersOnly]="true" formatErrorMessage="Postal Code allows numbers only."
-      [model]="dialogPostalCode" (modelChange)="dialogPostalCode = $event" />
+    <app-text-field label="Postal Code" inputId="dialog-postalCode" placeholder="Postal Code" [required]="true"
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Postal Code is required."
+      [numbersOnly]="true" formatErrorMessage="Postal Code allows numbers only." [model]="dialogPostalCode"
+      (modelChange)="dialogPostalCode = $event" />
 
     <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks" [model]="dialogRemarks"
       (modelChange)="dialogRemarks = $event" />
-
-    <app-select-field label="Primary Branch" inputId="dialog-branch" placeholder="Choose branch"
-      [options]="branchOptions" [model]="dialogBranch" (modelChange)="dialogBranch = $event" />
   </section>
 
   <div class="dialog-actions">
-    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Cancel" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times" [primaryLoading]="dialogSaving" [primaryDisabled]="dialogSaving"
-      [secondaryDisabled]="dialogSaving" [secondaryText]="true" [secondaryOutlined]="false" (primaryClick)="submitAddDialog()"
-      (secondaryClick)="closeAddDialog()" />
+    <app-action-buttons [primaryLabel]="dialogPrimaryActionLabel" secondaryLabel="Clear" primaryIcon="pi pi-save"
+      secondaryIcon="pi pi-refresh" [primaryLoading]="dialogSaving" [primaryDisabled]="dialogSaving"
+      [secondaryDisabled]="dialogSaving" [secondaryText]="true" [secondaryOutlined]="false"
+      (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm(true)" />
   </div>
 </p-dialog>
-}
 
 <p-dialog [(visible)]="showConfigDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }"
   [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeConfigDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
-      <p class="eyebrow">Organization Config</p>
       <h3>Add Config</h3>
       <p>Configure logo, theme color, and typography for {{ configOrganizationName || pageTitle }}.</p>
     </div>
@@ -156,6 +308,9 @@
       <span>Image Upload</span>
       <input id="dialog-config-image" type="file" accept="image/*" (change)="onConfigImageSelect($event)" />
       <small>{{ configImageName || 'Choose organization logo or brand image' }}</small>
+      @if (configImageUrl) {
+        <img class="image-preview" [src]="configImageUrl" alt="Organization Preview" />
+      }
     </label>
 
     <label class="color-field" for="dialog-theme-color">
@@ -177,7 +332,94 @@
 
   <div class="dialog-actions">
     <app-action-buttons primaryLabel="Save Config" secondaryLabel="Cancel" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-times" [secondaryText]="true" [secondaryOutlined]="false"
+      secondaryIcon="pi pi-times" [primaryLoading]="configSaving" [primaryDisabled]="configSaving"
+      [secondaryDisabled]="configSaving" [secondaryText]="true" [secondaryOutlined]="false"
       (primaryClick)="submitConfigDialog()" (secondaryClick)="closeConfigDialog()" />
   </div>
+</p-dialog>
+
+<p-dialog [(visible)]="showCodeTemplateDialog" [modal]="true"
+  [style]="{ width: '96rem', maxWidth: '99vw', height: '92vh' }" styleClass="code-template-dialog"
+  [draggable]="false" [resizable]="false" [closable]="false" (onHide)="closeCodeTemplateDialog()">
+  <ng-template pTemplate="header">
+    <div class="code-template-header">
+      <div class="dialog-copy">
+        <h3>Code Templates</h3>
+        <p>View all code template data for the organization.</p>
+      </div>
+      <div class="code-template-toolbar">
+        <div class="code-template-tabs">
+          <button type="button" class="code-template-tab" [class.active]="activeCodeTemplateTab === 'master'"
+            (click)="onCodeTemplateTabChange('master')">Masters</button>
+          <button type="button" class="code-template-tab" [class.active]="activeCodeTemplateTab === 'transaction'"
+            (click)="onCodeTemplateTabChange('transaction')">Transactions</button>
+        </div>
+
+        @if (isSuperAdmin) {
+          <app-select-field label="Organization" inputId="code-template-organization" placeholder="Choose organization"
+            [options]="codeTemplateOrganizations" [required]="true" [showRequiredMark]="true"
+            [submitted]="codeTemplateSubmitted" errorMessage="Organization is required." [showClear]="false" [filter]="true" [appendTo]="'body'"
+            [numberValue]="true" [model]="codeTemplateOrganization" (modelChange)="onCodeTemplateOrganizationChange($event)" />
+        }
+
+        @if (activeCodeTemplateTab === 'transaction') {
+          <app-select-field label="Branch" inputId="code-template-branch" placeholder="Choose branch"
+            [options]="codeTemplateBranches" [required]="true" [showRequiredMark]="true"
+            [submitted]="codeTemplateSubmitted" errorMessage="Branch is required." [showClear]="false" [filter]="true" [appendTo]="'body'"
+            [numberValue]="true" [disabled]="isCodeTemplateBranchLocked"
+            [model]="codeTemplateBranch" (modelChange)="onCodeTemplateBranchChange($event)" />
+        }
+      </div>
+      <div class="code-template-header-actions">
+        <app-action-buttons primaryLabel="Save" secondaryLabel="Close" primaryIcon="pi pi-save"
+          secondaryIcon="pi pi-times" [showSecondary]="true" [primaryLoading]="codeTemplateSaving"
+          [primaryDisabled]="codeTemplateSaving" [secondaryDisabled]="codeTemplateSaving"
+          [secondaryOutlined]="true" [buttonSize]="'small'"
+          (primaryClick)="submitCodeTemplates()" (secondaryClick)="closeCodeTemplateDialog()" />
+      </div>
+    </div>
+  </ng-template>
+
+  <section class="code-template-panel">
+    @if (codeTemplateLoading) {
+      <div class="code-template-empty">Loading code templates...</div>
+    } @else if (!codeTemplateRows.length) {
+      <div class="code-template-empty">No code templates found.</div>
+    } @else {
+      <app-shared-table [columns]="codeTemplateColumns" [value]="codeTemplateRows" caption="Code Templates"
+        [showAddNewButton]="false" [showFilterButton]="false" [showRowActions]="false" [rows]="10"
+        [globalFilterPlaceholder]="'Search code templates'" [scrollable]="false" [size]="'small'">
+        <ng-template appTableCellTemplate="NoOfDigit" let-row>
+          <input class="code-template-cell-input" type="number" [value]="row.NoOfDigit ?? ''"
+            (input)="row.NoOfDigit = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="StartValue" let-row>
+          <input class="code-template-cell-input" type="number" [value]="row.StartValue ?? ''"
+            (input)="row.StartValue = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="Prefix" let-row>
+          <input class="code-template-cell-input" type="text" [value]="row.Prefix ?? ''"
+            (input)="row.Prefix = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="CurrentValue" let-row>
+          <input class="code-template-cell-input" type="text" [value]="row.CurrentValue ?? ''"
+            (input)="row.CurrentValue = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="Suffix" let-row>
+          <input class="code-template-cell-input" type="text" [value]="row.Suffix ?? ''"
+            (input)="row.Suffix = $any($event.target).value" />
+        </ng-template>
+
+        <ng-template appTableCellTemplate="IsDateMonthYearWise" let-row>
+          <div class="code-template-switch-wrap">
+            <p-toggleswitch [(ngModel)]="row.IsDateMonthYearWise" [trueValue]="true" [falseValue]="false" />
+          </div>
+        </ng-template>
+      </app-shared-table>
+    }
+  </section>
 </p-dialog>

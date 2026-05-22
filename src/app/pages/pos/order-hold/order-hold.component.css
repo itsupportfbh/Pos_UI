@@ -1,0 +1,56 @@
+:host {
+  display: block;
+}
+
+.hold-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.8rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  border: 1px solid rgba(var(--app-primary-rgb), 0.28);
+  background: var(--app-primary-soft);
+  color: var(--app-primary);
+}
+
+.row-action-trigger {
+  color: var(--app-text-muted);
+}
+
+.row-action-trigger:hover {
+  color: var(--app-primary);
+  background: var(--app-primary-soft);
+}
+
+:host ::ng-deep .row-action-menu {
+  min-width: 12rem;
+  border-radius: 0.9rem;
+}
+
+:host ::ng-deep .row-action-menu .p-menu-item-link {
+  border-radius: 0.7rem;
+}
+
+:host ::ng-deep .row-action-menu .row-action-delete .p-menu-item-icon {
+  color: #dc2626;
+}
+
+:host ::ng-deep .row-action-menu .row-action-open .p-menu-item-icon {
+  color: var(--app-primary);
+}
+
+@media (max-width: 700px) {
+  .hold-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

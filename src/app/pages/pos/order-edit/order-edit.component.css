@@ -1,0 +1,48 @@
+.workflow-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.workflow-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 6rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.status-active {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+}
+
+.status-inactive {
+  background: rgba(249, 115, 22, 0.14);
+  color: #c2410c;
+}
+
+.row-action-trigger {
+  color: var(--app-primary);
+}
+
+@media (max-width: 960px) {
+  .workflow-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .workflow-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+}

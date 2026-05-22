@@ -1,15 +1,97 @@
 <main class="pos-page">
+  <p-confirmDialog />
   <app-shell
     [appName]="appName"
+    [appLogoUrl]="brandLogoUrl"
     [user]="currentUser"
     [footerDescription]="footerDescription"
     [sidebarOpen]="sidebarOpen"
     [activeMenuKey]="activeMenuKey"
     [menuItems]="sidebarMenus"
+    [currentOfficeScope]="currentOfficeScope"
+    [officeOptions]="officeOptions"
+    [chromeHidden]="isDisplayChromeHidden"
     (menuToggle)="toggleSidebar()"
     (menuSelect)="selectMenu($event)"
+    (officeScopeChange)="onOfficeScopeChange($event)"
+    (changePasswordClick)="openChangePasswordDialog()"
     (logoutClick)="logout()"
   >
     <router-outlet />
   </app-shell>
+
+  <p-dialog
+    [(visible)]="showChangePasswordDialog"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="true"
+    (onHide)="closeChangePasswordDialog()"
+    [style]="{ width: '30rem', maxWidth: '94vw' }"
+  >
+    <ng-template pTemplate="header">
+      <div class="role-dialog-copy">
+        <h3>Change password</h3>
+        <p>Use this form to set a new password for your account.</p>
+      </div>
+    </ng-template>
+
+    <section class="auth-dialog-body">
+      <section class="field-grid auth-dialog-grid">
+        <app-text-field
+          label="Current Password"
+          inputId="profile-current-password"
+          type="password"
+          placeholder="Enter current password"
+          [required]="true"
+          [showRequiredMark]="true"
+          [submitted]="changePasswordSubmitted"
+          errorMessage="Current Password is required."
+          [model]="changePasswordCurrent"
+          (modelChange)="changePasswordCurrent = $event"
+        />
+
+        <app-text-field
+          label="New Password"
+          inputId="profile-new-password"
+          type="password"
+          placeholder="Enter new password"
+          [required]="true"
+          [showRequiredMark]="true"
+          [submitted]="changePasswordSubmitted"
+          errorMessage="New Password is required."
+          [model]="changePasswordNew"
+          (modelChange)="changePasswordNew = $event"
+        />
+        @if (showNewPasswordRuleError) {
+          <small class="dialog-validation-error">{{ passwordRuleMessage }}</small>
+        }
+
+        <app-text-field
+          label="Confirm Password"
+          inputId="profile-confirm-password"
+          type="password"
+          placeholder="Confirm new password"
+          [required]="true"
+          [showRequiredMark]="true"
+          [submitted]="changePasswordSubmitted"
+          errorMessage="Confirm Password is required."
+          [model]="changePasswordConfirm"
+          (modelChange)="changePasswordConfirm = $event"
+        />
+        @if (showConfirmPasswordMismatch) {
+          <small class="dialog-validation-error">Confirm password should match the new password.</small>
+        }
+      </section>
+
+      <app-action-buttons
+        primaryLabel="Change Password"
+        secondaryLabel="Clear"
+        primaryIcon="pi pi-key"
+        secondaryIcon="pi pi-refresh"
+        (primaryClick)="submitChangePassword()"
+        (secondaryClick)="clearChangePasswordForm()"
+      />
+    </section>
+  </p-dialog>
 </main>

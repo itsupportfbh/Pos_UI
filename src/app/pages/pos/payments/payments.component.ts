@@ -8,44 +8,14 @@ import { AutocompleteFieldComponent } from '../../../components/form/autocomplet
 import { DateFieldComponent } from '../../../components/form/date-field.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { SharedTableComponent } from '../../../components/table/shared-table.component';
-import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
+import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
-const PAYMENT_MODE_OPTIONS = [
-  { label: 'Cash', value: 'Cash' },
-  { label: 'UPI', value: 'UPI' },
-  { label: 'Card', value: 'Card' },
-  { label: 'Credit', value: 'Credit' }
-];
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
+const PAYMENT_MODE_OPTIONS: { label: string | number; value: string | number }[] = [];
+const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
   { field: 'code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'name', header: 'Name', sortable: true, width: '18rem' },
   { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
 ];
-
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Payments',
-  title: 'Payment History',
-  subtitle: 'Review received payments.',
-  formTitle: `${'Payment History'} Filters`,
-  formDescription: `Static ${'Payment History'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Payment History',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'PAY-8801', name: 'Cash', status: 'Posted' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Payments', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'paymentMode', label: 'Payment Mode', type: 'select', placeholder: 'Choose mode', options: PAYMENT_MODE_OPTIONS }],
-  primaryActionLabel: `Search ${'Payment History'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Payment History',
-  rows: [{ code: 'PAY-8801', name: 'Cash', status: 'Posted' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
-
 
 @Component({
   selector: 'app-payments',
@@ -54,35 +24,31 @@ const ADD_DIALOG_CONFIG: FeaturePageConfig | null = null;
   templateUrl: './payments.component.html',
   styleUrl: './payments.component.css'
 })
-export class PaymentsComponent {
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
-  readonly formState = this.createEmptyState(this.config);
-  readonly dialogFormState = this.addDialogConfig ? this.createEmptyState(this.addDialogConfig) : {};
+export class PaymentsComponent {  readonly formState: Record<string, string | Date | null> = {};
+  readonly dialogFormState: Record<string, string | Date | null> = {};
   showAddDialog = false;
   showFilterSidebar = false;
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
+  readonly pageEyebrow = 'Payments';
+  readonly pageTitle = 'Payment History';
+  readonly pageSubtitle = 'Review received payments.';
   readonly paymentModeOptions = PAYMENT_MODE_OPTIONS;
-  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
-  readonly dialogFields = this.addDialogConfig?.fields ?? [];
+  
+  readonly filterTitle = `${'Payment History'} Filters`;
+  readonly filterDescription = `API data will be loaded for ${'Payment History'.toLowerCase()}.`;
+  readonly fields: any[] = [{ key: 'paymentMode', label: 'Payment Mode', type: 'select', placeholder: 'Choose mode', options: PAYMENT_MODE_OPTIONS }];
+  readonly primaryActionLabel = `Search ${'Payment History'}`;
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  readonly dialogTitle = '';
+  readonly dialogSubtitle = '';
+  readonly dialogFields: any[] = [];
   readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
+  readonly tableTitle = 'Payment History';
+  readonly tableCaption = 'Payment History';
+  readonly tableColumns = CODE_NAME_COLUMNS;
+  tableRows: Record<string, unknown>[] = [];
+    readonly showAddNewButton = false;
+    readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
     readonly showFilterButton = true;
 
   getFieldValue(fieldKey: string): string | Date | null {
@@ -108,10 +74,11 @@ export class PaymentsComponent {
   }
 
   resetForm(): void {
-    this.resetState(this.formState, this.config);
+    this.resetState(this.formState, this.fields);
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
     this.showFilterSidebar = true;
   }
 
@@ -119,11 +86,11 @@ export class PaymentsComponent {
     this.showFilterSidebar = false;
   }
   openAddDialog(): void {
-    if (!this.addDialogConfig) {
+    if (!this.showAddNewButton) {
       return;
     }
 
-    this.resetState(this.dialogFormState, this.addDialogConfig);
+    this.resetState(this.dialogFormState, this.dialogFields);
     this.showAddDialog = true;
   }
 
@@ -135,27 +102,21 @@ export class PaymentsComponent {
     this.closeAddDialog();
   }
 
-  trackByField(_: number, field: FeatureFieldConfig): string {
+  trackByField(_: number, field: any): string {
     return field.key;
   }
 
-  private createEmptyState(config: FeaturePageConfig): Record<string, string | Date | null> {
-    return config.fields.reduce<Record<string, string | Date | null>>((state, field) => {
-      state[field.key] = null;
-      return state;
-    }, {});
-  }
-
-  private resetState(state: Record<string, string | Date | null>, config: FeaturePageConfig): void {
+  private resetState(state: Record<string, string | Date | null>, fields: any[]): void {
     for (const key of Object.keys(state)) {
       delete state[key];
     }
 
-    for (const field of config.fields) {
+    for (const field of fields) {
       state[field.key] = null;
     }
   }
 }
+
 
 
 

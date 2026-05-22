@@ -1,0 +1,69 @@
+<section class="customer-display-page">
+  <header class="customer-display-topbar">
+    <div></div>
+    <div class="brand-mark">
+      @if (organizationLogoUrl) {
+        <img class="brand-logo" [src]="organizationLogoUrl" [alt]="organizationName" />
+      } @else {
+        <span class="brand-icon">{{ organizationName.charAt(0) }}{{ branchName.charAt(0) }}</span>
+      }
+      <span class="brand-text">
+        {{ organizationName }}
+        @if (branchName) {
+          <br />
+          {{ branchName }}
+        }
+      </span>
+    </div>
+    <time>{{ currentTime | date: 'hh:mm a' }}</time>
+  </header>
+
+  <section class="customer-order-board">
+    <article class="customer-order-column progress-column">
+      <header>
+        <h2>In Progress</h2>
+        <span>{{ inProgressOrderCount }}</span>
+      </header>
+
+      <section class="customer-order-list">
+        @for (order of inProgressOrders; track order.trackKey; let orderIndex = $index) {
+          <div class="customer-order-row">
+            <span class="order-type-icon" [class]="getOrderToneClass(order, orderIndex)">
+              <i [class]="getOrderIcon(order)"></i>
+            </span>
+            <strong>{{ getCustomerName(order) }}</strong>
+            <span class="table-label">{{ getTableDisplay(order) }}</span>
+            <small>{{ getOrderNumberDisplay(order) }}</small>
+            @if (getElapsedMinutes(order)) {
+              <em>{{ getElapsedMinutes(order) }}</em>
+            }
+          </div>
+        } @empty {
+          <div class="customer-order-empty">No orders in progress</div>
+        }
+      </section>
+    </article>
+
+    <article class="customer-order-column ready-column">
+      <header>
+        <h2>Ready for Collection!</h2>
+        <span>{{ readyOrderCount }}</span>
+      </header>
+
+      <section class="customer-order-list">
+        @for (order of readyOrders; track order.trackKey; let orderIndex = $index) {
+          <div class="customer-order-row ready-row">
+            <span class="order-type-icon" [class]="getOrderToneClass(order, orderIndex)">
+              <i [class]="getOrderIcon(order)"></i>
+            </span>
+            <strong>{{ getCustomerName(order) }}</strong>
+            <span class="table-label">{{ getTableDisplay(order) }}</span>
+            <small>{{ getOrderNumberDisplay(order) }}</small>
+          </div>
+        } @empty {
+          <div class="customer-order-empty">No ready orders</div>
+        }
+      </section>
+    </article>
+  </section>
+</section>

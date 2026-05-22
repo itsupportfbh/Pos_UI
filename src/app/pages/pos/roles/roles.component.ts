@@ -1,16 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
+import { ConfirmationService, MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
-import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
-import { SelectFieldComponent } from '../../../components/form/select-field.component';
-import { TextFieldComponent } from '../../../components/form/text-field.component';
-import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
-import { SharedTableComponent } from '../../../components/table/shared-table.component';
-import { FeatureFieldConfig, FeaturePageConfig } from '../config/models';
+
+import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
+import { TextFieldComponent } from '../../../components/form/text-field.component';
+import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { OrganizationService } from '../../../services/organization.service';
+import { Role, RoleService } from '../../../services/role.service';
 
 type PagePermission = {
   pageName: string;
@@ -22,139 +27,123 @@ type PagePermission = {
   print: boolean;
 };
 
-const ROLE_OPTIONS = [
-  { label: 'Admin', value: 'Admin' },
-  { label: 'Staff', value: 'Staff' },
-  { label: 'Cashier', value: 'Cashier' }
-];
-const BRANCH_OPTIONS = [
-  { label: 'Head Office', value: 'Head Office' },
-  { label: 'City Center', value: 'City Center' },
-  { label: 'Airport Kiosk', value: 'Airport Kiosk' }
-];
-const ROLE_FIELDS: FeatureFieldConfig[] = [
-  { key: 'role', label: 'Role', type: 'select', placeholder: 'Choose role', options: ROLE_OPTIONS },
-  { key: 'branch', label: 'Branch', type: 'select', placeholder: 'Choose branch', options: BRANCH_OPTIONS }
-];
-const CODE_NAME_COLUMNS: FeaturePageConfig['columns'] = [
-  { field: 'code', header: 'Code', sortable: true, width: '10rem' },
-  { field: 'name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'status', header: 'Status', type: 'tag' as const, sortable: true, width: '9rem', tagSeverityMap: { Active: 'success', Draft: 'info', Low: 'warn', Out: 'danger', Printed: 'success', Posted: 'success', Pending: 'warn', Partial: 'warn', Open: 'info', Critical: 'danger', Sent: 'success', Review: 'contrast' } }
-];
-
-const PAGE_CONFIG: FeaturePageConfig = {
-  eyebrow: 'Users & Roles',
-  title: 'Roles',
-  subtitle: 'Define role templates.',
-  formTitle: `${'Roles'} Filters`,
-  formDescription: `Static ${'Roles'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Roles',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'ROL-01', name: 'Admin', status: 'Active' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Users & Roles', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: ROLE_FIELDS,
-  primaryActionLabel: `Search ${'Roles'}`,
-  secondaryActionLabel: 'Clear Filters',
-  showAddNewButton: true,
-  addNewLabel: 'Add New',
-  tableCaption: 'Roles',
-  rows: [{ code: 'ROL-01', name: 'Admin', status: 'Active' }],
-  columns: CODE_NAME_COLUMNS
-};
-const ADD_DIALOG_CONFIG: FeaturePageConfig | null = {
-  eyebrow: 'Users & Roles',
-  title: 'Create Role',
-  subtitle: 'Create a new role template.',
-  formTitle: `${'Create Role'} Filters`,
-  formDescription: `Static ${'Create Role'.toLowerCase()} page ready for API integration.`,
-  tableTitle: 'Create Role',
-  tableDescription: 'Replace this static data with your API response later.',
-  helperPoints: ['This screen is structured for easy API binding.', 'The layout is intentionally separated into filters, summary, and table.'],
-  summaryCards: [
-    { label: 'Records', value: `${[{ code: 'ROL-09', name: 'Senior Cashier', status: 'Draft' }].length}`, caption: 'Static records shown on this page' },
-    { label: 'Module', value: 'Users & Roles', caption: 'Current functional area' },
-    { label: 'Mode', value: 'Static UI', caption: 'Ready for API replacement' }
-  ],
-  fields: [{ key: 'roleName', label: 'Role Name', type: 'text', placeholder: 'Senior Cashier' }, { key: 'branch', label: 'Branch', type: 'select', placeholder: 'Choose branch', options: BRANCH_OPTIONS }],
-  primaryActionLabel: `Search ${'Create Role'}`,
-  secondaryActionLabel: 'Clear Filters',
-  tableCaption: 'Create Role',
-  rows: [{ code: 'ROL-09', name: 'Senior Cashier', status: 'Draft' }],
-  columns: CODE_NAME_COLUMNS
+type RoleRow = Role & {
+  RowNumber: number;
+  Status: string;
 };
 
+
+const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
+  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
+  { field: 'OrganizationName', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
+  { field: 'Code', header: 'Code', sortable: true, width: '9rem' },
+  { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
+  { field: 'Remarks', header: 'Remarks', sortable: true, width: '18rem' },
+  {
+    field: 'Status',
+    header: 'Status',
+    type: 'tag',
+    sortable: true,
+    width: '8rem',
+    tagSeverityMap: { Active: 'success', Inactive: 'danger' }
+  }
+];
+
+const PERMISSION_PAGES: PagePermission[] = [
+  { groupName: 'Organization', pageName: 'Organization', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Organization', pageName: 'Branches', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Organization', pageName: 'Counters', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Organization', pageName: 'Terminal', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Organization', pageName: 'Printers', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Users & Roles', pageName: 'Users', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Users & Roles', pageName: 'Roles', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Food Menu', pageName: 'Categories', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Food Menu', pageName: 'Menus', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Reports', pageName: 'Daily Sales', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Reports', pageName: 'Monthly Sales', view: false, add: false, edit: false, delete: false, print: false },
+  { groupName: 'Reports', pageName: 'Menu Wise Sales', view: false, add: false, edit: false, delete: false, print: false }
+];
 
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
+  imports: [CommonModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, MultiSelectFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
+  providers: [ConfirmationService],
   templateUrl: './roles.component.html',
   styleUrl: './roles.component.css'
 })
 export class RolesComponent {
   private readonly toast = inject(AppToastService);
-  readonly config: FeaturePageConfig = PAGE_CONFIG;
-  readonly addDialogConfig: FeaturePageConfig | null = ADD_DIALOG_CONFIG;
+  private readonly roleService = inject(RoleService);
+  private readonly organizationService = inject(OrganizationService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+
+  @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+
   showAddDialog = false;
   showFilterSidebar = false;
   showPermissionsDialog = false;
+  isEditMode = false;
+  dialogSubmitted = false;
+  dialogSaving = false;
+  filterOrganizations: MultiSelectFieldValue = [];
   permissionRoleName = '';
   permissionSearchText = '';
-  filterRole: string | null = null;
-  filterBranch: string | null = null;
-  dialogRoleName = '';
-  dialogBranch: string | null = null;
-  selectedRow: Record<string, unknown> | null = null;
-  permissionPages: PagePermission[] = [
-    { groupName: 'Billing', pageName: 'Billing', view: true, add: true, edit: true, delete: false, print: true },
-    { groupName: 'Billing', pageName: 'Print Bills', view: true, add: false, edit: false, delete: false, print: true },
-    { groupName: 'Food Menu', pageName: 'Menus', view: true, add: true, edit: true, delete: false, print: false },
-    { groupName: 'Food Menu', pageName: 'Categories', view: true, add: true, edit: true, delete: false, print: false },
-    { groupName: 'Inventory', pageName: 'Stock In', view: true, add: true, edit: true, delete: false, print: false },
-    { groupName: 'Inventory', pageName: 'Current Stock', view: true, add: false, edit: false, delete: false, print: true },
-    { groupName: 'Orders', pageName: 'Return Refund', view: true, add: true, edit: true, delete: false, print: true },
-    { groupName: 'Reports', pageName: 'Daily Sales', view: true, add: false, edit: false, delete: false, print: true },
-    { groupName: 'Reports', pageName: 'Monthly Sales', view: true, add: false, edit: false, delete: false, print: true },
-    { groupName: 'Reports', pageName: 'Menu wise Sales', view: true, add: false, edit: false, delete: false, print: true },
-    { groupName: 'Organization', pageName: 'Organization', view: true, add: true, edit: true, delete: false, print: false },
-    { groupName: 'Users & Roles', pageName: 'Users', view: true, add: true, edit: true, delete: false, print: false }
-  ];
-  readonly pageEyebrow = this.config.eyebrow;
-  readonly pageTitle = this.config.title;
-  readonly pageSubtitle = this.config.subtitle;
-  readonly roleOptions = ROLE_OPTIONS;
-  readonly branchOptions = BRANCH_OPTIONS;
-  readonly summaryCards = this.config.summaryCards;
-  readonly filterTitle = this.config.formTitle ?? `${this.config.title} Form`;
-  readonly filterDescription = this.config.formDescription ?? '';
-  readonly fields = this.config.fields;
-  readonly primaryActionLabel = this.config.primaryActionLabel;
-  readonly secondaryActionLabel = this.config.secondaryActionLabel ?? '';
-  readonly showSecondaryAction = !!this.config.secondaryActionLabel;
-  readonly dialogTitle = this.addDialogConfig?.title ?? '';
-  readonly dialogSubtitle = this.addDialogConfig?.subtitle ?? '';
-  readonly dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = this.config.tableTitle ?? this.config.tableCaption;
-  readonly tableDescription = this.config.tableDescription ?? '';
-  readonly tableCaption = this.config.tableCaption;
-  readonly tableColumns = this.config.columns;
-  readonly tableRows = this.config.rows;
-    readonly showAddNewButton = !!this.addDialogConfig;
-    readonly addNewButtonLabel = this.showAddNewButton ? (this.config.addNewLabel ?? 'Add New') : '';
-    readonly showFilterButton = true;
+
+  dialogId = 0;
+  dialogOrganization: SelectFieldValue = null;
+  dialogCode = '';
+  dialogName = '';
+  dialogRemarks = '';
+
+  selectedRow: RoleRow | null = null;
+  rowActionItems: MenuItem[] = [];
+  allRows: RoleRow[] = [];
+  tableRows: RoleRow[] = [];
+  permissionPages: PagePermission[] = [];
+  organizationOptions: any[] = [];
+  userDetails: any = {};
+  roleEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+
+  readonly pageEyebrow = 'Users & Roles';
+  readonly pageTitle = 'Roles';
+  readonly pageSubtitle = 'Maintain role master details.';
+  readonly filterTitle = 'Role Filters';
+  readonly primaryActionLabel = 'Search Roles';
+  readonly secondaryActionLabel = 'Clear Filters';
+  readonly showSecondaryAction = true;
+  dialogTitle = 'Create Role';
+  dialogSubtitle = 'Create a new role template.';
+  dialogPrimaryActionLabel = 'Save';
+  readonly tableTitle = 'Roles';
+  readonly tableCaption = 'Roles';
+  tableColumns = ROLE_COLUMNS;
+  readonly showAddNewButton = true;
+  readonly addNewButtonLabel = 'Add New';
+  showFilterButton = false;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-  readonly rowActionItems: MenuItem[] = [
-    { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
-    { label: 'Permissions', icon: 'pi pi-lock', styleClass: 'row-action-permissions', command: () => this.handleRowAction('permissions') },
-    { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
-    { label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') },
-    { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
-  ];
+
+  constructor() {
+    this.permissionPages = PERMISSION_PAGES.map((page) => ({ ...page }));
+  }
+
+  ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.showFilterButton = this.userDetails.RoleId === 1;
+
+    this.tableColumns = ROLE_COLUMNS.map((x: any) => {
+      if (x.field === 'OrganizationName') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+
+    this.loadRoles();
+  }
 
   get filteredPermissionPages(): PagePermission[] {
     const searchText = this.permissionSearchText.trim().toLowerCase();
@@ -170,68 +159,245 @@ export class RolesComponent {
   }
 
   resetForm(): void {
-    this.filterRole = null;
-    this.filterBranch = null;
+    this.filterOrganizations = [];
+    this.tableRows = [...this.allRows];
+  }
+
+  searchRoles(): void {
+    if (!this.filterOrganizations.length) {
+      this.tableRows = [...this.allRows];
+      return;
+    }
+
+    this.tableRows = this.allRows.filter((row) =>
+      this.filterOrganizations.includes(Number(row.OrgId || 0))
+    );
   }
 
   openFilterSidebar(): void {
+    this.resetForm();
+    if (!this.organizationOptions.length) {
+      this.loadOrganizations();
+    }
     this.showFilterSidebar = true;
   }
 
   closeFilterSidebar(): void {
     this.showFilterSidebar = false;
   }
-  openAddDialog(): void {
-    if (!this.addDialogConfig) {
-      return;
-    }
 
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
+    this.isEditMode = false;
+    this.dialogTitle = 'Create Role';
+    this.dialogSubtitle = 'Create a new role template.';
+    this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+
+    if (this.userDetails.RoleId === 1) {
+      await this.loadOrganizations();
+    } else {
+      await this.loadLatestRoleCode(Number(this.userDetails.OrgId || 0));
+    }
   }
 
   closeAddDialog(): void {
+    this.loadRoles();
+    this.isEditMode = false;
+    this.dialogSubmitted = false;
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
-    this.toast.success('Saved', `${this.dialogTitle || this.pageTitle} saved successfully.`);
-    this.closeAddDialog();
+  loadRoles(): void {
+    const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+
+    this.roleService.getAll(orgId).subscribe({
+      next: (response) => {
+        let RowNumber = 1;
+
+        this.tableRows = (response.result ?? []).map((x: any) => {
+          x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
+          x.RowNumber = RowNumber++;
+          x.Status = x.IsActive ? 'Active' : 'Inactive';
+          return x;
+        });
+        this.allRows = [...this.tableRows];
+
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.toast.error('Load Failed', 'Unable to load roles. Please check API and try again.');
+      }
+    });
   }
 
-  editRow(row: Record<string, unknown>): void {
-    if (!this.addDialogConfig) {
+  async loadOrganizations(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.organizationService.getAll());
+      const organizations = response?.result ?? [];
+
+      this.organizationOptions = organizations.filter((org: any) => org.IsActive).map((organization: any) => ({
+        label: organization.Name ?? '',
+        value: organization.Id ?? 0
+      }));
+    } catch {
+      this.organizationOptions = [];
+      this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
+    }
+  }
+
+  public async onDialogOrganizationChange(value: SelectFieldValue): Promise<void> {
+    this.dialogOrganization = value;
+
+    if (this.isEditMode) {
       return;
     }
 
-    this.dialogRoleName = String(row['roleName'] ?? row['name'] ?? '');
-    this.dialogBranch = typeof row['branch'] === 'string' ? row['branch'] : null;
-    this.showAddDialog = true;
-    this.toast.info('Edit Mode', `Editing ${String(row['name'] ?? row['code'] ?? this.pageTitle)}.`);
-  }
-
-  deleteRow(row: Record<string, unknown>): void {
-    const rowIndex = this.tableRows.indexOf(row);
-
-    if (rowIndex >= 0) {
-      this.tableRows.splice(rowIndex, 1);
+    if (!value || Number(value) === 0) {
+      this.dialogCode = '';
+      return;
     }
 
-    this.toast.warn('Deleted', `${String(row['name'] ?? row['code'] ?? 'Record')} removed successfully.`);
+    await this.loadLatestRoleCode(Number(value));
   }
 
-  activateRow(row: Record<string, unknown>): void {
-    row['status'] = 'Active';
-    this.toast.success('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as active.`);
+  async submitAddDialog(): Promise<void> {
+    this.dialogSubmitted = true;
+
+    if (!this.isDialogFormValid()) {
+      return;
+    }
+
+    this.dialogSaving = true;
+
+    const payload: Role = {
+      Id: this.dialogId,
+      Code: this.dialogCode,
+      Name: this.dialogName,
+      Remarks: this.dialogRemarks,
+      OrgId: this.userDetails.RoleId === 1
+        ? Number(this.dialogOrganization || 0)
+        : Number(this.userDetails.OrgId || 0),
+      IsActive: true,
+      CreatedBy: Number(this.userDetails.UserId || 0),
+      CreatedDate: new Date().toISOString(),
+      UpdatedBy: Number(this.userDetails.UserId || 0),
+      UpdatedDate: null,
+      IsDeleted: false,
+      EntityNo: this.roleEntityNo
+    };
+
+    try {
+      let response: any;
+
+      if (!payload.Id) {
+        response = await firstValueFrom(this.roleService.create(payload));
+      } else {
+        response = await firstValueFrom(this.roleService.update(payload));
+      }
+
+      if (response.ErrorInfo.Message === true && response.result === 'AlreadyExists') {
+        this.toast.warn('Already Exists', `${payload.Name || this.pageTitle} already exists. Please use a different name.`);
+        this.dialogName = '';
+        return;
+      }
+
+      if (response.ErrorInfo.Message === true && !payload.Id) {
+        this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      if (response.ErrorInfo.Message === true && payload.Id) {
+        this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
+        this.closeAddDialog();
+        return;
+      }
+
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', response.ErrorInfo.Message || 'Unable to save role.');
+    } catch {
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save role.');
+    } finally {
+      this.dialogSaving = false;
+    }
   }
 
-  deactivateRow(row: Record<string, unknown>): void {
-    row['status'] = 'Inactive';
-    this.toast.info('Status Updated', `${String(row['name'] ?? row['code'] ?? 'Record')} marked as inactive.`);
+  async editRow(row: RoleRow): Promise<void> {
+    this.resetDialogForm();
+    this.isEditMode = true;
+    this.dialogTitle = 'Edit Role';
+    this.dialogSubtitle = 'Update the selected role template.';
+    this.dialogPrimaryActionLabel = 'Update';
+    this.showAddDialog = true;
+
+    try {
+      if (this.userDetails.RoleId === 1) {
+        await this.loadOrganizations();
+      }
+
+      const response: any = await firstValueFrom(this.roleService.getById(row.Id ?? 0));
+      const role = response.result ?? {};
+
+      this.dialogId = role.Id ?? 0;
+      this.dialogOrganization = role.OrgId ?? null;
+      this.dialogCode = role.Code ?? '';
+      this.dialogName = role.Name ?? '';
+      this.dialogRemarks = role.Remarks ?? '';
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load role details. Please check and try again.');
+    }
   }
 
-  openPermissionsDialog(row: Record<string, unknown>): void {
-    this.permissionRoleName = String(row['name'] ?? row['code'] ?? this.pageTitle);
+  async deleteRow(row: RoleRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.roleService.delete(row.Id ?? 0));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deleted', `${String(row.Name ?? row.Code ?? 'Record')} deleted successfully.`);
+        this.loadRoles();
+        return;
+      }
+
+      this.toast.error('Delete Failed', response.ErrorInfo.Message || `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Delete Failed', `Unable to delete ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
+  }
+
+  async activateRow(row: RoleRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.roleService.activeInActive(row.Id ?? 0, true));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Activated', `${String(row.Name ?? row.Code ?? 'Record')} activated successfully.`);
+        this.loadRoles();
+        return;
+      }
+
+      this.toast.error('Activation Failed', response.ErrorInfo.Message || `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Activation Failed', `Unable to activate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
+  }
+
+  async deactivateRow(row: RoleRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.roleService.activeInActive(row.Id ?? 0, false));
+
+      if (response.ErrorInfo.Message === true) {
+        this.toast.success('Deactivated', `${String(row.Name ?? row.Code ?? 'Record')} deactivated successfully.`);
+        this.loadRoles();
+        return;
+      }
+
+      this.toast.error('Deactivation Failed', response.ErrorInfo.Message || `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    } catch {
+      this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
+    }
+  }
+
+  openPermissionsDialog(row: RoleRow): void {
+    this.permissionRoleName = row.Name || row.Code || this.pageTitle;
     this.permissionSearchText = '';
     this.showPermissionsDialog = true;
   }
@@ -262,9 +428,74 @@ export class RolesComponent {
     return page.view && page.add && page.edit && page.delete && page.print;
   }
 
-  openRowActions(menu: any, event: Event, row: Record<string, unknown>): void {
+  openRowActions(menu: any, event: Event, row: RoleRow): void {
     this.selectedRow = row;
+    this.rowActionItems = this.getRowActionItems(row);
     menu.toggle(event);
+  }
+
+  confirmDeleteRow(row: RoleRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this role');
+
+    this.confirmationService.confirm({
+      header: 'Delete Confirmation',
+      message: `Are you sure you want to delete ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.deleteRow(row);
+      }
+    });
+  }
+
+  confirmActivateRow(row: RoleRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this role');
+
+    this.confirmationService.confirm({
+      header: 'Activate Confirmation',
+      message: `Are you sure you want to activate ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-success',
+      accept: () => {
+        this.activateRow(row);
+      }
+    });
+  }
+
+  confirmDeactivateRow(row: RoleRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this role');
+
+    this.confirmationService.confirm({
+      header: 'Deactivate Confirmation',
+      message: `Are you sure you want to deactivate ${name}?`,
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Yes',
+      rejectLabel: 'No',
+      acceptButtonStyleClass: 'p-button-warn',
+      accept: () => {
+        this.deactivateRow(row);
+      }
+    });
+  }
+
+  private getRowActionItems(row: RoleRow): MenuItem[] {
+    const items: MenuItem[] = [
+      { label: 'Permissions', icon: 'pi pi-lock', styleClass: 'row-action-permissions', command: () => this.handleRowAction('permissions') },
+      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
+    ];
+
+    if (row.IsActive === true) {
+      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+    } else {
+      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    return items;
   }
 
   private handleRowAction(action: 'permissions' | 'edit' | 'delete' | 'activate' | 'deactivate'): void {
@@ -277,32 +508,51 @@ export class RolesComponent {
     } else if (action === 'edit') {
       this.editRow(this.selectedRow);
     } else if (action === 'delete') {
-      this.deleteRow(this.selectedRow);
+      this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
-      this.activateRow(this.selectedRow);
+      this.confirmActivateRow(this.selectedRow);
     } else {
-      this.deactivateRow(this.selectedRow);
+      this.confirmDeactivateRow(this.selectedRow);
     }
   }
 
-  private resetDialogForm(): void {
-    this.dialogRoleName = '';
-    this.dialogBranch = null;
+  private isDialogFormValid(): boolean {
+    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+
+    return areTextFieldsValid && areSelectFieldsValid;
+  }
+
+  private getOrganizationName(orgId: number | string | undefined): string {
+    const organization = this.organizationOptions.find((x: any) => Number(x.value || 0) === Number(orgId || 0));
+    return organization?.label ?? '';
+  }
+
+  private async loadLatestRoleCode(orgId: number): Promise<void> {
+      if (!this.roleEntityNo || !orgId) {
+        this.dialogCode = '';
+        return;
+      }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.roleEntityNo, orgId, 0));
+
+      this.dialogCode = response?.result ?? '';
+    } catch {
+      this.dialogCode = '';
+      this.toast.error('Load Failed', 'Unable to load role code. Please check and try again.');
+    }
+  }
+
+  resetDialogForm(keepCode: boolean = false): void {
+    this.dialogSubmitted = false;
+    this.dialogSaving = false;
+    this.dialogId = 0;
+    this.dialogOrganization = null;
+    if (!keepCode) {
+      this.dialogCode = '';
+    }
+    this.dialogName = '';
+    this.dialogRemarks = '';
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
