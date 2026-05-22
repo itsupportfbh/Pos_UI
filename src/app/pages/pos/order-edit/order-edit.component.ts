@@ -38,7 +38,6 @@ const ORDER_EDIT_COLUMNS: SharedTableColumn<OrderEditRow>[] = [
   { field: 'GuestName', header: 'Guest', sortable: true, width: '14rem' },
   { field: 'ItemCount', header: 'Items', sortable: true, width: '7rem' },
   { field: 'OrderTotal', header: 'Total', sortable: true, width: '10rem' },
-  { field: 'UpdatedBy', header: 'Updated By', sortable: true, width: '12rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 

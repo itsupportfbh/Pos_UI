@@ -522,7 +522,7 @@ export class OrderScreenComponent implements OnInit {
       const request = Number(orderPayload?.orderid || 0) > 0
         ? this.displayMenuItemsService.update(orderPayload)
         : this.displayMenuItemsService.create(orderPayload);
-
+debugger
       request.subscribe({
         next: (response: any) => {
           const orderNumber = this.getApiOrderNumber(response) || 'Order';
