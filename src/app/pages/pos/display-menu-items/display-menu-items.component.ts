@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { catchError, forkJoin, map, of } from 'rxjs';
 
@@ -52,16 +52,23 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   totalKitchenOrders = 0;
   totalKitchenItems = 0;
   isLoadingOrders = false;
-
+viewReady = false;
   constructor(
     private readonly toast: AppToastService,
-    private readonly displayMenuItemsService: DisplayMenuItemsService
+    private readonly displayMenuItemsService: DisplayMenuItemsService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.loadKitchenOrders();
-   // this.refreshTimer = setInterval(() => this.loadKitchenOrders(), 5000);
+
+    setTimeout(() => {
+    this.viewReady = true;
+     this.loadKitchenOrders();
+    this.cdr.detectChanges();
+  });
+   
+   
   }
 
   ngOnDestroy(): void {
@@ -100,7 +107,13 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
       error: () => {
         this.isLoadingOrders = false;
         this.toast.error('Load Failed', 'Unable to load kitchen orders.');
-      }
+      },
+       complete: () => {
+       setTimeout(() => {
+          this.isLoadingOrders = false;
+          this.cdr.detectChanges();
+        });
+}
     });
   }
 

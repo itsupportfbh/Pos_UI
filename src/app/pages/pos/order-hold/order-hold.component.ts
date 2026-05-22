@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef,Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { MenuItem } from 'primeng/api';
@@ -179,18 +179,24 @@ export class OrderHoldComponent implements OnInit {
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
   readonly tableDataKey = 'HoldId';
+viewReady = false;
+ constructor(
+  private readonly toast: AppToastService,
+  private readonly orderHoldService: OrderHoldService,
+  private readonly router: Router,
+  private readonly cdr: ChangeDetectorRef
+) {}
 
-  constructor(
-    private readonly toast: AppToastService,
-    private readonly orderHoldService: OrderHoldService,
-    private readonly router: Router
-  ) {}
+ngOnInit(): void {
+  this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+  this.orgId = this.getUserOrgId();
 
-  ngOnInit(): void {
-    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.orgId = this.getUserOrgId();
+  setTimeout(() => {
+    this.viewReady = true;
     this.loadHeldOrders();
-  }
+    this.cdr.detectChanges();
+  });
+}
 
   get totalHeldOrders(): number {
     return this.totalHeldOrdersCount;
@@ -220,9 +226,12 @@ export class OrderHoldComponent implements OnInit {
         this.totalHeldAmountValue = 0;
         this.toast.error('Load Failed', 'Unable to load held orders from API.');
       },
-      complete: () => {
-        this.isLoading = false;
-      }
+     complete: () => {
+  setTimeout(() => {
+    this.isLoading = false;
+    this.cdr.detectChanges();
+  });
+}
     });
   }
 

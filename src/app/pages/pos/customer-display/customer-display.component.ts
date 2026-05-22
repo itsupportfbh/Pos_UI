@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
@@ -41,25 +41,31 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   organizationName = 'Unity work POS';
   branchName = '';
   organizationLogoUrl = '';
-
+viewReady = false;
   constructor(
     private readonly toast: AppToastService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
     private readonly organizationService: OrganizationService,
     private readonly branchService: BranchService,
-    private readonly runtimeConfig: RuntimeConfigService
+    private readonly runtimeConfig: RuntimeConfigService,
+     private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.organizationName = this.getStringValue(this.userDetails, 'OrganizationName', 'organizationName', 'OrgName', 'orgName') || 'Unity work POS';
     this.branchName = this.getStringValue(this.userDetails, 'BranchName', 'branchName') || '';
+
+
+
+    setTimeout(() => {
+    this.viewReady = true;
     this.loadDisplayHeaderDetails();
     this.loadCustomerOrders();
-    this.refreshTimer = setInterval(() => {
-      this.currentTime = new Date();
-      this.loadCustomerOrders();
-    }, 5000);
+    this.cdr.detectChanges();
+  });
+    
+    
   }
 
   ngOnDestroy(): void {
@@ -81,7 +87,13 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
         this.customerOrders = [];
         this.rebuildStatusBuckets();
         this.toast.error('Load Failed', 'Unable to load customer display orders.');
-      }
+      },
+       complete: () => {
+  setTimeout(() => {
+    
+    this.cdr.detectChanges();
+  });
+}
     });
   }
 

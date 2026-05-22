@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, ViewChildren, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -65,7 +65,7 @@ export class OrderEditComponent {
   private readonly displayMenuItemsService = inject(DisplayMenuItemsService);
   private readonly router = inject(Router);
   private readonly confirmationService = inject(ConfirmationService);
-
+  private readonly cdr = inject(ChangeDetectorRef);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
   showAddDialog = false;
@@ -116,10 +116,16 @@ export class OrderEditComponent {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-
+  viewReady = false;
   ngOnInit(): void {
+
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    setTimeout(() => {
+    this.viewReady = true;
     this.loadRows();
+    this.cdr.detectChanges();
+  });
+    
   }
 
   loadRows(): void {
@@ -143,7 +149,10 @@ export class OrderEditComponent {
         this.toast.error('Load Failed', 'Unable to load edit orders.');
       },
       complete: () => {
-        this.isLoading = false;
+         setTimeout(() => {
+    this.isLoading = false;
+    this.cdr.detectChanges();
+  });
       }
     });
   }
@@ -584,7 +593,25 @@ export class OrderEditComponent {
 
   private getResponseList(response: any): any[] {
     const result = response?.result ?? response?.Result ?? response;
-    return Array.isArray(result) ? result : [];
+
+    if (Array.isArray(result)) {
+      return result;
+    }
+
+    const nestedList = result?.data ??
+      result?.Data ??
+      result?.items ??
+      result?.Items ??
+      result?.orders ??
+      result?.Orders ??
+      result?.list ??
+      result?.List;
+
+    if (Array.isArray(nestedList)) {
+      return nestedList;
+    }
+
+    return result && typeof result === 'object' ? [result] : [];
   }
 
   private getOrderId(order: any): number {
