@@ -71,11 +71,11 @@
         </ng-template>
 
         <ng-template appTableCellTemplate="Status" let-row>
-          <span class="status-badge" [class.status-active]="row.Status === 'Upcoming'"
-            [class.status-inactive]="row.Status === 'Seated'">
-            {{ row.Status }}
-          </span>
-        </ng-template>
+        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+          [class.status-inactive]="row.Status === 'Inactive'">
+          {{ row.Status }}
+        </span>
+      </ng-template>
       </app-shared-table>
     </p-card>
   </section>
@@ -142,12 +142,9 @@
       errorMessage="Visit time is required." [model]="dialogVisitTime"
       (modelChange)="dialogVisitTime = $event"></app-text-field>
 
-    <!-- <app-multiselect-field label="Category" inputId="counter-branch-filter" placeholder="Choose categories"
-      [options]="categoryfilterOptions" [model]="selectedCategoryIds" (modelChange)="onfilterCategoryChange($event)" /> -->
-
-    <app-text-field label="Table" inputId="dialog-table-name" [showRequiredMark]="true" placeholder="Enter table name"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Table is required." [maxlength]="100"
-      [model]="dialogTableName" (modelChange)="dialogTableName = $event"></app-text-field>
+    <app-multiselect-field label="Table" inputId="dialog-table-name" placeholder="Choose tables" [showRequiredMark]="true"
+      [options]="tablesOptions" [required]="true" [submitted]="dialogSubmitted" errorMessage="Table is required."
+       [model]="selectedTables" (modelChange)="onfiltertableChange($event)" /> 
 
     <app-text-field label="Guest Count" inputId="dialog-guest-count" type="number" [showRequiredMark]="true"
       placeholder="Enter guest count" [required]="true" [submitted]="dialogSubmitted"
