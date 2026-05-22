@@ -16,6 +16,8 @@ export interface subCategory {
   UpdatedBy?: number | null;
   UpdatedDate?: string | null;
   IsDeleted?: boolean;
+  EntityNo?: number;
+  BranchId?: number;
 }
 
 export interface subCategoryStatusRequest {

@@ -131,7 +131,7 @@ export class TerminalComponent implements OnInit {
     readonly showRowActions = true;
     readonly rowActionHeader = 'Actions';
     rowActionItems: MenuItem[] = [];
-    branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+    terminalEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
     ngOnInit(): void {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -238,18 +238,17 @@ export class TerminalComponent implements OnInit {
     }
 
     private async loadLatestTerminalCode(orgId: number): Promise<void> {
-        if (!this.branchEntityNo || !orgId) {
+        if (!this.terminalEntityNo || !orgId) {
             this.dialogModel.code = '';
             return;
         }
-
         try {
-            const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+            const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.terminalEntityNo, orgId, this.BranchId));
             console.log('Latest Terminal Code Response:', response.result);
             this.dialogModel.code = response?.result ?? '';
         } catch {
             this.dialogModel.code = '';
-            this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+            this.toast.error('Load Failed', 'Unable to load terminal code. Please check and try again.');
         }
     }
 
@@ -352,7 +351,8 @@ export class TerminalComponent implements OnInit {
             ...this.dialogModel,
             OrgId: this.OrgId,
             IsActive: this.dialogModel.IsActive ?? true,
-            IsDeleted: false
+            IsDeleted: false,
+            EntityNo: this.terminalEntityNo,
         };
 
         try {

@@ -113,7 +113,7 @@ export class CategoriesComponent {
     { label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') }
   ];
 
-  branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  CategoryEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -197,18 +197,18 @@ export class CategoriesComponent {
   }
 
   private async loadLatestTableCode(orgId: number): Promise<void> {
-    if (!this.branchEntityNo || !orgId) {
+    if (!this.CategoryEntityNo || !orgId) {
       this.dialogModel.code = '';
       return;
     }
 
     try {
-      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.CategoryEntityNo, orgId, this.BranchId));
       
       this.dialogModel.code = response?.result ?? '';
     } catch {
       this.dialogModel.code = '';
-      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+      this.toast.error('Load Failed', 'Unable to load category code. Please check and try again.');
     }
   }
 
@@ -231,7 +231,9 @@ export class CategoriesComponent {
       ...this.dialogModel,
       OrgId: this.OrgId,
       IsActive: this.dialogModel.IsActive ?? true,
-      IsDeleted: false
+      IsDeleted: false,
+      EntityNo: this.CategoryEntityNo,
+      BranchId: this.BranchId
     };
 
     if (this.isEditMode && this.editingCategoryId) {
