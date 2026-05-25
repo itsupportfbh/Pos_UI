@@ -53,8 +53,8 @@ viewReady = false;
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.organizationName = this.getStringValue(this.userDetails, 'OrganizationName', 'organizationName', 'OrgName', 'orgName') || 'Unity work POS';
-    this.branchName = this.getStringValue(this.userDetails, 'BranchName', 'branchName') || '';
+    this.organizationName = this.getStringValue(this.userDetails,  'OrgName') || 'Unity work POS';
+    this.branchName = this.getStringValue(this.userDetails, 'BranchName') || '';
 
 
 
@@ -186,7 +186,7 @@ viewReady = false;
   }
 
   private isReadyStatus(status: string): boolean {
-    return status.trim().toLowerCase() === 'ready';
+    return status.trim().toLowerCase() === 'Ready To Serve';
   }
 
   private getResponseList(response: any): any[] {
@@ -224,11 +224,11 @@ viewReady = false;
   }
 
   private getOrderStatus(order: any): string {
-    return this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus', 'Status', 'status') || 'In Progress';
+    return this.getStringValue(order, 'OrderStatus')|| 'In Progress';
   }
 
   private isCustomerDisplayOrder(order: any): boolean {
-    const orderNo = this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo');
+    const orderNo = this.getStringValue(order, 'OrderNumber');
     const isDeleted = this.getBooleanValue(order, 'IsDeleted', 'isDeleted');
     const isActive = this.getBooleanValue(order, 'IsActive', 'isActive');
 
@@ -238,7 +238,7 @@ viewReady = false;
   private getUserOrgId(): number {
     return Number(this.userDetails.RoleId || 0) === 1
       ? 0
-      : this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
+      : this.getNumberValue(this.userDetails, 'OrgId');
   }
 
   private getUserBranchId(): number {
@@ -248,11 +248,11 @@ viewReady = false;
   }
 
   private getSessionOrgId(): number {
-    return this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
+    return this.getNumberValue(this.userDetails, 'OrgId');
   }
 
   private getSessionBranchId(): number {
-    return this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
+    return this.getNumberValue(this.userDetails, 'BranchId');
   }
 
   private getResponseObject(response: any): any {

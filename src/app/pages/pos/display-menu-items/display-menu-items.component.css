@@ -14,7 +14,15 @@
     var(--app-bg);
   box-shadow: var(--app-shadow);
 }
+.ticket-header-line {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
 
+.ticket-course {
+  margin: 0;
+}
 .kitchen-topbar {
   display: grid;
   grid-template-columns: minmax(13rem, 1fr) minmax(16rem, 28rem) minmax(13rem, 1fr);

@@ -1,66 +1,33 @@
 <section class="kitchen-board-page">
-  <header class="kitchen-topbar">
-    <div class="kitchen-topbar-left">
-      <button type="button" aria-label="Orders">
-        <i class="pi pi-box"></i>
-      </button>
-      <button type="button" aria-label="Home">
-        <i class="pi pi-home"></i>
-      </button>
-      <button type="button" aria-label="Refresh" (click)="loadKitchenOrders()">
-        <i class="pi pi-refresh"></i>
-      </button>
-      <strong>Recall</strong>
-    </div>
-
-    <label class="ticket-search" for="ticket-search">
-      <input id="ticket-search" type="search" placeholder="Search Ticket" [value]="searchTicketText"
-        (input)="updateSearchTicket($event)" />
-      <i class="pi pi-search"></i>
-    </label>
-
-    <div class="kitchen-topbar-right">
-      <span>{{ totalKitchenOrders }} tickets</span>
-      <strong>Kitchen</strong>
-      <button type="button" aria-label="Clear" [disabled]="!kitchenOrders.length" (click)="clearKitchenOrders()">
-        <i class="pi pi-trash"></i>
-      </button>
-      <button type="button" aria-label="Menu">
-        <i class="pi pi-bars"></i>
-      </button>
-      <button type="button" aria-label="Settings">
-        <i class="pi pi-cog"></i>
-      </button>
-    </div>
-  </header>
-
+  
   <section class="kitchen-ticket-board">
     @for (order of filteredKitchenOrders; track order.id) {
       <article class="kitchen-ticket" [class.ticket-ready]="isReady(order)">
         <header class="ticket-header">
           <div>
-            <strong>#{{ getTicketNumber(order) }}</strong>
-            <span>{{ order.itemCount || order.items.length }}/{{ order.items.length }}</span>
+           <small>{{ order.customerName || 'Walk-in Guest' }}</small>
           </div>
           <div>
-            <span>{{ order.sentAt | date: 'hh:mm:ss a' }}</span>
-            <small>{{ order.customerName || 'Walk-in Guest' }}</small>
+            <span>{{ order.sentAt | date: 'hh:mm a' }}</span>
+            
           </div>
         </header>
 
         <h2>{{ getTicketTitle(order) }}</h2>
 
         <section class="ticket-items">
+         
+          <div class="ticket-header-line">
           <p class="ticket-course">{{ order.orderType || 'Order' }}</p>
+        <!--  <p class="ticket-course">{{ order.orderNo || 'Order' }}</p>  -->
+        </div>
 
           @for (item of order.items; track item.cartKey) {
             <div class="ticket-item">
               <strong>{{ item.quantity }} x {{ item.name }}</strong>
-              @if (item.itemType === 'Combo') {
-                <span>Combo</span>
-              }
+              
               @if (item.comboItems?.length) {
-                <small>{{ item.comboItems?.length }} combo item(s)</small>
+                <small>{{ item.comboItems?.length }}  Items</small>
               }
             </div>
           }
@@ -82,9 +49,5 @@
     }
   </section>
 
-  <footer class="kitchen-pager">
-    <button type="button" class="active">Page 1</button>
-    <button type="button">Page 2</button>
-    <button type="button">Page 3</button>
-  </footer>
+ 
 </section>

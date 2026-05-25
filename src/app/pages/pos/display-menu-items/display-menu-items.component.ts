@@ -154,34 +154,34 @@ viewReady = false;
     const items = this.getOrderItems(order).map((item: any, index: number) => this.mapApiOrderItem(item, index));
 
     return {
-      id: this.getNumberValue(order, 'Orderid', 'orderid', 'OrderId', 'orderId', 'Id', 'id'),
-      orderNo: this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber'),
-      orderType: this.getStringValue(order, 'OrderType', 'orderType', 'Ordertype', 'ordertype'),
-      table: this.getStringValue(order, 'TableName', 'tableName', 'TableCode', 'tableCode', 'TableId', 'tableId') || 'Counter',
-      customerName: this.getStringValue(order, 'CustomerName', 'customerName') || 'Walk-in Guest',
-      customerPhone: this.getStringValue(order, 'CustomerPhone', 'customerPhone'),
-      status: this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus') || 'In Kitchen',
+      id: this.getNumberValue(order,  'OrderId'),
+      orderNo: this.getStringValue(order, 'OrderNumber'),
+      orderType: this.getStringValue(order, 'OrderType'),
+      table: this.getStringValue(order,  'TableId') || 'Counter',
+      customerName: this.getStringValue(order, 'CustomerName') || 'Walk-in Guest',
+      customerPhone: this.getStringValue(order, 'ContactNumber'),
+      status: this.getStringValue(order, 'OrderStatus') || 'In Kitchen',
       sentAt: this.getStringValue(order, 'CreatedDate', 'createdDate', 'UpdatedDate', 'updatedDate') || new Date().toISOString(),
-      itemCount: this.getNumberValue(order, 'ItemCount', 'itemCount') || items.length,
-      grandTotal: this.getNumberValue(order, 'TotalAmount', 'totalAmount', 'GrandTotal', 'grandTotal'),
+      itemCount: this.getNumberValue(order, 'ItemCount') || items.length,
+      grandTotal: this.getNumberValue(order, 'TotalAmount'),
       items
     };
   }
 
   private mapApiOrderItem(item: any, index: number): KitchenOrderItem {
-    const menuItemId = this.getNumberValue(item, 'Menuitemid', 'menuitemid', 'MenuItemId', 'menuItemId');
-    const comboMenuItemId = this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId');
-    const quantity = this.getNumberValue(item, 'Quantity', 'quantity') || 1;
-    const price = this.getNumberValue(item, 'Unitprice', 'unitprice', 'UnitPrice', 'unitPrice');
+    const menuItemId = this.getNumberValue(item, 'Menuitemid');
+    const comboMenuItemId = this.getNumberValue(item, 'ComboMenuItemId');
+    const quantity = this.getNumberValue(item, 'Quantity') || 1;
+    const price = this.getNumberValue(item, 'Unitprice');
 
     return {
-      id: this.getNumberValue(item, 'Itemid', 'itemid', 'Id', 'id') || index + 1,
+      id: this.getNumberValue(item, 'Itemid') || index + 1,
       cartKey: `${comboMenuItemId ? 'combo' : 'menu'}-${comboMenuItemId || menuItemId || index}`,
       itemType: comboMenuItemId ? 'Combo' : 'Menu',
-      name: this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName') || 'Order item',
+      name: this.getStringValue(item, 'Itemname') || 'Order item',
       quantity,
       price,
-      lineTotal: this.getNumberValue(item, 'Totalprice', 'totalprice', 'TotalPrice', 'totalPrice') || quantity * price,
+      lineTotal: this.getNumberValue(item, 'Totalprice') || quantity * price,
       comboItems: this.parseComboDetails(this.getStringValue(item, 'Modifierdetails', 'modifierdetails'))
     };
   }
@@ -204,7 +204,7 @@ viewReady = false;
         return of(order);
       }
 
-      const orderId = this.getNumberValue(order, 'Orderid', 'orderid', 'OrderId', 'orderId', 'Id', 'id');
+      const orderId = this.getNumberValue(order, 'OrderId');
 
       if (!orderId) {
         return of(order);
@@ -233,16 +233,7 @@ viewReady = false;
   }
 
   private getOrderItems(order: any): any[] {
-    const items = order?.Items ??
-      order?.items ??
-      order?.Orderitems ??
-      order?.orderitems ??
-      order?.OrderItems ??
-      order?.orderItems ??
-      order?.OrderDetails ??
-      order?.orderDetails ??
-      order?.Details ??
-      order?.details ??
+    const items = order?.Items ??    
       [];
     return Array.isArray(items) ? items : [];
   }
@@ -255,8 +246,8 @@ viewReady = false;
     return {
       ...listOrder,
       ...detailHeader,
-      Items: detailItems.length ? detailItems : this.getOrderItems(listOrder),
-      items: detailItems.length ? detailItems : this.getOrderItems(listOrder)
+      Items: detailItems.length ? detailItems : this.getOrderItems(listOrder)
+      
     };
   }
 
@@ -315,27 +306,18 @@ viewReady = false;
 
   private isOrderHeaderLike(value: any): boolean {
     return Boolean(value && typeof value === 'object' && (
-      value.Orderid !== undefined ||
-      value.orderid !== undefined ||
-      value.OrderId !== undefined ||
-      value.orderId !== undefined ||
-      value.OrderNumber !== undefined ||
-      value.orderNumber !== undefined ||
-      value.Ordernumber !== undefined ||
-      value.ordernumber !== undefined
+      value.OrderId !== undefined 
+      
     ));
   }
 
   private isOrderItemLike(value: any): boolean {
     return Boolean(value && typeof value === 'object' && (
       value.Menuitemid !== undefined ||
-      value.menuitemid !== undefined ||
       value.ComboMenuItemId !== undefined ||
-      value.comboMenuItemId !== undefined ||
       value.Itemname !== undefined ||
-      value.itemname !== undefined ||
-      value.Quantity !== undefined ||
-      value.quantity !== undefined
+      value.Quantity !== undefined 
+      
     ));
   }
 
