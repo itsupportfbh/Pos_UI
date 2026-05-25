@@ -59,3 +59,32 @@
   background: #fee2e2;
   color: #991b1b;
 }
+.status-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.status-label {
+  font-weight: 500;
+  color: #374151;
+}
+.status-toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.status-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.status-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
