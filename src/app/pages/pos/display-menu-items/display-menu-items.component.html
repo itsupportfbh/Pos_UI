@@ -37,9 +37,12 @@
           <strong>Notes:</strong>
           <span>{{ order.status }}</span>
         </div>
-
-        <button pButton type="button" icon="pi pi-check" [label]="isReady(order) ? 'Ready' : 'Done'"
-          [disabled]="isReady(order)" (click)="markKitchenOrderReady(order)"></button>
+        <div class="ticket-actions">
+          <button pButton type="button" icon="pi pi-clock" label="In Process"
+            [disabled]="isPreparing(order) || isReady(order)" (click)="markKitchenOrderPreparing(order)"></button>
+          <button pButton type="button" icon="pi pi-check" label="Ready"
+            [disabled]="isReady(order)" (click)="markKitchenOrderReady(order)"></button>
+        </div>
       </article>
     } @empty {
       <div class="kitchen-empty">

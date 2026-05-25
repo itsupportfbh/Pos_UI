@@ -230,14 +230,19 @@
   white-space: nowrap;
 }
 
-.kitchen-ticket > button {
-  justify-self: center;
+.ticket-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem 0.62rem;
+}
+
+.ticket-actions button {
   min-width: 7rem;
-  margin: 0.2rem 0 0.62rem;
   border-radius: 999px;
 }
 
-.kitchen-ticket > button:disabled {
+.ticket-actions button:disabled {
   background: #d8d0ca;
   border-color: #d8d0ca;
   color: #7c7068;

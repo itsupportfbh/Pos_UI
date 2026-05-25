@@ -31,7 +31,10 @@ type KitchenOrder = {
   itemCount: number;
   grandTotal: number;
   items: KitchenOrderItem[];
+  rawOrder?: any;
 };
+
+type KitchenOrderStatus = 'In Process' | 'Ready';
 
 @Component({
   selector: 'app-display-menu-items',
@@ -125,12 +128,43 @@ viewReady = false;
     this.toast.info('API Required', 'Clear kitchen orders from the saved order list.');
   }
 
+  markKitchenOrderPreparing(order: KitchenOrder): void {
+    this.updateKitchenOrderStatus(order, 'In Process');
+  }
+
   markKitchenOrderReady(order: KitchenOrder): void {
-    this.kitchenOrders = this.kitchenOrders.map((item) =>
-      item.id === order.id ? { ...item, status: 'Ready' } : item
-    );
+    this.updateKitchenOrderStatus(order, 'Ready');
+  }
+
+  private updateKitchenOrderStatus(order: KitchenOrder, status: KitchenOrderStatus): void {
+    const payload = this.buildKitchenStatusPayload(order, status);
+
+    this.displayMenuItemsService.KitchenStatusChange(payload).subscribe({
+      next: () => {
+        this.setLocalKitchenOrderStatus(order, status);
+        this.toast.success('Updated', `${order.orderNo} marked ${status.toLowerCase()}.`);
+      },
+      error: (err: any) => {
+        const message = err?.error?.message
+          || err?.error?.Message
+          || err?.message
+          || `Unable to mark ${order.orderNo} as ${status.toLowerCase()}.`;
+
+        this.toast.error('Update Failed', message);
+      }
+    });
+  }
+
+  private setLocalKitchenOrderStatus(order: KitchenOrder, status: string): void {
+    if (this.isReadyStatus(status)) {
+      this.kitchenOrders = this.kitchenOrders.filter((item) => item.id !== order.id);
+    } else {
+      this.kitchenOrders = this.kitchenOrders.map((item) =>
+        item.id === order.id ? { ...item, status } : item
+      );
+    }
+
     this.updateKitchenTotals();
-    this.toast.success('Ready', `${order.orderNo} marked ready.`);
   }
 
   getTicketNumber(order: KitchenOrder): string {
@@ -147,7 +181,11 @@ viewReady = false;
   }
 
   isReady(order: KitchenOrder): boolean {
-    return String(order.status ?? '').trim().toLowerCase() === 'ready';
+    return this.isReadyStatus(order.status);
+  }
+
+  isPreparing(order: KitchenOrder): boolean {
+    return this.isInProcessStatus(order.status);
   }
 
   private mapApiOrderToKitchenOrder(order: any): KitchenOrder {
@@ -164,7 +202,44 @@ viewReady = false;
       sentAt: this.getStringValue(order, 'CreatedDate', 'createdDate', 'UpdatedDate', 'updatedDate') || new Date().toISOString(),
       itemCount: this.getNumberValue(order, 'ItemCount') || items.length,
       grandTotal: this.getNumberValue(order, 'TotalAmount'),
-      items
+      items,
+      rawOrder: order
+    };
+  }
+
+  private buildKitchenStatusPayload(order: KitchenOrder, status: KitchenOrderStatus): any {
+    const rawOrder = order.rawOrder ?? {};
+    const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
+    const now = new Date().toISOString();
+
+    return {
+      ...rawOrder,
+      orderid: this.getNumberValue(rawOrder, 'orderid', 'Orderid', 'OrderId', 'Id') || order.id,
+      orderNumber: this.getStringValue(rawOrder, 'orderNumber', 'OrderNumber') || order.orderNo,
+      orderType: this.getStringValue(rawOrder, 'orderType', 'OrderType') || order.orderType,
+      orderStatus: status,
+      itemCount: this.getNumberValue(rawOrder, 'itemCount', 'ItemCount') || order.itemCount,
+      subtotalAmount: this.getNumberValue(rawOrder, 'subtotalAmount', 'SubtotalAmount'),
+      taxAmount: this.getNumberValue(rawOrder, 'taxAmount', 'TaxAmount'),
+      discountAmount: this.getNumberValue(rawOrder, 'discountAmount', 'DiscountAmount'),
+      totalAmount: this.getNumberValue(rawOrder, 'totalAmount', 'TotalAmount') || order.grandTotal,
+      customerName: this.getStringValue(rawOrder, 'customerName', 'CustomerName') || order.customerName,
+      contactNumber: this.getStringValue(rawOrder, 'contactNumber', 'ContactNumber', 'CustomerPhone') || order.customerPhone,
+      tableId: this.getNumberValue(rawOrder, 'tableId', 'TableId') || Number(order.table || 0),
+      shiftId: this.getNumberValue(rawOrder, 'shiftId', 'ShiftId', 'Shiftid'),
+      orgId: this.getNumberValue(rawOrder, 'orgId', 'OrgId') || this.getUserOrgId(),
+      branchId: this.getNumberValue(rawOrder, 'branchId', 'BranchId') || this.getUserBranchId(),
+      createdBy: this.getNumberValue(rawOrder, 'createdBy', 'CreatedBy') || userId || 0,
+      createdDate: this.getStringValue(rawOrder, 'createdDate', 'CreatedDate') || now,
+      updatedBy: userId || this.getNumberValue(rawOrder, 'updatedBy', 'UpdatedBy') || 0,
+      updatedDate: now,
+      isDeleted: this.getBooleanValue(rawOrder, 'isDeleted', 'IsDeleted') ?? false,
+      items: this.getOrderItems(rawOrder).map((item: any) => ({
+        ...item,
+        itemstatus: status,
+        updatedBy: userId || this.getNumberValue(item, 'updatedBy', 'UpdatedBy') || 0,
+        updatedDate: now
+      }))
     };
   }
 
@@ -301,7 +376,17 @@ viewReady = false;
 
   private isVisibleKitchenStatus(status: string): boolean {
     const normalizedStatus = String(status || '').trim().toLowerCase();
-    return normalizedStatus === 'in kitchen' || normalizedStatus === 'ready';
+    return normalizedStatus === 'in kitchen' || this.isInProcessStatus(status);
+  }
+
+  private isInProcessStatus(status: string): boolean {
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    return normalizedStatus === 'in process' || normalizedStatus === 'preparing';
+  }
+
+  private isReadyStatus(status: string): boolean {
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    return normalizedStatus === 'ready' || normalizedStatus === 'ready to serve';
   }
 
   private isOrderHeaderLike(value: any): boolean {
@@ -347,6 +432,30 @@ viewReady = false;
   private getNumberValue(source: any, ...keys: string[]): number {
     const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
     return Number(value ?? 0);
+  }
+
+  private getBooleanValue(source: any, ...keys: string[]): boolean | null {
+    const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
+
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    const normalizedValue = String(value).trim().toLowerCase();
+
+    if (normalizedValue === 'true' || normalizedValue === '1') {
+      return true;
+    }
+
+    if (normalizedValue === 'false' || normalizedValue === '0') {
+      return false;
+    }
+
+    return null;
   }
 
   private getUserOrgId(): number {
