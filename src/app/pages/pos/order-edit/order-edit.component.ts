@@ -38,7 +38,8 @@ const ORDER_EDIT_COLUMNS: SharedTableColumn<OrderEditRow>[] = [
   { field: 'GuestName', header: 'Guest', sortable: true, width: '14rem' },
   { field: 'ItemCount', header: 'Items', sortable: true, width: '7rem' },
   { field: 'OrderTotal', header: 'Total', sortable: true, width: '10rem' },
-  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
+  { field: 'Status', header: 'Status', sortable: true, width: '8rem' },
+  { field: 'Notes', header: 'Notes', sortable: true, width: '14rem' }
 ];
 
 @Component({
@@ -442,7 +443,7 @@ export class OrderEditComponent {
       ItemCount: this.getNumberValue(order, 'ItemCount') || this.getOrderItems(order).length,
       OrderTotal: this.getNumberValue(order, 'TotalAmount'),
       UpdatedBy: this.getStringValue(order, 'UpdatedBy', 'updatedBy', 'CreatedBy', 'createdBy') || '-',
-      Notes: this.getStringValue(order, 'Notes', 'notes', 'Remarks', 'remarks') || status,
+      Notes: this.getStringValue(order, 'Notes' ) ,
       IsActive: status.trim().toLowerCase() !== 'completed' && !this.getBooleanValue(order, 'IsDeleted', 'isDeleted'),
       Status: status,
       RowNumber: index + 1,

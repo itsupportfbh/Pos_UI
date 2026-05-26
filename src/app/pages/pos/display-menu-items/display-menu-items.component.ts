@@ -29,6 +29,7 @@ type KitchenOrder = {
   customerName: string;
   customerPhone?: string;
   status: string;
+  notes: string;
   sentAt: string;
   itemCount: number;
   grandTotal: number;
@@ -275,6 +276,18 @@ viewReady = false;
     return order.items.filter((item) => this.isVisibleKitchenStatus(item.status)).length;
   }
 
+  getComboItemTrackKey(comboItem: any, index: number): string {
+    return `${this.getNumberValue(comboItem,  'MenuItemId') || index}-${this.getComboItemName(comboItem)}`;
+  }
+
+  getComboItemName(comboItem: any): string {
+    return this.getStringValue(comboItem, 'Name', 'name',  'Itemname', 'itemname', 'ItemName', 'itemName') || 'Combo item';
+  }
+
+  getComboItemQuantity(comboItem: any): number {
+    return this.getNumberValue(comboItem, 'Quantity') || 1;
+  }
+
   private mapApiOrderToKitchenOrder(order: any): KitchenOrder {
     const orderStatus = this.getStringValue(order, 'OrderStatus') || 'In Kitchen';
     const items = this.getOrderItems(order).map((item: any, index: number) => this.mapApiOrderItem(item, index, orderStatus));
@@ -287,6 +300,7 @@ viewReady = false;
       customerName: this.getStringValue(order, 'CustomerName') || 'Walk-in Guest',
       customerPhone: this.getStringValue(order, 'ContactNumber'),
       status: this.getOrderStatusFromItems(items, orderStatus),
+      notes: this.getStringValue(order, 'Notes'),
       sentAt: this.getStringValue(order, 'CreatedDate', 'createdDate', 'UpdatedDate', 'updatedDate') || new Date().toISOString(),
       itemCount: this.getNumberValue(order, 'ItemCount') || items.length,
       grandTotal: this.getNumberValue(order, 'TotalAmount'),
@@ -343,10 +357,15 @@ viewReady = false;
     const itemId = this.getNumberValue(rawItem, 'itemid', 'Itemid', 'ItemId', 'id', 'Id') || item.id;
 
     return {
+      Orderid: orderId,
+      OrderId: orderId,
       orderid: orderId,
       orderId,
       itemid: itemId,
+      Itemid: itemId,
+      ItemId: itemId,
       itemId,
+      OrderStatus: status,
       orderStatus: status,
       itemstatus: status,
       Itemstatus: status,
@@ -496,11 +515,11 @@ viewReady = false;
     if (items.length) {
       return items.some((item: any) => this.isVisibleKitchenStatus(
         this.getStringValue(item, 'Itemstatus', 'itemstatus') ||
-        this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus')
+        this.getStringValue(order, 'OrderStatus')
       ));
     }
 
-    return this.isVisibleKitchenStatus(this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus'));
+    return this.isVisibleKitchenStatus(this.getStringValue(order, 'OrderStatus'));
   }
 
   private isVisibleKitchenStatus(status: string): boolean {
