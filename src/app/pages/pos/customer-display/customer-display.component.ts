@@ -157,7 +157,7 @@ viewReady = false;
       return 'order-type-delivery';
     }
 
-    if (orderType.includes('dine')) {
+    if (this.isDineInOrderType(orderType)) {
       return 'order-type-dine-in';
     }
 
@@ -208,7 +208,7 @@ viewReady = false;
   getOrderIcon(order: CustomerDisplayOrder): string {
     const orderType = String(order.orderType || '').toLowerCase();
 
-    if (orderType.includes('dine')) {
+    if (this.isDineInOrderType(orderType)) {
       return 'pi pi-table';
     }
 
@@ -226,6 +226,10 @@ viewReady = false;
   getOrderToneClass(order: CustomerDisplayOrder, index: number): string {
     const orderType = String(order.orderType || '').toLowerCase();
 
+    if (this.isDineInOrderType(orderType)) {
+      return 'tone-dine-in';
+    }
+
     if (orderType.includes('take')) {
       return 'tone-teal';
     }
@@ -239,6 +243,11 @@ viewReady = false;
     }
 
     return ['tone-teal', 'tone-orange', 'tone-green', 'tone-red', 'tone-black'][index % 5];
+  }
+
+  private isDineInOrderType(orderType: string): boolean {
+    const normalizedOrderType = String(orderType || '').replace(/[\s_-]+/g, '').toLowerCase();
+    return normalizedOrderType.includes('dinein') || normalizedOrderType.includes('dinin') || normalizedOrderType.includes('table');
   }
 
   private isReadyStatus(status: string): boolean {

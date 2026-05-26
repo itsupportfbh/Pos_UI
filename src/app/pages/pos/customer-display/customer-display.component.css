@@ -244,6 +244,12 @@
   background: #48c9c0;
 }
 
+.tone-dine-in {
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .tone-green {
   background: #58be67;
 }

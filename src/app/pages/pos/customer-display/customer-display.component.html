@@ -28,7 +28,7 @@
       <section class="customer-order-list">
         @for (order of inProgressOrders; track order.trackKey; let orderIndex = $index) {
           <div class="customer-order-row">
-            <span class="order-type-icon" [class]="getOrderToneClass(order, orderIndex)">
+            <span class="order-type-icon" [ngClass]="getOrderToneClass(order, orderIndex)">
               <i [class]="getOrderIcon(order)"></i>
             </span>
             <strong>{{ getCustomerName(order) }}</strong>
@@ -55,7 +55,7 @@
       <section class="customer-order-list">
         @for (order of readyOrders; track order.trackKey; let orderIndex = $index) {
           <div class="customer-order-row ready-row">
-            <span class="order-type-icon" [class]="getOrderToneClass(order, orderIndex)">
+            <span class="order-type-icon" [ngClass]="getOrderToneClass(order, orderIndex)">
               <i [class]="getOrderIcon(order)"></i>
             </span>
             <strong>{{ getCustomerName(order) }}</strong>

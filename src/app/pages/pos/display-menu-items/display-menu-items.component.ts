@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import {ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
-import { catchError, forkJoin, map, of } from 'rxjs';
+import { catchError, firstValueFrom, forkJoin, map, of } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
+import { DiningTableService } from '../../../services/diningtable.service';
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
 
 type KitchenOrderItem = {
@@ -25,7 +26,8 @@ type KitchenOrder = {
   id: number;
   orderNo: string;
   orderType: string;
-  table: string;
+  tableId: number;
+  TableName: string;
   customerName: string;
   customerPhone?: string;
   status: string;
@@ -59,19 +61,22 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   totalKitchenOrders = 0;
   totalKitchenItems = 0;
   isLoadingOrders = false;
+  private tableNameById: Record<number, string> = {};
 viewReady = false;
   constructor(
     private readonly toast: AppToastService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
+    private readonly diningTableService: DiningTableService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
 
-    setTimeout(() => {
+    setTimeout(async () => {
     this.viewReady = true;
-     this.loadKitchenOrders();
+    await this.loadDiningTableNames();
+    this.loadKitchenOrders();
     this.cdr.detectChanges();
   });
    
@@ -93,7 +98,7 @@ viewReady = false;
 
     return this.kitchenOrders.filter((order) =>
       String(order.orderNo ?? '').toLowerCase().includes(searchText) ||
-      String(order.table ?? '').toLowerCase().includes(searchText) ||
+      String(order.TableName ?? '').toLowerCase().includes(searchText) ||
       String(order.orderType ?? '').toLowerCase().includes(searchText) ||
       String(order.customerName ?? '').toLowerCase().includes(searchText)
     );
@@ -130,6 +135,26 @@ viewReady = false;
         });
 }
     });
+  }
+
+  private async loadDiningTableNames(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.diningTableService.getAll(this.getUserOrgId(), this.getUserBranchId()));
+      const tables = this.getResponseList(response);
+
+      this.tableNameById = tables.reduce((lookup: Record<number, string>, table: any) => {
+        const tableId = this.getNumberValue(table, 'Id', 'id', 'TableId', 'tableId');
+        const tableName = this.getStringValue(table, 'Name', 'name', 'Code', 'code', 'TableName', 'tableName');
+
+        if (tableId > 0 && tableName) {
+          lookup[tableId] = tableName;
+        }
+
+        return lookup;
+      }, {});
+    } catch {
+      this.tableNameById = {};
+    }
   }
 
   updateSearchTicket(event: Event): void {
@@ -249,8 +274,8 @@ viewReady = false;
   }
 
   getTicketTitle(order: KitchenOrder): string {
-    if (order.table && order.table !== 'Counter') {
-      return `Table No. ${order.table}`;
+    if (order.TableName && order.TableName !== 'Counter') {
+      return order.TableName;
     }
 
     return order.orderType?.toLowerCase().includes('take') ? 'Take Out' : order.orderType || 'Take Out';
@@ -288,15 +313,31 @@ viewReady = false;
     return this.getNumberValue(comboItem, 'Quantity') || 1;
   }
 
+  private getTableName(order: any, tableId: number): string {
+    const tableName = this.getStringValue(order, 'TableName', 'tableName', 'TableCode', 'tableCode', 'TableNo', 'tableNo');
+
+    if (tableName && tableName !== '0') {
+      return tableName;
+    }
+
+    if (tableId > 0 && this.tableNameById[tableId]) {
+      return this.tableNameById[tableId];
+    }
+
+    return tableId > 0 ? `Table ${tableId}` : 'Counter';
+  }
+
   private mapApiOrderToKitchenOrder(order: any): KitchenOrder {
     const orderStatus = this.getStringValue(order, 'OrderStatus') || 'In Kitchen';
     const items = this.getOrderItems(order).map((item: any, index: number) => this.mapApiOrderItem(item, index, orderStatus));
+    const tableId = this.getNumberValue(order, 'TableId', 'tableId', 'Tableid', 'tableid');
 
     return {
       id: this.getNumberValue(order,  'OrderId'),
       orderNo: this.getStringValue(order, 'OrderNumber'),
       orderType: this.getStringValue(order, 'OrderType'),
-      table: this.getStringValue(order,  'TableId') || 'Counter',
+      tableId,
+      TableName: this.getTableName(order, tableId),
       customerName: this.getStringValue(order, 'CustomerName') || 'Walk-in Guest',
       customerPhone: this.getStringValue(order, 'ContactNumber'),
       status: this.getOrderStatusFromItems(items, orderStatus),
@@ -327,7 +368,7 @@ viewReady = false;
       totalAmount: this.getNumberValue(rawOrder, 'totalAmount', 'TotalAmount') || order.grandTotal,
       customerName: this.getStringValue(rawOrder, 'customerName', 'CustomerName') || order.customerName,
       contactNumber: this.getStringValue(rawOrder, 'contactNumber', 'ContactNumber', 'CustomerPhone') || order.customerPhone,
-      tableId: this.getNumberValue(rawOrder, 'tableId', 'TableId') || Number(order.table || 0),
+      tableId: this.getNumberValue(rawOrder, 'tableId', 'TableId') || order.tableId,
       shiftId: this.getNumberValue(rawOrder, 'shiftId', 'ShiftId', 'Shiftid'),
       orgId: this.getNumberValue(rawOrder, 'orgId', 'OrgId') || this.getUserOrgId(),
       branchId: this.getNumberValue(rawOrder, 'branchId', 'BranchId') || this.getUserBranchId(),

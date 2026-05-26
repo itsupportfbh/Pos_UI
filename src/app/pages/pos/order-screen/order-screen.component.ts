@@ -693,6 +693,7 @@ export class OrderScreenComponent implements OnInit {
     const orderNotes = this.normalizeInputText(this.orderNotes).slice(0, 500);
     const items = this.cartItems.map((item: any) => this.buildKitchenOrderItem(item, existingOrderId, userId, now, status));
     const tableId = this.getSelectedTableId();
+    const tableName = this.selectedTable === ALL_TABLE ? '' : this.selectedTable;
     const shiftId = this.getCurrentShiftId();
 
     const payload = {
@@ -707,6 +708,10 @@ export class OrderScreenComponent implements OnInit {
       TableId: tableId,
       Tableid: tableId,
       tableId,
+      TableName: tableName,
+      tableName,
+      TableCode: tableName,
+      tableCode: tableName,
       OrderType: this.activeOrderType,
       Ordertype: this.activeOrderType,
       orderType: this.activeOrderType,
