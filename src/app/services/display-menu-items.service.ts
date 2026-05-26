@@ -38,6 +38,16 @@ export class DisplayMenuItemsService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
+KitchenStatusChange(payload: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/KitchenStatusChange`, payload);
+  }
+
+  KitchenItemStatusChange(payload: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/KitchenItemStatusChange`, payload);
+  }
+
+
+
   getAll(orgid: number, branchid: number): Observable<ApiListResponse<DisplayMenuItems>> {
     const params = new HttpParams()
       .set('orgid', orgid.toString())

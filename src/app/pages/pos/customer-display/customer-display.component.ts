@@ -186,7 +186,8 @@ viewReady = false;
   }
 
   private isReadyStatus(status: string): boolean {
-    return status.trim().toLowerCase() === 'Ready To Serve';
+    const normalizedStatus = status.trim().toLowerCase();
+    return normalizedStatus === 'ready' || normalizedStatus === 'ready to serve';
   }
 
   private getResponseList(response: any): any[] {

@@ -139,7 +139,7 @@ const ORDER_HOLD_COLUMNS: SharedTableColumn<HeldOrderRow>[] = [
   { field: 'Tax', header: 'Tax', sortable: true, width: '9rem' },
   { field: 'Discount', header: 'Discount', sortable: true, width: '10rem' },
   { field: 'Total', header: 'Total', sortable: true, width: '10rem' },
-  { field: 'HeldTime', header: 'Held Time', sortable: true, width: '14rem' }
+ // { field: 'HeldTime', header: 'Held Time', sortable: true, width: '14rem' }
 ];
 
 @Component({
