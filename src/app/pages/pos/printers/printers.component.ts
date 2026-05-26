@@ -23,6 +23,7 @@ import { CounterService } from '../../../services/counter.service';
 import { Printer, PrinterService } from '../../../services/printer.service';
 import { TerminalService } from '../../../services/terminal.service';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 type SelectOption = { label: string | number; value: string | number };
 
 type PrinterRow = Printer & {
@@ -76,6 +77,7 @@ export class PrintersComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly organizationService = inject(OrganizationService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -130,10 +132,13 @@ export class PrintersComponent implements OnInit {
   tableColumns = PRINTER_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  readonly showDownloadButton = true;
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
    branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -363,6 +368,98 @@ private async loadLatestTableCode(orgId: number): Promise<void> {
           );
         }
       });
+  }
+
+  async exportPrintersAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : this.OrgId;
+      const BranchId = this.isAdmin ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : this.BranchId;
+      const response: any = await firstValueFrom(this.printerService.getAll(OrgId, BranchId, 0, 0));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Printers`;
+      const searchText = this.filterPrinterName.trim().toLowerCase();
+      const branchIds = this.toNumberArray(this.filterBranch);
+      const counterIds = this.toNumberArray(this.filterCounter);
+      const terminalIds = this.toNumberArray(this.filterTerminal);
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText ||
+          row.Name?.toLowerCase().includes(searchText) ||
+          row.Code?.toLowerCase().includes(searchText);
+        const matchesBranch = !branchIds.length || branchIds.includes(Number(row.BranchId || 0));
+        const matchesCounter = !counterIds.length || counterIds.includes(Number(row.CounterId || 0));
+        const matchesTerminal = !terminalIds.length || terminalIds.includes(Number(row.TerminalId || 0));
+        return matchesText && matchesBranch && matchesCounter && matchesTerminal;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No printers are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Printers');
+      this.toast.success('Export Ready', 'Printer Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export printers to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportPrintersAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : this.OrgId;
+      const BranchId = this.isAdmin ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : this.BranchId;
+      const response: any = await firstValueFrom(this.printerService.getAll(OrgId, BranchId, 0, 0));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Printers`;
+      const searchText = this.filterPrinterName.trim().toLowerCase();
+      const branchIds = this.toNumberArray(this.filterBranch);
+      const counterIds = this.toNumberArray(this.filterCounter);
+      const terminalIds = this.toNumberArray(this.filterTerminal);
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText ||
+          row.Name?.toLowerCase().includes(searchText) ||
+          row.Code?.toLowerCase().includes(searchText);
+        const matchesBranch = !branchIds.length || branchIds.includes(Number(row.BranchId || 0));
+        const matchesCounter = !counterIds.length || counterIds.includes(Number(row.CounterId || 0));
+        const matchesTerminal = !terminalIds.length || terminalIds.includes(Number(row.TerminalId || 0));
+        return matchesText && matchesBranch && matchesCounter && matchesTerminal;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No printers are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Printers', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Printer PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export printers to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   async editRow(row: PrinterRow): Promise<void> {

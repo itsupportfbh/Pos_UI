@@ -14,6 +14,7 @@ import { Tax, TaxService } from '../../../services/tax.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { OrganizationService } from '../../../services/organization.service';
 import { firstValueFrom } from 'rxjs';
+import { TableExportService } from '../../../services/table-export.service';
 
 const TAX_COLUMNS: SharedTableColumn<any>[] = [
     { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
@@ -43,6 +44,7 @@ export class TaxComponent implements OnInit {
     private readonly organizationService = inject(OrganizationService);
     private readonly confirmationService = inject(ConfirmationService);
     private readonly changeDetector = inject(ChangeDetectorRef);
+    private readonly tableExportService = inject(TableExportService);
 
     @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
     @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -76,10 +78,13 @@ export class TaxComponent implements OnInit {
     tableColumns = TAX_COLUMNS;
     readonly showAddNewButton = true;
     readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+    readonly showDownloadButton = true;
     readonly showFilterButton = true;
     readonly showRowActions = true;
     readonly rowActionHeader = 'Actions';
     rowActionItems: MenuItem[] = [];
+    downloadLoading = false;
+    downloadLoadingLabel = 'Exporting...';
 
     ngOnInit(): void {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -117,6 +122,68 @@ export class TaxComponent implements OnInit {
                 );
             }
         });
+    }
+
+    async exportTaxesAsExcel(): Promise<void> {
+        this.downloadLoading = true;
+        this.downloadLoadingLabel = 'Excel exporting...';
+
+        try {
+            const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+            const response: any = await firstValueFrom(this.TaxService.getAll(orgId));
+            let RowNumber = 1;
+            const exportRows = (response.result ?? []).map((x: any) => {
+                x.RowNumber = RowNumber++;
+                x.Status = x.IsActive ? 'Active' : 'Inactive';
+                return x;
+            });
+            const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+            const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Taxes`;
+
+            if (!exportRows.length) {
+                this.toast.warn('No Records', 'No taxes are available to export.');
+                return;
+            }
+
+            await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Taxes');
+            this.toast.success('Export Ready', 'Tax Excel export downloaded successfully.');
+        } catch {
+            this.toast.error('Export Failed', 'Unable to export taxes to Excel.');
+        } finally {
+            this.downloadLoading = false;
+            this.downloadLoadingLabel = 'Exporting...';
+        }
+    }
+
+    async exportTaxesAsPdf(): Promise<void> {
+        this.downloadLoading = true;
+        this.downloadLoadingLabel = 'PDF exporting...';
+
+        try {
+            const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+            const response: any = await firstValueFrom(this.TaxService.getAll(orgId));
+            let RowNumber = 1;
+            const exportRows = (response.result ?? []).map((x: any) => {
+                x.RowNumber = RowNumber++;
+                x.Status = x.IsActive ? 'Active' : 'Inactive';
+                return x;
+            });
+            const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+            const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Taxes`;
+
+            if (!exportRows.length) {
+                this.toast.warn('No Records', 'No taxes are available to export.');
+                return;
+            }
+
+            await this.tableExportService.exportPdf(fileName, 'Taxes', this.tableColumns, exportRows);
+            this.toast.success('Export Ready', 'Tax PDF export downloaded successfully.');
+        } catch {
+            this.toast.error('Export Failed', 'Unable to export taxes to PDF.');
+        } finally {
+            this.downloadLoading = false;
+            this.downloadLoadingLabel = 'Exporting...';
+        }
     }
 
     async openAddDialog(): Promise<void> {

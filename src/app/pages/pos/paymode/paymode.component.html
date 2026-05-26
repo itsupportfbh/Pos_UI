@@ -16,7 +16,10 @@
       </div>
     </div>
 
-    <app-shared-table [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+    <app-shared-table [showDownloadButton]="showDownloadButton" (excelDownloadClick)="exportPaymodesAsExcel()"
+      (pdfDownloadClick)="exportPaymodesAsPdf()" [downloadLoading]="downloadLoading"
+      [downloadLoadingLabel]="downloadLoadingLabel"
+      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
      

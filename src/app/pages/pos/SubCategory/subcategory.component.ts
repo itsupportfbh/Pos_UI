@@ -16,6 +16,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { OrganizationService } from '../../../services/organization.service';
 import { firstValueFrom } from 'rxjs';
+import { TableExportService } from '../../../services/table-export.service';
 
 type SubCategoryRow = {
   id: number;
@@ -63,6 +64,7 @@ export class SubCategoryComponent {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -119,10 +121,13 @@ export class SubCategoryComponent {
   tableColumns = SUBCATEGORY_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+  readonly showDownloadButton = true;
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
   rowActionItems: MenuItem[] = [];
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
   subCategoryEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   ngOnInit(): void {
@@ -193,6 +198,90 @@ export class SubCategoryComponent {
         this.isLoading = false;
       }
     });
+  }
+
+  async exportSubCategoriesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+      const response: any = await firstValueFrom(this.SubcategoryService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-SubCategories`;
+      const searchText = this.filterSubCategoryName.trim().toLowerCase();
+      const CategoryIds = this.selectedCategoryIds.map((id) => Number(id));
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText ||
+          row.name?.toLowerCase().includes(searchText) ||
+          row.code?.toLowerCase().includes(searchText);
+
+        const matchesCategory = !CategoryIds.length || CategoryIds.includes(Number(row.categoryId ?? 0));
+        return matchesText && matchesCategory;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No subcategories are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'SubCategories');
+      this.toast.success('Export Ready', 'SubCategory Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export subcategories to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportSubCategoriesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+      const response: any = await firstValueFrom(this.SubcategoryService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-SubCategories`;
+      const searchText = this.filterSubCategoryName.trim().toLowerCase();
+      const CategoryIds = this.selectedCategoryIds.map((id) => Number(id));
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText ||
+          row.name?.toLowerCase().includes(searchText) ||
+          row.code?.toLowerCase().includes(searchText);
+
+        const matchesCategory = !CategoryIds.length || CategoryIds.includes(Number(row.categoryId ?? 0));
+        return matchesText && matchesCategory;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No subcategories are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'SubCategories', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'SubCategory PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export subcategories to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   searchSubCategories(): void {

@@ -17,6 +17,7 @@ import { AppToastService } from '../../../services/app-toast.service';
 import { Branch, BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type BranchRow = Branch & {
   RowNumber: number;
@@ -63,6 +64,7 @@ export class BranchesComponent implements OnInit {
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -117,9 +119,12 @@ export class BranchesComponent implements OnInit {
   tableColumns = BRANCH_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  readonly showDownloadButton = true;
   showFilterButton = false;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
   async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -157,6 +162,82 @@ export class BranchesComponent implements OnInit {
         this.toast.error('Load Failed', 'Unable to load branches. Please check API and try again.');
       }
     });
+  }
+
+  async exportBranchesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.branchService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Branches`;
+
+      if (this.filterOrganizations.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterOrganizations.includes(Number(row.OrgId || 0))
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No branches are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Branches');
+      this.toast.success('Export Ready', 'Branch Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export branches to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportBranchesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.branchService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Branches`;
+
+      if (this.filterOrganizations.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterOrganizations.includes(Number(row.OrgId || 0))
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No branches are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Branches', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Branch PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export branches to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   resetForm(): void {

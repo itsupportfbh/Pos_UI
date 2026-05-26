@@ -13,6 +13,7 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { AppToastService } from '../../../services/app-toast.service';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { Paymode, PaymodeService } from '../../../services/paymode.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type PaymodeRow = Paymode & {
   Type: string;
@@ -52,6 +53,7 @@ export class PaymodeComponent implements OnInit {
   private readonly paymodeService = inject(PaymodeService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -88,8 +90,11 @@ export class PaymodeComponent implements OnInit {
   tableColumns = PAYMODE_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  readonly showDownloadButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -135,6 +140,98 @@ export class PaymodeComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  async exportPaymodesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const response: any = await firstValueFrom(this.paymodeService.getAll(orgId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((paymode: any) => ({
+        ...paymode,
+        Id: paymode.Id ?? paymode.id ?? 0,
+        Code: paymode.Code ?? paymode.code ?? '',
+        Type: paymode.Type ?? paymode.type ?? '',
+        Organization: paymode.OrganizationName,
+        IsActive: paymode.IsActive ?? paymode.isActive ?? paymode.isactive ?? false,
+        RowNumber: rowNumber++,
+        Status: (paymode.IsActive ?? paymode.isActive ?? paymode.isactive) ? 'Active' : 'Inactive'
+      }));
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Paymode`;
+      const searchText = this.filterSearchText.trim().toLowerCase();
+
+      if (searchText) {
+        exportRows = exportRows.filter((row: any) =>
+          String(row.Code ?? '').toLowerCase().includes(searchText) ||
+          String(row.Type ?? '').toLowerCase().includes(searchText) ||
+          String(row.Remarks ?? '').toLowerCase().includes(searchText) ||
+          String(row.Status ?? '').toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No paymodes are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Paymode');
+      this.toast.success('Export Ready', 'Paymode Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export paymodes to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportPaymodesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const response: any = await firstValueFrom(this.paymodeService.getAll(orgId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((paymode: any) => ({
+        ...paymode,
+        Id: paymode.Id ?? paymode.id ?? 0,
+        Code: paymode.Code ?? paymode.code ?? '',
+        Type: paymode.Type ?? paymode.type ?? '',
+        Organization: paymode.OrganizationName,
+        IsActive: paymode.IsActive ?? paymode.isActive ?? paymode.isactive ?? false,
+        RowNumber: rowNumber++,
+        Status: (paymode.IsActive ?? paymode.isActive ?? paymode.isactive) ? 'Active' : 'Inactive'
+      }));
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Paymode`;
+      const searchText = this.filterSearchText.trim().toLowerCase();
+
+      if (searchText) {
+        exportRows = exportRows.filter((row: any) =>
+          String(row.Code ?? '').toLowerCase().includes(searchText) ||
+          String(row.Type ?? '').toLowerCase().includes(searchText) ||
+          String(row.Remarks ?? '').toLowerCase().includes(searchText) ||
+          String(row.Status ?? '').toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No paymodes are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Paymode', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Paymode PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export paymodes to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   searchRows(): void {

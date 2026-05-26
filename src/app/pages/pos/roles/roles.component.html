@@ -17,6 +17,9 @@
     </div>
 
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [showDownloadButton]="showDownloadButton" (excelDownloadClick)="exportRolesAsExcel()"
+      (pdfDownloadClick)="exportRolesAsPdf()" [downloadLoading]="downloadLoading"
+      [downloadLoadingLabel]="downloadLoadingLabel"
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">

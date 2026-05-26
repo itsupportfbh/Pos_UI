@@ -17,6 +17,9 @@
     </div>
 
     <app-shared-table
+      [showDownloadButton]="showDownloadButton" (excelDownloadClick)="exportCategoriesAsExcel()"
+      (pdfDownloadClick)="exportCategoriesAsPdf()" [downloadLoading]="downloadLoading"
+      [downloadLoadingLabel]="downloadLoadingLabel"
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">

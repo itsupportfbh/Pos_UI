@@ -21,6 +21,7 @@ import { AppToastService } from '../../../services/app-toast.service';
 import { BranchService } from '../../../services/branch.service';
 import { Floor, FloorService } from '../../../services/floor.service';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type FloorRow = Floor & {
   RowNumber: number;
@@ -66,6 +67,7 @@ export class FloorComponent implements OnInit {
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -110,9 +112,12 @@ export class FloorComponent implements OnInit {
   tableColumns = FLOOR_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
-  readonly showRowActions = true;
-  readonly rowActionHeader = 'Actions';
+  public readonly showDownloadButton = true;
+  public readonly showFilterButton = true;
+  public readonly showRowActions = true;
+  public readonly rowActionHeader = 'Actions';
+  public downloadLoading = false;
+  public downloadLoadingLabel = 'Exporting...';
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -157,6 +162,102 @@ export class FloorComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  async exportFloorsAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.RoleId || 0) === 1 ? 0 : Number(this.userDetails?.OrgId || 0);
+      const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+      const response: any = await firstValueFrom(this.floorService.getAll(orgId, BranchId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((floor: any) => ({
+        ...floor,
+        Id: floor.Id ?? floor.id ?? 0,
+        Code: floor.Code ?? floor.code ?? '',
+        Name: floor.Name ?? floor.name ?? '',
+        BranchId: floor.BranchId ?? floor.branchId ?? 0,
+        OrganizationName: floor.OrganizationName ?? '',
+        BranchName: floor.BranchName ?? floor.branchName ?? floor.Branch ?? '',
+        OrgId: floor.OrgId ?? floor.orgId ?? 0,
+        IsActive: floor.IsActive ?? floor.isActive ?? false,
+        RowNumber: rowNumber++,
+        Status: (floor.IsActive ?? floor.isActive) ? 'Active' : 'Inactive'
+      }));
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Floors`;
+      const searchText = this.filterFloorName.trim().toLowerCase();
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText || row.Name?.toLowerCase().includes(searchText) || row.Code?.toLowerCase().includes(searchText);
+        const matchesOrganization = !this.filterOrganizations.length || this.filterOrganizations.includes(Number(row.OrgId || 0));
+        const matchesBranch = !this.filterBranches.length || this.filterBranches.includes(Number(row.BranchId || 0));
+        return matchesText && matchesOrganization && matchesBranch;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No floors are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Floors');
+      this.toast.success('Export Ready', 'Floor Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export floors to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportFloorsAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.RoleId || 0) === 1 ? 0 : Number(this.userDetails?.OrgId || 0);
+      const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+      const response: any = await firstValueFrom(this.floorService.getAll(orgId, BranchId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((floor: any) => ({
+        ...floor,
+        Id: floor.Id ?? floor.id ?? 0,
+        Code: floor.Code ?? floor.code ?? '',
+        Name: floor.Name ?? floor.name ?? '',
+        BranchId: floor.BranchId ?? floor.branchId ?? 0,
+        OrganizationName: floor.OrganizationName ?? '',
+        BranchName: floor.BranchName ?? floor.branchName ?? floor.Branch ?? '',
+        OrgId: floor.OrgId ?? floor.orgId ?? 0,
+        IsActive: floor.IsActive ?? floor.isActive ?? false,
+        RowNumber: rowNumber++,
+        Status: (floor.IsActive ?? floor.isActive) ? 'Active' : 'Inactive'
+      }));
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Floors`;
+      const searchText = this.filterFloorName.trim().toLowerCase();
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText || row.Name?.toLowerCase().includes(searchText) || row.Code?.toLowerCase().includes(searchText);
+        const matchesOrganization = !this.filterOrganizations.length || this.filterOrganizations.includes(Number(row.OrgId || 0));
+        const matchesBranch = !this.filterBranches.length || this.filterBranches.includes(Number(row.BranchId || 0));
+        return matchesText && matchesOrganization && matchesBranch;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No floors are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Floors', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Floor PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export floors to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   resetForm(): void {

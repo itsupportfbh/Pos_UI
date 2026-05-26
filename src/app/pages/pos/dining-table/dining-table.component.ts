@@ -18,6 +18,7 @@ import { BranchService } from '../../../services/branch.service';
 import { DiningTable, DiningTableService } from '../../../services/diningtable.service';
 import { FloorService } from '../../../services/floor.service';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 const DINING_TABLE_COLUMNS: SharedTableColumn<any>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
@@ -59,6 +60,7 @@ export class DiningTableComponent implements OnInit {
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -103,10 +105,13 @@ export class DiningTableComponent implements OnInit {
   tableColumns = DINING_TABLE_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  readonly showDownloadButton = true;
   readonly showFilterButton = false;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
   branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -201,6 +206,70 @@ export class DiningTableComponent implements OnInit {
     } catch (error: any) {
       console.error('Error loading dining tables:', error);
       this.toast.error('Load Failed', 'Unable to load dining tables. Please check API and try again.');
+    }
+  }
+
+  async exportDiningTablesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const branchId = this.userDetails.IsAdmin === true ? 0 : Number(this.userDetails.BranchId || 0);
+      const response: any = await firstValueFrom(this.diningTableService.getAll(orgId, branchId));
+      let RowNumber = 1;
+      const exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive === true ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-DiningTables`;
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No dining tables are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'DiningTables');
+      this.toast.success('Export Ready', 'Dining Table Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export dining tables to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportDiningTablesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const branchId = this.userDetails.IsAdmin === true ? 0 : Number(this.userDetails.BranchId || 0);
+      const response: any = await firstValueFrom(this.diningTableService.getAll(orgId, branchId));
+      let RowNumber = 1;
+      const exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive === true ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-DiningTables`;
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No dining tables are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'DiningTables', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Dining Table PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export dining tables to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
     }
   }
 
