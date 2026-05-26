@@ -168,14 +168,54 @@
   font-weight: 900;
 }
 
-.order-type-label {
-  background: #e0f2fe;
-  color: #0369a1;
+.order-type-dine-in {
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
-.status-label {
-  background: #fef3c7;
-  color: #92400e;
+.order-type-take-away {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.order-type-delivery {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.order-type-default {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.status-in-kitchen {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.status-in-process {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.status-ready {
+  background: #bbf7d0;
+  color: #166534;
+}
+
+.status-hold {
+  background: #e9d5ff;
+  color: #7e22ce;
+}
+
+.status-cancelled {
+  background: #fecaca;
+  color: #b91c1c;
+}
+
+.status-default {
+  background: #e5e7eb;
+  color: #374151;
 }
 
 .customer-order-row em {
