@@ -1,16 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, ViewChildren, inject } from '@angular/core';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
-
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
+import { DiningTableService } from '../../../services/diningtable.service';
+import { JoinTable, JoinTableService } from '../../../services/join-table.service';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
+import { firstValueFrom } from 'rxjs';
+import { OrganizationService } from '../../../services/organization.service';
 
 type JoinTableRow = {
   Id: number;
@@ -18,18 +23,23 @@ type JoinTableRow = {
   PrimaryTable: string;
   SecondaryTables: string;
   GuestCount: number;
-  StewardName: string;
+  StewardId: string;
   Notes: string;
   IsActive: boolean;
   Status: string;
   RowNumber: number;
+  OrgId: number;
+  createdBy?: number | null;
+  createdDate?: string;
+  updatedBy?: number | null;
+  updatedDate?: string | null;
+  isDeleted?: boolean;
 };
 
 const JOIN_TABLE_COLUMNS: SharedTableColumn<JoinTableRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
   { field: 'JoinNo', header: 'Join No', sortable: true, width: '11rem' },
   { field: 'PrimaryTable', header: 'Primary Table', sortable: true, width: '11rem' },
-  { field: 'SecondaryTables', header: 'Merged Tables', sortable: true, width: '14rem' },
   { field: 'GuestCount', header: 'Guests', sortable: true, width: '7rem' },
   { field: 'StewardName', header: 'Steward', sortable: true, width: '12rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
@@ -48,7 +58,9 @@ const JOIN_TABLE_COLUMNS: SharedTableColumn<JoinTableRow>[] = [
     ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
-    SharedTableCellTemplateDirective
+    SharedTableCellTemplateDirective,
+    SelectFieldComponent,
+    MultiSelectFieldComponent
   ],
   providers: [ConfirmationService],
   templateUrl: './join-table.component.html',
@@ -57,8 +69,13 @@ const JOIN_TABLE_COLUMNS: SharedTableColumn<JoinTableRow>[] = [
 export class JoinTableComponent {
   private readonly toast = inject(AppToastService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly diningTableService = inject(DiningTableService);
+  private readonly jointableService = inject(JoinTableService);
+  private readonly organizationService = inject(OrganizationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  @ViewChildren(MultiSelectFieldComponent) private readonly multiSelectFields?: QueryList<MultiSelectFieldComponent>;
 
   showAddDialog = false;
   showFilterSidebar = false;
@@ -66,19 +83,31 @@ export class JoinTableComponent {
   dialogSubmitted = false;
   selectedRow: JoinTableRow | null = null;
   rowActionItems: MenuItem[] = [];
-  allRows: JoinTableRow[] = [];
+  alljoinTables: JoinTableRow[] = [];
   tableRows: JoinTableRow[] = [];
-
+  primaryTablesOptions: any[] = [];
+  secondaryTablesOptions: any[] = [];
+  editingJoinTable: number | null = null;
   filterSearchText = '';
 
   dialogId = 0;
   dialogJoinNo = '';
-  dialogPrimaryTable = '';
-  dialogSecondaryTables = '';
+  dialogPrimaryTable: SelectFieldValue = null;
+  dialogSecondaryTables: MultiSelectFieldValue = [];
   dialogGuestCount = '';
   dialogStewardName = '';
   dialogNotes = '';
+  dialogCreatedBy = 0;
+  dialogCreatedDate = '';
+  dialogUpdatedBy = 0;
+  dialogUpdatedDate = '';
+  dialogIsDeleted = false;
+  dialogIsActive = true;
 
+  isLoading = false;
+  BranchId = 0;
+  OrgId = 0;
+  userDetails: any = {};
   totalJoins = 0;
   activeJoins = 0;
   totalGuests = 0;
@@ -104,38 +133,118 @@ export class JoinTableComponent {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  jointableEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   ngOnInit(): void {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.dialogCreatedBy = Number(this.userDetails.UserId || 0);
+    this.OrgId = Number(this.userDetails.OrgId || 0);
+    this.tableColumns = JOIN_TABLE_COLUMNS.map((x: any) => {
+      if (x.field === 'organizationname') {
+        x.hidden = this.userDetails.RoleId !== 1;
+      }
+
+      return x;
+    });
+
     this.loadRows();
   }
 
   loadRows(): void {
-    this.allRows = [];
-    this.tableRows = [];
+    this.loadJoinTables();
+    this.loadDiningTables();
     this.updateSummary();
     this.updatePreview();
+  }
+
+  loadJoinTables(): void {
+    this.isLoading = true;
+
+    this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+    this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+
+    this.jointableService.getAll(this.OrgId).subscribe({
+      next: (response: any) => {
+        let RowNumber = 1;
+        this.alljoinTables = (response.result ?? []).map((x: any) => {
+          const isActive = x.Status ?? x.isactive ?? false;
+          return {
+            ...x,
+            RowNumber: RowNumber++
+          } as JoinTableRow;
+        });
+        this.tableRows = [...this.alljoinTables];
+        this.updateSummary();
+        this.updatePreview();
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.toast.error(
+          'Load Failed',
+          'Unable to load join tables. Please check API and try again.'
+        );
+      },
+      complete: () => {
+        this.isLoading = false;
+      }
+    });
+  }
+
+
+  loadDiningTables() {
+    this.diningTableService.getAll(this.OrgId).subscribe((res: any) => {
+      this.primaryTablesOptions = (res.result || []).map((item: any) => ({
+        label: item.name,
+        value: item.id
+      }));
+
+      this.secondaryTablesOptions = (res.result || []).map((item: any) => ({
+        label: item.name,
+        value: item.id
+      }));
+    });
   }
 
   searchRows(): void {
     const searchText = this.filterSearchText.trim().toLowerCase();
 
     if (!searchText) {
-      this.tableRows = [...this.allRows];
+      this.tableRows = [...this.alljoinTables];
       return;
     }
 
-    this.tableRows = this.allRows.filter((row) =>
+    this.tableRows = this.alljoinTables.filter((row) =>
       row.JoinNo.toLowerCase().includes(searchText) ||
       row.PrimaryTable.toLowerCase().includes(searchText) ||
-      row.SecondaryTables.toLowerCase().includes(searchText) ||
-      row.StewardName.toLowerCase().includes(searchText) ||
+      row.StewardId.toLowerCase().includes(searchText) ||
       row.Notes.toLowerCase().includes(searchText)
     );
   }
 
+  onfiltertableChange(value: MultiSelectFieldValue): void {
+    const arr = Array.isArray(value) ? value : value ? [value] : [];
+    this.dialogSecondaryTables = arr.map(v => Number(v));
+  }
+
+  private async loadLatestJoinNo(orgId: number): Promise<void> {
+    if (!this.jointableEntityNo || !orgId) {
+      this.dialogJoinNo = '';
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.jointableEntityNo, orgId, this.BranchId));
+
+      this.dialogJoinNo = response?.result ?? '';
+    } catch {
+      this.dialogJoinNo = '';
+      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+    }
+  }
+
   resetForm(): void {
     this.filterSearchText = '';
-    this.tableRows = [...this.allRows];
+    this.tableRows = [...this.alljoinTables];
   }
 
   openFilterSidebar(): void {
@@ -147,13 +256,16 @@ export class JoinTableComponent {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Table Join';
     this.dialogSubtitle = 'Capture the tables that are being merged into one service group.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+
+    await this.loadLatestJoinNo(Number(this.userDetails.OrgId || 0));
+    this.changeDetector.detectChanges();
   }
 
   closeAddDialog(): void {
@@ -170,89 +282,149 @@ export class JoinTableComponent {
       return;
     }
 
-    if (this.isEditMode && this.dialogId) {
-      this.allRows = this.allRows.map((row) => {
-        if (row.Id === this.dialogId) {
-          row.JoinNo = this.dialogJoinNo;
-          row.PrimaryTable = this.dialogPrimaryTable;
-          row.SecondaryTables = this.dialogSecondaryTables;
-          row.GuestCount = Number(this.dialogGuestCount || 0);
-          row.StewardName = this.dialogStewardName;
-          row.Notes = this.dialogNotes;
-        }
+    const primaryTableId = Number(this.dialogPrimaryTable);
 
-        return row;
-      });
+    const isPrimaryInSecondary = this.dialogSecondaryTables.some(
+      tableId => Number(tableId) === primaryTableId
+    );
 
-      this.toast.success('Updated', 'Table join updated successfully.');
-    } else {
-      this.allRows.unshift({
-        Id: Date.now(),
-        JoinNo: this.dialogJoinNo,
-        PrimaryTable: this.dialogPrimaryTable,
-        SecondaryTables: this.dialogSecondaryTables,
-        GuestCount: Number(this.dialogGuestCount || 0),
-        StewardName: this.dialogStewardName,
-        Notes: this.dialogNotes,
-        IsActive: true,
-        Status: 'Joined',
-        RowNumber: 0
-      });
-
-      this.toast.success('Saved', 'Table join saved successfully.');
+    if (isPrimaryInSecondary) {
+      this.toast.warn(
+        'Validation',
+        'Primary Table and Merged Tables must be different.'
+      );
+      return;
     }
 
-    this.refreshRows();
-    this.closeAddDialog();
+    const payload: JoinTable = {
+      JoinNo: this.dialogJoinNo,
+      PrimaryTable: Number(this.dialogPrimaryTable),
+      TableIds: this.dialogSecondaryTables.map((tableId) => ({ TableId: Number(tableId) })),
+      GuestCount: Number(this.dialogGuestCount),
+      StewardId: Number(this.dialogStewardName),
+      Notes: this.dialogNotes,
+      IsActive: this.dialogIsActive ?? true,
+      IsDeleted: false,
+      OrgId: this.OrgId,
+      EntityNo: this.jointableEntityNo,
+      branchId: this.BranchId
+    };
+
+    if (this.isEditMode && this.editingJoinTable) {
+      payload.Id = this.editingJoinTable;
+      payload.UpdatedBy = 1;
+
+      this.jointableService.update(payload).subscribe({
+        next: (response: any) => {
+          if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
+            this.toast.warn('Duplicate', 'Join table already exists.');
+            return;
+          }
+
+          this.toast.success('Updated', 'Join table updated successfully.');
+          this.closeAddDialog();
+          this.loadJoinTables();
+        },
+        error: () => {
+          this.toast.error('Update Failed', 'Unable to update join table.');
+        }
+      });
+
+      return;
+    }
+
+    payload.CreatedBy = 1;
+
+    this.jointableService.create(payload).subscribe({
+      next: (response: any) => {
+        if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
+          this.toast.warn('Duplicate', 'Join table already exists.');
+          return;
+        }
+
+        this.toast.success('Saved', 'Join table saved successfully.');
+        this.closeAddDialog();
+        this.loadJoinTables();
+      },
+      error: () => {
+        this.toast.error('Save Failed', 'Unable to save join table.');
+      }
+    });
   }
 
   editRow(row: JoinTableRow): void {
     this.isEditMode = true;
-    this.dialogId = row.Id;
-    this.dialogJoinNo = row.JoinNo;
-    this.dialogPrimaryTable = row.PrimaryTable;
-    this.dialogSecondaryTables = row.SecondaryTables;
-    this.dialogGuestCount = String(row.GuestCount);
-    this.dialogStewardName = row.StewardName;
-    this.dialogNotes = row.Notes;
-    this.dialogTitle = 'Edit Table Join';
-    this.dialogSubtitle = 'Update the selected table merge before the floor is reset.';
+    this.dialogTitle = 'Edit Join Table';
+    this.dialogSubtitle = 'update the details of the table join and save to apply changes.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
+    this.editingJoinTable = row.Id;
+
+    this.jointableService.getById(row.Id).subscribe({
+      next: (response: any) => {
+        const jointable = response?.result?.[0] ?? response?.result ?? response;
+        const rawTableIds = jointable?.tableIds ?? jointable?.TableIds ?? [];
+        debugger;
+
+        this.dialogJoinNo = jointable?.code ?? jointable?.Code ?? row.JoinNo;
+        this.dialogPrimaryTable = String(jointable?.customerName ?? jointable?.CustomerName ?? row.PrimaryTable);
+        this.dialogSecondaryTables = (Array.isArray(rawTableIds) ? rawTableIds : []).map((t: any) => {
+          if (t == null) return t;
+          if (typeof t === 'number' || typeof t === 'string') return Number(t);
+          return Number(t.TableId ?? t.tableId ?? t.id ?? t.Id ?? NaN);
+        }).filter((x: number) => !Number.isNaN(x));
+        this.dialogGuestCount = String(jointable?.customerMobile ?? jointable?.CustomerMobile ?? row.GuestCount);
+        this.dialogStewardName = jointable?.stewardName ?? jointable?.StewardName ?? row.StewardId;
+        this.dialogNotes = jointable?.notes ?? jointable?.Notes ?? row.Notes;
+        this.OrgId = jointable?.orgId ?? jointable?.OrgId ?? row.OrgId;
+        this.dialogCreatedBy = jointable?.createdBy ?? jointable?.CreatedBy ?? 1;
+        this.dialogCreatedDate = jointable?.createdDate ?? jointable?.CreatedDate;
+        this.dialogUpdatedBy = jointable?.updatedBy ?? jointable?.UpdatedBy ?? 1;
+        this.dialogUpdatedDate = jointable?.updatedDate ?? jointable?.UpdatedDate;
+        this.dialogIsDeleted = jointable?.isDeleted ?? jointable?.IsDeleted ?? false
+
+        this.showAddDialog = true;
+      },
+      error: () => {
+        this.toast.error('Load Failed', 'Unable to load join table details.');
+      }
+    });
   }
 
   deleteRow(row: JoinTableRow): void {
-    this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
-    this.refreshRows();
-    this.toast.success('Deleted', row.JoinNo + ' removed successfully.');
+    this.jointableService.delete(row.Id).subscribe({
+      next: () => {
+        this.toast.warn('Deleted', `${row.JoinNo} removed successfully.`);
+        this.loadJoinTables();
+      },
+      error: () => {
+        this.toast.error('Delete Failed', 'Unable to delete join table.');
+      }
+    });
   }
 
   activateRow(row: JoinTableRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = true;
-        item.Status = 'Joined';
+    this.jointableService.activeInActive(row.Id, true).subscribe({
+      next: () => {
+        this.toast.success('Status Updated', `${row.JoinNo} marked as active.`);
+        this.loadJoinTables();
+      },
+      error: () => {
+        this.toast.error('Update Failed', 'Unable to activate join table.');
       }
-
-      return item;
     });
-
-    this.refreshRows();
-    this.toast.success('Activated', row.JoinNo + ' reopened successfully.');
   }
 
   deactivateRow(row: JoinTableRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = false;
-        item.Status = 'Released';
+    this.jointableService.activeInActive(row.Id, false).subscribe({
+      next: () => {
+        this.toast.info('Status Updated', `${row.JoinNo} marked as inactive.`);
+        this.loadJoinTables();
+      },
+      error: () => {
+        this.toast.error('Update Failed', 'Unable to deactivate join table.');
       }
-
-      return item;
     });
-
-    this.refreshRows();
-    this.toast.success('Released', row.JoinNo + ' marked as released.');
   }
 
   openRowActions(menu: any, event: Event, row: JoinTableRow): void {
@@ -311,14 +483,14 @@ export class JoinTableComponent {
     this.dialogId = 0;
     this.dialogJoinNo = '';
     this.dialogPrimaryTable = '';
-    this.dialogSecondaryTables = '';
+    this.dialogSecondaryTables = [];
     this.dialogGuestCount = '';
     this.dialogStewardName = '';
     this.dialogNotes = '';
   }
 
   private refreshRows(): void {
-    this.allRows = this.allRows.map((row, index) => {
+    this.alljoinTables = this.alljoinTables.map((row, index) => {
       row.RowNumber = index + 1;
       return row;
     });
@@ -329,13 +501,13 @@ export class JoinTableComponent {
   }
 
   private updateSummary(): void {
-    this.totalJoins = this.allRows.length;
-    this.activeJoins = this.allRows.filter((row) => row.IsActive).length;
-    this.totalGuests = this.allRows.reduce((total, row) => total + row.GuestCount, 0);
+    this.totalJoins = this.alljoinTables.length;
+    this.activeJoins = this.alljoinTables.filter((row) => row.IsActive).length;
+    this.totalGuests = this.alljoinTables.reduce((total, row) => total + row.GuestCount, 0);
   }
 
   private updatePreview(): void {
-    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+    const activeRow = this.alljoinTables.find((row) => row.IsActive) ?? null;
 
     this.previewPrimaryTable = activeRow?.PrimaryTable ?? 'T-10';
     this.previewSecondaryTables = activeRow?.SecondaryTables ?? 'T-11, T-12';
@@ -346,17 +518,17 @@ export class JoinTableComponent {
     return this.textFields?.toArray().every((field) => field.isValid) ?? true;
   }
 
-  private getRowActionItems(row: JoinTableRow): MenuItem[] {
+  private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
     const items: MenuItem[] = [
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
-
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Release', icon: 'pi pi-check-circle', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Reopen', icon: 'pi pi-refresh', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
-    }
+    debugger;
+    //if (row['Status'] === 'Active') {
+    items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    //items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+    // } else {
+    //   items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    // }
 
     return items;
   }

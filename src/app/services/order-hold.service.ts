@@ -29,6 +29,10 @@ export interface OrderHold {
   customerName?: string;
   ContactNumber?: string;
   contactNumber?: string;
+  Notes?: string | null;
+  notes?: string | null;
+  Remarks?: string | null;
+  remarks?: string | null;
  
   Itemcount?: number;
   itemcount?: number;

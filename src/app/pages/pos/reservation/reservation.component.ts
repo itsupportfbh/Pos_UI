@@ -586,64 +586,64 @@ export class ReservationComponent {
   // }
 
   private updatePreview(): void {
-  const now = new Date();
+    const now = new Date();
 
-  const upcomingReservations = this.allReservations.filter((row) => {
-    const datePart = String(row.ReservationDate ?? '')
-      .split('T')[0];
+    const upcomingReservations = this.allReservations.filter((row) => {
+      const datePart = String(row.ReservationDate ?? '')
+        .split('T')[0];
 
-    const timePart = String(row.Reservationtime ?? '00:00')
-      .split(':')
-      .slice(0, 2)
-      .join(':');
+      const timePart = String(row.Reservationtime ?? '00:00')
+        .split(':')
+        .slice(0, 2)
+        .join(':');
 
-    if (!datePart) {
-      return false;
-    }
+      if (!datePart) {
+        return false;
+      }
 
-    const reservationDateTime = new Date(`${datePart}T${timePart}:00`);
+      const reservationDateTime = new Date(`${datePart}T${timePart}:00`);
 
-    return reservationDateTime >= now;
-  });
+      return reservationDateTime >= now;
+    });
 
-  const activeRow =
-    upcomingReservations.sort((a, b) => {
-      const aDate = new Date(
-        `${String(a.ReservationDate).split('T')[0]}T${String(a.Reservationtime).slice(0, 5)}:00`
-      ).getTime();
+    const activeRow =
+      upcomingReservations.sort((a, b) => {
+        const aDate = new Date(
+          `${String(a.ReservationDate).split('T')[0]}T${String(a.Reservationtime).slice(0, 5)}:00`
+        ).getTime();
 
-      const bDate = new Date(
-        `${String(b.ReservationDate).split('T')[0]}T${String(b.Reservationtime).slice(0, 5)}:00`
-      ).getTime();
+        const bDate = new Date(
+          `${String(b.ReservationDate).split('T')[0]}T${String(b.Reservationtime).slice(0, 5)}:00`
+        ).getTime();
 
-      return aDate - bDate;
-    })[0] ?? null;
+        return aDate - bDate;
+      })[0] ?? null;
 
-  const formatDate = (value: string): string => {
-    const datePart = String(value ?? '').split('T')[0];
+    const formatDate = (value: string): string => {
+      const datePart = String(value ?? '').split('T')[0];
 
-    const [year, month, day] = datePart.split('-');
+      const [year, month, day] = datePart.split('-');
 
-    return day && month && year
-      ? `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`
-      : value;
-  };
+      return day && month && year
+        ? `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`
+        : value;
+    };
 
-  const formatTime = (value: string): string => {
-    return String(value ?? '')
-      .split(':')
-      .slice(0, 2)
-      .join(':');
-  };
+    const formatTime = (value: string): string => {
+      return String(value ?? '')
+        .split(':')
+        .slice(0, 2)
+        .join(':');
+    };
 
-  this.previewGuestName = activeRow?.CustomerName ?? 'Rahul Family';
+    this.previewGuestName = activeRow?.CustomerName ?? 'Rahul Family';
 
-  this.previewVisitSlot = activeRow
-    ? `${formatDate(activeRow.ReservationDate)} ${formatTime(activeRow.Reservationtime)}`
-    : '19 May, 8:00 PM';
+    this.previewVisitSlot = activeRow
+      ? `${formatDate(activeRow.ReservationDate)} ${formatTime(activeRow.Reservationtime)}`
+      : '19 May, 8:00 PM';
 
-  this.previewTableName = activeRow?.TableName ?? 'Garden 3';
-}
+    this.previewTableName = activeRow?.TableName ?? 'Garden 3';
+  }
 
   private isDialogFormValid(): boolean {
     return this.textFields?.toArray().every((field) => field.isValid) ?? true;

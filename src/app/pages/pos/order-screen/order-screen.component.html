@@ -220,6 +220,14 @@
         </section>
 
         <div class="cart-section-title">
+          <span>Notes</span>
+        </div>
+        <label class="order-notes-field" for="order-notes">
+          <textarea id="order-notes" rows="3" maxlength="500" placeholder="Add kitchen notes or special instructions"
+            [value]="orderNotes" (input)="updateOrderNotes($event)"></textarea>
+        </label>
+
+        <div class="cart-section-title">
           <span>Bill Summary</span>
         </div>
         <section class="bill-summary">

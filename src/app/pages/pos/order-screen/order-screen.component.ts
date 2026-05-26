@@ -110,6 +110,7 @@ export class OrderScreenComponent implements OnInit {
   searchText = '';
   customerName = '';
   ContactNumber = '';
+  orderNotes = '';
 
   itemCount = 0;
   subtotal = 0;
@@ -452,6 +453,10 @@ export class OrderScreenComponent implements OnInit {
     this.ContactNumber = this.normalizeInputText((event.target as HTMLInputElement).value).replace(/\D/g, '').slice(0, 13);
   }
 
+  updateOrderNotes(event: Event): void {
+    this.orderNotes = this.normalizeInputText((event.target as HTMLTextAreaElement).value).slice(0, 500);
+  }
+
   applyMenuSelection(): void {
     this.menuItems = this.allMenuItems
       .filter((x: any) => this.activeCategoryId === 0 || x.categoryId === this.activeCategoryId)
@@ -500,6 +505,7 @@ export class OrderScreenComponent implements OnInit {
     this.discountPercent = 5;
     this.customerName = '';
     this.ContactNumber = '';
+    this.orderNotes = '';
     this.orderValidationSubmitted = false;
     this.orderValidationMessages = [];
     this.showOrderValidationDialog = false;
@@ -633,33 +639,68 @@ export class OrderScreenComponent implements OnInit {
     const orderNumber = this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder);
     const requestOrderNumber = orderNumber || `PENDING-${Date.now()}`;
     const now = new Date().toISOString();
+    const orderNotes = this.normalizeInputText(this.orderNotes).slice(0, 500);
     const items = this.cartItems.map((item: any) => this.buildKitchenOrderItem(item, existingOrderId, userId, now, status));
     const tableId = this.getSelectedTableId();
     const shiftId = this.getCurrentShiftId();
 
     const payload = {
+      OrderId: existingOrderId,
+      Orderid: existingOrderId,
       orderid: existingOrderId,
+      OrderNumber: requestOrderNumber,
+      Ordernumber: requestOrderNumber,
       orderNumber: requestOrderNumber,
+      HoldOrderId: this.isCurrentHeldOrder() ? this.getCurrentHeldOrderId() : 0,
       holdOrderId: this.isCurrentHeldOrder() ? this.getCurrentHeldOrderId() : 0,
+      TableId: tableId,
+      Tableid: tableId,
       tableId,
+      OrderType: this.activeOrderType,
+      Ordertype: this.activeOrderType,
       orderType: this.activeOrderType,
+      OrderStatus: status,
+      Orderstatus: status,
       orderStatus: status,
+      ItemCount: this.itemCount,
+      Itemcount: this.itemCount,
       itemCount: this.itemCount,
+      SubtotalAmount: this.subtotal,
       subtotalAmount: this.subtotal,
+      TaxAmount: this.taxAmount,
       taxAmount: this.taxAmount,
+      DiscountAmount: this.discountAmount,
       discountAmount: this.discountAmount,
+      TotalAmount: this.grandTotal,
       totalAmount: this.grandTotal,
+      CustomerName: this.customerName,
       customerName: this.customerName,
+      ContactNumber: this.ContactNumber,
       contactNumber: this.ContactNumber,
+      Notes: orderNotes,
+      notes: orderNotes,
+      Remarks: orderNotes,
+      remarks: orderNotes,
+      ShiftId: shiftId,
+      Shiftid: shiftId,
       shiftId,
+      CreatedBy: userId || 0,
       createdBy: userId || 0,
+      CreatedDate: now,
       createdDate: now,
+      UpdatedBy: userId || 0,
       updatedBy: userId || 0,
+      UpdatedDate: now,
       updatedDate: now,
+      IsDeleted: false,
       isDeleted: false,
+      OrgId: this.orgId,
       orgId: this.orgId,
+      BranchId: this.branchId,
       branchId: this.branchId,
+      Items: items,
       items,
+      EntityNo: this.currentOrderEntityNo,
       entityNo: this.currentOrderEntityNo
     };
 
@@ -742,24 +783,44 @@ export class OrderScreenComponent implements OnInit {
       : 0;
 
     return {
+      Itemid: this.getNumberValue(item, 'heldItemId', 'itemid', 'Itemid', 'ItemId', 'itemId'),
       itemid: this.getNumberValue(item, 'heldItemId', 'itemid', 'Itemid', 'ItemId', 'itemId'),
+      Orderid: orderId,
       orderid: orderId,
+      Menuitemid: isCombo ? 0 : Number(item.id || 0),
+      MenuItemId: isCombo ? 0 : Number(item.id || 0),
       menuitemid: isCombo ? 0 : Number(item.id || 0),
+      ComboMenuItemId: comboMenuItemId,
       comboMenuItemId,
+      Itemname: item.name || '',
       itemname: item.name || '',
+      Quantity: quantity,
       quantity,
+      Unitprice: unitPrice,
       unitprice: unitPrice,
+      Totalprice: quantity * unitPrice,
       totalprice: quantity * unitPrice,
+      DiscountAmount: 0,
       discountAmount: 0,
+      TaxAmount: 0,
       taxAmount: 0,
+      Modifierdetails: isCombo && item.comboItems?.length ? JSON.stringify(item.comboItems) : '',
       modifierdetails: isCombo && item.comboItems?.length ? JSON.stringify(item.comboItems) : '',
+      Itemstatus: status,
       itemstatus: status,
+      Notes: isCombo ? 'Combo Menu' : '',
       notes: isCombo ? 'Combo Menu' : '',
+      OrgId: this.orgId,
       orgId: this.orgId,
+      CreatedBy: userId || 0,
       createdBy: userId || 0,
+      CreatedDate: timestamp,
       createdDate: timestamp,
+      UpdatedBy: userId || 0,
       updatedBy: userId || 0,
+      UpdatedDate: timestamp,
       updatedDate: timestamp,
+      IsDeleted: false,
       isDeleted: false
     };
   }
@@ -850,6 +911,7 @@ export class OrderScreenComponent implements OnInit {
       this.selectedTable = this.getTableDisplayValue(heldOrder) || ALL_TABLE;
       this.customerName = this.getStringValue(heldOrder, 'CustomerName', 'customerName', 'GuestName', 'guestName');
       this.ContactNumber = this.getStringValue(heldOrder, 'ContactNumber', 'contactNumber', 'CustomerPhone', 'customerPhone', 'Phone', 'phone');
+      this.orderNotes = this.getStringValue(heldOrder, 'Notes', 'notes', 'Remarks', 'remarks');
 
       if (this.selectedTable && !this.tables.includes(this.selectedTable)) {
         this.tables = [...this.tables, this.selectedTable];
@@ -996,6 +1058,8 @@ export class OrderScreenComponent implements OnInit {
       totalAmount: this.grandTotal,
       customerName: this.customerName,
       contactNumber: this.ContactNumber,
+      notes: this.orderNotes,
+      remarks: this.orderNotes,
       shiftid: shiftId,
       orgId: this.orgId,
       createdBy: userId || 0,

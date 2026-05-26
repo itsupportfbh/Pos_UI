@@ -408,6 +408,35 @@
   background: var(--app-item-bg);
 }
 
+.order-notes-field {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.order-notes-field textarea {
+  display: block;
+  width: 100%;
+  min-height: 4.4rem;
+  resize: vertical;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  outline: 0;
+  background: var(--app-surface-strong);
+  color: var(--app-text);
+  font: inherit;
+  line-height: 1.35;
+}
+
+.order-notes-field textarea:focus {
+  border-color: rgba(var(--app-primary-rgb), 0.45);
+  box-shadow: 0 0 0 2px rgba(var(--app-primary-rgb), 0.12);
+}
+
+.order-notes-field textarea::placeholder {
+  color: var(--app-text-muted);
+}
+
 .cart-item-main {
   min-width: 0;
 }
