@@ -146,6 +146,50 @@ viewReady = false;
     return String(order.status || '').trim() || 'In Progress';
   }
 
+  getOrderTypeClass(order: CustomerDisplayOrder): string {
+    const orderType = this.getOrderTypeDisplay(order).toLowerCase();
+
+    if (orderType.includes('take')) {
+      return 'order-type-take-away';
+    }
+
+    if (orderType.includes('delivery')) {
+      return 'order-type-delivery';
+    }
+
+    if (orderType.includes('dine')) {
+      return 'order-type-dine-in';
+    }
+
+    return 'order-type-default';
+  }
+
+  getStatusClass(order: CustomerDisplayOrder): string {
+    const status = this.getOrderStatusDisplay(order).toLowerCase();
+
+    if (status.includes('ready')) {
+      return 'status-ready';
+    }
+
+    if (status.includes('process') || status.includes('preparing')) {
+      return 'status-in-process';
+    }
+
+    if (status.includes('kitchen')) {
+      return 'status-in-kitchen';
+    }
+
+    if (status.includes('hold')) {
+      return 'status-hold';
+    }
+
+    if (status.includes('cancel') || status.includes('void')) {
+      return 'status-cancelled';
+    }
+
+    return 'status-default';
+  }
+
   getElapsedMinutes(order: CustomerDisplayOrder): string {
     if (!order.sentAt) {
       return '';
@@ -163,6 +207,10 @@ viewReady = false;
 
   getOrderIcon(order: CustomerDisplayOrder): string {
     const orderType = String(order.orderType || '').toLowerCase();
+
+    if (orderType.includes('dine')) {
+      return 'pi pi-table';
+    }
 
     if (orderType.includes('take')) {
       return 'pi pi-shopping-bag';
