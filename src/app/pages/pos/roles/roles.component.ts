@@ -396,7 +396,7 @@ export class RolesComponent {
   async openPermissionsDialog(row: RoleRow): Promise<void> {
     this.permissionRoleName = row.Name || row.Code || this.pageTitle;
     this.permissionSearchText = '';
-    this.permissionOrgId = Number(row.OrgId || this.userDetails.OrgId || 0);
+    this.permissionOrgId = Number(row.OrgId || 0);
     this.permissionRoleId = Number(row.Id || 0);
     this.showPermissionsDialog = true;
 

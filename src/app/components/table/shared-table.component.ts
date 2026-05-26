@@ -1,5 +1,5 @@
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
-import { Component, ContentChild, ContentChildren, Directive, EventEmitter, Input, Output, QueryList, TemplateRef } from '@angular/core';
+import { Component, ContentChild, ContentChildren, Directive, ElementRef, EventEmitter, HostListener, Input, Output, QueryList, TemplateRef, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -41,6 +41,14 @@ export interface SharedTableColumn<T = Record<string, unknown>> {
   formatter?: (value: unknown, row: T) => string;
 }
 
+type DownloadMenuAction = 'excel' | 'pdf';
+
+type DownloadMenuItem = {
+  label: string;
+  icon: string;
+  action: DownloadMenuAction;
+};
+
 @Directive({
   selector: 'ng-template[appTableCellTemplate]',
   standalone: true
@@ -60,6 +68,7 @@ export class SharedTableCellTemplateDirective<T = Record<string, unknown>> {
   styleUrl: './shared-table.component.css'
 })
 export class SharedTableComponent<T extends Record<string, unknown> = Record<string, unknown>> {
+  private readonly elementRef = inject(ElementRef<HTMLElement>);
   @ContentChild('rowActions', { read: TemplateRef }) rowActionsTemplate?: TemplateRef<{ $implicit: T }>;
   @ContentChildren(SharedTableCellTemplateDirective) cellTemplates?: QueryList<SharedTableCellTemplateDirective<T>>;
   @Input() columns: SharedTableColumn<T>[] = [];
@@ -68,8 +77,13 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
   @Input() globalFilterPlaceholder = 'Search records';
   @Input() showAddNewButton = false;
   @Input() showFilterButton = false;
+  @Input() showDownloadButton = true;
   @Input() filterButtonLabel = 'Filters';
   @Input() filterButtonIcon = 'pi pi-filter';
+  @Input() downloadButtonLabel = 'Download';
+  @Input() downloadButtonIcon = 'pi pi-download';
+  @Input() downloadLoading = false;
+  @Input() downloadLoadingLabel = 'Exporting...';
   @Input() toolbarButtonLabel = '';
   @Input() toolbarButtonIcon = 'pi pi-plus';
   @Input() showRowActions = false;
@@ -103,6 +117,8 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
   @Output() lazyLoad = new EventEmitter<SharedTableLazyLoadEvent>();
   @Output() pageChange = new EventEmitter<SharedTablePageChangeEvent>();
   @Output() filterButtonClick = new EventEmitter<void>();
+  @Output() excelDownloadClick = new EventEmitter<void>();
+  @Output() pdfDownloadClick = new EventEmitter<void>();
   @Output() toolbarButtonClick = new EventEmitter<void>();
   @Output() editRowClick = new EventEmitter<T>();
   @Output() deleteRowClick = new EventEmitter<T>();
@@ -110,6 +126,7 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
   @Output() deactivateRowClick = new EventEmitter<T>();
 
   globalFilterValue = '';
+  showDownloadMenu = false;
 
   constructor(
     private readonly currencyPipe: CurrencyPipe,
@@ -131,6 +148,21 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
 
   get resolvedTotalRecords(): number {
     return this.isServerPagination ? this.totalRecords : this.value.length;
+  }
+
+  get downloadMenuItems(): DownloadMenuItem[] {
+    return [
+      {
+        label: 'Excel',
+        icon: 'pi pi-file-excel',
+        action: 'excel'
+      },
+      {
+        label: 'PDF',
+        icon: 'pi pi-file-pdf',
+        action: 'pdf'
+      }
+    ];
   }
 
   updateSelection(selection: T | T[] | null): void {
@@ -189,6 +221,44 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
 
   emitFilterButtonClick(): void {
     this.filterButtonClick.emit();
+  }
+
+  toggleDownloadMenu(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.showDownloadMenu = !this.showDownloadMenu;
+  }
+
+  handleDownloadMenuClick(action: DownloadMenuAction, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.showDownloadMenu = false;
+
+    if (action === 'excel') {
+      this.emitExcelDownloadClick();
+      return;
+    }
+
+    this.emitPdfDownloadClick();
+  }
+
+  @HostListener('document:click', ['$event'])
+  handleDocumentClick(event: Event): void {
+    if (!this.showDownloadMenu) {
+      return;
+    }
+
+    if (!this.elementRef.nativeElement.contains(event.target as Node)) {
+      this.showDownloadMenu = false;
+    }
+  }
+
+  emitExcelDownloadClick(): void {
+    this.excelDownloadClick.emit();
+  }
+
+  emitPdfDownloadClick(): void {
+    this.pdfDownloadClick.emit();
   }
 
   emitEditRowClick(row: T): void {

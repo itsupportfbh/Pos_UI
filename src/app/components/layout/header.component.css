@@ -81,7 +81,9 @@
   width: 3rem;
   height: 3rem;
   border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 0.18rem;
   border: 1px solid var(--app-border);
   background: var(--app-surface-strong);
   flex-shrink: 0;
@@ -166,7 +168,9 @@
   width: 3rem;
   height: 3rem;
   border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 0.18rem;
   border: 1px solid var(--app-border);
   background: var(--app-surface-strong);
   flex-shrink: 0;

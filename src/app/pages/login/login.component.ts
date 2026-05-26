@@ -39,6 +39,7 @@ export class LoginComponent {
   userDetailsList: any[] = [];
   showShiftAssignmentDialog = false;
   selectedUserDetails: any = null;
+  accessibleRoutes: string[] = [];
 
   get isForgotPasswordEmailValid(): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.forgotEmail.trim());
@@ -73,7 +74,7 @@ export class LoginComponent {
         };
 
         if (loginData.UserDetails.length && loginData.UserDetails.length == 1) {
-          this.selectUserDetails(loginData.UserDetails[0]);
+          await this.selectUserDetails(loginData.UserDetails[0]);
           return;
         }
 
@@ -97,8 +98,7 @@ export class LoginComponent {
     }
   }
 
-  selectUserDetails(selectedUserDetails: any): void {
-    console.log('Selected User Details:', selectedUserDetails);
+  async selectUserDetails(selectedUserDetails: any): Promise<void> {
     const userDetails = {
       IsAdmin: selectedUserDetails.IsAdmin ?? false,
       UserId: selectedUserDetails.UserId ?? '',
@@ -115,17 +115,33 @@ export class LoginComponent {
       BranchName: selectedUserDetails.BranchName ?? ''
     };
 
+    const orgId = Number(userDetails.OrganizationId ?? userDetails.OrgId ?? 0);
+    const roleId = Number(userDetails.RoleId ?? 0);
+
     localStorage.setItem('loginSession', JSON.stringify(this.loginSession));
     localStorage.setItem('userDetails', JSON.stringify(userDetails));
+
+    try {
+      this.menuService.clearMenuCache();
+      this.accessibleRoutes = await firstValueFrom(this.menuService.getAccessibleRoutes(orgId, roleId, true));
+
+      if (!this.accessibleRoutes.length) {
+        this.clearLoginState();
+        this.showRoleDialog = false;
+        this.toast.warn('No Page Rights', 'There is no any page rights for this user role.');
+        this.changeDetector.detectChanges();
+        return;
+      }
+    } catch {
+      this.clearLoginState();
+      this.showRoleDialog = false;
+      this.toast.error('Login Failed', 'Unable to load page rights for this user role.');
+      this.changeDetector.detectChanges();
+      return;
+    }
 
     this.showRoleDialog = false;
-    //this.toast.success('Login Successful', `Welcome back, ${userDetails.UserName || 'User'}.`);
-    //this.router.navigate(['/pos']);
     this.selectedUserDetails = userDetails;
-
-    // Save login session + user details first
-    localStorage.setItem('loginSession', JSON.stringify(this.loginSession));
-    localStorage.setItem('userDetails', JSON.stringify(userDetails));
 
     // Open mandatory shift assignment popup
     this.showShiftAssignmentDialog = true;
@@ -136,11 +152,8 @@ export class LoginComponent {
     localStorage.setItem('shiftAssignment', JSON.stringify(event));
     this.menuService.clearMenuCache();
 
-    const orgId = Number(this.selectedUserDetails?.OrganizationId ?? this.selectedUserDetails?.OrgId ?? 0);
-    const roleId = Number(this.selectedUserDetails?.RoleId ?? 0);
-
     try {
-      const accessibleRoutes = await firstValueFrom(this.menuService.getAccessibleRoutes(orgId, roleId, true));
+      const accessibleRoutes = this.accessibleRoutes.length ? this.accessibleRoutes : [];
 
       if (!accessibleRoutes.length) {
         this.clearLoginState();
@@ -208,5 +221,6 @@ export class LoginComponent {
     this.loginSession = null;
     this.selectedUserDetails = null;
     this.userDetailsList = [];
+    this.accessibleRoutes = [];
   }
 }
