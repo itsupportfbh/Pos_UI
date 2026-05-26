@@ -132,18 +132,38 @@ export class LoginComponent {
     this.changeDetector.detectChanges();
   }
 
-  onShiftAssigned(event: any): void {
+  async onShiftAssigned(event: any): Promise<void> {
     localStorage.setItem('shiftAssignment', JSON.stringify(event));
     this.menuService.clearMenuCache();
 
-    this.showShiftAssignmentDialog = false;
+    const orgId = Number(this.selectedUserDetails?.OrganizationId ?? this.selectedUserDetails?.OrgId ?? 0);
+    const roleId = Number(this.selectedUserDetails?.RoleId ?? 0);
 
-    this.toast.success(
-      'Login Successful',
-      `Welcome back, ${this.selectedUserDetails?.UserName || 'User'}.`
-    );
+    try {
+      const accessibleRoutes = await firstValueFrom(this.menuService.getAccessibleRoutes(orgId, roleId, true));
 
-    this.router.navigate(['/pos']);
+      if (!accessibleRoutes.length) {
+        this.clearLoginState();
+        this.showShiftAssignmentDialog = false;
+        this.toast.warn('No Page Rights', 'There is no any page rights for this user role.');
+        this.changeDetector.detectChanges();
+        return;
+      }
+
+      this.showShiftAssignmentDialog = false;
+
+      this.toast.success(
+        'Login Successful',
+        `Welcome back, ${this.selectedUserDetails?.UserName || 'User'}.`
+      );
+
+      await this.router.navigate(['/pos', accessibleRoutes[0]]);
+    } catch {
+      this.clearLoginState();
+      this.showShiftAssignmentDialog = false;
+      this.toast.error('Login Failed', 'Unable to load page rights for this user role.');
+      this.changeDetector.detectChanges();
+    }
   }
 
   closeRoleDialog(): void {
@@ -179,5 +199,14 @@ export class LoginComponent {
 
     this.showForgotPasswordDialog = false;
     this.toast.info('Forgot Password Ready', `Password recovery is ready for ${email}. Connect the backend API to continue the actual reset flow.`);
+  }
+
+  private clearLoginState(): void {
+    localStorage.removeItem('loginSession');
+    localStorage.removeItem('userDetails');
+    localStorage.removeItem('shiftAssignment');
+    this.loginSession = null;
+    this.selectedUserDetails = null;
+    this.userDetailsList = [];
   }
 }

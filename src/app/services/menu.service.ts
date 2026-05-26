@@ -55,8 +55,8 @@ export class MenuService {
     );
   }
 
-  getAccessibleRoutes(OrgId: number, RoleId: number): Observable<string[]> {
-    return this.getMenus(OrgId, RoleId).pipe(
+  getAccessibleRoutes(OrgId: number, RoleId: number, forceRefresh: boolean = false): Observable<string[]> {
+    return this.getMenus(OrgId, RoleId, forceRefresh).pipe(
       map((response) => this.extractRoutes(response.result ?? []))
     );
   }
@@ -77,7 +77,6 @@ export class MenuService {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
-
 
 
 
