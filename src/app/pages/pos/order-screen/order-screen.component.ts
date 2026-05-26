@@ -1041,6 +1041,7 @@ export class OrderScreenComponent implements OnInit {
     const orderNumber = this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder);
     const requestOrderNumber = orderNumber || `PENDING-${Date.now()}`;
     const now = new Date().toISOString();
+    const orderNotes = this.normalizeInputText(this.orderNotes).slice(0, 500);
     const items = this.buildHoldOrderItems(userId, status, existingOrderId || 0, now);
     const tableId = this.getSelectedTableId();
     const shiftId = this.getCurrentShiftId();
@@ -1058,8 +1059,10 @@ export class OrderScreenComponent implements OnInit {
       totalAmount: this.grandTotal,
       customerName: this.customerName,
       contactNumber: this.ContactNumber,
-      notes: this.orderNotes,
-      remarks: this.orderNotes,
+      Notes: orderNotes,
+      notes: orderNotes,
+      Remarks: orderNotes,
+      remarks: orderNotes,
       shiftid: shiftId,
       orgId: this.orgId,
       createdBy: userId || 0,
