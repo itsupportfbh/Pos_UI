@@ -95,7 +95,10 @@ export class WorkspaceComponent implements OnInit {
   }
 
   loadMenus(): void {
-    this.menuService.getMenus().subscribe({
+    const orgId = Number(this.userDetails.OrganizationId ?? this.userDetails.OrgId ?? 0);
+    const roleId = Number(this.userDetails.RoleId ?? 0);
+
+    this.menuService.getMenus(orgId, roleId, true).subscribe({
       next: (response) => {
         this.sidebarMenus = this.mapMenus(response.result ?? []);
         this.routeScopeMap.clear();
@@ -131,8 +134,10 @@ export class WorkspaceComponent implements OnInit {
       rejectLabel: 'No',
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
+        this.menuService.clearMenuCache();
         localStorage.removeItem(LOGIN_SESSION_KEY);
         localStorage.removeItem(USER_DETAILS_KEY);
+        localStorage.removeItem('shiftAssignment');
         this.router.navigate(['/login']);
       }
     });
@@ -211,7 +216,7 @@ export class WorkspaceComponent implements OnInit {
   }
 
   async loadorganizationconfig(): Promise<void> {
-    const orgId = Number(this.userDetails.OrgId || 0);
+    const orgId = Number(this.userDetails.OrganizationId ?? this.userDetails.OrgId ?? 0);
 
     if (!orgId) {
       this.applyOrganizationTheme();
@@ -332,8 +337,20 @@ export class WorkspaceComponent implements OnInit {
       return routeScope;
     }
 
+    if (this.officeOptions.length === 1) {
+      return Number(this.officeOptions[0].value);
+    }
+
+    if (this.officeOptions.length > 1 && !this.officeOptions.some((option) => Number(option.value) === FRONT_OFFICE_SCOPE)) {
+      return Number(this.officeOptions[0].value);
+    }
+
     if (Number(this.userDetails.RoleId || 0) === 1 || this.userDetails.IsAdmin === true || this.userDetails.IsAdmin === 1) {
       return BACK_OFFICE_SCOPE;
+    }
+
+    if (this.officeOptions.length) {
+      return Number(this.officeOptions[0].value);
     }
 
     return FRONT_OFFICE_SCOPE;
