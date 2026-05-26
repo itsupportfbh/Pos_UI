@@ -72,13 +72,3 @@ export class ReservationService {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
-
-
-
-
-
-
-
-
-
-

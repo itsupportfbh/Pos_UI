@@ -57,23 +57,17 @@
         </div>
       </div>
 
-      <app-shared-table
-        [showFilterButton]="showFilterButton"
-        (filterButtonClick)="openFilterSidebar()"
-        [caption]="tableCaption"
-        [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
-        [columns]="tableColumns"
-        [value]="tableRows"
-        [showAddNewButton]="showAddNewButton"
-        [toolbarButtonLabel]="addNewButtonLabel"
-        [showRowActions]="showRowActions"
-        [rowActionHeader]="rowActionHeader"
+      <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+        [caption]="tableCaption" [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
+        [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+        [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
         (toolbarButtonClick)="openAddDialog()">
         <ng-template #rowActions let-row>
-          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body"
+            styleClass="row-action-menu"></p-menu>
 
-          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
-            (click)="openRowActions(rowMenu, $event, row)"></button>
+          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true"
+            class="row-action-trigger" (click)="openRowActions(rowMenu, $event, row)"></button>
         </ng-template>
 
         <ng-template appTableCellTemplate="Status" let-row>
@@ -120,20 +114,19 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Join No" inputId="dialog-join-no" [showRequiredMark]="true"
-      placeholder="Enter join number" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Join number is required." [maxlength]="100" [model]="dialogJoinNo"
-      (modelChange)="dialogJoinNo = $event"></app-text-field>
+    <app-text-field label="Join No" inputId="dialog-join-no" [showRequiredMark]="true" placeholder="Enter join number"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Join number is required." [maxlength]="100"
+      [model]="dialogJoinNo" (modelChange)="dialogJoinNo = $event"></app-text-field>
 
-    <app-text-field label="Primary Table" inputId="dialog-primary-table" [showRequiredMark]="true"
-      placeholder="Enter primary table" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Primary table is required." [maxlength]="100" [model]="dialogPrimaryTable"
-      (modelChange)="dialogPrimaryTable = $event"></app-text-field>
+    <app-select-field label="Primary Table" inputId="dialog-primary-table" placeholder="Enter primary table"
+      [options]="primaryTablesOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Primary table is required." [model]="dialogPrimaryTable"
+      (modelChange)="dialogPrimaryTable = $event" />
 
-    <app-text-field label="Merged Tables" inputId="dialog-secondary-tables" [showRequiredMark]="true"
-      placeholder="Enter merged tables" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Merged tables are required." [maxlength]="150" [model]="dialogSecondaryTables"
-      (modelChange)="dialogSecondaryTables = $event"></app-text-field>
+    <app-multiselect-field label="Merged Tables" inputId="dialog-secondary-tables" placeholder="Choose merged tables"
+      [showRequiredMark]="true" [options]="secondaryTablesOptions" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Merged tables are required." [model]="dialogSecondaryTables"
+      (modelChange)="onfiltertableChange($event)" />
 
     <app-text-field label="Guest Count" inputId="dialog-guest-count" type="number" [showRequiredMark]="true"
       placeholder="Enter guest count" [required]="true" [submitted]="dialogSubmitted"
