@@ -49,6 +49,49 @@
           ></button>
         }
 
+        @if (showDownloadButton) {
+          @if (downloadLoading) {
+            <button
+              pButton
+              type="button"
+              [label]="downloadLoadingLabel"
+              icon="pi pi-spinner pi-spin"
+              severity="secondary"
+              outlined="true"
+              class="table-download-button table-download-loading"
+              [disabled]="true"
+            ></button>
+          } @else {
+            <div class="table-download">
+              <button
+                pButton
+                type="button"
+                [label]="downloadButtonLabel"
+                [icon]="downloadButtonIcon"
+                severity="secondary"
+                outlined="true"
+                class="table-download-button"
+                (click)="toggleDownloadMenu($event)"
+              ></button>
+
+              @if (showDownloadMenu) {
+                <div class="table-download-menu" role="menu">
+                  @for (item of downloadMenuItems; track item.action) {
+                    <button
+                      type="button"
+                      class="table-download-menu-item"
+                      (click)="handleDownloadMenuClick(item.action, $event)"
+                    >
+                      <i [class]="item.icon"></i>
+                      <span>{{ item.label }}</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+
         <div class="table-search">
           <input
             pInputText

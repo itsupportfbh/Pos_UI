@@ -175,6 +175,18 @@
   flex-shrink: 0;
 }
 
+.table-download-button {
+  flex-shrink: 0;
+}
+
+.table-download {
+  position: relative;
+}
+
+.table-download-loading {
+  min-width: 11.5rem;
+}
+
 .header-cell {
   align-items: center;
   display: flex;
@@ -195,8 +207,58 @@
   justify-content: center;
 }
 
-:host ::ng-deep .p-menu-overlay {
-  z-index: 2200 !important;
+.table-download-menu {
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  border-radius: 0.85rem;
+  box-shadow: 0 14px 28px rgba(84, 51, 28, 0.14);
+  min-width: 10rem;
+  padding: 0.35rem;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  z-index: 2200;
+}
+
+.table-download-menu-item {
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 0.65rem;
+  color: var(--app-text);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: 0.55rem;
+  justify-content: flex-start;
+  line-height: 1.2;
+  margin: 0;
+  outline: 0;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  text-decoration: none;
+  width: 100%;
+}
+
+.table-download-menu-item + .table-download-menu-item {
+  margin-top: 0.2rem;
+}
+
+.table-download-menu-item:hover {
+  background: var(--app-primary-soft);
+}
+
+.table-download-menu-item .pi {
+  font-size: 0.95rem;
+}
+
+.table-download-menu .pi-file-excel {
+  color: #15803d;
+}
+
+.table-download-menu .pi-file-pdf {
+  color: #dc2626;
 }
 
 :host ::ng-deep .p-select-overlay {
