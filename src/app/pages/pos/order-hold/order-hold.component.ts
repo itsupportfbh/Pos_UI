@@ -66,6 +66,10 @@ type HeldOrder = {
   customerPhone?: string;
   Phone?: string;
   phone?: string;
+  Notes?: string | null;
+  notes?: string | null;
+  Remarks?: string | null;
+  remarks?: string | null;
   itemcount?: number;
   Itemcount?: number;
   itemCount?: number;
@@ -116,6 +120,7 @@ type HeldOrderRow = Omit<HeldOrder, 'Items'> & {
   Tax: number;
   Discount: number;
   Total: number;
+  Notes: string;
   HeldTime: string;
 };
 
@@ -131,14 +136,14 @@ const HELD_TIME_FORMATTER = new Intl.DateTimeFormat('en-IN', {
 const ORDER_HOLD_COLUMNS: SharedTableColumn<HeldOrderRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
   { field: 'OrderNo', header: 'Order No', sortable: true, width: '13rem' },
+   { field: 'CustomerName', header: 'CustomerName', sortable: true, width: '13rem' },
   { field: 'Type', header: 'Type', sortable: true, width: '10rem' },
   { field: 'TableName', header: 'Table', sortable: true, width: '8rem' },
-  { field: 'Status', header: 'Status', sortable: true, width: '8rem' },
   { field: 'Items', header: 'NOofItems', sortable: true, width: '7rem' },
-  { field: 'Subtotal', header: 'Subtotal', sortable: true, width: '10rem' },
-  { field: 'Tax', header: 'Tax', sortable: true, width: '9rem' },
-  { field: 'Discount', header: 'Discount', sortable: true, width: '10rem' },
   { field: 'Total', header: 'Total', sortable: true, width: '10rem' },
+  { field: 'Notes', header: 'Notes', sortable: true, width: '8rem' },
+  { field: 'Status', header: 'Status', sortable: true, width: '8rem' },
+  
   
 ];
 
@@ -339,7 +344,7 @@ ngOnInit(): void {
 
   getOrderTableName(order: HeldOrder): string {
     const source = order as any;
-    return source.TableName ?? source.tableName ?? source.TableCode ?? source.tableCode ?? source.Table ?? source.table ?? this.getOrderTable(order);
+    return source.TableName  ?? this.getOrderTable(order);
   }
 
   getOrderHeldDate(order: HeldOrder): string {
@@ -347,24 +352,29 @@ ngOnInit(): void {
     return source.CreatedDate ?? source.createdDate ?? source.heldAt ?? '';
   }
 
+  getOrderNotes(order: HeldOrder | HeldOrderRow): string {
+    const source = order as any;
+    return this.normalizeText(source.Notes ?? source.notes ?? source.Remarks ?? source.remarks);
+  }
+
   getOrderSubtotal(order: HeldOrder): number {
     const source = order as any;
-    return this.toNumber(source.SubtotalAmount ?? source.subtotalAmount ?? source.subtotal);
+    return this.toNumber(source.SubtotalAmount );
   }
 
   getOrderDiscount(order: HeldOrder): number {
     const source = order as any;
-    return this.toNumber(source.DiscountAmount ?? source.discountAmount);
+    return this.toNumber(source.DiscountAmount );
   }
 
   getOrderTax(order: HeldOrder): number {
     const source = order as any;
-    return this.toNumber(source.TaxAmount ?? source.taxAmount);
+    return this.toNumber(source.TaxAmount );
   }
 
   getOrderTotal(order: HeldOrder): number {
     const source = order as any;
-    return this.toNumber(source.TotalAmount ?? source.totalAmount ?? source.grandTotal);
+    return this.toNumber(source.TotalAmount );
   }
 
   formatHeldTime(value: string): string {
@@ -412,6 +422,7 @@ ngOnInit(): void {
       Tax: this.getOrderTax(order),
       Discount: this.getOrderDiscount(order),
       Total: orderTotal,
+      Notes: this.getOrderNotes(order),
       HeldTime: this.formatHeldTime(this.getOrderHeldDate(order))
     };
   }
@@ -484,6 +495,7 @@ ngOnInit(): void {
     const source = order as any;
     const customerName = this.getCustomerName(source);
     const contactNumber = this.getContactNumber(source);
+    const notes = this.getOrderNotes(order);
     const orderId = this.getOrderDetailId(order);
     const tableName = this.getOrderTableName(order);
     const items = this.getOrderItems(order).map((item: any) => ({
@@ -541,6 +553,10 @@ ngOnInit(): void {
       contactNumber,
       CustomerPhone: contactNumber,
       customerPhone: contactNumber,
+      Notes: notes,
+      notes,
+      Remarks: notes,
+      remarks: notes,
       Itemcount: this.getItemCount(order),
       itemcount: this.getItemCount(order),
       Guestcount: source.Guestcount ?? source.guestcount ?? this.getItemCount(order),
@@ -587,6 +603,7 @@ ngOnInit(): void {
     const detailItems = this.extractOrderItems(apiResult, apiOrderDetails, listOrder);
     const customerName = this.getCustomerName(apiOrderDetails) || this.getCustomerName(listOrder);
     const contactNumber = this.getContactNumber(apiOrderDetails) || this.getContactNumber(listOrder);
+    const notes = this.getOrderNotes(apiOrderDetails) || this.getOrderNotes(listOrder);
 
     return {
       ...listOrder,
@@ -597,6 +614,10 @@ ngOnInit(): void {
       contactNumber,
       CustomerPhone: contactNumber,
       customerPhone: contactNumber,
+      Notes: notes,
+      notes,
+      Remarks: notes,
+      remarks: notes,
       Items: detailItems,
       items: detailItems,
       OrderHoldItems: detailItems,
