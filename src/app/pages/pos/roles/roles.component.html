@@ -88,64 +88,76 @@
   </div>
 </p-dialog>
 
-<p-dialog [(visible)]="showPermissionsDialog" [modal]="true" [style]="{ width: '82rem', maxWidth: '98vw' }"
+<p-dialog [(visible)]="showPermissionsDialog" [modal]="true" [style]="{ width: '100rem', maxWidth: '98vw', height: '90vh' }"
   styleClass="permissions-dialog" [draggable]="false" [resizable]="false" [closable]="true"
   (onHide)="closePermissionsDialog()">
   <ng-template pTemplate="header">
-    <div class="dialog-copy">
-      <p class="eyebrow">Role Permissions</p>
-      <h3>Permissions</h3>
-      <p>Choose page access for {{ permissionRoleName || 'selected role' }}.</p>
+    <div class="permissions-dialog-header">
+      <div class="dialog-copy">
+        <h3>Permissions</h3>
+        <p>Choose page access for {{ permissionRoleName || 'selected role' }}.</p>
+      </div>
+
+      <div class="permissions-header-actions">
+        <label class="permissions-select-all">
+          <input type="checkbox" [checked]="isAllPermissionsSelected" (change)="toggleAllPermissions($event)" />
+          <span>Select All</span>
+        </label>
+
+        <div class="permissions-search">
+          <app-text-field label="Search Permissions" inputId="permissions-search" placeholder="Search module or page"
+            [model]="permissionSearchText" (modelChange)="permissionSearchText = $event" />
+        </div>
+
+        <app-action-buttons primaryLabel="Save Permission" primaryIcon="pi pi-save"
+          [showSecondary]="false" [primaryLoading]="permissionSaving" [primaryDisabled]="permissionLoading"
+          (primaryClick)="savePermissionsDialog()" />
+      </div>
     </div>
   </ng-template>
 
   <section class="permissions-panel">
-    <div class="permissions-note">
-      <strong>{{ permissionRoleName || 'Role' }}</strong>
-      <span>Select the pages and actions this role can use. This is sample UI only, so you can change the pages later.</span>
-    </div>
-
-    <div class="permissions-search">
-      <app-text-field label="Search Permissions" inputId="permissions-search" placeholder="Search module or page"
-        [model]="permissionSearchText" (modelChange)="permissionSearchText = $event" />
-    </div>
-
-    <div class="permissions-table">
-      <div class="permissions-row permissions-header">
-        <span>Module</span>
-        <span>Page</span>
-        <span>View</span>
-        <span>Add</span>
-        <span>Edit</span>
-        <span>Delete</span>
-        <span>Print</span>
-        <span>Full</span>
+    @if (permissionLoading) {
+      <div class="permissions-loading">
+        <i class="pi pi-spinner pi-spin"></i>
+        <span>Loading permissions...</span>
       </div>
-
-      @for (page of filteredPermissionPages; track page.groupName + page.pageName) {
-        <div class="permissions-row">
-          <strong>{{ page.groupName }}</strong>
-          <span>{{ page.pageName }}</span>
-          <label class="permission-check"><input type="checkbox" [checked]="page.view" (change)="setPagePermission(page, 'view', $event)" /><span>View</span></label>
-          <label class="permission-check"><input type="checkbox" [checked]="page.add" (change)="setPagePermission(page, 'add', $event)" /><span>Add</span></label>
-          <label class="permission-check"><input type="checkbox" [checked]="page.edit" (change)="setPagePermission(page, 'edit', $event)" /><span>Edit</span></label>
-          <label class="permission-check"><input type="checkbox" [checked]="page.delete" (change)="setPagePermission(page, 'delete', $event)" /><span>Delete</span></label>
-          <label class="permission-check"><input type="checkbox" [checked]="page.print" (change)="setPagePermission(page, 'print', $event)" /><span>Print</span></label>
-          <label class="permission-check permission-full"><input type="checkbox" [checked]="isFullAccess(page)" (change)="setAllPagePermissions(page, $event)" /><span>All</span></label>
+    } @else {
+      <div class="permissions-table">
+        <div class="permissions-row permissions-header">
+          <span>Module</span>
+          <span>Page</span>
+          <span>View</span>
+          <span>Add</span>
+          <span>Edit</span>
+          <span>Delete</span>
+          <span>Active / InActive</span>
+          <span>Print</span>
+          <span>Download</span>
+          <span>All</span>
         </div>
-      }
 
-      @if (!filteredPermissionPages.length) {
-        <div class="permissions-empty">
-          No matching permissions found.
-        </div>
-      }
-    </div>
+        @for (page of filteredPermissionPages; track page.groupName + page.pageName) {
+          <div class="permissions-row">
+            <strong class="permission-module">{{ page.groupName }}</strong>
+            <span class="permission-page">{{ page.pageName }}</span>
+            <label class="permission-check" data-label="View"><input type="checkbox" [checked]="page.view" (change)="setPagePermission(page, 'view', $event)" /></label>
+            <label class="permission-check" data-label="Add"><input type="checkbox" [checked]="page.add" (change)="setPagePermission(page, 'add', $event)" /></label>
+            <label class="permission-check" data-label="Edit"><input type="checkbox" [checked]="page.edit" (change)="setPagePermission(page, 'edit', $event)" /></label>
+            <label class="permission-check" data-label="Delete"><input type="checkbox" [checked]="page.delete" (change)="setPagePermission(page, 'delete', $event)" /></label>
+            <label class="permission-check" data-label="Active / InActive"><input type="checkbox" [checked]="page.ActiveInActive" (change)="setPagePermission(page, 'ActiveInActive', $event)" /></label>
+            <label class="permission-check" data-label="Print"><input type="checkbox" [checked]="page.print" (change)="setPagePermission(page, 'print', $event)" /></label>
+            <label class="permission-check" data-label="Download"><input type="checkbox" [checked]="page.download" (change)="setPagePermission(page, 'download', $event)" /></label>
+            <label class="permission-check permission-full" data-label="All"><input type="checkbox" [checked]="isFullAccess(page)" (change)="setAllPagePermissions(page, $event)" /></label>
+          </div>
+        }
+
+        @if (!filteredPermissionPages.length) {
+          <div class="permissions-empty">
+            No matching permissions found.
+          </div>
+        }
+      </div>
+    }
   </section>
-
-  <div class="permissions-actions">
-    <app-action-buttons primaryLabel="Save Permissions" secondaryLabel="Clear" primaryIcon="pi pi-save"
-      secondaryIcon="pi pi-refresh" [secondaryText]="true" [secondaryOutlined]="false"
-      (primaryClick)="savePermissionsDialog()" (secondaryClick)="closePermissionsDialog()" />
-  </div>
 </p-dialog>

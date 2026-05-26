@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { WorkspaceComponent } from '../workspace/workspace.component';
+import { posRouteAccessGuard } from './route-access.guard';
 import { shiftAssignmentGuard } from './shift-assignment.guard';
 
 const dashboardPage = () => import('../dashboard/dashboard.component').then((module) => module.DashboardComponent);
@@ -80,6 +81,7 @@ export const POS_ROUTES: Routes = [
     path: '',
     component: WorkspaceComponent,
     canActivate: [shiftAssignmentGuard],
+    canActivateChild: [posRouteAccessGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'dashboard', loadComponent: dashboardPage },

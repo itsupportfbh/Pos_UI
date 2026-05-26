@@ -13,6 +13,7 @@ import { firstValueFrom } from 'rxjs';
 import { TextFieldComponent } from '../../components/form/text-field.component';
 import { AppToastService } from '../../services/app-toast.service';
 import { LoginService } from '../../services/login.service';
+import { MenuService } from '../../services/menu.service';
 import { ShiftAssignmentComponent } from '../pos/components/shift-assignment/shift-assignment.component';
 
 @Component({
@@ -47,6 +48,7 @@ export class LoginComponent {
     private readonly router: Router,
     private readonly toast: AppToastService,
     private readonly loginService: LoginService,
+    private readonly menuService: MenuService,
     private readonly changeDetector: ChangeDetectorRef
   ) { }
 
@@ -106,7 +108,8 @@ export class LoginComponent {
       Image: selectedUserDetails.Image ?? selectedUserDetails.UserImage ?? '',
       RoleId: selectedUserDetails.RoleId ?? '',
       RoleName: selectedUserDetails.RoleName ?? '',
-      OrgId: selectedUserDetails.OrgId ?? '',
+      OrganizationId: selectedUserDetails.OrganizationId ?? selectedUserDetails.OrgId ?? '',
+      OrgId: selectedUserDetails.OrgId ?? selectedUserDetails.OrganizationId ?? '',
       OrgName: selectedUserDetails.OrgName ?? '',
       BranchId: selectedUserDetails.BranchId ?? '',
       BranchName: selectedUserDetails.BranchName ?? ''
@@ -131,6 +134,7 @@ export class LoginComponent {
 
   onShiftAssigned(event: any): void {
     localStorage.setItem('shiftAssignment', JSON.stringify(event));
+    this.menuService.clearMenuCache();
 
     this.showShiftAssignmentDialog = false;
 

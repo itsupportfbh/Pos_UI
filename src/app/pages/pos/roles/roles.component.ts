@@ -14,18 +14,24 @@ import { SelectFieldComponent, SelectFieldValue } from '../../../components/form
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { Role, RoleService } from '../../../services/role.service';
 
 type PagePermission = {
+  entityNo: number;
   pageName: string;
   groupName: string;
   view: boolean;
   add: boolean;
   edit: boolean;
   delete: boolean;
+  ActiveInActive: boolean;
   print: boolean;
+  download: boolean;
 };
+
+type PagePermissionAction = 'view' | 'add' | 'edit' | 'delete' | 'ActiveInActive' | 'print' | 'download';
 
 type RoleRow = Role & {
   RowNumber: number;
@@ -49,21 +55,6 @@ const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
   }
 ];
 
-const PERMISSION_PAGES: PagePermission[] = [
-  { groupName: 'Organization', pageName: 'Organization', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Organization', pageName: 'Branches', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Organization', pageName: 'Counters', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Organization', pageName: 'Terminal', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Organization', pageName: 'Printers', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Users & Roles', pageName: 'Users', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Users & Roles', pageName: 'Roles', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Food Menu', pageName: 'Categories', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Food Menu', pageName: 'Menus', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Reports', pageName: 'Daily Sales', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Reports', pageName: 'Monthly Sales', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Reports', pageName: 'Menu Wise Sales', view: false, add: false, edit: false, delete: false, print: false }
-];
-
 @Component({
   selector: 'app-roles',
   standalone: true,
@@ -75,6 +66,7 @@ const PERMISSION_PAGES: PagePermission[] = [
 export class RolesComponent {
   private readonly toast = inject(AppToastService);
   private readonly roleService = inject(RoleService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
@@ -88,9 +80,13 @@ export class RolesComponent {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
+  permissionLoading = false;
+  permissionSaving = false;
   filterOrganizations: MultiSelectFieldValue = [];
   permissionRoleName = '';
   permissionSearchText = '';
+  permissionOrgId = 0;
+  permissionRoleId = 0;
 
   dialogId = 0;
   dialogOrganization: SelectFieldValue = null;
@@ -126,10 +122,6 @@ export class RolesComponent {
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
 
-  constructor() {
-    this.permissionPages = PERMISSION_PAGES.map((page) => ({ ...page }));
-  }
-
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.showFilterButton = this.userDetails.RoleId === 1;
@@ -156,6 +148,11 @@ export class RolesComponent {
       page.groupName.toLowerCase().includes(searchText) ||
       page.pageName.toLowerCase().includes(searchText)
     );
+  }
+
+  get isAllPermissionsSelected(): boolean {
+    return this.permissionPages.length > 0 &&
+      this.permissionPages.every((page) => this.isFullAccess(page));
   }
 
   resetForm(): void {
@@ -396,22 +393,95 @@ export class RolesComponent {
     }
   }
 
-  openPermissionsDialog(row: RoleRow): void {
+  async openPermissionsDialog(row: RoleRow): Promise<void> {
     this.permissionRoleName = row.Name || row.Code || this.pageTitle;
     this.permissionSearchText = '';
+    this.permissionOrgId = Number(row.OrgId || this.userDetails.OrgId || 0);
+    this.permissionRoleId = Number(row.Id || 0);
     this.showPermissionsDialog = true;
+
+    await this.loadPermissionPages();
   }
 
   closePermissionsDialog(): void {
     this.showPermissionsDialog = false;
+    this.permissionLoading = false;
+    this.permissionSaving = false;
+    this.permissionOrgId = 0;
+    this.permissionRoleId = 0;
+    this.permissionPages = [];
   }
 
-  savePermissionsDialog(): void {
-    this.toast.success('Permissions Saved', `${this.permissionRoleName || 'Role'} permissions saved successfully.`);
-    this.closePermissionsDialog();
+  async savePermissionsDialog(): Promise<void> {
+    if (!this.permissionPages.length) {
+      this.toast.warn('No Permissions', 'No permission rows are available to save.');
+      return;
+    }
+
+    this.permissionSaving = true;
+
+    const payload = this.permissionPages.map((page) => ({
+      OrgId: this.permissionOrgId,
+      RoleId: this.permissionRoleId,
+      EntityNo: page.entityNo,
+      Create: page.add,
+      Edit: page.edit,
+      Delete: page.delete,
+      ActiveInActive: page.ActiveInActive,
+      View: page.view,
+      Download: page.download,
+      Print: page.print,
+      CreatedBy: Number(this.userDetails.UserId || 0),
+      UpdatedBy: Number(this.userDetails.UserId || 0)
+    }));
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.SaveRolePermission(payload));
+
+      if (response?.ErrorInfo?.Message === true || response?.result === 'Success') {
+        this.toast.success('Permissions Saved', `${this.permissionRoleName || 'Role'} permissions saved successfully.`);
+        this.closePermissionsDialog();
+        return;
+      }
+
+      this.toast.error('Save Failed', response?.ErrorInfo?.Message || 'Unable to save role permissions.');
+    } catch {
+      this.toast.error('Save Failed', 'Unable to save role permissions.');
+    } finally {
+      this.permissionSaving = false;
+    }
   }
 
-  setPagePermission(page: PagePermission, permission: keyof Omit<PagePermission, 'pageName' | 'groupName'>, event: Event): void {
+  clearPermissionsDialog(): void {
+    this.permissionSearchText = '';
+    this.permissionPages = this.permissionPages.map((page) => ({
+      ...page,
+      view: false,
+      add: false,
+      edit: false,
+      delete: false,
+      ActiveInActive: false,
+      print: false,
+      download: false
+    }));
+  }
+
+  toggleAllPermissions(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+
+    this.permissionPages = this.permissionPages.map((page) => ({
+      ...page,
+      view: checked,
+      add: checked,
+      edit: checked,
+      delete: checked,
+      ActiveInActive: checked,
+      print: checked,
+      download: checked
+    }));
+  }
+
+  setPagePermission(page: PagePermission, permission: PagePermissionAction, event: Event): void {
     page[permission] = (event.target as HTMLInputElement).checked;
   }
 
@@ -421,11 +491,13 @@ export class RolesComponent {
     page.add = checked;
     page.edit = checked;
     page.delete = checked;
+    page.ActiveInActive = checked;
     page.print = checked;
+    page.download = checked;
   }
 
   isFullAccess(page: PagePermission): boolean {
-    return page.view && page.add && page.edit && page.delete && page.print;
+    return page.view && page.add && page.edit && page.delete && page.ActiveInActive && page.print && page.download;
   }
 
   openRowActions(menu: any, event: Event, row: RoleRow): void {
@@ -526,6 +598,41 @@ export class RolesComponent {
   private getOrganizationName(orgId: number | string | undefined): string {
     const organization = this.organizationOptions.find((x: any) => Number(x.value || 0) === Number(orgId || 0));
     return organization?.label ?? '';
+  }
+
+  private async loadPermissionPages(): Promise<void> {
+    if (!this.permissionOrgId || !this.permissionRoleId) {
+      this.permissionPages = [];
+      return;
+    }
+
+    this.permissionLoading = true;
+    this.permissionPages = [];
+
+    try {
+      const response: any = await firstValueFrom(
+        this.entityMasterService.GetEntityMasterForRoleRights(this.permissionOrgId, this.permissionRoleId)
+      );
+      const permissionRows = response?.result ?? [];
+
+      this.permissionPages = permissionRows.map((x: any) => ({
+        entityNo: Number(x.EntityNo || 0),
+        groupName: x.MenuName ?? '',
+        pageName: x.EntityName ?? x.SubMenuName ?? '',
+        view: x.View ?? false, 
+        add: x.Create ?? false,
+        edit: x.Edit ?? false,
+        delete: x.Delete ?? false,
+        ActiveInActive: x.ActiveInActive,
+        print: x.Print ?? false,
+        download: x.Download ?? false
+      }));
+    } catch {
+      this.permissionPages = [];
+      this.toast.error('Load Failed', 'Unable to load role permissions. Please check and try again.');
+    } finally {
+      this.permissionLoading = false;
+    }
   }
 
   private async loadLatestRoleCode(orgId: number): Promise<void> {
