@@ -13,6 +13,7 @@ import { Category, CategoryService } from '../../../services/Category.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { firstValueFrom } from 'rxjs';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type CategoryRow = {
   id: number;
@@ -56,6 +57,7 @@ export class CategoriesComponent {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -103,9 +105,12 @@ export class CategoriesComponent {
   tableColumns = CATEGORY_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+  readonly showDownloadButton = true;
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
   rowActionItems: MenuItem[] = [
     { label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') },
     { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') },
@@ -154,6 +159,84 @@ export class CategoriesComponent {
         this.isLoading = false;
       }
     });
+  }
+
+  async exportCategoriesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+      const response: any = await firstValueFrom(this.categoryService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Categories`;
+      const searchText = this.filterCategoryName.trim().toLowerCase();
+
+      if (searchText) {
+        exportRows = exportRows.filter((row: any) =>
+          row.name?.toLowerCase().includes(searchText) ||
+          row.code?.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No categories are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Categories');
+      this.toast.success('Export Ready', 'Category Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export categories to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportCategoriesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+      const response: any = await firstValueFrom(this.categoryService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Categories`;
+      const searchText = this.filterCategoryName.trim().toLowerCase();
+
+      if (searchText) {
+        exportRows = exportRows.filter((row: any) =>
+          row.name?.toLowerCase().includes(searchText) ||
+          row.code?.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No categories are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Categories', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Category PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export categories to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   searchCategories(): void {

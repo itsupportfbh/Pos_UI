@@ -11,6 +11,7 @@ import { ActionButtonsComponent } from '../../../components/form/action-buttons.
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { TableExportService } from '../../../services/table-export.service';
 
 type CallerIdRow = {
   Id: number;
@@ -52,6 +53,7 @@ const CALLERID_COLUMNS: SharedTableColumn<CallerIdRow>[] = [
 export class CallerIdComponent {
   private readonly toast = inject(AppToastService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -85,9 +87,12 @@ export class CallerIdComponent {
   tableColumns = CALLERID_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  readonly showDownloadButton = true;
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
   ngOnInit(): void {
     this.loadRows();
@@ -95,6 +100,70 @@ export class CallerIdComponent {
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+  }
+
+  async exportCallerIdsAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const fileName = 'OrgName-Caller-ID';
+      const searchText = this.filterSearchText.trim().toLowerCase();
+      let exportRows = [...this.allRows];
+
+      if (searchText) {
+        exportRows = exportRows.filter((row) =>
+          row.Code.toLowerCase().includes(searchText) ||
+          row.Name.toLowerCase().includes(searchText) ||
+          row.Remarks.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No caller ID records are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Caller ID');
+      this.toast.success('Export Ready', 'Caller ID Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export caller ID records to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportCallerIdsAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const fileName = 'OrgName-Caller-ID';
+      const searchText = this.filterSearchText.trim().toLowerCase();
+      let exportRows = [...this.allRows];
+
+      if (searchText) {
+        exportRows = exportRows.filter((row) =>
+          row.Code.toLowerCase().includes(searchText) ||
+          row.Name.toLowerCase().includes(searchText) ||
+          row.Remarks.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No caller ID records are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Caller ID', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Caller ID PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export caller ID records to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   searchRows(): void {

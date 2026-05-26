@@ -17,6 +17,7 @@ import { CounterService } from '../../../services/counter.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type TerminalRow = {
     id: number;
@@ -70,6 +71,7 @@ export class TerminalComponent implements OnInit {
     private readonly changeDetector = inject(ChangeDetectorRef);
     private readonly confirmationService = inject(ConfirmationService);
     private readonly organizationService = inject(OrganizationService);
+    private readonly tableExportService = inject(TableExportService);
 
     @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
     @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -127,11 +129,14 @@ export class TerminalComponent implements OnInit {
     tableColumns = TERMINAL_COLUMNS;
     readonly showAddNewButton = true;
     readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+    readonly showDownloadButton = true;
     readonly showFilterButton = true;
     readonly showRowActions = true;
     readonly rowActionHeader = 'Actions';
     rowActionItems: MenuItem[] = [];
     terminalEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+    downloadLoading = false;
+    downloadLoadingLabel = 'Exporting...';
 
     ngOnInit(): void {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -234,6 +239,86 @@ export class TerminalComponent implements OnInit {
             this.changeDetector.detectChanges();
         } catch {
             this.toast.error('Load Failed', 'Unable to load terminals. Please check API and try again.');
+        }
+    }
+
+    async exportTerminalsAsExcel(): Promise<void> {
+        this.downloadLoading = true;
+        this.downloadLoadingLabel = 'Excel exporting...';
+
+        try {
+            const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+            const branchId = this.isAdmin ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+            const response: any = await firstValueFrom(this.TerminalService.getAll(orgId, branchId, 0));
+            let RowNumber = 1;
+            let exportRows = (response.result ?? []).map((x: any) => {
+                x.RowNumber = RowNumber++;
+                x.Status = x.isactive ? 'Active' : 'Inactive';
+                return x;
+            });
+            const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+            const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Terminals`;
+            const branchIds = this.selectedBranchIds.map((id) => Number(id));
+            const counterIds = this.selectedCounterIds.map((id) => Number(id));
+
+            exportRows = exportRows.filter((row: any) => {
+                const matchesBranch = !branchIds.length || branchIds.includes(Number(row.branchid ?? 0));
+                const matchesCounter = !counterIds.length || counterIds.includes(Number(row.counterid ?? 0));
+                return matchesBranch && matchesCounter;
+            });
+
+            if (!exportRows.length) {
+                this.toast.warn('No Records', 'No terminals are available to export.');
+                return;
+            }
+
+            await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Terminals');
+            this.toast.success('Export Ready', 'Terminal Excel export downloaded successfully.');
+        } catch {
+            this.toast.error('Export Failed', 'Unable to export terminals to Excel.');
+        } finally {
+            this.downloadLoading = false;
+            this.downloadLoadingLabel = 'Exporting...';
+        }
+    }
+
+    async exportTerminalsAsPdf(): Promise<void> {
+        this.downloadLoading = true;
+        this.downloadLoadingLabel = 'PDF exporting...';
+
+        try {
+            const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+            const branchId = this.isAdmin ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+            const response: any = await firstValueFrom(this.TerminalService.getAll(orgId, branchId, 0));
+            let RowNumber = 1;
+            let exportRows = (response.result ?? []).map((x: any) => {
+                x.RowNumber = RowNumber++;
+                x.Status = x.isactive ? 'Active' : 'Inactive';
+                return x;
+            });
+            const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+            const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Terminals`;
+            const branchIds = this.selectedBranchIds.map((id) => Number(id));
+            const counterIds = this.selectedCounterIds.map((id) => Number(id));
+
+            exportRows = exportRows.filter((row: any) => {
+                const matchesBranch = !branchIds.length || branchIds.includes(Number(row.branchid ?? 0));
+                const matchesCounter = !counterIds.length || counterIds.includes(Number(row.counterid ?? 0));
+                return matchesBranch && matchesCounter;
+            });
+
+            if (!exportRows.length) {
+                this.toast.warn('No Records', 'No terminals are available to export.');
+                return;
+            }
+
+            await this.tableExportService.exportPdf(fileName, 'Terminals', this.tableColumns, exportRows);
+            this.toast.success('Export Ready', 'Terminal PDF export downloaded successfully.');
+        } catch {
+            this.toast.error('Export Failed', 'Unable to export terminals to PDF.');
+        } finally {
+            this.downloadLoading = false;
+            this.downloadLoadingLabel = 'Exporting...';
         }
     }
 

@@ -107,13 +107,13 @@ export class CountersComponent implements OnInit {
   tableColumns = COUNTER_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
   readonly showDownloadButton = true;
-  downloadLoading = false;
-  downloadLoadingLabel = 'Exporting...';
+  readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
   branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -258,54 +258,6 @@ export class CountersComponent implements OnInit {
     );
   }
 
-  async exportCountersAsExcel(): Promise<void> {
-    this.downloadLoading = true;
-    this.downloadLoadingLabel = 'Excel exporting...';
-
-    try {
-      const exportRows = await this.getCounterExportRows();
-      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
-      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Counters`;
-
-      if (!exportRows.length) {
-        this.toast.warn('No Records', 'No counters are available to export.');
-        return;
-      }
-
-      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Counters');
-      this.toast.success('Export Ready', 'Counter Excel export downloaded successfully.');
-    } catch {
-      this.toast.error('Export Failed', 'Unable to export counters to Excel.');
-    } finally {
-      this.downloadLoading = false;
-      this.downloadLoadingLabel = 'Exporting...';
-    }
-  }
-
-  async exportCountersAsPdf(): Promise<void> {
-    this.downloadLoading = true;
-    this.downloadLoadingLabel = 'PDF exporting...';
-
-    try {
-      const exportRows = await this.getCounterExportRows();
-      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
-      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Counters`;
-
-      if (!exportRows.length) {
-        this.toast.warn('No Records', 'No counters are available to export.');
-        return;
-      }
-
-      await this.tableExportService.exportPdf(fileName, 'Counters', this.tableColumns, exportRows);
-      this.toast.success('Export Ready', 'Counter PDF export downloaded successfully.');
-    } catch {
-      this.toast.error('Export Failed', 'Unable to export counters to PDF.');
-    } finally {
-      this.downloadLoading = false;
-      this.downloadLoadingLabel = 'Exporting...';
-    }
-  }
-
   loadBranches(): void {
     const orgId = Number(this.userDetails?.OrgId || 0);
 
@@ -340,33 +292,6 @@ export class CountersComponent implements OnInit {
     }));
   }
 
-  private async getCounterExportRows(): Promise<CounterRow[]> {
-    const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
-    const branchId = Number(this.userDetails.IsAdmin || 0) === 1
-      ? 0
-      : Number(this.userDetails.RoleId || 0) === 1
-        ? 0
-        : Number(this.userDetails.BranchId || 0);
-
-    const response: any = this.selectedBranchIds.length
-      ? await firstValueFrom(this.counterService.getMultiAll(orgId, this.selectedBranchIds.map((id) => Number(id))))
-      : await firstValueFrom(this.counterService.getAll(orgId, branchId));
-
-    let rowNumber = 1;
-
-    return (response?.result ?? []).map((x: any) => {
-      const isActive = x.IsActive ?? x.isActive ?? x.isactive ?? false;
-
-      return {
-        ...x,
-        RowNumber: rowNumber++,
-        BranchName: x.BranchName ?? x.Branch ?? x.branchName ?? '',
-        IsActive: isActive,
-        Status: isActive ? 'Active' : 'Inactive'
-      };
-    });
-  }
-
   loadCounter(): void {
     this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
 
@@ -395,6 +320,100 @@ export class CountersComponent implements OnInit {
         this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
       }
     });
+  }
+
+  async exportCountersAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const branchId = Number(this.userDetails.IsAdmin || 0) === 1
+        ? 0
+        : Number(this.userDetails.RoleId || 0) === 1
+          ? 0
+          : Number(this.userDetails.BranchId || 0);
+
+      const response: any = this.selectedBranchIds.length
+        ? await firstValueFrom(this.counterService.getMultiAll(orgId, this.selectedBranchIds.map((id) => Number(id))))
+        : await firstValueFrom(this.counterService.getAll(orgId, branchId));
+
+      let rowNumber = 1;
+      const exportRows = (response?.result ?? []).map((x: any) => {
+        const isActive = x.IsActive ?? x.isActive ?? x.isactive ?? false;
+
+        return {
+          ...x,
+          RowNumber: rowNumber++,
+          BranchName: x.BranchName ?? x.Branch ?? x.branchName ?? '',
+          IsActive: isActive,
+          Status: isActive ? 'Active' : 'Inactive'
+        };
+      });
+
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Counters`;
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No counters are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Counters');
+      this.toast.success('Export Ready', 'Counter Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export counters to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportCountersAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const branchId = Number(this.userDetails.IsAdmin || 0) === 1
+        ? 0
+        : Number(this.userDetails.RoleId || 0) === 1
+          ? 0
+          : Number(this.userDetails.BranchId || 0);
+
+      const response: any = this.selectedBranchIds.length
+        ? await firstValueFrom(this.counterService.getMultiAll(orgId, this.selectedBranchIds.map((id) => Number(id))))
+        : await firstValueFrom(this.counterService.getAll(orgId, branchId));
+
+      let rowNumber = 1;
+      const exportRows = (response?.result ?? []).map((x: any) => {
+        const isActive = x.IsActive ?? x.isActive ?? x.isactive ?? false;
+
+        return {
+          ...x,
+          RowNumber: rowNumber++,
+          BranchName: x.BranchName ?? x.Branch ?? x.branchName ?? '',
+          IsActive: isActive,
+          Status: isActive ? 'Active' : 'Inactive'
+        };
+      });
+
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Counters`;
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No counters are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Counters', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Counter PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export counters to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   async editRow(row: CounterRow): Promise<void> {

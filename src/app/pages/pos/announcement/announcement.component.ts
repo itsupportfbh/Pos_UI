@@ -11,6 +11,7 @@ import { ActionButtonsComponent } from '../../../components/form/action-buttons.
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { TableExportService } from '../../../services/table-export.service';
 
 type AnnouncementRow = {
   Id: number;
@@ -52,6 +53,7 @@ const ANNOUNCEMENT_COLUMNS: SharedTableColumn<AnnouncementRow>[] = [
 export class AnnouncementComponent {
   private readonly toast = inject(AppToastService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -85,9 +87,12 @@ export class AnnouncementComponent {
   tableColumns = ANNOUNCEMENT_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  readonly showDownloadButton = true;
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
   ngOnInit(): void {
     this.loadRows();
@@ -95,6 +100,70 @@ export class AnnouncementComponent {
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+  }
+
+  async exportAnnouncementsAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const fileName = 'OrgName-Announcement';
+      const searchText = this.filterSearchText.trim().toLowerCase();
+      let exportRows = [...this.allRows];
+
+      if (searchText) {
+        exportRows = exportRows.filter((row) =>
+          row.Code.toLowerCase().includes(searchText) ||
+          row.Name.toLowerCase().includes(searchText) ||
+          row.Remarks.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No announcements are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Announcement');
+      this.toast.success('Export Ready', 'Announcement Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export announcements to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportAnnouncementsAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const fileName = 'OrgName-Announcement';
+      const searchText = this.filterSearchText.trim().toLowerCase();
+      let exportRows = [...this.allRows];
+
+      if (searchText) {
+        exportRows = exportRows.filter((row) =>
+          row.Code.toLowerCase().includes(searchText) ||
+          row.Name.toLowerCase().includes(searchText) ||
+          row.Remarks.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No announcements are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Announcement', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Announcement PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export announcements to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   searchRows(): void {

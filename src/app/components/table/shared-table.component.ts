@@ -1,10 +1,12 @@
 import { CommonModule, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
-import { Component, ContentChild, ContentChildren, Directive, ElementRef, EventEmitter, HostListener, Input, Output, QueryList, TemplateRef, inject } from '@angular/core';
+import { Component, ContentChild, ContentChildren, Directive, ElementRef, EventEmitter, HostListener, Input, Output, QueryList, TemplateRef, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { TableLazyLoadEvent, TableModule, TablePageEvent, TableRowSelectEvent, TableRowUnSelectEvent } from 'primeng/table';
+import { Table, TableLazyLoadEvent, TableModule, TablePageEvent, TableRowSelectEvent, TableRowUnSelectEvent } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { AppToastService } from '../../services/app-toast.service';
+import { TableExportService } from '../../services/table-export.service';
 
 export type SharedTableColumnType = 'text' | 'number' | 'currency' | 'date' | 'boolean' | 'tag';
 export type SharedTablePaginationMode = 'client' | 'server';
@@ -69,8 +71,11 @@ export class SharedTableCellTemplateDirective<T = Record<string, unknown>> {
 })
 export class SharedTableComponent<T extends Record<string, unknown> = Record<string, unknown>> {
   private readonly elementRef = inject(ElementRef<HTMLElement>);
+  private readonly tableExportService = inject(TableExportService);
+  private readonly toast = inject(AppToastService);
   @ContentChild('rowActions', { read: TemplateRef }) rowActionsTemplate?: TemplateRef<{ $implicit: T }>;
   @ContentChildren(SharedTableCellTemplateDirective) cellTemplates?: QueryList<SharedTableCellTemplateDirective<T>>;
+  @ViewChild('dt') table?: Table;
   @Input() columns: SharedTableColumn<T>[] = [];
   @Input() value: T[] = [];
   @Input() caption = '';
@@ -127,6 +132,8 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
 
   globalFilterValue = '';
   showDownloadMenu = false;
+  internalDownloadLoading = false;
+  internalDownloadLoadingLabel = 'Exporting...';
 
   constructor(
     private readonly currencyPipe: CurrencyPipe,
@@ -136,6 +143,14 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
 
   get visibleColumns(): SharedTableColumn<T>[] {
     return this.columns.filter((column) => !column.hidden);
+  }
+
+  get resolvedDownloadLoading(): boolean {
+    return this.downloadLoading || this.internalDownloadLoading;
+  }
+
+  get resolvedDownloadLoadingLabel(): string {
+    return this.internalDownloadLoading ? this.internalDownloadLoadingLabel : this.downloadLoadingLabel;
   }
 
   get globalFilterFields(): string[] {
@@ -223,6 +238,80 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
     this.filterButtonClick.emit();
   }
 
+  private async runBuiltInExcelExport(): Promise<void> {
+    const exportRows = this.getExportRows();
+    const exportTitle = this.getExportTitle();
+
+    if (!exportRows.length) {
+      this.toast.warn('No Records', 'No records are available to export.');
+      return;
+    }
+
+    this.internalDownloadLoading = true;
+    this.internalDownloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      await this.tableExportService.exportExcel(this.getExportFileName(), this.visibleColumns, exportRows, exportTitle);
+      this.toast.success('Export Ready', `${exportTitle} Excel export downloaded successfully.`);
+    } catch {
+      this.toast.error('Export Failed', `Unable to export ${exportTitle.toLowerCase()} to Excel.`);
+    } finally {
+      this.internalDownloadLoading = false;
+      this.internalDownloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  private async runBuiltInPdfExport(): Promise<void> {
+    const exportRows = this.getExportRows();
+    const exportTitle = this.getExportTitle();
+
+    if (!exportRows.length) {
+      this.toast.warn('No Records', 'No records are available to export.');
+      return;
+    }
+
+    this.internalDownloadLoading = true;
+    this.internalDownloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      await this.tableExportService.exportPdf(this.getExportFileName(), exportTitle, this.visibleColumns, exportRows);
+      this.toast.success('Export Ready', `${exportTitle} PDF export downloaded successfully.`);
+    } catch {
+      this.toast.error('Export Failed', `Unable to export ${exportTitle.toLowerCase()} to PDF.`);
+    } finally {
+      this.internalDownloadLoading = false;
+      this.internalDownloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  private getExportRows(): T[] {
+    const filteredRows = Array.isArray(this.table?.filteredValue) ? this.table.filteredValue as T[] : null;
+    return filteredRows ?? this.value;
+  }
+
+  private getExportTitle(): string {
+    return this.caption?.trim() || 'Export';
+  }
+
+  private getExportFileName(): string {
+    let orgName = '';
+
+    try {
+      const userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+      orgName = String(userDetails.OrgName || userDetails.OrganizationName || '').trim();
+    } catch {
+      orgName = '';
+    }
+
+    const title = this.getExportTitle().replace(/[\\/:*?"<>|]/g, '-');
+
+    if (!orgName) {
+      return title;
+    }
+
+    return `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-${title}`;
+  }
+
   toggleDownloadMenu(event: Event): void {
     event.preventDefault();
     event.stopPropagation();
@@ -235,11 +324,19 @@ export class SharedTableComponent<T extends Record<string, unknown> = Record<str
     this.showDownloadMenu = false;
 
     if (action === 'excel') {
-      this.emitExcelDownloadClick();
+      if (this.excelDownloadClick.observers.length > 0) {
+        this.emitExcelDownloadClick();
+      } else {
+        void this.runBuiltInExcelExport();
+      }
       return;
     }
 
-    this.emitPdfDownloadClick();
+    if (this.pdfDownloadClick.observers.length > 0) {
+      this.emitPdfDownloadClick();
+    } else {
+      void this.runBuiltInPdfExport();
+    }
   }
 
   @HostListener('document:click', ['$event'])

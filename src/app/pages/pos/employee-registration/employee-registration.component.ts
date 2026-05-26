@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -15,6 +16,7 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 import { employee, EmployeeService } from '../../../services/employeemasters.service';
 import { FormsModule } from '@angular/forms';
 import{ BranchService } from '../../../services/branch.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 
 type EmployeeRegistrationRow = {
@@ -107,6 +109,7 @@ export class EmployeeRegistrationComponent {
   private readonly employeeService = inject(EmployeeService);
   private readonly branchService = inject(BranchService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
   showAddDialog = false;
   showFilterSidebar = false;
   isEditMode = false;
@@ -158,10 +161,13 @@ dialogGender: string = '';
   tableColumns = EMPLOYEEREGISTRATION_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  readonly showDownloadButton = true;
   showFilterButton: boolean = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
   isLoading=false;
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
   userDetails: any = {};
   isBranchSelectionLocked=false;
   CodeOptions: any[] = [];
@@ -251,6 +257,94 @@ this.changeDetector.detectChanges();
     });
 
 }
+
+  async exportEmployeesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const branchId = Number(this.userDetails?.BranchId || 0);
+      const response: any = await firstValueFrom(this.employeeService.getAll(orgId, branchId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((item: any) => {
+        const department = this.departmentOptions.find((x: any) => x.value == item.DepartmentId)?.label || '';
+        const designation = this.designationOptions.find((x: any) => x.value == item.DesignationId)?.label || '';
+        return {
+          ...item,
+          Department: department,
+          Designation: designation,
+          RowNumber: rowNumber++,
+          Status: (item.IsActive ?? item.isActive ?? item.isactive) ? 'Active' : 'Inactive'
+        };
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Employee-Registration`;
+
+      if (this.filterEmployee.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterEmployee.includes(`${row.Department}-${row.BranchName}`)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No employees are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Employee Registration');
+      this.toast.success('Export Ready', 'Employee Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export employees to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportEmployeesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const branchId = Number(this.userDetails?.BranchId || 0);
+      const response: any = await firstValueFrom(this.employeeService.getAll(orgId, branchId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((item: any) => {
+        const department = this.departmentOptions.find((x: any) => x.value == item.DepartmentId)?.label || '';
+        const designation = this.designationOptions.find((x: any) => x.value == item.DesignationId)?.label || '';
+        return {
+          ...item,
+          Department: department,
+          Designation: designation,
+          RowNumber: rowNumber++,
+          Status: (item.IsActive ?? item.isActive ?? item.isactive) ? 'Active' : 'Inactive'
+        };
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Employee-Registration`;
+
+      if (this.filterEmployee.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterEmployee.includes(`${row.Department}-${row.BranchName}`)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No employees are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Employee Registration', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Employee PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export employees to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
 
   genderOptions = [
   { label: 'Male', value: 'Male' },

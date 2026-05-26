@@ -50,11 +50,11 @@
         }
 
         @if (showDownloadButton) {
-          @if (downloadLoading) {
+          @if (resolvedDownloadLoading) {
             <button
               pButton
               type="button"
-              [label]="downloadLoadingLabel"
+              [label]="resolvedDownloadLoadingLabel"
               icon="pi pi-spinner pi-spin"
               severity="secondary"
               outlined="true"

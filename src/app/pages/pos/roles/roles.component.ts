@@ -17,6 +17,7 @@ import { AppToastService } from '../../../services/app-toast.service';
 import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { Role, RoleService } from '../../../services/role.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type PagePermission = {
   entityNo: number;
@@ -70,6 +71,7 @@ export class RolesComponent {
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -118,9 +120,12 @@ export class RolesComponent {
   tableColumns = ROLE_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  readonly showDownloadButton = true;
   showFilterButton = false;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
@@ -226,6 +231,82 @@ export class RolesComponent {
         this.toast.error('Load Failed', 'Unable to load roles. Please check API and try again.');
       }
     });
+  }
+
+  async exportRolesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.roleService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
+        x.RowNumber = RowNumber++;
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Roles`;
+
+      if (this.filterOrganizations.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterOrganizations.includes(Number(row.OrgId || 0))
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No roles are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Roles');
+      this.toast.success('Export Ready', 'Role Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export roles to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportRolesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.roleService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
+        x.RowNumber = RowNumber++;
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Roles`;
+
+      if (this.filterOrganizations.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterOrganizations.includes(Number(row.OrgId || 0))
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No roles are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Roles', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Role PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export roles to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   async loadOrganizations(): Promise<void> {

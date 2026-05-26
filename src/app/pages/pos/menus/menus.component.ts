@@ -17,6 +17,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { OrganizationService } from '../../../services/organization.service';
 import { firstValueFrom } from 'rxjs';
+import { TableExportService } from '../../../services/table-export.service';
 
 type MenuRow = {
   id: number;
@@ -69,6 +70,7 @@ export class MenusComponent {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -130,9 +132,12 @@ export class MenusComponent {
   tableColumns = MENU_COLUMNS;
   readonly showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+  readonly showDownloadButton = true;
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
   rowActionItems: MenuItem[] = [];
   MenuEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
@@ -239,6 +244,90 @@ export class MenusComponent {
         this.isLoading = false;
       }
     });
+  }
+
+  async exportMenusAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+      const response: any = await firstValueFrom(this.menuService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Menus`;
+      const searchText = this.filterMenuName.trim().toLowerCase();
+      const CategoryIds = this.selectedCategoryIds.map((id) => Number(id));
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText ||
+          row.name?.toLowerCase().includes(searchText) ||
+          row.code?.toLowerCase().includes(searchText);
+
+        const matchesCategory = !CategoryIds.length || CategoryIds.includes(Number(row.categoryId ?? 0));
+        return matchesText && matchesCategory;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No menus are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Menus');
+      this.toast.success('Export Ready', 'Menu Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export menus to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportMenusAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+      const response: any = await firstValueFrom(this.menuService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Menus`;
+      const searchText = this.filterMenuName.trim().toLowerCase();
+      const CategoryIds = this.selectedCategoryIds.map((id) => Number(id));
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText ||
+          row.name?.toLowerCase().includes(searchText) ||
+          row.code?.toLowerCase().includes(searchText);
+
+        const matchesCategory = !CategoryIds.length || CategoryIds.includes(Number(row.categoryId ?? 0));
+        return matchesText && matchesCategory;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No menus are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Menus', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Menu PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export menus to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   searchMenus(): void {
