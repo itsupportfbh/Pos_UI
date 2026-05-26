@@ -33,6 +33,8 @@
             </span>
             <strong>{{ getCustomerName(order) }}</strong>
             <span class="table-label">{{ getTableDisplay(order) }}</span>
+            <span class="order-type-label">{{ getOrderTypeDisplay(order) }}</span>
+            <span class="status-label">{{ getOrderStatusDisplay(order) }}</span>
             <small>{{ getOrderNumberDisplay(order) }}</small>
             @if (getElapsedMinutes(order)) {
               <em>{{ getElapsedMinutes(order) }}</em>
@@ -58,6 +60,8 @@
             </span>
             <strong>{{ getCustomerName(order) }}</strong>
             <span class="table-label">{{ getTableDisplay(order) }}</span>
+            <span class="order-type-label">{{ getOrderTypeDisplay(order) }}</span>
+            <span class="status-label">{{ getOrderStatusDisplay(order) }}</span>
             <small>{{ getOrderNumberDisplay(order) }}</small>
           </div>
         } @empty {

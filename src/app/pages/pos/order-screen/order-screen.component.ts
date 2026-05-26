@@ -19,6 +19,7 @@ import { OrderHold, OrderHoldItem, OrderHoldService } from '../../../services/or
 import { OrganizationService } from '../../../services/organization.service';
 import { subCategoryService } from '../../../services/SubCategory.service';
 import { TaxService } from '../../../services/tax.service';
+import { FieldOption, SelectFieldComponent } from '../../../components/form/select-field.component';
 
 const ALL_CATEGORY = { id: 0, name: 'All', icon: 'pi pi-th-large' };
 const ALL_SUBCATEGORY = { id: 0, name: 'All', categoryId: 0 };
@@ -54,7 +55,7 @@ const DEFAULT_SUBCATEGORY_ICON = 'pi pi-tags';
 @Component({
   selector: 'app-order-screen',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TagModule],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TagModule, SelectFieldComponent],
   templateUrl: './order-screen.component.html',
   styleUrl: './order-screen.component.css'
 })
@@ -240,9 +241,9 @@ export class OrderScreenComponent implements OnInit {
       this.subCategories = [
         ALL_SUBCATEGORY,
         ...activeSubCategories.map((x: any) => ({
-          id: x.id ?? 0,
-          name: x.name ?? '',
-          categoryId: x.categoryId ?? 0
+          id: this.getNumberValue(x, 'id', 'Id'),
+          name: this.getStringValue(x, 'name', 'Name'),
+          categoryId: this.getNumberValue(x, 'categoryId', 'CategoryId', 'categoryid')
         }))
       ];
 
@@ -269,12 +270,12 @@ export class OrderScreenComponent implements OnInit {
         id: this.getNumberValue(menu, 'id', 'Id'),
         cartKey: 'menu-' + this.getNumberValue(menu, 'id', 'Id'),
         itemType: 'Menu',
-        name: menu.name ?? '',
-        categoryId: menu.categoryId ?? 0,
-        category: menu.categoryname ?? this.getCategoryName(menu.categoryId ?? 0),
-        subCategoryId: menu.subCategoryId ?? 0,
-        subCategory: menu.subCategoryName ?? this.getSubCategoryName(menu.subCategoryId ?? 0),
-        price: menu.price ?? 0,
+        name: this.getStringValue(menu, 'name', 'Name'),
+        categoryId: this.getNumberValue(menu, 'categoryId', 'CategoryId', 'categoryid'),
+        category: this.getStringValue(menu, 'categoryname', 'CategoryName') || this.getCategoryName(this.getNumberValue(menu, 'categoryId', 'CategoryId', 'categoryid')),
+        subCategoryId: this.getNumberValue(menu, 'subCategoryId', 'SubCategoryId', 'subcategoryid'),
+        subCategory: this.getStringValue(menu, 'subCategoryName', 'SubCategoryName', 'subcategoryname') || this.getSubCategoryName(this.getNumberValue(menu, 'subCategoryId', 'SubCategoryId', 'subcategoryid')),
+        price: this.getNumberValue(menu, 'price', 'Price'),
         preparationTime: '',
         isPopular: false
       }));
@@ -418,8 +419,48 @@ export class OrderScreenComponent implements OnInit {
     this.applyMenuSelection();
   }
 
+  selectCategoryById(categoryId: number | null): void {
+    const selectedCategoryId = Number(categoryId || 0);
+    const category = this.categories.find((item: any) => Number(item.id || 0) === selectedCategoryId) ?? ALL_CATEGORY;
+    this.selectCategory(category);
+  }
+
+  selectSubCategoryById(subCategoryId: number | null): void {
+    const selectedSubCategoryId = Number(subCategoryId || 0);
+    const subCategory = this.visibleSubCategories.find((item: any) => Number(item.id || 0) === selectedSubCategoryId) ?? ALL_SUBCATEGORY;
+    this.selectSubCategory(subCategory);
+  }
+
   selectOrderType(orderType: string): void {
     this.activeOrderType = orderType;
+  }
+
+  get categoryOptions(): FieldOption[] {
+    return this.categories.map((category: any) => ({
+      label: category.name || 'All',
+      value: Number(category.id || 0)
+    }));
+  }
+
+  get subCategoryOptions(): FieldOption[] {
+    return this.visibleSubCategories.map((subCategory: any) => ({
+      label: subCategory.name || 'All',
+      value: Number(subCategory.id || 0)
+    }));
+  }
+
+  get floorOptions(): FieldOption[] {
+    return this.floors.map((floor: any) => ({
+      label: floor.name || 'All',
+      value: Number(floor.id || 0)
+    }));
+  }
+
+  get tableOptions(): FieldOption[] {
+    return this.tables.map((table: string) => ({
+      label: table || ALL_TABLE,
+      value: table || ALL_TABLE
+    }));
   }
 
   selectFloor(floor: any): void {
@@ -429,6 +470,16 @@ export class OrderScreenComponent implements OnInit {
 
   selectTable(table: string): void {
     this.selectedTable = table;
+  }
+
+  selectFloorById(floorId: number | null): void {
+    const selectedFloorId = Number(floorId || 0);
+    const floor = this.floors.find((item: any) => Number(item.id || 0) === selectedFloorId) ?? ALL_FLOOR;
+    this.selectFloor(floor);
+  }
+
+  selectTableByName(table: string | number | null): void {
+    this.selectTable(String(table || ALL_TABLE));
   }
 
   get selectedTableWithFloorName(): string {
@@ -828,7 +879,7 @@ export class OrderScreenComponent implements OnInit {
   private updateVisibleSubCategories(): void {
     const rows = this.activeCategoryId === 0
       ? this.subCategories.filter((x: any) => x.id !== 0)
-      : this.subCategories.filter((x: any) => x.categoryId === this.activeCategoryId);
+      : this.subCategories.filter((x: any) => Number(x.categoryId || 0) === this.activeCategoryId);
 
     this.visibleSubCategories = [
       ALL_SUBCATEGORY,
@@ -1005,7 +1056,7 @@ export class OrderScreenComponent implements OnInit {
       return;
     }
 
-    this.discountPercent = heldDiscountAmount > 0 ? (heldDiscountAmount / heldSubtotal) * 100 : 0;
+    this.discountPercent = heldDiscountAmount > 0 ? Math.round((heldDiscountAmount / heldSubtotal) * 100) : 0;
 
     const taxableAmount = Math.max(heldSubtotal - heldDiscountAmount, 0);
     this.taxPercent = taxableAmount > 0 && heldTaxAmount > 0
@@ -1041,6 +1092,7 @@ export class OrderScreenComponent implements OnInit {
     const orderNumber = this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder);
     const requestOrderNumber = orderNumber || `PENDING-${Date.now()}`;
     const now = new Date().toISOString();
+    const orderNotes = this.normalizeInputText(this.orderNotes).slice(0, 500);
     const items = this.buildHoldOrderItems(userId, status, existingOrderId || 0, now);
     const tableId = this.getSelectedTableId();
     const shiftId = this.getCurrentShiftId();
@@ -1058,8 +1110,10 @@ export class OrderScreenComponent implements OnInit {
       totalAmount: this.grandTotal,
       customerName: this.customerName,
       contactNumber: this.ContactNumber,
-      notes: this.orderNotes,
-      remarks: this.orderNotes,
+      Notes: orderNotes,
+      notes: orderNotes,
+      Remarks: orderNotes,
+      remarks: orderNotes,
       shiftid: shiftId,
       orgId: this.orgId,
       createdBy: userId || 0,

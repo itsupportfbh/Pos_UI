@@ -138,6 +138,14 @@ viewReady = false;
     return order.orderNo.startsWith('#') ? order.orderNo : `#${order.orderNo}`;
   }
 
+  getOrderTypeDisplay(order: CustomerDisplayOrder): string {
+    return String(order.orderType || '').trim() || 'Order';
+  }
+
+  getOrderStatusDisplay(order: CustomerDisplayOrder): string {
+    return String(order.status || '').trim() || 'In Progress';
+  }
+
   getElapsedMinutes(order: CustomerDisplayOrder): string {
     if (!order.sentAt) {
       return '';
@@ -225,7 +233,7 @@ viewReady = false;
   }
 
   private getOrderStatus(order: any): string {
-    return this.getStringValue(order, 'OrderStatus')|| 'In Progress';
+    return this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus', 'Status', 'status') || 'In Progress';
   }
 
   private isCustomerDisplayOrder(order: any): boolean {
