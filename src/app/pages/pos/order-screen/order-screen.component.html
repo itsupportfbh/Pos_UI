@@ -68,68 +68,25 @@
         </div>
       </div>
 
-      <div class="filter-group">
-        <div class="filter-group-label">
-          <span>Categories</span>
-        </div>
-      <nav class="category-strip" aria-label="Menu categories">
-        @for (category of categories; track category.id) {
-          <button type="button" [class.active]="activeCategoryId === category.id" (click)="selectCategory(category)">
-            <i [class]="category.icon"></i>
-            <span>{{ category.name }}</span>
-          </button>
-        }
-      </nav>
-      </div>
+      <div class="menu-filter-selectors">
+        <app-select-field label="Category" inputId="menu-category" placeholder="Choose category"
+          [options]="categoryOptions" [model]="activeCategoryId" [numberValue]="true" [showClear]="false"
+          [filter]="true" [disabled]="isCategoryLoading" (modelChange)="selectCategoryById($event)" />
 
-      <div class="filter-group">
-        <div class="filter-group-label">
-          <span>Sub Categories</span>
-        </div>
-      <nav class="subcategory-strip" aria-label="Menu subcategories">
-        @for (subCategory of visibleSubCategories; track subCategory.id) {
-          <button type="button" [class.active]="activeSubCategoryId === subCategory.id" (click)="selectSubCategory(subCategory)">
-            <i [class]="getSubCategoryIcon(subCategory)"></i>
-            <span>{{ subCategory.name }}</span>
-          </button>
-        }
-      </nav>
-      </div>
+        <app-select-field label="Sub Category" inputId="menu-subcategory" placeholder="Choose sub category"
+          [options]="subCategoryOptions" [model]="activeSubCategoryId" [numberValue]="true" [showClear]="false"
+          [filter]="true" [disabled]="isSubCategoryLoading"
+          (modelChange)="selectSubCategoryById($event)" />
 
-      <div class="filter-group">
-        <div class="filter-group-label">
-          <span>Floors</span>
-        </div>
-      <section class="floor-strip" aria-label="Floors">
-        @if (isFloorLoading && floors.length === 1) {
-          <span class="strip-loading">Loading floors...</span>
-        } @else {
-          @for (floor of floors; track floor.id) {
-            <button type="button" [class.active]="activeFloorId === floor.id" (click)="selectFloor(floor)">
-              <i [class]="getFloorIcon(floor)"></i>
-              <span>{{ floor.name }}</span>
-            </button>
-          }
-        }
-      </section>
-      </div>
+        <app-select-field label="Floor" inputId="order-floor" placeholder="Choose floor"
+          [options]="floorOptions" [model]="activeFloorId" [numberValue]="true" [showClear]="false"
+          [filter]="true" [disabled]="isFloorLoading" (modelChange)="selectFloorById($event)" />
 
-      <div class="filter-group">
-        <div class="filter-group-label">
-          <span>Tables</span>
-        </div>
-      <section class="table-strip" [class.field-invalid]="isTableSelectionInvalid" aria-label="Tables">
-        @if (isTableLoading && tables.length === 1) {
-          <span class="strip-loading">Loading tables...</span>
-        } @else {
-          @for (table of tables; track table) {
-            <button type="button" [class.active]="selectedTable === table" (click)="selectTable(table)">
-              <i [class]="getTableIcon(table)"></i>
-              <span>{{ table }}</span>
-            </button>
-          }
-        }
-      </section>
+        <app-select-field label="Table" inputId="order-table" placeholder="Choose table"
+          [options]="tableOptions" [model]="selectedTable" [showClear]="false"
+          [filter]="true" [disabled]="isTableLoading"
+          [submitted]="orderValidationSubmitted" [required]="true" errorMessage="Select a table."
+          (modelChange)="selectTableByName($event)" />
       </div>
 
       <section class="menu-grid">
@@ -236,7 +193,7 @@
             <strong>{{ subtotal | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
           </div>
           <div>
-            <span>Discount {{ discountPercent }}%</span>
+            <span>Discount {{ discountPercent | number: '1.0-0' }}%</span>
             <strong>-{{ discountAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
           </div>
           <div>

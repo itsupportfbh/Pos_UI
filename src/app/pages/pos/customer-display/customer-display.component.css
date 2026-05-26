@@ -120,7 +120,7 @@
 
 .customer-order-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto auto auto;
   align-items: center;
   gap: 0.52rem;
   min-width: 0;
@@ -133,7 +133,9 @@
 
 .customer-order-row strong,
 .customer-order-row small,
-.table-label {
+.table-label,
+.order-type-label,
+.status-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -155,6 +157,25 @@
   color: #52606d;
   font-size: 0.6rem;
   font-weight: 900;
+}
+
+.order-type-label,
+.status-label {
+  max-width: 5.7rem;
+  padding: 0.22rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.56rem;
+  font-weight: 900;
+}
+
+.order-type-label {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status-label {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .customer-order-row em {
@@ -200,7 +221,7 @@
 }
 
 .ready-row {
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto auto;
 }
 
 .customer-order-empty {
