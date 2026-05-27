@@ -17,6 +17,10 @@ export interface OrderHold {
   tableid?: number;
   TableId?: number;
   tableId?: number;
+  FloorId?: number;
+  Floorid?: number;
+  floorId?: number;
+  floorid?: number;
   ComboMenuId?: number;
   comboMenuId?: number;
   Combomenuid?: number;

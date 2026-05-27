@@ -85,7 +85,7 @@
         <app-select-field label="Table" inputId="order-table" placeholder="Choose table"
           [options]="tableOptions" [model]="selectedTable" [showClear]="false"
           [filter]="true" [disabled]="isTableLoading"
-          [submitted]="orderValidationSubmitted" [required]="true" errorMessage="Select a table."
+          [submitted]="orderValidationSubmitted" [required]="isDineInOrder()" errorMessage="Select a table."
           (modelChange)="selectTableByName($event)" />
       </div>
 

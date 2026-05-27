@@ -692,6 +692,7 @@ export class OrderScreenComponent implements OnInit {
     const orderNotes = this.normalizeInputText(this.orderNotes).slice(0, 500);
     const items = this.cartItems.map((item: any) => this.buildKitchenOrderItem(item, existingOrderId, userId, now, status));
     const tableId = this.getSelectedTableId();
+    const floorId = this.getSelectedFloorId();
     const tableName = this.selectedTable === ALL_TABLE ? '' : this.selectedTable;
     const shiftId = this.getCurrentShiftId();
 
@@ -707,6 +708,10 @@ export class OrderScreenComponent implements OnInit {
       TableId: tableId,
       Tableid: tableId,
       tableId,
+      FloorId: floorId,
+      Floorid: floorId,
+      floorId,
+      floorid: floorId,
       TableName: tableName,
       tableName,
       TableCode: tableName,
@@ -777,7 +782,7 @@ export class OrderScreenComponent implements OnInit {
   }
 
   get isTableSelectionInvalid(): boolean {
-    return this.orderValidationSubmitted && !this.isTableSelected();
+    return this.orderValidationSubmitted && this.isDineInOrder() && !this.isTableSelected();
   }
 
   private validateOrderBeforeSubmit(actionLabel: string): boolean {
@@ -797,7 +802,7 @@ export class OrderScreenComponent implements OnInit {
       messages.push('Enter a valid phone number with 10 to 13 digits.');
     }
 
-    if (!this.isTableSelected()) {
+    if (this.isDineInOrder() && !this.isTableSelected()) {
       messages.push('Select a table.');
     }
 
@@ -823,6 +828,10 @@ export class OrderScreenComponent implements OnInit {
 
   private isTableSelected(): boolean {
     return Boolean(this.selectedTable && this.selectedTable !== ALL_TABLE && this.getSelectedTableId() > 0);
+  }
+
+  isDineInOrder(): boolean {
+    return this.normalizeInputText(this.activeOrderType).toLowerCase() === 'dine in';
   }
 
   private isPhoneNumberValid(): boolean {
@@ -1099,12 +1108,17 @@ export class OrderScreenComponent implements OnInit {
     const orderNotes = this.normalizeInputText(this.orderNotes).slice(0, 500);
     const items = this.buildHoldOrderItems(userId, status, existingOrderId || 0, now);
     const tableId = this.getSelectedTableId();
+    const floorId = this.getSelectedFloorId();
     const shiftId = this.getCurrentShiftId();
 
     const payload: OrderHold = {
       orderId: existingOrderId,
       ordernumber: requestOrderNumber,
       tableid: tableId,
+      FloorId: floorId,
+      Floorid: floorId,
+      floorId,
+      floorid: floorId,
       ordertype: this.activeOrderType,
       orderstatus: status,
       itemcount: this.itemCount,
@@ -1285,6 +1299,15 @@ export class OrderScreenComponent implements OnInit {
     }
 
     return this.tableIdByName[this.selectedTable] ?? this.parseMenuItemId(this.selectedTable);
+  }
+
+  private getSelectedFloorId(): number {
+
+    debugger
+    const selectedTable = this.getDiningTableByDisplayName(this.selectedTable);
+    const tableFloorId = this.getNumberValue(selectedTable,  'floorid');
+
+    return tableFloorId || Number(this.activeFloorId || 0);
   }
 
   private getCurrentShiftId(): number {
