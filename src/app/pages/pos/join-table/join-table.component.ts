@@ -16,9 +16,10 @@ import { JoinTable, JoinTableService } from '../../../services/join-table.servic
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { firstValueFrom } from 'rxjs';
 import { OrganizationService } from '../../../services/organization.service';
+import { EmployeeService } from '../../../services/employeemasters.service';
 
 type JoinTableRow = {
-  Id: number;
+  id: number;
   JoinNo: string;
   PrimaryTable: string;
   SecondaryTables: string;
@@ -38,10 +39,11 @@ type JoinTableRow = {
 
 const JOIN_TABLE_COLUMNS: SharedTableColumn<JoinTableRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'JoinNo', header: 'Join No', sortable: true, width: '11rem' },
-  { field: 'PrimaryTable', header: 'Primary Table', sortable: true, width: '11rem' },
-  { field: 'GuestCount', header: 'Guests', sortable: true, width: '7rem' },
-  { field: 'StewardName', header: 'Steward', sortable: true, width: '12rem' },
+  { field: 'organizationname', header: 'Organization Name', sortable: true, width: '16rem', hidden: true },
+  { field: 'joinno', header: 'Join No', sortable: true, width: '11rem' },
+  { field: 'primaryname', header: 'Primary Table', sortable: true, width: '11rem' },
+  { field: 'guestcount', header: 'Guests', sortable: true, width: '7rem' },
+  { field: 'stewardname', header: 'Steward', sortable: true, width: '12rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
 ];
 
@@ -73,7 +75,7 @@ export class JoinTableComponent {
   private readonly diningTableService = inject(DiningTableService);
   private readonly jointableService = inject(JoinTableService);
   private readonly organizationService = inject(OrganizationService);
-
+  private readonly employeeService = inject(EmployeeService);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(MultiSelectFieldComponent) private readonly multiSelectFields?: QueryList<MultiSelectFieldComponent>;
 
@@ -87,6 +89,7 @@ export class JoinTableComponent {
   tableRows: JoinTableRow[] = [];
   primaryTablesOptions: any[] = [];
   secondaryTablesOptions: any[] = [];
+  stewardOptions: any[] = [];
   editingJoinTable: number | null = null;
   filterSearchText = '';
 
@@ -94,8 +97,8 @@ export class JoinTableComponent {
   dialogJoinNo = '';
   dialogPrimaryTable: SelectFieldValue = null;
   dialogSecondaryTables: MultiSelectFieldValue = [];
-  dialogGuestCount = '';
-  dialogStewardName = '';
+  dialogGuestCount = 0;
+  dialogSteward: SelectFieldValue = null;
   dialogNotes = '';
   dialogCreatedBy = 0;
   dialogCreatedDate = '';
@@ -153,6 +156,7 @@ export class JoinTableComponent {
   loadRows(): void {
     this.loadJoinTables();
     this.loadDiningTables();
+    this.loadEmployees();
     this.updateSummary();
     this.updatePreview();
   }
@@ -167,10 +171,16 @@ export class JoinTableComponent {
       next: (response: any) => {
         let RowNumber = 1;
         this.alljoinTables = (response.result ?? []).map((x: any) => {
-          const isActive = x.Status ?? x.isactive ?? false;
+          const rawStatus = x.Status ?? x.status ?? x.Status;
+          const status = typeof rawStatus === 'string' ? rawStatus : rawStatus ? String(rawStatus) : '';
+          const isActive = /^joined$/i.test(status) || /^active$/i.test(status) || x.isactive === true || x.IsActive === true;
+
           return {
             ...x,
-            RowNumber: RowNumber++
+            RowNumber: RowNumber++,
+            Status: status || (isActive ? 'Joined' : 'Released'),
+            IsActive: isActive,
+            GuestCount: Number(x.GuestCount ?? x.guestcount ?? 0)
           } as JoinTableRow;
         });
         this.tableRows = [...this.alljoinTables];
@@ -190,7 +200,6 @@ export class JoinTableComponent {
     });
   }
 
-
   loadDiningTables() {
     this.diningTableService.getAll(this.OrgId).subscribe((res: any) => {
       this.primaryTablesOptions = (res.result || []).map((item: any) => ({
@@ -201,6 +210,15 @@ export class JoinTableComponent {
       this.secondaryTablesOptions = (res.result || []).map((item: any) => ({
         label: item.name,
         value: item.id
+      }));
+    });
+  }
+
+  loadEmployees() {
+    this.employeeService.getAll(this.OrgId, this.BranchId).subscribe((res: any) => {
+      this.stewardOptions = (res.result || []).map((item: any) => ({
+        label: item.Name,
+        value: item.Id
       }));
     });
   }
@@ -301,7 +319,7 @@ export class JoinTableComponent {
       PrimaryTable: Number(this.dialogPrimaryTable),
       TableIds: this.dialogSecondaryTables.map((tableId) => ({ TableId: Number(tableId) })),
       GuestCount: Number(this.dialogGuestCount),
-      StewardId: Number(this.dialogStewardName),
+      StewardId: Number(this.dialogSteward),
       Notes: this.dialogNotes,
       IsActive: this.dialogIsActive ?? true,
       IsDeleted: false,
@@ -358,30 +376,30 @@ export class JoinTableComponent {
     this.dialogSubtitle = 'update the details of the table join and save to apply changes.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
-    this.editingJoinTable = row.Id;
-
-    this.jointableService.getById(row.Id).subscribe({
+    this.editingJoinTable = row.id;
+    debugger;
+    this.jointableService.getById(row.id).subscribe({
       next: (response: any) => {
         const jointable = response?.result?.[0] ?? response?.result ?? response;
         const rawTableIds = jointable?.tableIds ?? jointable?.TableIds ?? [];
         debugger;
 
-        this.dialogJoinNo = jointable?.code ?? jointable?.Code ?? row.JoinNo;
-        this.dialogPrimaryTable = String(jointable?.customerName ?? jointable?.CustomerName ?? row.PrimaryTable);
+        this.dialogJoinNo = jointable?.joinno ?? jointable?.joinno ?? row.JoinNo;
+        this.dialogPrimaryTable = Number(jointable?.primarytable ?? jointable?.primarytable ?? row.PrimaryTable);
         this.dialogSecondaryTables = (Array.isArray(rawTableIds) ? rawTableIds : []).map((t: any) => {
           if (t == null) return t;
           if (typeof t === 'number' || typeof t === 'string') return Number(t);
           return Number(t.TableId ?? t.tableId ?? t.id ?? t.Id ?? NaN);
         }).filter((x: number) => !Number.isNaN(x));
-        this.dialogGuestCount = String(jointable?.customerMobile ?? jointable?.CustomerMobile ?? row.GuestCount);
-        this.dialogStewardName = jointable?.stewardName ?? jointable?.StewardName ?? row.StewardId;
-        this.dialogNotes = jointable?.notes ?? jointable?.Notes ?? row.Notes;
-        this.OrgId = jointable?.orgId ?? jointable?.OrgId ?? row.OrgId;
-        this.dialogCreatedBy = jointable?.createdBy ?? jointable?.CreatedBy ?? 1;
+        this.dialogGuestCount = Number(jointable?.guestcount ?? jointable?.guestcount ?? row.GuestCount);
+        this.dialogSteward = Number(jointable?.stewardid ?? jointable?.stewardid ?? row.StewardId);
+        this.dialogNotes = jointable?.notes ?? jointable?.notes ?? row.Notes;
+        this.OrgId = Number(jointable?.orgId ?? jointable?.OrgId ?? row.OrgId);
+        this.dialogCreatedBy = Number(jointable?.createdBy ?? jointable?.CreatedBy ?? 1);
         this.dialogCreatedDate = jointable?.createdDate ?? jointable?.CreatedDate;
-        this.dialogUpdatedBy = jointable?.updatedBy ?? jointable?.UpdatedBy ?? 1;
+        this.dialogUpdatedBy = Number(jointable?.updatedBy ?? jointable?.UpdatedBy ?? 1);
         this.dialogUpdatedDate = jointable?.updatedDate ?? jointable?.UpdatedDate;
-        this.dialogIsDeleted = jointable?.isDeleted ?? jointable?.IsDeleted ?? false
+        this.dialogIsDeleted = Boolean(jointable?.isDeleted ?? jointable?.IsDeleted ?? false);
 
         this.showAddDialog = true;
       },
@@ -392,7 +410,7 @@ export class JoinTableComponent {
   }
 
   deleteRow(row: JoinTableRow): void {
-    this.jointableService.delete(row.Id).subscribe({
+    this.jointableService.delete(row.id).subscribe({
       next: () => {
         this.toast.warn('Deleted', `${row.JoinNo} removed successfully.`);
         this.loadJoinTables();
@@ -404,7 +422,7 @@ export class JoinTableComponent {
   }
 
   activateRow(row: JoinTableRow): void {
-    this.jointableService.activeInActive(row.Id, true).subscribe({
+    this.jointableService.activeInActive(row.id, true).subscribe({
       next: () => {
         this.toast.success('Status Updated', `${row.JoinNo} marked as active.`);
         this.loadJoinTables();
@@ -416,7 +434,7 @@ export class JoinTableComponent {
   }
 
   deactivateRow(row: JoinTableRow): void {
-    this.jointableService.activeInActive(row.Id, false).subscribe({
+    this.jointableService.activeInActive(row.id, false).subscribe({
       next: () => {
         this.toast.info('Status Updated', `${row.JoinNo} marked as inactive.`);
         this.loadJoinTables();
@@ -484,8 +502,8 @@ export class JoinTableComponent {
     this.dialogJoinNo = '';
     this.dialogPrimaryTable = '';
     this.dialogSecondaryTables = [];
-    this.dialogGuestCount = '';
-    this.dialogStewardName = '';
+    this.dialogGuestCount = 0;
+    this.dialogSteward = '';
     this.dialogNotes = '';
   }
 
@@ -502,9 +520,9 @@ export class JoinTableComponent {
 
   private updateSummary(): void {
     this.totalJoins = this.alljoinTables.length;
-    this.activeJoins = this.alljoinTables.filter((row) => row.IsActive).length;
-    this.totalGuests = this.alljoinTables.reduce((total, row) => total + row.GuestCount, 0);
-  }
+    this.activeJoins = this.alljoinTables.filter((row) => row.IsActive || row.Status === 'Joined' || row.Status === 'Active').length;
+    this.totalGuests = this.alljoinTables.reduce((total, row) => total + Number(row.GuestCount ?? 0), 0);
+  } 
 
   private updatePreview(): void {
     const activeRow = this.alljoinTables.find((row) => row.IsActive) ?? null;

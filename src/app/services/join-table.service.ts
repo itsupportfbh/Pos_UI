@@ -52,7 +52,7 @@ export class JoinTableService {
   }
 
   getById(id: number | string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetJoinTableById?Id=${id}`);
+    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetJoinTableById?id=${id}`);
   }
 
   delete(id: number | string): Observable<any> {
