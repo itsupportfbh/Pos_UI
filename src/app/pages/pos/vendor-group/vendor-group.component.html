@@ -17,6 +17,7 @@
     </div>
 
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [showDownloadButton]="showDownloadButton"
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
@@ -71,7 +72,7 @@
 
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true" [maxlength]="100"
       [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
 
     <app-text-field label="Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter name"

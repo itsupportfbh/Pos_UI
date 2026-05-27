@@ -10,10 +10,15 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { Terminal, TerminalService } from '../../../services/terminal.service';
 import { BranchService } from '../../../services/branch.service';
 import { CounterService } from '../../../services/counter.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { OrganizationService } from '../../../services/organization.service';
@@ -64,12 +69,17 @@ const TERMINAL_COLUMNS: SharedTableColumn<TerminalRow>[] = [
 })
 
 export class TerminalComponent implements OnInit {
-    private readonly toast = inject(AppToastService);
+    
+  
+  private readonly toast = inject(AppToastService);
+  
+  
     private readonly TerminalService = inject(TerminalService);
     private readonly branchService = inject(BranchService);
     private readonly counterService = inject(CounterService);
     private readonly changeDetector = inject(ChangeDetectorRef);
     private readonly confirmationService = inject(ConfirmationService);
+    private readonly entityMasterService = inject(EntityMasterService);
     private readonly organizationService = inject(OrganizationService);
     private readonly tableExportService = inject(TableExportService);
 
@@ -127,24 +137,34 @@ export class TerminalComponent implements OnInit {
     readonly tableTitle = 'Terminals';
     readonly tableCaption = 'Terminals';
     tableColumns = TERMINAL_COLUMNS;
-    readonly showAddNewButton = true;
+    showAddNewButton = true;
     readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
-    readonly showDownloadButton = true;
+    showDownloadButton = true;
     readonly showFilterButton = true;
-    readonly showRowActions = true;
+    showRowActions = true;
     readonly rowActionHeader = 'Actions';
     rowActionItems: MenuItem[] = [];
     terminalEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+    terminalRights = {
+        View: true,
+        Create: true,
+        Edit: true,
+        Delete: true,
+        ActiveInActive: true,
+        Print: true,
+        Download: true
+    };
     downloadLoading = false;
     downloadLoadingLabel = 'Exporting...';
 
-    ngOnInit(): void {
+    async ngOnInit(): Promise<void> {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
         this.UserId = Number(this.userDetails.UserId || 0);
         this.OrgId = Number(this.userDetails.OrgId || 0);
         this.BranchId = Number(this.userDetails.BranchId || 0);
         this.isAdmin = this.userDetails.IsAdmin == true || this.userDetails.IsAdmin == 1;
         this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
+        await this.loadTerminalRights();
 
         this.tableColumns = TERMINAL_COLUMNS.map((x: any) => {
             if (x.field === 'organizationname') {
@@ -155,6 +175,44 @@ export class TerminalComponent implements OnInit {
         });
 
         void this.loadTerminals();
+    }
+
+    async loadTerminalRights(): Promise<void> {
+        try {
+            const orgId = Number(this.userDetails?.OrgId || 0);
+            const roleId = Number(this.userDetails?.RoleId || 0);
+            const entityNo = Number(this.terminalEntityNo || 0);
+            const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+            const rights = response?.result?.[0] ?? {};
+
+            this.terminalRights = {
+                View: rights.View,
+                Create: rights.Create,
+                Edit: rights.Edit,
+                Delete: rights.Delete,
+                ActiveInActive: rights.ActiveInActive,
+                Print: rights.Print,
+                Download: rights.Download
+            };
+
+            this.showAddNewButton = this.terminalRights.Create;
+            this.showDownloadButton = this.terminalRights.Download;
+            this.showRowActions = this.terminalRights.Edit || this.terminalRights.Delete || this.terminalRights.ActiveInActive || this.terminalRights.Print;
+        } catch {
+            this.terminalRights = {
+                View: true,
+                Create: false,
+                Edit: false,
+                Delete: false,
+                ActiveInActive: false,
+                Print: false,
+                Download: false
+            };
+            this.showAddNewButton = false;
+            this.showDownloadButton = false;
+            this.showRowActions = false;
+            this.toast.error('Rights Load Failed', 'Unable to load terminal role rights. Please check and try again.');
+        }
     }
 
     async loadBranches(): Promise<void> {
@@ -534,6 +592,10 @@ export class TerminalComponent implements OnInit {
         }
     }
 
+    printRow(row: TerminalRow): void {
+        this.toast.info('Print Pending', `${String(row.name ?? row.code ?? 'Terminal')} print will be connected later.`);
+    }
+
     confirmDeleteRow(row: TerminalRow): void {
         const name = row.name ?? row.code ?? 'this Category';
 
@@ -597,15 +659,26 @@ export class TerminalComponent implements OnInit {
     }
 
     private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-        const items: MenuItem[] = [
-            { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-        ];
+        const items: MenuItem[] = [];
 
-        if (row['isactive'] === true) {
-            items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+        if (this.terminalRights.Edit && row['isactive'] === true) {
+            items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+        }
+
+        if (this.terminalRights.Delete) {
+            items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+        }
+
+        if (this.terminalRights.ActiveInActive && row['isactive'] === true) {
             items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-        } else {
+        }
+
+        if (this.terminalRights.ActiveInActive && row['isactive'] !== true) {
             items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+        }
+
+        if (this.terminalRights.Print) {
+            items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row as TerminalRow) });
         }
 
         return items;

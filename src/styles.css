@@ -723,6 +723,12 @@ html[data-theme='dark'] .ops-context-card {
   color: #b45309;
 }
 
+.row-action-menu .row-action-print .p-menu-item-link,
+.row-action-menu .row-action-print .p-menu-item-text,
+.row-action-menu .row-action-print .p-menu-item-icon {
+  color: #64748b;
+}
+
 .p-toast {
   width: min(24rem, calc(100vw - 2rem));
 }

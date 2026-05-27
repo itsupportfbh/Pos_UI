@@ -82,8 +82,8 @@
 
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
-      [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
+      [maxlength]="100" [model]="dialogCode" (modelChange)="dialogCode = $event"></app-text-field>
 
     <app-text-field label="Type" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter type"
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Type is required." [maxlength]="200"

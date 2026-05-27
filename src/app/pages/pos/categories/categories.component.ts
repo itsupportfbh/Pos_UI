@@ -8,9 +8,14 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { Category, CategoryService } from '../../../services/Category.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { firstValueFrom } from 'rxjs';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
@@ -52,10 +57,15 @@ const CATEGORY_COLUMNS: SharedTableColumn<CategoryRow>[] = [
   styleUrl: './categories.component.css'
 })
 export class CategoriesComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly categoryService = inject(CategoryService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
   private readonly tableExportService = inject(TableExportService);
 
@@ -103,11 +113,11 @@ export class CategoriesComponent {
   readonly tableTitle = 'Categories';
   readonly tableCaption = 'Categories';
   tableColumns = CATEGORY_COLUMNS;
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
-  readonly showDownloadButton = true;
+  showDownloadButton = true;
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   downloadLoading = false;
   downloadLoadingLabel = 'Exporting...';
@@ -119,10 +129,20 @@ export class CategoriesComponent {
   ];
 
   CategoryEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  categoryRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
+    await this.loadCategoryRights();
     this.tableColumns = CATEGORY_COLUMNS.map((x: any) => {
       if (x.field === 'organizationname') {
         x.hidden = this.userDetails.RoleId !== 1;
@@ -132,6 +152,44 @@ export class CategoriesComponent {
     });
 
     this.loadCategories();
+  }
+
+  async loadCategoryRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.CategoryEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.categoryRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.categoryRights.Create;
+      this.showDownloadButton = this.categoryRights.Download;
+      this.showRowActions = this.categoryRights.Edit || this.categoryRights.Delete || this.categoryRights.ActiveInActive || this.categoryRights.Print;
+    } catch {
+      this.categoryRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load category rights. Please check and try again.');
+    }
   }
 
   loadCategories(): void {
@@ -478,6 +536,10 @@ export class CategoriesComponent {
     });
   }
 
+  printRow(row: CategoryRow): void {
+    this.toast.info('Print Pending', `${String(row.name ?? row.code ?? 'Category')} print will be connected later.`);
+  }
+
   openRowActions(menu: any, event: Event, row: CategoryRow): void {
     this.selectedRow = row;
     this.rowActionItems = this.getRowActionItems(row);
@@ -485,15 +547,26 @@ export class CategoriesComponent {
   }
 
   private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row['isactive'] === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    if (this.categoryRights.Edit && row['isactive'] === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.categoryRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.categoryRights.ActiveInActive && row['isactive'] === true) {
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
+    }
+
+    if (this.categoryRights.ActiveInActive && row['isactive'] !== true) {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    if (this.categoryRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row as CategoryRow) });
     }
 
     return items;

@@ -9,7 +9,11 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
 type MoveTableRow = {
@@ -55,7 +59,11 @@ const MOVE_TABLE_COLUMNS: SharedTableColumn<MoveTableRow>[] = [
   styleUrl: './move-table.component.css'
 })
 export class MoveTableComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;

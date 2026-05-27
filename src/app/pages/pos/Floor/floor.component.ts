@@ -17,8 +17,13 @@ import {
   SharedTableColumn,
   SharedTableComponent
 } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { BranchService } from '../../../services/branch.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { Floor, FloorService } from '../../../services/floor.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
@@ -61,9 +66,14 @@ const FLOOR_COLUMNS: SharedTableColumn<FloorRow>[] = [
   styleUrl: './floor.component.css'
 })
 export class FloorComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly floorService = inject(FloorService);
   private readonly branchService = inject(BranchService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
@@ -110,17 +120,20 @@ export class FloorComponent implements OnInit {
   readonly tableTitle = 'Floors';
   readonly tableCaption = 'Floors';
   tableColumns = FLOOR_COLUMNS;
-  readonly showAddNewButton = true;
+  floorEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  floorRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  public readonly showDownloadButton = true;
+  public showDownloadButton = true;
   public readonly showFilterButton = true;
-  public readonly showRowActions = true;
+  public showRowActions = true;
   public readonly rowActionHeader = 'Actions';
   public downloadLoading = false;
   public downloadLoadingLabel = 'Exporting...';
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    await this.loadFloorRights();
      this.tableColumns = FLOOR_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
         x.hidden = this.userDetails.RoleId !== 1;
@@ -129,6 +142,43 @@ export class FloorComponent implements OnInit {
       return x;
     });
     this.loadFloors();
+  }
+
+  async loadFloorRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.floorEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.floorRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.floorRights.Create;
+      this.showDownloadButton = this.floorRights.Download;
+      this.showRowActions = this.floorRights.Edit || this.floorRights.Delete || this.floorRights.ActiveInActive || this.floorRights.Print;
+    } catch {
+      this.floorRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load floor rights for this role.');
+    }
   }
 
   loadFloors(): void {
@@ -679,21 +729,32 @@ export class FloorComponent implements OnInit {
   }
 
   private getRowActionItems(row: FloorRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.floorRights.Edit && row.IsActive === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.floorRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.floorRights.ActiveInActive) {
+      if (row.IsActive === true) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.floorRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -704,8 +765,15 @@ export class FloorComponent implements OnInit {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: FloorRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this floor');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
   }
 }

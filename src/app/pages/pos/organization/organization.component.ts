@@ -13,9 +13,14 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { firstValueFrom } from 'rxjs';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { Organization, OrganizationConfig, OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
@@ -48,10 +53,15 @@ const CODE_TEMPLATE_COLUMNS: SharedTableColumn<any>[] = [
   styleUrl: './organization.component.css'
 })
 export class OrganizationComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly branchService = inject(BranchService);
   private readonly organizationService = inject(OrganizationService);
   private readonly commonService = inject(CommonService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly runtimeConfig = inject(RuntimeConfigService);
@@ -126,18 +136,69 @@ export class OrganizationComponent implements OnInit {
   isSuperAdmin = false;
   isAdminUser = false;
   organizationEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  organizationRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
   showAddNewButton = false;
+  showRowActions = true;
   readonly addNewButtonLabel = 'Add New';
   readonly addCodeTemplateButtonLabel = 'Add Code Template';
   rowActionItems: MenuItem[] = [];
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.isSuperAdmin = this.userDetails.RoleId == 1;
     this.isAdminUser = this.userDetails.IsAdmin == 1;
-    this.showAddNewButton = this.isSuperAdmin;
+    await this.loadOrganizationRights();
     this.loadOrganizations();
+  }
+
+  async loadOrganizationRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.organizationEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.organizationRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.isSuperAdmin && this.organizationRights.Create;
+      this.showRowActions =
+        this.organizationRights.View
+        || this.organizationRights.Edit
+        || this.organizationRights.Delete
+        || this.organizationRights.ActiveInActive
+        || this.organizationRights.Print;
+    } catch {
+      this.organizationRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showRowActions = this.organizationRights.View || this.organizationRights.Print;
+      this.toast.error('Rights Load Failed', 'Unable to load organization role rights. Please check and try again.');
+    }
   }
 
   onCardSearchChange(value: string): void {
@@ -1089,38 +1150,66 @@ export class OrganizationComponent implements OnInit {
   }
 
   private getRowActionItems(row: any): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'View', icon: 'pi pi-eye', styleClass: 'row-action-view', command: () => this.handleRowAction('view') }
-    ];
+    const items: MenuItem[] = [];
+
+    if (this.organizationRights.View) {
+      items.push({ label: 'View', icon: 'pi pi-eye', styleClass: 'row-action-view', command: () => this.handleRowAction('view') });
+    }
 
     if (this.userDetails.RoleId === 1) {
-      if (row['IsActive'] === true) {
+      if (this.organizationRights.Edit && row['IsActive'] === true) {
         items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+      }
+
+      if (this.organizationRights.ActiveInActive && row['IsActive'] === true) {
         items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-      } else {
+      }
+
+      if (this.organizationRights.ActiveInActive && row['IsActive'] !== true) {
         items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
       }
 
-      items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
-      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+      if (this.organizationRights.Edit) {
+        items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+      }
+
+      if (this.organizationRights.Delete) {
+        items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+      }
+
+      if (this.organizationRights.Print) {
+        items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
+      }
+
       return items;
     }
 
     if (this.userDetails.IsAdmin === true) {
-      if (row['IsActive'] === true) {
+      if (this.organizationRights.Edit && row['IsActive'] === true) {
         items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+      }
+
+      if (this.organizationRights.ActiveInActive && row['IsActive'] === true) {
         items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-      } else {
+      }
+
+      if (this.organizationRights.ActiveInActive && row['IsActive'] !== true) {
         items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
       }
 
-      items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+      if (this.organizationRights.Edit) {
+        items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+      }
+
+      if (this.organizationRights.Print) {
+        items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
+      }
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'view' | 'config' | 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'view' | 'config' | 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -1135,9 +1224,15 @@ export class OrganizationComponent implements OnInit {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: any): void {
+    this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'Organization')} print will be connected later.`);
   }
 }
 

@@ -13,9 +13,14 @@ import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../compo
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { Branch, BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
 
@@ -58,9 +63,14 @@ const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
   styleUrl: './branches.component.css'
 })
 export class BranchesComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly branchService = inject(BranchService);
   private readonly commonService = inject(CommonService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
@@ -103,6 +113,15 @@ export class BranchesComponent implements OnInit {
   countryOptions = countryOptions;
   organizationOptions: any[] = [];
   branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  branchRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Branches';
@@ -117,11 +136,11 @@ export class BranchesComponent implements OnInit {
   readonly tableTitle = 'Branches';
   readonly tableCaption = 'Branches';
   tableColumns = BRANCH_COLUMNS;
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showDownloadButton = true;
+  showDownloadButton = true;
   showFilterButton = false;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   downloadLoading = false;
   downloadLoadingLabel = 'Exporting...';
@@ -129,6 +148,7 @@ export class BranchesComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.showFilterButton = this.userDetails.RoleId === 1;
+    await this.loadBranchRights();
 
     this.tableColumns = BRANCH_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
@@ -139,6 +159,44 @@ export class BranchesComponent implements OnInit {
     });
 
     this.loadBranches();
+  }
+
+  async loadBranchRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.branchEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? response?.result?.[0] ?? {};
+
+      this.branchRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.branchRights.Create;
+      this.showDownloadButton = this.branchRights.Download;
+      this.showRowActions = this.branchRights.Edit || this.branchRights.Delete || this.branchRights.ActiveInActive || this.branchRights.Print;
+    } catch {
+      this.branchRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load branch role rights. Please check and try again.');
+    }
   }
 
   loadBranches(): void {
@@ -562,6 +620,10 @@ export class BranchesComponent implements OnInit {
     }
   }
 
+  printRow(row: BranchRow): void {
+    this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'Branch')} print will be connected later.`);
+  }
+
   openRowActions(menu: any, event: Event, row: BranchRow): void {
     this.selectedRow = row;
     this.rowActionItems = this.getRowActionItems(row);
@@ -668,15 +730,26 @@ export class BranchesComponent implements OnInit {
   }
 
   private getRowActionItems(row: BranchRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    if (this.branchRights.Edit && row.IsActive === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.branchRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.branchRights.ActiveInActive && row.IsActive === true) {
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
+    }
+
+    if (this.branchRights.ActiveInActive && row.IsActive !== true) {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    if (this.branchRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row) });
     }
 
     return items;

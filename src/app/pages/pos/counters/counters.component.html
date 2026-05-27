@@ -76,7 +76,7 @@
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" inputId="dialog-counterCode" placeholder="Enter counter code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Counter Code is required."
-      [model]="dialogCounterCode" (modelChange)="dialogCounterCode = $event"[readonly]="true"/>
+      [model]="dialogCounterCode" (modelChange)="dialogCounterCode = $event"[disabled]="true"/>
 
     <app-text-field label="Counter Name" inputId="dialog-counterName" placeholder="Enter counter name" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Counter Name is required."
