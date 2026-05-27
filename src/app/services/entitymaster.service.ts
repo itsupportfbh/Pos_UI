@@ -17,7 +17,7 @@ export class EntityMasterService {
 
   GetEntityMasterForRoleRights(OrgId: number, roleId: number): Observable<ApiListResponse<any>> {
     return this.http.get<ApiListResponse<any>>(
-      `${this.baseUrl}/${this.controllerPath}/GetEntityMasterForRoleRights?orgid=${OrgId}&roleid=${roleId}`
+      `${this.baseUrl}/${this.controllerPath}/GetEntityMasterForRoleRights?OrgId=${OrgId}&RoleId=${roleId}`
     );
   }
 
@@ -25,6 +25,12 @@ export class EntityMasterService {
     return this.http.post<any>(
       `${this.baseUrl}/${this.controllerPath}/SaveRolePermission`,
       payload
+    );
+  }
+
+   GetRoleRightsByRoleId(OrgId: number, roleId: number, EntityNo: number): Observable<ApiListResponse<any>> {
+    return this.http.get<ApiListResponse<any>>(
+      `${this.baseUrl}/${this.controllerPath}/GetRoleRightsByRoleId?OrgId=${OrgId}&RoleId=${roleId}&EntityNo=${EntityNo}`
     );
   }
 

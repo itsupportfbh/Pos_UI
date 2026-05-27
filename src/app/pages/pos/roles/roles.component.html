@@ -72,7 +72,7 @@
       }
 
     <app-text-field label="Code" inputId="dialog-code" placeholder="Role Code" [required]="true"
-      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required."
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
       [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Name" inputId="dialog-name" placeholder="Role Name" [required]="true"

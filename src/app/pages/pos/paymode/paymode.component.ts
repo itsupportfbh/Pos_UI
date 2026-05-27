@@ -10,8 +10,13 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { Paymode, PaymodeService } from '../../../services/paymode.service';
 import { TableExportService } from '../../../services/table-export.service';
 
@@ -49,8 +54,13 @@ const PAYMODE_COLUMNS: SharedTableColumn<PaymodeRow>[] = [
   styleUrl: './paymode.component.css'
 })
 export class PaymodeComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly paymodeService = inject(PaymodeService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly tableExportService = inject(TableExportService);
@@ -88,16 +98,19 @@ export class PaymodeComponent implements OnInit {
   readonly tableTitle = 'Paymode';
   readonly tableCaption = 'Paymode';
   tableColumns = PAYMODE_COLUMNS;
-  readonly showAddNewButton = true;
+  paymodeRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showDownloadButton = true;
-  readonly showRowActions = true;
+  showDownloadButton = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   downloadLoading = false;
   downloadLoadingLabel = 'Exporting...';
+  paymodeEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    await this.loadPaymodeRights();
     this.tableColumns = PAYMODE_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
         x.hidden = this.userDetails.RoleId !== 1;
@@ -107,6 +120,43 @@ export class PaymodeComponent implements OnInit {
     });
 
     this.loadRows();
+  }
+
+  async loadPaymodeRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.paymodeEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.paymodeRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.paymodeRights.Create;
+      this.showDownloadButton = this.paymodeRights.Download;
+      this.showRowActions = this.paymodeRights.Edit || this.paymodeRights.Delete || this.paymodeRights.ActiveInActive || this.paymodeRights.Print;
+    } catch {
+      this.paymodeRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load paymode rights for this role.');
+    }
   }
 
   loadRows(): void {
@@ -510,21 +560,32 @@ export class PaymodeComponent implements OnInit {
   }
 
   private getRowActionItems(row: PaymodeRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.paymodeRights.Edit && row.IsActive === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.paymodeRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.paymodeRights.ActiveInActive) {
+      if (row.IsActive === true) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.paymodeRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -535,8 +596,15 @@ export class PaymodeComponent implements OnInit {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: PaymodeRow): void {
+    const name = String(row.Type ?? row.Code ?? 'this paymode');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
   }
 }

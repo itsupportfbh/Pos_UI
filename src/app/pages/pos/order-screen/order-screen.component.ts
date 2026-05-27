@@ -70,8 +70,6 @@ const DEFAULT_SUBCATEGORY_ICON = 'pi pi-tags';
   styleUrl: './order-screen.component.css'
 })
 export class OrderScreenComponent implements OnInit {
-  private readonly changeDetector = inject(ChangeDetectorRef);
-
   readonly orderTypes = ['Dine In', 'Take Away', 'Delivery'];
 
   userDetails: any = {};
@@ -133,6 +131,7 @@ export class OrderScreenComponent implements OnInit {
 
   constructor(
     private readonly toast: AppToastService,
+    private readonly changeDetector: ChangeDetectorRef,
     private readonly branchService: BranchService,
     private readonly categoryService: CategoryService,
     private readonly comboMenuService: ComboMenuService,

@@ -9,7 +9,11 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { Menu, MenuService } from '../../../services/FoodMenu.service';
 import { CategoryService } from '../../../services/Category.service';
 import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
@@ -17,6 +21,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { OrganizationService } from '../../../services/organization.service';
 import { firstValueFrom } from 'rxjs';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { TableExportService } from '../../../services/table-export.service';
 
 type MenuRow = {
@@ -63,10 +68,15 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
   styleUrl: './menus.component.css'
 })
 export class MenusComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly menuService = inject(MenuService);
   private readonly categoryService = inject(CategoryService);
   private readonly subCategoryService = inject(subCategoryService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly organizationService = inject(OrganizationService);
@@ -130,21 +140,23 @@ export class MenusComponent {
   readonly tableTitle = 'Menus';
   readonly tableCaption = 'Menus';
   tableColumns = MENU_COLUMNS;
-  readonly showAddNewButton = true;
+  menuRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
-  readonly showDownloadButton = true;
+  showDownloadButton = true;
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   downloadLoading = false;
   downloadLoadingLabel = 'Exporting...';
   rowActionItems: MenuItem[] = [];
   MenuEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    const userId = Number(this.userDetails.UserId || 0);
-    this.OrgId = Number(this.userDetails.OrgId || 0); this.loadMenus();
+    this.OrgId = Number(this.userDetails.OrgId || 0);
+    await this.loadMenuRights();
+    this.loadMenus();
     this.tableColumns = MENU_COLUMNS.map((x: any) => {
       if (x.field === 'organizationname') {
         x.hidden = this.userDetails.RoleId !== 1;
@@ -156,6 +168,43 @@ export class MenusComponent {
     this.loadCategories();
     this.loadSubCategories();
     this.loadFilterCategories();
+  }
+
+  async loadMenuRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.MenuEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.menuRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.menuRights.Create;
+      this.showDownloadButton = this.menuRights.Download;
+      this.showRowActions = this.menuRights.Edit || this.menuRights.Delete || this.menuRights.ActiveInActive || this.menuRights.Print;
+    } catch {
+      this.menuRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load menu rights for this role.');
+    }
   }
 
   loadCategories() {
@@ -581,15 +630,26 @@ export class MenusComponent {
   }
 
   private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row['isactive'] === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.menuRights.Edit && row['isactive'] === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.menuRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.menuRights.ActiveInActive) {
+      if (row['isactive'] === true) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.menuRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
@@ -603,7 +663,7 @@ export class MenusComponent {
     return areTextFieldsValid && areSelectFieldsValid;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -614,9 +674,16 @@ export class MenusComponent {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: MenuRow): void {
+    const name = String(row.name ?? row.code ?? 'this menu');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
   }
 
   resetDialogForm(keepCode: boolean = false): void {

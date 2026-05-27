@@ -45,11 +45,13 @@
                 </div>
               </div>
             </div>
-            <div class="user-card-menu">
-              <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
-              <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
-                (click)="openRowActions(rowMenu, $event, row)"></button>
-            </div>
+            @if (showRowActions) {
+              <div class="user-card-menu">
+                <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
+                <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
+                  (click)="openRowActions(rowMenu, $event, row)"></button>
+              </div>
+            }
           </div>
 
           <div class="user-card-tags">
@@ -138,7 +140,7 @@
     }
 
     <app-text-field label="Code" inputId="dialog-code" placeholder="User Code" [required]="true"
-      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." 
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
       [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Name" inputId="dialog-name" placeholder="User Name" [required]="true"

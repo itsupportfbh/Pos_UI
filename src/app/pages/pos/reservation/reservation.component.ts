@@ -8,7 +8,11 @@ import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { Reservation, ReservationService } from '../../../services/reservation.service';
 import { firstValueFrom } from 'rxjs';
@@ -68,7 +72,11 @@ const RESERVATION_COLUMNS: SharedTableColumn<ReservationRow>[] = [
   styleUrl: './reservation.component.css'
 })
 export class ReservationComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly reservationService = inject(ReservationService);

@@ -79,8 +79,8 @@
       }
 
     <app-text-field label="Code" inputId="dialog-code" placeholder="Branch Code" [required]="true"
-      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogCode"
-      (modelChange)="dialogCode = $event" />
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
+      [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Name" inputId="dialog-name" placeholder="Branch Name" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."

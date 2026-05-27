@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -9,6 +10,8 @@ import { DateFieldComponent } from '../../../components/form/date-field.componen
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { AppToastService } from '../../../services/app-toast.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 
 const CATEGORY_OPTIONS: { label: string | number; value: string | number }[] = [];
 const STOCK_LOCATION_OPTIONS: { label: string | number; value: string | number }[] = [];
@@ -25,10 +28,24 @@ const CODE_NAME_COLUMNS: SharedTableColumn<Record<string, unknown>>[] = [
   templateUrl: './current-stock.component.html',
   styleUrl: './current-stock.component.css'
 })
-export class CurrentStockComponent {  readonly formState: Record<string, string | Date | null> = {};
+export class CurrentStockComponent {
+  private readonly toast = inject(AppToastService);
+  private readonly entityMasterService = inject(EntityMasterService);
+  readonly formState: Record<string, string | Date | null> = {};
   readonly dialogFormState: Record<string, string | Date | null> = {};
   showAddDialog = false;
   showFilterSidebar = false;
+  userDetails: any = {};
+  currentStockEntityNo = Number(sessionStorage.getItem('currentMenuEntityNo') || 0);
+  currentStockRights = {
+    View: true,
+    Create: false,
+    Edit: false,
+    Delete: false,
+    ActiveInActive: false,
+    Print: false,
+    Download: true
+  };
   readonly pageEyebrow = 'Inventory';
   readonly pageTitle = 'Current Stock';
   readonly pageSubtitle = 'View stock on hand by location.';
@@ -48,9 +65,51 @@ export class CurrentStockComponent {  readonly formState: Record<string, string 
   readonly tableCaption = 'Current Stock';
   readonly tableColumns = CODE_NAME_COLUMNS;
   tableRows: Record<string, unknown>[] = [];
-    readonly showAddNewButton = false;
-    readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
-    readonly showFilterButton = true;
+  showAddNewButton = false;
+  readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+  readonly showFilterButton = true;
+  showDownloadButton = true;
+
+  async ngOnInit(): Promise<void> {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    await this.loadCurrentStockRights();
+  }
+
+  async loadCurrentStockRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.currentStockEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.currentStockRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = false;
+      this.showDownloadButton = this.currentStockRights.Download;
+    } catch {
+      this.currentStockRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.toast.error('Rights Load Failed', 'Unable to load current stock role rights. Please check and try again.');
+    }
+  }
 
   getFieldValue(fieldKey: string): string | Date | null {
     return this.formState[fieldKey] ?? null;

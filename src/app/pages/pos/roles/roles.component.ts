@@ -13,7 +13,11 @@ import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../compo
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { Role, RoleService } from '../../../services/role.service';
@@ -65,7 +69,11 @@ const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
   styleUrl: './roles.component.css'
 })
 export class RolesComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly roleService = inject(RoleService);
   private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
@@ -104,6 +112,15 @@ export class RolesComponent {
   organizationOptions: any[] = [];
   userDetails: any = {};
   roleEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  roleRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Roles';
@@ -118,18 +135,19 @@ export class RolesComponent {
   readonly tableTitle = 'Roles';
   readonly tableCaption = 'Roles';
   tableColumns = ROLE_COLUMNS;
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showDownloadButton = true;
+  showDownloadButton = true;
   showFilterButton = false;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   downloadLoading = false;
   downloadLoadingLabel = 'Exporting...';
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.showFilterButton = this.userDetails.RoleId === 1;
+    await this.loadRoleRights();
 
     this.tableColumns = ROLE_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
@@ -140,6 +158,44 @@ export class RolesComponent {
     });
 
     this.loadRoles();
+  }
+
+  async loadRoleRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.roleEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.roleRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.roleRights.Create;
+      this.showDownloadButton = this.roleRights.Download;
+      this.showRowActions = this.roleRights.View || this.roleRights.Edit || this.roleRights.Delete || this.roleRights.ActiveInActive || this.roleRights.Print;
+    } catch {
+      this.roleRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = this.roleRights.View || this.roleRights.Print;
+      this.toast.error('Rights Load Failed', 'Unable to load role rights. Please check and try again.');
+    }
   }
 
   get filteredPermissionPages(): PagePermission[] {
@@ -635,17 +691,35 @@ export class RolesComponent {
     });
   }
 
-  private getRowActionItems(row: RoleRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Permissions', icon: 'pi pi-lock', styleClass: 'row-action-permissions', command: () => this.handleRowAction('permissions') },
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+  printRow(row: RoleRow): void {
+    this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'Role')} print will be connected later.`);
+  }
 
-    if (row.IsActive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+  private getRowActionItems(row: RoleRow): MenuItem[] {
+    const items: MenuItem[] = [];
+
+    if (this.roleRights.View) {
+      items.push({ label: 'Permissions', icon: 'pi pi-lock', styleClass: 'row-action-permissions', command: () => this.handleRowAction('permissions') });
+    }
+
+    if (this.roleRights.Edit && row.IsActive === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.roleRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.roleRights.ActiveInActive && row.IsActive === true) {
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
+    }
+
+    if (this.roleRights.ActiveInActive && row.IsActive !== true) {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    if (this.roleRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row) });
     }
 
     return items;

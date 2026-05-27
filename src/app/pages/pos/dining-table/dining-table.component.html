@@ -58,8 +58,8 @@
     }
 
     <app-text-field label="Code" inputId="dialog-code" [showRequiredMark]="true" placeholder="Enter table code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
-      [model]="dialogCode" (modelChange)="dialogCode = $event" />
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
+      [maxlength]="100" [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Table Name" inputId="dialog-name" [showRequiredMark]="true" placeholder="Enter table name"
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Name is required." [maxlength]="200"
