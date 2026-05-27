@@ -28,27 +28,6 @@
   </section>
 
   <section class="workflow-layout">
-    <p-card class="feature-card workflow-preview-card">
-      <div class="section-heading">
-        <div>
-          <h2>Join Snapshot</h2>
-          <p class="section-note">Keep joined groups visible so service and billing stay under one captain.</p>
-        </div>
-      </div>
-
-      <section class="workflow-preview-surface">
-        <div class="workflow-preview-topline">
-          <span>{{ previewPrimaryTable }}</span>
-          <strong>{{ previewSecondaryTables }}</strong>
-        </div>
-        <div class="workflow-preview-copy">
-          <p class="workflow-preview-title">Join note</p>
-          <h3>Tables merged under one bill</h3>
-          <p>{{ previewNotes }}</p>
-        </div>
-      </section>
-    </p-card>
-
     <p-card class="feature-card">
       <div class="section-heading">
         <div>
@@ -133,11 +112,11 @@
       errorMessage="Guest count is required." [model]="dialogGuestCount"
       (modelChange)="dialogGuestCount = $event"></app-text-field>
 
-    <app-text-field label="Steward" inputId="dialog-steward-name" [showRequiredMark]="true"
-      placeholder="Enter steward name" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Steward is required." [maxlength]="150" [model]="dialogStewardName"
-      (modelChange)="dialogStewardName = $event"></app-text-field>
-
+    <app-select-field label="Steward" inputId="dialog-steward" placeholder="Choose steward"
+      [options]="stewardOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Steward is required." [model]="dialogSteward"
+      (modelChange)="dialogSteward = $event" /> 
+      
     <app-text-field label="Notes" inputId="dialog-notes" placeholder="Enter join notes" [maxlength]="250"
       [model]="dialogNotes" (modelChange)="dialogNotes = $event"></app-text-field>
   </section>
