@@ -28,6 +28,16 @@ const ALL_TABLE = 'All';
 const ACTIVE_HELD_ORDER_STORAGE_KEY = 'activeHeldOrder';
 const ORDER_SCREEN_TEMPLATE_NAME = 'Order Screen';
 const ORDER_HOLD_TEMPLATE_NAME = 'Order Hold List';
+const ORDER_STATUS = {
+  Hold: 0,
+  InKitchen: 1,
+  Preparing: 2,
+  Ready: 3,
+  Served: 4,
+  Cancelled: 5
+} as const;
+
+type OrderStatusCode = typeof ORDER_STATUS[keyof typeof ORDER_STATUS];
 
 const CATEGORY_ICON_MAP: Record<string, string> = {
   breakfast: 'pi pi-sun',
@@ -585,7 +595,7 @@ export class OrderScreenComponent implements OnInit {
 
     try {
       await this.ensureKitchenOrderNumber();
-      orderPayload = this.buildOrderApiPayload('In Kitchen');
+      orderPayload = this.buildOrderApiPayload(ORDER_STATUS.InKitchen);
 
       const request = Number(orderPayload?.orderid || 0) > 0
         ? this.displayMenuItemsService.update(orderPayload)
@@ -665,7 +675,9 @@ export class OrderScreenComponent implements OnInit {
           setTimeout(() => this.refreshOrderScreenPage(), 1200);
         },
         error: (err: any) => {
-          const message = err?.error?.message
+          const validationMessage = this.getApiValidationMessage(err);
+          const message = validationMessage
+            || err?.error?.message
             || err?.error?.Message
             || err?.message
             || 'Unable to save this order to hold.';
@@ -684,7 +696,7 @@ export class OrderScreenComponent implements OnInit {
     }
   }
 
-  private buildOrderApiPayload(status: 'Hold' | 'In Kitchen' = 'In Kitchen'): any {
+  private buildOrderApiPayload(status: OrderStatusCode = ORDER_STATUS.InKitchen): any {
     const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
     const existingOrderId = this.getKitchenOrderId();
     const orderNumber = this.currentOrderNumber || this.getOrderNumber(this.currentHeldOrder);
@@ -839,7 +851,7 @@ export class OrderScreenComponent implements OnInit {
     return /^\d{10,13}$/.test(this.ContactNumber);
   }
 
-  private buildKitchenOrderItem(item: any, orderId: number, userId: number, timestamp: string, status: 'Hold' | 'In Kitchen'): any {
+  private buildKitchenOrderItem(item: any, orderId: number, userId: number, timestamp: string, status: OrderStatusCode): any {
     const quantity = Number(item.quantity || 0);
     const unitPrice = Number(item.price || 0);
     const isCombo = item.itemType === 'Combo';
@@ -1098,7 +1110,7 @@ export class OrderScreenComponent implements OnInit {
     }
   }
 
-  private buildHoldOrderPayload(status: 'Hold' | 'In Kitchen' = 'Hold'): OrderHold {
+  private buildHoldOrderPayload(status: OrderStatusCode = ORDER_STATUS.Hold): OrderHold {
     const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
     const holdOrderId = this.getCurrentHeldOrderId();
     const orderDetailId = this.getCurrentHeldOrderDetailId();
@@ -1113,40 +1125,84 @@ export class OrderScreenComponent implements OnInit {
     const shiftId = this.getCurrentShiftId();
 
     const payload: OrderHold = {
+      OrderId: existingOrderId,
+      Orderid: existingOrderId,
       orderId: existingOrderId,
+      Ordernumber: requestOrderNumber,
+      OrderNumber: requestOrderNumber,
       ordernumber: requestOrderNumber,
+      orderNumber: requestOrderNumber,
+      TableId: tableId,
+      Tableid: tableId,
       tableid: tableId,
       FloorId: floorId,
       Floorid: floorId,
       floorId,
       floorid: floorId,
+      Ordertype: this.activeOrderType,
       ordertype: this.activeOrderType,
+      Orderstatus: status,
       orderstatus: status,
+      ItemCount: this.itemCount,
+      Itemcount: this.itemCount,
       itemcount: this.itemCount,
+      SubtotalAmount: this.subtotal,
       subtotalAmount: this.subtotal,
+      TaxAmount: this.taxAmount,
       taxAmount: this.taxAmount,
+      DiscountAmount: this.discountAmount,
       discountAmount: this.discountAmount,
+      TotalAmount: this.grandTotal,
       totalAmount: this.grandTotal,
+      CustomerName: this.customerName,
       customerName: this.customerName,
+      ContactNumber: this.ContactNumber,
       contactNumber: this.ContactNumber,
       Notes: orderNotes,
       notes: orderNotes,
       Remarks: orderNotes,
       remarks: orderNotes,
+      ShiftId: shiftId,
+      Shiftid: shiftId,
       shiftid: shiftId,
+      OrgId: this.orgId,
       orgId: this.orgId,
+      CreatedBy: userId || 0,
       createdBy: userId || 0,
+      CreatedDate: now,
       createdDate: now,
+      UpdatedBy: userId || 0,
       updatedBy: userId || 0,
+      UpdatedDate: now,
       updatedDate: now,
+      IsDeleted: false,
       isDeleted: false,
+      BranchId: this.branchId,
       branchId: this.branchId,
+      Items: items,
+      OrderHoldItems: items,
+      orderHoldItems: items,
       items,
       EntityNo: this.currentHoldOrderEntityNo,
-    
+      entityNo: this.currentHoldOrderEntityNo
     };
 
     return payload;
+  }
+
+  private getApiValidationMessage(err: any): string {
+    const errors = err?.error?.errors;
+
+    if (!errors || typeof errors !== 'object') {
+      return '';
+    }
+
+    return Object.keys(errors)
+      .flatMap((key) => {
+        const messages = Array.isArray(errors[key]) ? errors[key] : [errors[key]];
+        return messages.map((message: unknown) => `${key}: ${message}`);
+      })
+      .join(' ');
   }
 
   private async ensureHoldOrderNumber(): Promise<void> {
@@ -1205,12 +1261,6 @@ export class OrderScreenComponent implements OnInit {
       throw new Error('Unable to load order number.');
     }
   }
-
-
-
-
-
-
   
   private async resolveOrderEntityNo(templateName: string, orgId: number): Promise<number> {
     const branchId = this.getCodeTemplateBranchId();
@@ -1249,7 +1299,7 @@ export class OrderScreenComponent implements OnInit {
     return String(value ?? '').trim().toLowerCase();
   }
 
-  private buildHoldOrderItems(userId: number, status: 'Hold' | 'In Kitchen', orderId: number, timestamp: string): OrderHoldItem[] {
+  private buildHoldOrderItems(userId: number, status: OrderStatusCode, orderId: number, timestamp: string): OrderHoldItem[] {
     return this.cartItems.map((item: any) => {
       const quantity = Number(item.quantity || 0);
       const unitPrice = Number(item.price || 0);
@@ -1421,8 +1471,44 @@ export class OrderScreenComponent implements OnInit {
 }
 
   private isCurrentHeldOrder(): boolean {
-    const status = this.getStringValue(this.currentHeldOrder, 'Orderstatus', 'orderstatus', 'OrderStatus', 'orderStatus');
-    return status.trim().toLowerCase() === 'hold';
+    const status = this.getStatusCode(this.currentHeldOrder, 'Orderstatus', 'orderstatus', 'OrderStatus', 'orderStatus');
+    return status === ORDER_STATUS.Hold;
+  }
+
+  private getStatusCode(source: any, ...keys: string[]): OrderStatusCode | null {
+    const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value as OrderStatusCode;
+    }
+
+    const normalizedStatus = String(value ?? '').trim().toLowerCase().replace(/\s+/g, '');
+
+    switch (normalizedStatus) {
+      case '0':
+      case 'hold':
+        return ORDER_STATUS.Hold;
+      case '1':
+      case 'inkitchen':
+        return ORDER_STATUS.InKitchen;
+      case '2':
+      case 'inprocess':
+      case 'preparing':
+        return ORDER_STATUS.Preparing;
+      case '3':
+      case 'ready':
+      case 'readytoserve':
+        return ORDER_STATUS.Ready;
+      case '4':
+      case 'served':
+        return ORDER_STATUS.Served;
+      case '5':
+      case 'cancelled':
+      case 'canceled':
+        return ORDER_STATUS.Cancelled;
+      default:
+        return null;
+    }
   }
 
   private getScopedOrgId(): number {

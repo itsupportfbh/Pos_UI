@@ -55,8 +55,8 @@ type HeldOrder = {
   tableName?: string;
   ordertype?: string;
   Ordertype?: string;
-  orderstatus?: string;
-  Orderstatus?: string;
+  orderstatus?: string | number;
+  Orderstatus?: string | number;
   CustomerName?: string;
   GuestName?: string;
   guestName?: string;
@@ -125,6 +125,15 @@ type HeldOrderRow = Omit<HeldOrder, 'Items'> & {
 };
 
 const ACTIVE_HELD_ORDER_STORAGE_KEY = 'activeHeldOrder';
+const ORDER_STATUS = {
+  Hold: 0,
+  InKitchen: 1,
+  Preparing: 2,
+  Ready: 3,
+  Served: 4,
+  Cancelled: 5
+} as const;
+
 const HELD_TIME_FORMATTER = new Intl.DateTimeFormat('en-IN', {
   day: '2-digit',
   month: 'short',
@@ -334,7 +343,7 @@ ngOnInit(): void {
 
   getOrderStatus(order: HeldOrder): string {
     const source = order as any;
-    return source.Orderstatus ?? source.orderstatus ?? source.orderStatus ?? source.OrderStatus ?? 'Hold';
+    return this.getStatusLabel(source.Orderstatus ?? source.orderstatus ?? source.orderStatus ?? source.OrderStatus ?? ORDER_STATUS.Hold);
   }
 
   getOrderTable(order: HeldOrder): string {
@@ -522,8 +531,8 @@ ngOnInit(): void {
       taxAmount: item.taxAmount ?? item.TaxAmount ?? 0,
       Modifierdetails: item.Modifierdetails ?? item.modifierdetails ?? null,
       modifierdetails: item.modifierdetails ?? item.Modifierdetails ?? null,
-      Itemstatus: item.Itemstatus ?? item.itemstatus ?? source.Orderstatus ?? source.orderstatus ?? 'Hold',
-      itemstatus: item.itemstatus ?? item.Itemstatus ?? source.orderstatus ?? source.Orderstatus ?? 'Hold',
+      Itemstatus: this.getStatusCode(item.Itemstatus ?? item.itemstatus ?? source.Orderstatus ?? source.orderstatus ?? ORDER_STATUS.Hold),
+      itemstatus: this.getStatusCode(item.itemstatus ?? item.Itemstatus ?? source.orderstatus ?? source.Orderstatus ?? ORDER_STATUS.Hold),
       Notes: item.Notes ?? item.notes ?? null,
       notes: item.notes ?? item.Notes ?? null,
       OrgId: item.OrgId ?? item.orgId ?? source.OrgId ?? source.orgId ?? 0,
@@ -545,8 +554,8 @@ ngOnInit(): void {
       tableName,
       Ordertype: this.getOrderType(order),
       ordertype: this.getOrderType(order),
-      Orderstatus: this.getOrderStatus(order),
-      orderstatus: this.getOrderStatus(order),
+      Orderstatus: this.getStatusCode(source.Orderstatus ?? source.orderstatus ?? source.orderStatus ?? source.OrderStatus ?? ORDER_STATUS.Hold),
+      orderstatus: this.getStatusCode(source.orderstatus ?? source.Orderstatus ?? source.orderStatus ?? source.OrderStatus ?? ORDER_STATUS.Hold),
       CustomerName: customerName,
       customerName,
       ContactNumber: contactNumber,
@@ -694,6 +703,59 @@ ngOnInit(): void {
       source?.Phone ??
       source?.phone
     );
+  }
+
+  private getStatusCode(status: unknown): number {
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status;
+    }
+
+    const normalizedStatus = String(status ?? '').trim().toLowerCase().replace(/\s+/g, '');
+
+    switch (normalizedStatus) {
+      case '0':
+      case 'hold':
+        return ORDER_STATUS.Hold;
+      case '1':
+      case 'inkitchen':
+        return ORDER_STATUS.InKitchen;
+      case '2':
+      case 'inprocess':
+      case 'preparing':
+        return ORDER_STATUS.Preparing;
+      case '3':
+      case 'ready':
+      case 'readytoserve':
+        return ORDER_STATUS.Ready;
+      case '4':
+      case 'served':
+        return ORDER_STATUS.Served;
+      case '5':
+      case 'cancelled':
+      case 'canceled':
+        return ORDER_STATUS.Cancelled;
+      default:
+        return ORDER_STATUS.Hold;
+    }
+  }
+
+  private getStatusLabel(status: unknown): string {
+    switch (this.getStatusCode(status)) {
+      case ORDER_STATUS.Hold:
+        return 'Hold';
+      case ORDER_STATUS.InKitchen:
+        return 'In Kitchen';
+      case ORDER_STATUS.Preparing:
+        return 'Preparing';
+      case ORDER_STATUS.Ready:
+        return 'Ready';
+      case ORDER_STATUS.Served:
+        return 'Served';
+      case ORDER_STATUS.Cancelled:
+        return 'Cancelled';
+      default:
+        return this.normalizeText(status);
+    }
   }
 
   private normalizeText(value: unknown): string {
