@@ -186,8 +186,6 @@ export class ReservationComponent {
   loadRows(): void {
     this.loadReservations();
     this.loadDiningTables();
-    this.updateSummary();
-    this.updatePreview();
   }
 
   loadReservations(): void {
@@ -419,7 +417,7 @@ export class ReservationComponent {
           if (typeof t === 'number' || typeof t === 'string') return Number(t);
           return Number(t.TableId ?? t.tableId ?? t.id ?? t.Id ?? NaN);
         }).filter((x: number) => !Number.isNaN(x));
-        this.OrgId = reservation?.orgId ?? reservation?.OrgId ?? row.OrgId;
+        //this.OrgId = reservation?.orgId ?? reservation?.OrgId ?? row.OrgId;
         this.dialogCreatedBy = reservation?.createdBy ?? reservation?.CreatedBy ?? 1;
         this.dialogCreatedDate = reservation?.createdDate ?? reservation?.CreatedDate;
         this.dialogUpdatedBy = reservation?.updatedBy ?? reservation?.UpdatedBy ?? 1;
