@@ -732,8 +732,6 @@ export class OrderScreenComponent implements OnInit {
       Ordertype: this.activeOrderType,
       orderType: this.activeOrderType,
       OrderStatus: status,
-      Orderstatus: status,
-      orderStatus: status,
       ItemCount: this.itemCount,
       Itemcount: this.itemCount,
       itemCount: this.itemCount,
@@ -744,26 +742,24 @@ export class OrderScreenComponent implements OnInit {
       DiscountAmount: this.discountAmount,
       discountAmount: this.discountAmount,
       TotalAmount: this.grandTotal,
-      totalAmount: this.grandTotal,
+      
       CustomerName: this.customerName,
-      customerName: this.customerName,
+      
       ContactNumber: this.ContactNumber,
-      contactNumber: this.ContactNumber,
+      
       Notes: orderNotes,
-      notes: orderNotes,
-      Remarks: orderNotes,
-      remarks: orderNotes,
+      
       ShiftId: shiftId,
       Shiftid: shiftId,
       shiftId,
       CreatedBy: userId || 0,
-      createdBy: userId || 0,
+      
       CreatedDate: now,
-      createdDate: now,
+     
       UpdatedBy: userId || 0,
-      updatedBy: userId || 0,
+      
       UpdatedDate: now,
-      updatedDate: now,
+      
       IsDeleted: false,
       isDeleted: false,
       OrgId: this.orgId,

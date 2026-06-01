@@ -1,0 +1,131 @@
+<section class="serve-page">
+  <header class="serve-header">
+    <div>
+      <p class="eyebrow">Service Handoff</p>
+      <h1>Serve Orders</h1>
+      <p>Ready orders are split by how the food reaches the customer.</p>
+    </div>
+    <button pButton type="button" icon="pi pi-refresh" label="Refresh" [disabled]="isLoading" (click)="loadReadyOrders()"></button>
+  </header>
+
+  <section class="serve-stats">
+    <article>
+      <span>Self Service</span>
+      <strong>{{ selfServiceOrders.length }}</strong>
+    </article>
+    <article>
+      <span>Server Delivery</span>
+      <strong>{{ serverDeliveryOrders.length }}</strong>
+    </article>
+    <article>
+      <span>Total Ready</span>
+      <strong>{{ readyOrders.length }}</strong>
+    </article>
+  </section>
+
+  <section class="serve-columns">
+    <article class="serve-column self-service">
+      <header>
+        <div>
+          <span>Self Service</span>
+          <h2>Ready for Collection</h2>
+        </div>
+        <strong>{{ selfServiceOrders.length }}</strong>
+      </header>
+
+      <section class="order-list">
+        @for (order of selfServiceOrders; track order.id) {
+          <article class="serve-card">
+            <div class="serve-card-top">
+              <div>
+                <small>{{ order.orderNo }}</small>
+                <h3>{{ order.customerName }}</h3>
+              </div>
+              <span>{{ getHandoffLabel(order) }}</span>
+            </div>
+
+            <dl>
+              <div>
+                <dt>Table</dt>
+                <dd>{{ order.tableName }}</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd>{{ order.orderType }}</dd>
+              </div>
+              <div>
+                <dt>Items</dt>
+                <dd>{{ order.itemCount }}</dd>
+              </div>
+              <div>
+                <dt>Total</dt>
+                <dd>{{ order.totalAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</dd>
+              </div>
+            </dl>
+
+            @if (order.notes) {
+              <p class="order-note">{{ order.notes }}</p>
+            }
+
+            <button pButton type="button" icon="pi pi-check" label="Picked Up / Served"
+              [disabled]="servingOrderId === order.id" (click)="markServed(order)"></button>
+          </article>
+        } @empty {
+          <div class="empty-state">No self-service orders are ready.</div>
+        }
+      </section>
+    </article>
+
+    <article class="serve-column server-delivery">
+      <header>
+        <div>
+          <span>Server Delivery</span>
+          <h2>Ready for Staff</h2>
+        </div>
+        <strong>{{ serverDeliveryOrders.length }}</strong>
+      </header>
+
+      <section class="order-list">
+        @for (order of serverDeliveryOrders; track order.id) {
+          <article class="serve-card">
+            <div class="serve-card-top">
+              <div>
+                <small>{{ order.orderNo }}</small>
+                <h3>{{ order.customerName }}</h3>
+              </div>
+              <span>{{ getHandoffLabel(order) }}</span>
+            </div>
+
+            <dl>
+              <div>
+                <dt>Table</dt>
+                <dd>{{ order.tableName }}</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd>{{ order.orderType }}</dd>
+              </div>
+              <div>
+                <dt>Items</dt>
+                <dd>{{ order.itemCount }}</dd>
+              </div>
+              <div>
+                <dt>Total</dt>
+                <dd>{{ order.totalAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</dd>
+              </div>
+            </dl>
+
+            @if (order.notes) {
+              <p class="order-note">{{ order.notes }}</p>
+            }
+
+            <button pButton type="button" icon="pi pi-check" label="Delivered / Served"
+              [disabled]="servingOrderId === order.id" (click)="markServed(order)"></button>
+          </article>
+        } @empty {
+          <div class="empty-state">No server-delivery orders are ready.</div>
+        }
+      </section>
+    </article>
+  </section>
+</section>

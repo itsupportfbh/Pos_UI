@@ -358,8 +358,13 @@ viewReady = false;
     const orderNo = this.getStringValue(order, 'OrderNumber');
     const isDeleted = this.getBooleanValue(order, 'IsDeleted', 'isDeleted');
     const isActive = this.getBooleanValue(order, 'IsActive', 'isActive');
+    const statusCode = this.getStatusCode(this.getRawValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus', 'Status', 'status'));
+    const visibleStatuses: number[] = [ORDER_STATUS.InKitchen, ORDER_STATUS.Preparing, ORDER_STATUS.Ready];
 
-    return Boolean(orderNo) && !isDeleted && isActive !== false;
+    return Boolean(orderNo)
+      && !isDeleted
+      && isActive !== false
+      && visibleStatuses.includes(statusCode);
   }
 
   private getUserOrgId(): number {
