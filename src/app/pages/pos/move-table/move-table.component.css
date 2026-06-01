@@ -82,6 +82,11 @@
   color: var(--app-primary);
 }
 
+.workflow-layout .full-width-card {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 @media (max-width: 960px) {
   .workflow-layout {
     grid-template-columns: 1fr;

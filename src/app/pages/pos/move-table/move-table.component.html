@@ -28,7 +28,7 @@
   </section>
 
   <section class="workflow-layout">
-    <p-card class="feature-card workflow-preview-card">
+    <!-- <p-card class="feature-card workflow-preview-card">
       <div class="section-heading">
         <div>
           <h2>Floor Snapshot</h2>
@@ -47,33 +47,28 @@
           <p>{{ previewMoveReason }}</p>
         </div>
       </section>
-    </p-card>
+    </p-card> -->
 
-    <p-card class="feature-card">
+    <p-card class="feature-card full-width-card">
       <div class="section-heading">
         <div>
           <h2>{{ tableTitle }}</h2>
-          <p class="section-note">Track source and destination tables, guests, and the reason the move was requested.</p>
+          <p class="section-note">Track source and destination tables, guests, and the reason the move was requested.
+          </p>
         </div>
       </div>
 
-      <app-shared-table
-        [showFilterButton]="showFilterButton"
-        (filterButtonClick)="openFilterSidebar()"
-        [caption]="tableCaption"
-        [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
-        [columns]="tableColumns"
-        [value]="tableRows"
-        [showAddNewButton]="showAddNewButton"
-        [toolbarButtonLabel]="addNewButtonLabel"
-        [showRowActions]="showRowActions"
-        [rowActionHeader]="rowActionHeader"
+      <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+        [caption]="tableCaption" [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
+        [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+        [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
         (toolbarButtonClick)="openAddDialog()">
         <ng-template #rowActions let-row>
-          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body"
+            styleClass="row-action-menu"></p-menu>
 
-          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
-            (click)="openRowActions(rowMenu, $event, row)"></button>
+          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true"
+            class="row-action-trigger" (click)="openRowActions(rowMenu, $event, row)"></button>
         </ng-template>
 
         <ng-template appTableCellTemplate="Status" let-row>
@@ -120,30 +115,26 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Move No" inputId="dialog-move-no" [showRequiredMark]="true"
-      placeholder="Enter move number" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Move number is required." [maxlength]="100" [model]="dialogMoveNo"
-      (modelChange)="dialogMoveNo = $event"></app-text-field>
+    <app-text-field label="Move No" inputId="dialog-move-no" [showRequiredMark]="true" placeholder="Enter move number"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Move number is required." [maxlength]="100"
+      [model]="dialogMoveNo" (modelChange)="dialogMoveNo = $event"></app-text-field> 
 
-    <app-text-field label="From Table" inputId="dialog-from-table" [showRequiredMark]="true"
-      placeholder="Enter source table" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="From table is required." [maxlength]="100" [model]="dialogFromTable"
-      (modelChange)="dialogFromTable = $event"></app-text-field>
+    <app-multiselect-field label="From Table" inputId="dialog-from-tables" placeholder="Choose from tables"
+      [showRequiredMark]="true" [options]="fromTableOptions" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="From tables is required." [model]="dialogFromTables" (modelChange)="onfiltertableChange($event)" />
 
-    <app-text-field label="To Table" inputId="dialog-to-table" [showRequiredMark]="true"
-      placeholder="Enter destination table" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="To table is required." [maxlength]="100" [model]="dialogToTable"
-      (modelChange)="dialogToTable = $event"></app-text-field>
+    <app-multiselect-field label="To Table" inputId="dialog-to-tables" placeholder="Choose to tables"
+      [showRequiredMark]="true" [options]="toTableOptions" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="To tables is required." [model]="dialogToTables" (modelChange)="onfiltertoTableChange($event)" />
 
     <app-text-field label="Guest Count" inputId="dialog-guest-count" type="number" [showRequiredMark]="true"
       placeholder="Enter guest count" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Guest count is required." [model]="dialogGuestCount"
       (modelChange)="dialogGuestCount = $event"></app-text-field>
 
-    <app-text-field label="Steward" inputId="dialog-steward-name" [showRequiredMark]="true"
-      placeholder="Enter steward name" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Steward is required." [maxlength]="150" [model]="dialogStewardName"
-      (modelChange)="dialogStewardName = $event"></app-text-field>
+    <app-select-field label="Steward" inputId="dialog-steward" placeholder="Choose steward" [options]="stewardOptions"
+      [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Steward is required."
+      [model]="dialogSteward" (modelChange)="dialogSteward = $event" />
 
     <app-text-field label="Move Reason" inputId="dialog-move-reason" [showRequiredMark]="true"
       placeholder="Enter move reason" [required]="true" [submitted]="dialogSubmitted"
