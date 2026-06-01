@@ -27,6 +27,12 @@ type EmployeeRegistrationRow = {
 
   DepartmentId: number | null;
 
+  designationId: 0;
+
+  departmentId: 0;
+
+  branchId: 0;
+
   IdProofNo: string;    
 
   Id: number;
@@ -482,7 +488,7 @@ applyFilters(): void {
 
  openAddDialog(): void {
 
-  this.resetDialogForm();
+  this.resetDialogForm(true);
 
   this.isEditMode = false;
 
@@ -533,13 +539,28 @@ submitAddDialog(): void {
     return;
   }
 
+const code = this.dialogCode.trim();
+const name = this.dialogName.trim();
+const existingEmployee = this.allRows.find((row) =>
+  row.Id !== this.dialogId &&
+  String(row.Code ?? '').trim().toLowerCase() === code.toLowerCase()
+);
+
+if (existingEmployee) {
+  this.toast.warn(
+    'Already Exists',
+    `Employee code ${code} already exists. Please use a different code.`
+  );
+  return;
+}
+
 const payload: employee = {
 
   Id: this.dialogId || 0,
 
-  Code: this.dialogCode,
+  Code: code,
 
-  Name: this.dialogName,
+  Name: name,
 
   DepartmentId: Number(this.dialogDepartment),
 
@@ -573,6 +594,22 @@ const payload: employee = {
       .subscribe({
 
         next: (response: any) => {
+
+          if (this.isAlreadyExistsResponse(response)) {
+            this.toast.warn(
+              'Already Exists',
+              'Employee code or name already exists. Please use different details.'
+            );
+            return;
+          }
+
+          if (!this.isSuccessResponse(response)) {
+            this.toast.error(
+              'Update Failed',
+              this.getResponseMessage(response) || 'Unable to update employee.'
+            );
+            return;
+          }
 
           this.toast.success(
             'Updated',
@@ -609,6 +646,22 @@ const orgId = Number(this.userDetails?.OrgId || 0);
 
         next: (response: any) => {
 
+          if (this.isAlreadyExistsResponse(response)) {
+            this.toast.warn(
+              'Already Exists',
+              'Employee code or name already exists. Please use different details.'
+            );
+            return;
+          }
+
+          if (!this.isSuccessResponse(response)) {
+            this.toast.error(
+              'Save Failed',
+              this.getResponseMessage(response) || 'Unable to save employee.'
+            );
+            return;
+          }
+
           this.toast.success(
             'Saved',
             'Employee saved successfully.'
@@ -637,12 +690,12 @@ const orgId = Number(this.userDetails?.OrgId || 0);
   }
 
 }
-  dialogdesignation(dialogdesignation: any) {
-    throw new Error('Method not implemented.');
-  }
-  dialogdepartment(dialogdepartment: any) {
-    throw new Error('Method not implemented.');
-  }
+  // dialogdesignation(dialogdesignation: any) {
+  //   throw new Error('Method not implemented.');
+  // }
+  // dialogdepartment(dialogdepartment: any) {
+  //   throw new Error('Method not implemented.');
+  // }
 
 editRow(row: EmployeeRegistrationRow): void {
 
@@ -805,6 +858,7 @@ resetDialogForm(clearSubmitted: boolean = false): void {
   this.dialogPhone = '';
 
   this.dialogEmail = '';
+
   this.dialogAddress = '';
 
   this.dialogStatus = true;
@@ -814,6 +868,8 @@ resetDialogForm(clearSubmitted: boolean = false): void {
   this.dialogRemarks = '';
   
   this.dialogIdProofNo = '';
+
+  this.dialogStatus = true;
 
   if (clearSubmitted) {
     this.dialogSubmitted = false;
@@ -834,6 +890,27 @@ resetDialogForm(clearSubmitted: boolean = false): void {
     const selectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
 
     return textFieldsValid && selectFieldsValid;
+  }
+
+  private isAlreadyExistsResponse(response: any): boolean {
+    return response === 'AlreadyExists' ||
+      response?.result === 'AlreadyExists' ||
+      response?.message === 'AlreadyExists' ||
+      response?.ErrorInfo?.Message === 'AlreadyExists';
+  }
+
+  private isSuccessResponse(response: any): boolean {
+    return response == null ||
+      response?.ErrorInfo?.Message === true ||
+      response?.message === true ||
+      response === true ||
+      response?.success === true;
+  }
+
+  private getResponseMessage(response: any): string {
+    return typeof response?.ErrorInfo?.Message === 'string'
+      ? response.ErrorInfo.Message
+      : response?.message ?? '';
   }
 
   private getRowActionItems(row: EmployeeRegistrationRow): MenuItem[] {
