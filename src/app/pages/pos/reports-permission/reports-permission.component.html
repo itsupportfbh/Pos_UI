@@ -1,0 +1,123 @@
+<section class="feature-page">
+  <header class="page-header hero-panel">
+    <div>
+      <p class="eyebrow">{{ pageEyebrow }}</p>
+      <h1>{{ pageTitle }}</h1>
+      <p class="page-subtitle">{{ pageSubtitle }}</p>
+    </div>
+  </header>
+
+  <p-card class="feature-card">
+    <section class="field-grid">
+      <app-select-field
+        label="Organization"
+        inputId="report-permission-organization"
+        placeholder="Choose organization"
+        [options]="organizationOptions"
+        [model]="selectedOrgId"
+        [numberValue]="true"
+        [disabled]="loadingOrganizations"
+        (modelChange)="onOrganizationChange($event)"
+      />
+
+      <app-select-field
+        label="Role"
+        inputId="report-permission-role"
+        placeholder="Choose role"
+        [options]="roleOptions"
+        [model]="selectedRoleId"
+        [numberValue]="true"
+        [disabled]="!selectedOrgId || loadingRoles"
+        (modelChange)="onRoleChange($event)"
+      />
+    </section>
+
+    <div class="permission-actions">
+      <app-action-buttons
+        [primaryLabel]="'Open Permissions'"
+        [secondaryLabel]="'Reload'"
+        [showSecondary]="true"
+        [primaryDisabled]="!selectedOrgId || !selectedRoleId"
+        [secondaryDisabled]="!selectedOrgId"
+        (primaryClick)="openPermissionsDialog()"
+        (secondaryClick)="resetReportPermissions()"
+      />
+    </div>
+
+    <div class="permission-summary-card" *ngIf="selectedOrgId && selectedRoleId">
+      <div>
+        <strong>Selected Role</strong>
+        <p>Open the permissions panel to manage report access for {{ selectedRoleLabel }}.</p>
+      </div>
+      <span class="permission-summary-pill">{{ permissionRows.length || 0 }} reports configured</span>
+    </div>
+  </p-card>
+</section>
+
+<p-dialog [(visible)]="showPermissionsDialog" [modal]="true" [style]="{ width: '90rem', maxWidth: '98vw', height: '88vh' }"
+  styleClass="permissions-dialog" [draggable]="false" [resizable]="false" [closable]="true"
+  (onHide)="closePermissionsDialog()">
+  <ng-template pTemplate="header">
+    <div class="permissions-dialog-header">
+      <div class="dialog-copy">
+        <h3>Report Permissions</h3>
+        <p>Choose report rights for {{ selectedRoleLabel }}.</p>
+      </div>
+
+      <div class="permissions-header-actions">
+        <label class="permissions-select-all">
+          <input type="checkbox" [checked]="isAllPermissionsSelected" (change)="toggleAllPermissions($event)" />
+          <span>Select All</span>
+        </label>
+
+        <div class="permissions-search">
+          <app-text-field label="Search Reports" inputId="report-permissions-search" placeholder="Search category or report"
+            [model]="permissionSearchText" (modelChange)="permissionSearchText = $event" />
+        </div>
+
+        <app-action-buttons primaryLabel="Save Permission" primaryIcon="pi pi-save"
+          [showSecondary]="false" [primaryLoading]="savingPermissions" [primaryDisabled]="loadingPermissions"
+          (primaryClick)="saveReportPermissions()" />
+      </div>
+    </div>
+  </ng-template>
+
+  <section class="permissions-panel">
+    @if (loadingPermissions) {
+      <div class="permissions-loading">
+        <i class="pi pi-spinner pi-spin"></i>
+        <span>Loading report permissions...</span>
+      </div>
+    } @else {
+      <div class="permissions-table">
+        <div class="permissions-row permissions-header">
+          <span>Category</span>
+          <span>Report</span>
+          <span>View</span>
+          <span>Print</span>
+          <span>PDF</span>
+          <span>Excel</span>
+          <span>All</span>
+        </div>
+
+        @for (row of filteredPermissionRows; track row.reportId) {
+          <div class="permissions-row">
+            <strong class="permission-module">{{ row.categoryName }}</strong>
+            <span class="permission-page">{{ row.reportLabel }}</span>
+            <label class="permission-check" data-label="View"><input type="checkbox" [checked]="row.canView" (change)="setPermission(row, 'canView', $event)" /></label>
+            <label class="permission-check" data-label="Print"><input type="checkbox" [checked]="row.canPrint" (change)="setPermission(row, 'canPrint', $event)" /></label>
+            <label class="permission-check" data-label="PDF"><input type="checkbox" [checked]="row.exportPdf" (change)="setPermission(row, 'exportPdf', $event)" /></label>
+            <label class="permission-check" data-label="Excel"><input type="checkbox" [checked]="row.exportExcel" (change)="setPermission(row, 'exportExcel', $event)" /></label>
+            <label class="permission-check permission-full" data-label="All"><input type="checkbox" [checked]="isFullAccess(row)" (change)="setAllPermissions(row, $event)" /></label>
+          </div>
+        }
+
+        @if (!filteredPermissionRows.length) {
+          <div class="permissions-empty">
+            No matching reports found.
+          </div>
+        }
+      </div>
+    }
+  </section>
+</p-dialog>
