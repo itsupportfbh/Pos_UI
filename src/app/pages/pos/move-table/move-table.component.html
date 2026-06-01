@@ -117,7 +117,7 @@
   <section class="field-grid dialog-grid">
     <app-text-field label="Move No" inputId="dialog-move-no" [showRequiredMark]="true" placeholder="Enter move number"
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Move number is required." [maxlength]="100"
-      [model]="dialogMoveNo" (modelChange)="dialogMoveNo = $event"></app-text-field> 
+      [model]="dialogMoveNo" [disabled]="true" (modelChange)="dialogMoveNo = $event"></app-text-field> 
 
     <app-multiselect-field label="From Table" inputId="dialog-from-tables" placeholder="Choose from tables"
       [showRequiredMark]="true" [options]="fromTableOptions" [required]="true" [submitted]="dialogSubmitted"
