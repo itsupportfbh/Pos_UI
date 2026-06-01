@@ -95,7 +95,7 @@
   <section class="field-grid dialog-grid">
     <app-text-field label="Join No" inputId="dialog-join-no" [showRequiredMark]="true" placeholder="Enter join number"
       [required]="true" [submitted]="dialogSubmitted" errorMessage="Join number is required." [maxlength]="100"
-      [model]="dialogJoinNo" (modelChange)="dialogJoinNo = $event"></app-text-field>
+      [model]="dialogJoinNo" [disabled]="true" (modelChange)="dialogJoinNo = $event"></app-text-field>
 
     <app-select-field label="Primary Table" inputId="dialog-primary-table" placeholder="Enter primary table"
       [options]="primaryTablesOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
