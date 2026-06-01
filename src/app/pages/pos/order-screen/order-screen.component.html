@@ -46,6 +46,17 @@
             }
           </div>
         </div>
+
+        <div class="tool-block tool-block-toggle">
+          <span class="tool-label">Delivery Type</span>
+          <div class="order-type-toggle delivery-type-toggle" aria-label="Delivery type">
+            @for (servingType of servingTypes; track servingType) {
+              <button type="button" [class.active]="activeServingType === servingType" (click)="selectServingType(servingType)">
+                {{ servingType }}
+              </button>
+            }
+          </div>
+        </div>
       </div>
 
       <div class="customer-tools">
@@ -80,11 +91,11 @@
 
         <app-select-field label="Floor" inputId="order-floor" placeholder="Choose floor"
           [options]="floorOptions" [model]="activeFloorId" [numberValue]="true" [showClear]="false"
-          [filter]="true" [disabled]="isFloorLoading" (modelChange)="selectFloorById($event)" />
+          [filter]="true" [disabled]="isFloorLoading || isFloorTableSelectionDisabled" (modelChange)="selectFloorById($event)" />
 
         <app-select-field label="Table" inputId="order-table" placeholder="Choose table"
           [options]="tableOptions" [model]="selectedTable" [showClear]="false"
-          [filter]="true" [disabled]="isTableLoading"
+          [filter]="true" [disabled]="isTableLoading || isFloorTableSelectionDisabled"
           [submitted]="orderValidationSubmitted" [required]="isDineInOrder()" errorMessage="Select a table."
           (modelChange)="selectTableByName($event)" />
       </div>
@@ -130,7 +141,7 @@
             <p class="eyebrow">Order No: {{ currentOrderNumber }}</p>
             <h2>{{ selectedTableWithFloorName }}</h2>
           </div>
-          <span class="cart-customer-name">{{ activeOrderType }}</span>
+          <span class="cart-customer-name">{{ activeOrderType }} / {{ activeServingType }}</span>
         </div>
 
         <div class="order-context">

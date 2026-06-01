@@ -27,6 +27,10 @@ export interface OrderHold {
   combomenuid?: number;
   Ordertype?: string;
   ordertype?: string;
+  ServingType?: string;
+  servingType?: string;
+  ServiceType?: string;
+  serviceType?: string;
   Orderstatus?: number;
   orderstatus?: number;
   CustomerName?: string;

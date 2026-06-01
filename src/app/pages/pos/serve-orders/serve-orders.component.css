@@ -105,7 +105,9 @@ dt {
 }
 
 .order-list {
-  display: grid;
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.6rem;
   padding: 0.65rem;
 }
@@ -114,8 +116,10 @@ dt {
   border: 1px solid var(--app-border);
   border-radius: 0.45rem;
   display: grid;
-  gap: 0.38rem;
-  padding: 0.48rem 0.55rem;
+  max-width: 100%;
+  min-width: 15rem;
+  padding: 0.38rem;
+  width: fit-content;
 }
 
 .self-service .serve-card {
@@ -186,22 +190,32 @@ dd {
 
 .serve-card button {
   justify-self: start;
-  min-height: 1.9rem;
+  min-height: 2.25rem;
+  max-width: 100%;
 }
 
 .serve-card :is(.p-button, button.p-button) {
   font-size: 0.76rem;
-  padding: 0.28rem 0.6rem;
+  justify-content: flex-start;
+  padding: 0.34rem 0.58rem;
+  white-space: normal;
+  width: 100%;
 }
 
 .serve-card .p-button .p-button-icon {
   font-size: 0.75rem;
 }
 
+.serve-card ::ng-deep .p-button-label {
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
 .empty-state {
   border: 1px dashed var(--app-border-strong);
   border-radius: 0.65rem;
   color: var(--app-text-muted);
+  flex: 1 1 100%;
   padding: 1rem;
   text-align: center;
 }

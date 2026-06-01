@@ -36,38 +36,7 @@
       <section class="order-list">
         @for (order of selfServiceOrders; track order.id) {
           <article class="serve-card">
-            <div class="serve-card-top">
-              <div>
-                <small>{{ order.orderNo }}</small>
-                <h3>{{ order.customerName }}</h3>
-              </div>
-              <span>{{ getHandoffLabel(order) }}</span>
-            </div>
-
-            <dl>
-              <div>
-                <dt>Table</dt>
-                <dd>{{ order.tableName }}</dd>
-              </div>
-              <div>
-                <dt>Type</dt>
-                <dd>{{ order.orderType }}</dd>
-              </div>
-              <div>
-                <dt>Items</dt>
-                <dd>{{ order.itemCount }}</dd>
-              </div>
-              <div>
-                <dt>Total</dt>
-                <dd>{{ order.totalAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</dd>
-              </div>
-            </dl>
-
-            @if (order.notes) {
-              <p class="order-note">{{ order.notes }}</p>
-            }
-
-            <button pButton type="button" icon="pi pi-check" label="Picked Up / Served"
+            <button pButton type="button" icon="pi pi-check" [label]="getServeButtonLabel(order)"
               [disabled]="servingOrderId === order.id" (click)="markServed(order)"></button>
           </article>
         } @empty {
@@ -88,38 +57,7 @@
       <section class="order-list">
         @for (order of serverDeliveryOrders; track order.id) {
           <article class="serve-card">
-            <div class="serve-card-top">
-              <div>
-                <small>{{ order.orderNo }}</small>
-                <h3>{{ order.customerName }}</h3>
-              </div>
-              <span>{{ getHandoffLabel(order) }}</span>
-            </div>
-
-            <dl>
-              <div>
-                <dt>Table</dt>
-                <dd>{{ order.tableName }}</dd>
-              </div>
-              <div>
-                <dt>Type</dt>
-                <dd>{{ order.orderType }}</dd>
-              </div>
-              <div>
-                <dt>Items</dt>
-                <dd>{{ order.itemCount }}</dd>
-              </div>
-              <div>
-                <dt>Total</dt>
-                <dd>{{ order.totalAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</dd>
-              </div>
-            </dl>
-
-            @if (order.notes) {
-              <p class="order-note">{{ order.notes }}</p>
-            }
-
-            <button pButton type="button" icon="pi pi-check" label="Delivered / Served"
+            <button pButton type="button" icon="pi pi-check" [label]="getServeButtonLabel(order)"
               [disabled]="servingOrderId === order.id" (click)="markServed(order)"></button>
           </article>
         } @empty {

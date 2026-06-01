@@ -50,8 +50,8 @@ export class ServeOrdersComponent implements OnInit {
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.OrgId = Number(this.userDetails.OrgId || 0);
-    this.BranchId = Number(this.userDetails.BranchId || 0);
+    this.OrgId = this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
+    this.BranchId = this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
     this.loadReadyOrders();
   }
 
@@ -152,11 +152,19 @@ export class ServeOrdersComponent implements OnInit {
     const servingType = String(order.servingType || '').replace(/[\s_-]+/g, '').toLowerCase();
     const orderType = String(order.orderType || '').replace(/[\s_-]+/g, '').toLowerCase();
 
-    return servingType.includes('self') || servingType.includes('counter') || orderType.includes('takeaway');
+    if (servingType) {
+      return servingType.includes('self') || servingType.includes('counter');
+    }
+
+    return orderType.includes('takeaway');
   }
 
   getHandoffLabel(order: ServeOrder): string {
     return this.isSelfService(order) ? 'Counter pickup' : 'Server delivery';
+  }
+
+  getServeButtonLabel(order: ServeOrder): string {
+    return `${order.orderNo} - ${order.customerName}`;
   }
 
   private mapApiOrder(order: any): ServeOrder {
@@ -165,11 +173,11 @@ export class ServeOrdersComponent implements OnInit {
 
     return {
       id,
-      orderNo: this.getStringValue(order, 'OrderNumber', 'orderNumber', 'OrderNo', 'orderNo') || String(id),
+      orderNo: this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo') || String(id),
       orderType: this.getStringValue(order, 'OrderType', 'orderType', 'Ordertype', 'ordertype') || 'Order',
       servingType: this.getStringValue(order, 'ServingType', 'servingType', 'ServiceType', 'serviceType'),
       tableName: tableName || this.getTableFallback(order),
-      customerName: this.getStringValue(order, 'CustomerName', 'customerName') || 'Walk-in Guest',
+      customerName: this.getStringValue(order, 'CustomerName', 'customerName', 'GuestName', 'guestName') || 'Walk-in Guest',
       contactNumber: this.getStringValue(order, 'ContactNumber', 'contactNumber'),
       notes: this.getStringValue(order, 'Notes', 'notes', 'Remarks', 'remarks'),
       sentAt: this.getStringValue(order, 'UpdatedDate', 'updatedDate', 'CreatedDate', 'createdDate'),
@@ -191,6 +199,7 @@ export class ServeOrdersComponent implements OnInit {
       OrderStatus: ORDER_STATUS.Served,
       Orderstatus: ORDER_STATUS.Served,
       orderStatus: ORDER_STATUS.Served,
+      orderstatus: ORDER_STATUS.Served,
       ServingType: order.servingType,
       servingType: order.servingType,
       ServiceType: order.servingType,
@@ -211,21 +220,25 @@ export class ServeOrdersComponent implements OnInit {
   }
 
   private isReadyOrder(order: any): boolean {
-    const orderStatus = this.getRawValue(order, 'OrderStatus',  'status');
+    const orderStatus = this.getRawValue(order, 'OrderStatus', 'Orderstatus', 'orderStatus', 'orderstatus', 'Status', 'status');
     const items = this.getOrderItems(order);
 
+    if (this.isReadyStatus(orderStatus)) {
+      return true;
+    }
+
     if (items.length) {
-      return items.every((item: any) => this.isReadyStatus(this.getRawValue(item, 'Itemstatus', 'itemstatus') ?? orderStatus));
+      return items.every((item: any) => this.isReadyStatus(this.getRawValue(item, 'Itemstatus', 'itemstatus', 'ItemStatus', 'itemStatus') ?? orderStatus));
     }
 
     return this.isReadyStatus(orderStatus);
   }
 
   private isReadyOrderHeader(order: any): boolean {
-    const orderNo = this.getStringValue(order, 'OrderNumber', );
+    const orderNo = this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo');
     const isDeleted = this.getBooleanValue(order, 'IsDeleted', 'isDeleted');
     const isActive = this.getBooleanValue(order, 'IsActive', 'isActive');
-    const orderStatus = this.getRawValue(order, 'OrderStatus');
+    const orderStatus = this.getRawValue(order, 'OrderStatus', 'Orderstatus', 'orderStatus', 'orderstatus', 'Status', 'status');
 
     return Boolean(orderNo)
       && !isDeleted
@@ -376,7 +389,7 @@ export class ServeOrdersComponent implements OnInit {
   }
 
   private getOrderId(order: any): number {
-    return this.getNumberValue(order, 'OrderId', 'Orderid', );
+    return this.getNumberValue(order, 'OrderId', 'Orderid', 'orderId', 'orderid', 'Id', 'id');
   }
 
   private getTableFallback(order: any): string {

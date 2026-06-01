@@ -71,6 +71,7 @@ const DEFAULT_SUBCATEGORY_ICON = 'pi pi-tags';
 })
 export class OrderScreenComponent implements OnInit {
   readonly orderTypes = ['Dine In', 'Take Away', 'Delivery'];
+  readonly servingTypes = ['Self Service', 'Server Delivery'];
 
   userDetails: any = {};
   orgId = 0;
@@ -114,6 +115,7 @@ export class OrderScreenComponent implements OnInit {
   activeSubCategoryId = 0;
   activeFloorId = 0;
   activeOrderType = 'Dine In';
+  activeServingType = 'Server Delivery';
   selectedTable = ALL_TABLE;
   currentOrderNumber = '';
   searchText = '';
@@ -442,6 +444,15 @@ export class OrderScreenComponent implements OnInit {
 
   selectOrderType(orderType: string): void {
     this.activeOrderType = orderType;
+    this.activeServingType = this.getDefaultServingType(orderType);
+
+    if (!this.isDineInOrder()) {
+      this.clearFloorAndTableSelection();
+    }
+  }
+
+  selectServingType(servingType: string): void {
+    this.activeServingType = servingType;
   }
 
   get categoryOptions(): FieldOption[] {
@@ -473,11 +484,19 @@ export class OrderScreenComponent implements OnInit {
   }
 
   selectFloor(floor: any): void {
+    if (this.isFloorTableSelectionDisabled) {
+      return;
+    }
+
     this.activeFloorId = Number(floor?.id || 0);
     this.updateVisibleTables();
   }
 
   selectTable(table: string): void {
+    if (this.isFloorTableSelectionDisabled) {
+      return;
+    }
+
     this.selectedTable = table;
   }
 
@@ -492,6 +511,10 @@ export class OrderScreenComponent implements OnInit {
   }
 
   get selectedTableWithFloorName(): string {
+    if (!this.isDineInOrder()) {
+      return this.activeOrderType || ALL_TABLE;
+    }
+
     if (this.selectedTable === ALL_TABLE) {
       return ALL_TABLE;
     }
@@ -569,6 +592,7 @@ export class OrderScreenComponent implements OnInit {
     this.orderValidationSubmitted = false;
     this.orderValidationMessages = [];
     this.showOrderValidationDialog = false;
+    this.activeServingType = this.getDefaultServingType(this.activeOrderType);
     this.updateBillingSummary();
   }
 
@@ -731,6 +755,10 @@ export class OrderScreenComponent implements OnInit {
       OrderType: this.activeOrderType,
       Ordertype: this.activeOrderType,
       orderType: this.activeOrderType,
+      ServingType: this.activeServingType,
+      servingType: this.activeServingType,
+      ServiceType: this.activeServingType,
+      serviceType: this.activeServingType,
       OrderStatus: status,
       ItemCount: this.itemCount,
       Itemcount: this.itemCount,
@@ -793,6 +821,10 @@ export class OrderScreenComponent implements OnInit {
     return this.orderValidationSubmitted && this.isDineInOrder() && !this.isTableSelected();
   }
 
+  get isFloorTableSelectionDisabled(): boolean {
+    return !this.isDineInOrder();
+  }
+
   private validateOrderBeforeSubmit(actionLabel: string): boolean {
     const messages: string[] = [];
 
@@ -818,6 +850,10 @@ export class OrderScreenComponent implements OnInit {
       messages.push('Select order type.');
     }
 
+    if (!this.activeServingType) {
+      messages.push('Select delivery type.');
+    }
+
     if (!this.cartItems.length) {
       messages.push('Add at least one item.');
     }
@@ -840,6 +876,18 @@ export class OrderScreenComponent implements OnInit {
 
   isDineInOrder(): boolean {
     return this.normalizeInputText(this.activeOrderType).toLowerCase() === 'dine in';
+  }
+
+  private getDefaultServingType(orderType: string): string {
+    return this.normalizeInputText(orderType).toLowerCase() === 'dine in'
+      ? 'Server Delivery'
+      : 'Self Service';
+  }
+
+  private clearFloorAndTableSelection(): void {
+    this.activeFloorId = 0;
+    this.selectedTable = ALL_TABLE;
+    this.updateVisibleTables();
   }
 
   private isPhoneNumberValid(): boolean {
@@ -980,10 +1028,16 @@ export class OrderScreenComponent implements OnInit {
       this.currentHeldOrder = heldOrder;
       this.currentOrderNumber = this.getOrderNumber(heldOrder) || this.currentOrderNumber;
       this.activeOrderType = this.getStringValue(heldOrder, 'Ordertype', 'ordertype', 'orderType', 'OrderType') || this.activeOrderType;
-      this.selectedTable = this.getTableDisplayValue(heldOrder) || ALL_TABLE;
+      this.activeServingType = this.getStringValue(heldOrder, 'ServingType', 'servingType', 'ServiceType', 'serviceType')
+        || this.getDefaultServingType(this.activeOrderType);
+      this.selectedTable = this.isDineInOrder() ? this.getTableDisplayValue(heldOrder) || ALL_TABLE : ALL_TABLE;
       this.customerName = this.getStringValue(heldOrder, 'CustomerName', 'customerName', 'GuestName', 'guestName');
       this.ContactNumber = this.getStringValue(heldOrder, 'ContactNumber', 'contactNumber', 'CustomerPhone', 'customerPhone', 'Phone', 'phone');
       this.orderNotes = this.getStringValue(heldOrder, 'Notes', 'notes', 'Remarks', 'remarks');
+
+      if (!this.isDineInOrder()) {
+        this.clearFloorAndTableSelection();
+      }
 
       if (this.selectedTable && !this.tables.includes(this.selectedTable)) {
         this.tables = [...this.tables, this.selectedTable];
@@ -1136,6 +1190,10 @@ export class OrderScreenComponent implements OnInit {
       floorid: floorId,
       Ordertype: this.activeOrderType,
       ordertype: this.activeOrderType,
+      ServingType: this.activeServingType,
+      servingType: this.activeServingType,
+      ServiceType: this.activeServingType,
+      serviceType: this.activeServingType,
       Orderstatus: status,
       orderstatus: status,
       ItemCount: this.itemCount,
@@ -1340,6 +1398,10 @@ export class OrderScreenComponent implements OnInit {
   }
 
   private getSelectedTableId(): number {
+    if (!this.isDineInOrder()) {
+      return 0;
+    }
+
     if (this.selectedTable === ALL_TABLE) {
       return 0;
     }
@@ -1348,8 +1410,10 @@ export class OrderScreenComponent implements OnInit {
   }
 
   private getSelectedFloorId(): number {
+    if (!this.isDineInOrder()) {
+      return 0;
+    }
 
-    debugger
     const selectedTable = this.getDiningTableByDisplayName(this.selectedTable);
     const tableFloorId = this.getNumberValue(selectedTable,  'floorid');
 
