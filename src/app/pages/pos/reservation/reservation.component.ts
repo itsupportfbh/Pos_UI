@@ -8,7 +8,11 @@ import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { Reservation, ReservationService } from '../../../services/reservation.service';
 import { firstValueFrom } from 'rxjs';
@@ -68,7 +72,11 @@ const RESERVATION_COLUMNS: SharedTableColumn<ReservationRow>[] = [
   styleUrl: './reservation.component.css'
 })
 export class ReservationComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly reservationService = inject(ReservationService);
@@ -178,8 +186,6 @@ export class ReservationComponent {
   loadRows(): void {
     this.loadReservations();
     this.loadDiningTables();
-    this.updateSummary();
-    this.updatePreview();
   }
 
   loadReservations(): void {
@@ -411,7 +417,7 @@ export class ReservationComponent {
           if (typeof t === 'number' || typeof t === 'string') return Number(t);
           return Number(t.TableId ?? t.tableId ?? t.id ?? t.Id ?? NaN);
         }).filter((x: number) => !Number.isNaN(x));
-        this.OrgId = reservation?.orgId ?? reservation?.OrgId ?? row.OrgId;
+        //this.OrgId = reservation?.orgId ?? reservation?.OrgId ?? row.OrgId;
         this.dialogCreatedBy = reservation?.createdBy ?? reservation?.CreatedBy ?? 1;
         this.dialogCreatedDate = reservation?.createdDate ?? reservation?.CreatedDate;
         this.dialogUpdatedBy = reservation?.updatedBy ?? reservation?.UpdatedBy ?? 1;

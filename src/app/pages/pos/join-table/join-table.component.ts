@@ -20,7 +20,7 @@ import { EmployeeService } from '../../../services/employeemasters.service';
 
 type JoinTableRow = {
   id: number;
-  JoinNo: string;
+  joinno: string;
   PrimaryTable: string;
   SecondaryTables: string;
   GuestCount: number;
@@ -43,8 +43,7 @@ const JOIN_TABLE_COLUMNS: SharedTableColumn<JoinTableRow>[] = [
   { field: 'joinno', header: 'Join No', sortable: true, width: '11rem' },
   { field: 'primaryname', header: 'Primary Table', sortable: true, width: '11rem' },
   { field: 'guestcount', header: 'Guests', sortable: true, width: '7rem' },
-  { field: 'stewardname', header: 'Steward', sortable: true, width: '12rem' },
-  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
+  { field: 'stewardname', header: 'Steward', sortable: true, width: '12rem' }
 ];
 
 @Component({
@@ -232,7 +231,7 @@ export class JoinTableComponent {
     }
 
     this.tableRows = this.alljoinTables.filter((row) =>
-      row.JoinNo.toLowerCase().includes(searchText) ||
+      row.joinno.toLowerCase().includes(searchText) ||
       row.PrimaryTable.toLowerCase().includes(searchText) ||
       row.StewardId.toLowerCase().includes(searchText) ||
       row.Notes.toLowerCase().includes(searchText)
@@ -384,7 +383,7 @@ export class JoinTableComponent {
         const rawTableIds = jointable?.tableIds ?? jointable?.TableIds ?? [];
         debugger;
 
-        this.dialogJoinNo = jointable?.joinno ?? jointable?.joinno ?? row.JoinNo;
+        this.dialogJoinNo = jointable?.joinno ?? jointable?.joinno ?? row.joinno;
         this.dialogPrimaryTable = Number(jointable?.primarytable ?? jointable?.primarytable ?? row.PrimaryTable);
         this.dialogSecondaryTables = (Array.isArray(rawTableIds) ? rawTableIds : []).map((t: any) => {
           if (t == null) return t;
@@ -412,7 +411,7 @@ export class JoinTableComponent {
   deleteRow(row: JoinTableRow): void {
     this.jointableService.delete(row.id).subscribe({
       next: () => {
-        this.toast.warn('Deleted', `${row.JoinNo} removed successfully.`);
+        this.toast.warn('Deleted', `${row.joinno} removed successfully.`);
         this.loadJoinTables();
       },
       error: () => {
@@ -424,7 +423,7 @@ export class JoinTableComponent {
   activateRow(row: JoinTableRow): void {
     this.jointableService.activeInActive(row.id, true).subscribe({
       next: () => {
-        this.toast.success('Status Updated', `${row.JoinNo} marked as active.`);
+        this.toast.success('Status Updated', `${row.joinno} marked as active.`);
         this.loadJoinTables();
       },
       error: () => {
@@ -436,7 +435,7 @@ export class JoinTableComponent {
   deactivateRow(row: JoinTableRow): void {
     this.jointableService.activeInActive(row.id, false).subscribe({
       next: () => {
-        this.toast.info('Status Updated', `${row.JoinNo} marked as inactive.`);
+        this.toast.info('Status Updated', `${row.joinno} marked as inactive.`);
         this.loadJoinTables();
       },
       error: () => {
@@ -454,7 +453,7 @@ export class JoinTableComponent {
   confirmDeleteRow(row: JoinTableRow): void {
     this.confirmationService.confirm({
       header: 'Delete Confirmation',
-      message: 'Are you sure you want to delete ' + row.JoinNo + '?',
+      message: 'Are you sure you want to delete ' + row.joinno + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -469,7 +468,7 @@ export class JoinTableComponent {
   confirmActivateRow(row: JoinTableRow): void {
     this.confirmationService.confirm({
       header: 'Reopen Confirmation',
-      message: 'Are you sure you want to reopen ' + row.JoinNo + '?',
+      message: 'Are you sure you want to reopen ' + row.joinno + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',
@@ -484,7 +483,7 @@ export class JoinTableComponent {
   confirmDeactivateRow(row: JoinTableRow): void {
     this.confirmationService.confirm({
       header: 'Release Confirmation',
-      message: 'Are you sure you want to release ' + row.JoinNo + '?',
+      message: 'Are you sure you want to release ' + row.joinno + '?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Yes',
       rejectLabel: 'No',

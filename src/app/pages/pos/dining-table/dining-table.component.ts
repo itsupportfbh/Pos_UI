@@ -13,9 +13,14 @@ import { ImageUploadFieldComponent } from '../../../components/form/image-upload
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { BranchService } from '../../../services/branch.service';
 import { DiningTable, DiningTableService } from '../../../services/diningtable.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { FloorService } from '../../../services/floor.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
@@ -53,9 +58,14 @@ const DINING_TABLE_COLUMNS: SharedTableColumn<any>[] = [
   styleUrl: './dining-table.component.css'
 })
 export class DiningTableComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly branchService = inject(BranchService);
   private readonly floorService = inject(FloorService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly diningTableService = inject(DiningTableService);
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -103,20 +113,22 @@ export class DiningTableComponent implements OnInit {
   dialogSubtitle = 'Create a new dining table.';
   dialogPrimaryActionLabel = 'Save';
   tableColumns = DINING_TABLE_COLUMNS;
-  readonly showAddNewButton = true;
+  diningTableRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showDownloadButton = true;
+  showDownloadButton = true;
   readonly showFilterButton = false;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
   downloadLoading = false;
   downloadLoadingLabel = 'Exporting...';
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.BranchId = this.userDetails.IsAdmin === true ? 0 : Number(this.userDetails.BranchId || 0);
+    await this.loadDiningTableRights();
 
     this.tableColumns = DINING_TABLE_COLUMNS.map((x: any) => {
       if (x.field === 'organizationname') {
@@ -127,6 +139,43 @@ export class DiningTableComponent implements OnInit {
     });
 
     this.loadDiningTables();
+  }
+
+  async loadDiningTableRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.branchEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.diningTableRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.diningTableRights.Create;
+      this.showDownloadButton = this.diningTableRights.Download;
+      this.showRowActions = this.diningTableRights.Edit || this.diningTableRights.Delete || this.diningTableRights.ActiveInActive || this.diningTableRights.Print;
+    } catch {
+      this.diningTableRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load dining table rights for this role.');
+    }
   }
 
   async loadOrganizations(): Promise<void> {
@@ -559,21 +608,32 @@ export class DiningTableComponent implements OnInit {
   }
 
   private getRowActionItems(row: any): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive === true || row.isactive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.diningTableRights.Edit && (row.IsActive === true || row.isactive === true)) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.diningTableRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.diningTableRights.ActiveInActive) {
+      if (row.IsActive === true || row.isactive === true) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.diningTableRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -584,9 +644,16 @@ export class DiningTableComponent implements OnInit {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: any): void {
+    const name = String(row.name ?? row.Name ?? row.code ?? row.Code ?? 'this dining table');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
   }
 
   private isDialogFormValid(): boolean {
@@ -651,3 +718,4 @@ export class DiningTableComponent implements OnInit {
     }
   }
 }
+

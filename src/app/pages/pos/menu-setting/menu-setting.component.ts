@@ -9,7 +9,11 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
 type MenuSettingRow = {
@@ -50,7 +54,11 @@ const MENUSETTING_COLUMNS: SharedTableColumn<MenuSettingRow>[] = [
   styleUrl: './menu-setting.component.css'
 })
 export class MenuSettingComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
@@ -333,4 +341,5 @@ export class MenuSettingComponent {
     }
   }
 }
+
 

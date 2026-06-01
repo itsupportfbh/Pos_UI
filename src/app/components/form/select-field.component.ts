@@ -29,6 +29,7 @@ export class SelectFieldComponent {
   @Input() submitted = false;
   @Input() errorMessage = '';
   @Input() disabled = false;
+  @Input() readonly = false;
   @Input() showClear = true;
   @Input() filter = true;
   @Input() appendTo: 'body' | 'self' = 'body';
@@ -49,6 +50,10 @@ export class SelectFieldComponent {
   }
 
   onModelChange(value: SelectFieldValue): void {
+    if (this.readonly) {
+      return;
+    }
+
     if (this.numberValue) {
       this.modelChange.emit(this.toNumberOrNull(value));
       return;

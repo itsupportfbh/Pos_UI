@@ -81,20 +81,20 @@
     </ng-template>
 
     <section class="field-grid dialog-grid">
-      <app-select-field label="Branch" inputId="dialog-branch" placeholder="Choose branch" [options]="branchOptions"
-        [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
-        errorMessage="Branch is required." [numberValue]="true"
-        [disabled]="userDetails.RoleId !== 1 && userDetails.IsAdmin !== true" [model]="dialogBranch"
-        (modelChange)="dialogBranch = $event" />
-
       <app-text-field label="Code" inputId="dialog-code" placeholder="Floor Code" [required]="true"
-        [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogCode"
-        (modelChange)="dialogCode = $event" />
+        [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
+        [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
       <app-text-field label="Name" inputId="dialog-name" placeholder="Floor Name" [required]="true"
         [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."
         [textWithNumbersOnly]="true" formatErrorMessage="Name allows text and numbers only." [model]="dialogName"
         (modelChange)="dialogName = $event" />
+
+        <app-select-field label="Branch" inputId="dialog-branch" placeholder="Choose branch" [options]="branchOptions"
+        [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+        errorMessage="Branch is required." [numberValue]="true"
+        [disabled]="userDetails.RoleId !== 1 && userDetails.IsAdmin !== true" [model]="dialogBranch"
+        (modelChange)="dialogBranch = $event" />
 
       <app-text-field label="Remarks" inputId="dialog-remarks" placeholder="Remarks" [model]="dialogRemarks"
         (modelChange)="dialogRemarks = $event" />

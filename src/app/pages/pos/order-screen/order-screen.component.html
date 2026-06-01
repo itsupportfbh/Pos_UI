@@ -2,8 +2,10 @@
   <header class="page-header hero-panel order-header">
     <div>
       <h1>Order Screen</h1>
-      <p class="page-subtitle">Create dine-in, takeaway, and delivery orders from one focused counter screen.</p>
-    </div>
+   <!--  <p class="page-subtitle">Create dine-in, takeaway, and delivery orders from one focused counter screen.</p>
+    --> 
+  
+  </div>
   </header>
 
   <section class="order-stats">
@@ -46,6 +48,17 @@
             }
           </div>
         </div>
+
+        <div class="tool-block tool-block-toggle">
+          <span class="tool-label">Delivery Type</span>
+          <div class="order-type-toggle delivery-type-toggle" aria-label="Delivery type">
+            @for (servingType of servingTypes; track servingType) {
+              <button type="button" [class.active]="activeServingType === servingType" (click)="selectServingType(servingType)">
+                {{ servingType }}
+              </button>
+            }
+          </div>
+        </div>
       </div>
 
       <div class="customer-tools">
@@ -80,11 +93,11 @@
 
         <app-select-field label="Floor" inputId="order-floor" placeholder="Choose floor"
           [options]="floorOptions" [model]="activeFloorId" [numberValue]="true" [showClear]="false"
-          [filter]="true" [disabled]="isFloorLoading" (modelChange)="selectFloorById($event)" />
+          [filter]="true" [disabled]="isFloorLoading || isFloorTableSelectionDisabled" (modelChange)="selectFloorById($event)" />
 
         <app-select-field label="Table" inputId="order-table" placeholder="Choose table"
           [options]="tableOptions" [model]="selectedTable" [showClear]="false"
-          [filter]="true" [disabled]="isTableLoading"
+          [filter]="true" [disabled]="isTableLoading || isFloorTableSelectionDisabled"
           [submitted]="orderValidationSubmitted" [required]="isDineInOrder()" errorMessage="Select a table."
           (modelChange)="selectTableByName($event)" />
       </div>
@@ -130,7 +143,7 @@
             <p class="eyebrow">Order No: {{ currentOrderNumber }}</p>
             <h2>{{ selectedTableWithFloorName }}</h2>
           </div>
-          <span class="cart-customer-name">{{ activeOrderType }}</span>
+          <span class="cart-customer-name">{{ activeOrderType }} / {{ activeServingType }}</span>
         </div>
 
         <div class="order-context">
@@ -183,7 +196,7 @@
           <textarea id="order-notes" rows="3" maxlength="500" placeholder="Add kitchen notes or special instructions"
             [value]="orderNotes" (input)="updateOrderNotes($event)"></textarea>
         </label>
-
+<!--
         <div class="cart-section-title">
           <span>Bill Summary</span>
         </div>
@@ -205,14 +218,14 @@
             <strong>{{ grandTotal | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
           </div>
         </section>
-
+-->
         <div class="cart-actions">
           <button pButton type="button" icon="pi pi-pause" [label]="isHoldingOrder ? 'Holding' : 'Hold'" severity="secondary" [outlined]="true"
             [disabled]="isHoldingOrder || !cartItems.length"
             (click)="holdOrder()"></button>
           <button pButton type="button" icon="pi pi-send" [label]="isSendingToKitchen ? 'Sending' : 'Kitchen'"
             [disabled]="isSendingToKitchen || !cartItems.length" (click)="sendToKitchen()"></button>
-       <!--   <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>-->
+         <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>
         </div>
 
         <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Order" severity="danger" [text]="true" (click)="clearOrder()"></button>

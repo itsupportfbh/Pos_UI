@@ -117,7 +117,7 @@
     <app-text-field label="Reservation No" inputId="dialog-reservation-no" [showRequiredMark]="true"
       placeholder="Enter reservation number" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Reservation number is required." [maxlength]="100" [model]="dialogReservationNo"
-      (modelChange)="dialogReservationNo = $event"></app-text-field>
+      (modelChange)="dialogReservationNo = $event" [disabled]="true"></app-text-field>
 
     <app-text-field label="Guest Name" inputId="dialog-guest-name" [showRequiredMark]="true"
       placeholder="Enter guest name" [required]="true" [submitted]="dialogSubmitted"

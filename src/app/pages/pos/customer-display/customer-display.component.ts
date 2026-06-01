@@ -18,6 +18,15 @@ type CustomerDisplayOrder = {
   sentAt?: string;
 };
 
+const ORDER_STATUS = {
+  Hold: 0,
+  InKitchen: 1,
+  Preparing: 2,
+  Ready: 3,
+  Served: 4,
+  Cancelled: 5
+} as const;
+
 @Component({
   selector: 'app-customer-display',
   standalone: true,
@@ -143,7 +152,7 @@ viewReady = false;
   }
 
   getOrderStatusDisplay(order: CustomerDisplayOrder): string {
-    return String(order.status || '').trim() || 'In Progress';
+    return this.getStatusLabel(order.status);
   }
 
   getOrderTypeClass(order: CustomerDisplayOrder): string {
@@ -251,8 +260,7 @@ viewReady = false;
   }
 
   private isReadyStatus(status: string): boolean {
-    const normalizedStatus = status.trim().toLowerCase();
-    return normalizedStatus === 'ready' || normalizedStatus === 'ready to serve';
+    return this.getStatusCode(status) === ORDER_STATUS.Ready;
   }
 
   private getResponseList(response: any): any[] {
@@ -290,15 +298,73 @@ viewReady = false;
   }
 
   private getOrderStatus(order: any): string {
-    return this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus', 'Status', 'status') || 'In Progress';
+    return this.getStatusLabel(this.getRawValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus', 'Status', 'status'));
+  }
+
+  private getStatusCode(status: unknown): number {
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status;
+    }
+
+    const normalizedStatus = String(status ?? '').trim().toLowerCase().replace(/\s+/g, '');
+
+    switch (normalizedStatus) {
+      case '0':
+      case 'hold':
+        return ORDER_STATUS.Hold;
+      case '1':
+      case 'inkitchen':
+        return ORDER_STATUS.InKitchen;
+      case '2':
+      case 'inprocess':
+      case 'preparing':
+        return ORDER_STATUS.Preparing;
+      case '3':
+      case 'ready':
+      case 'readytoserve':
+        return ORDER_STATUS.Ready;
+      case '4':
+      case 'served':
+        return ORDER_STATUS.Served;
+      case '5':
+      case 'cancelled':
+      case 'canceled':
+        return ORDER_STATUS.Cancelled;
+      default:
+        return ORDER_STATUS.Preparing;
+    }
+  }
+
+  private getStatusLabel(status: unknown): string {
+    switch (this.getStatusCode(status)) {
+      case ORDER_STATUS.Hold:
+        return 'Hold';
+      case ORDER_STATUS.InKitchen:
+        return 'In Kitchen';
+      case ORDER_STATUS.Preparing:
+        return 'Preparing';
+      case ORDER_STATUS.Ready:
+        return 'Ready';
+      case ORDER_STATUS.Served:
+        return 'Served';
+      case ORDER_STATUS.Cancelled:
+        return 'Cancelled';
+      default:
+        return 'In Progress';
+    }
   }
 
   private isCustomerDisplayOrder(order: any): boolean {
     const orderNo = this.getStringValue(order, 'OrderNumber');
     const isDeleted = this.getBooleanValue(order, 'IsDeleted', 'isDeleted');
     const isActive = this.getBooleanValue(order, 'IsActive', 'isActive');
+    const statusCode = this.getStatusCode(this.getRawValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus', 'Status', 'status'));
+    const visibleStatuses: number[] = [ORDER_STATUS.InKitchen, ORDER_STATUS.Preparing, ORDER_STATUS.Ready];
 
-    return Boolean(orderNo) && !isDeleted && isActive !== false;
+    return Boolean(orderNo)
+      && !isDeleted
+      && isActive !== false
+      && visibleStatuses.includes(statusCode);
   }
 
   private getUserOrgId(): number {
@@ -383,6 +449,10 @@ viewReady = false;
   private getStringValue(source: any, ...keys: string[]): string {
     const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
     return value?.toString() ?? '';
+  }
+
+  private getRawValue(source: any, ...keys: string[]): unknown {
+    return keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
   }
 
   private getNumberValue(source: any, ...keys: string[]): number {

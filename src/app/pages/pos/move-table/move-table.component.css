@@ -1,7 +1,7 @@
 .workflow-layout {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(20rem, 24rem) minmax(0, 1fr);
+  grid-template-columns: minmax(19rem, 21rem) minmax(0, 1fr);
   align-items: start;
 }
 
@@ -80,6 +80,11 @@
 
 .row-action-trigger {
   color: var(--app-primary);
+}
+
+.workflow-layout .full-width-card {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 @media (max-width: 960px) {

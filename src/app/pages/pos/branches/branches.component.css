@@ -25,6 +25,12 @@
   color: #b45309;
 }
 
+:host ::ng-deep .row-action-menu .row-action-print .p-menu-item-link,
+:host ::ng-deep .row-action-menu .row-action-print .p-menu-item-text,
+:host ::ng-deep .row-action-menu .row-action-print .p-menu-item-icon {
+  color: #7c3aed !important;
+}
+
 .row-action-trigger {
   color: var(--app-text-muted);
 }

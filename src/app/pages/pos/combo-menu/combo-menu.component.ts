@@ -12,12 +12,17 @@ import { ActionButtonsComponent } from '../../../components/form/action-buttons.
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { ComboMenu, ComboMenuItem, ComboMenuService } from '../../../services/combo-menu.service';
 import { CategoryService } from '../../../services/Category.service';
 import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
 import { MenuService } from '../../../services/FoodMenu.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
 type ComboMenuRow = {
@@ -77,11 +82,16 @@ const COMBOMENU_COLUMNS: SharedTableColumn<ComboMenuRow>[] = [
   styleUrl: './combo-menu.component.css'
 })
 export class ComboMenuComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly comboMenuService = inject(ComboMenuService);
   private readonly categoryService = inject(CategoryService);
   private readonly subCategoryService = inject(subCategoryService);
   private readonly menuService = inject(MenuService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly organizationService = inject(OrganizationService);
@@ -135,11 +145,12 @@ export class ComboMenuComponent {
   readonly tableTitle = 'Combo Menus';
   readonly tableCaption = 'Combo Menus';
   tableColumns = COMBOMENU_COLUMNS;
-  readonly showAddNewButton = true;
+  comboMenuRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showDownloadButton = true;
+  showDownloadButton = true;
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
   downloadLoading = false;
@@ -148,8 +159,46 @@ export class ComboMenuComponent {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.BranchId = Number(this.userDetails.BranchId || 0);
+    await this.loadComboMenuRights();
     this.loadRows();
     await this.loadLookupOptions();
+  }
+
+  async loadComboMenuRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.branchEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.comboMenuRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.comboMenuRights.Create;
+      this.showDownloadButton = this.comboMenuRights.Download;
+      this.showRowActions = this.comboMenuRights.Edit || this.comboMenuRights.Delete || this.comboMenuRights.ActiveInActive || this.comboMenuRights.Print;
+    } catch {
+      this.comboMenuRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load combo menu rights for this role.');
+    }
   }
 
   private async loadLatestTableCode(orgId: number): Promise<void> {
@@ -901,23 +950,34 @@ export class ComboMenuComponent {
   }
 
   private getRowActionItems(row: ComboMenuRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
     const isActive = this.getBooleanValue(row, 'isactive', 'IsActive', 'isActive');
 
-    if (isActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.comboMenuRights.Edit && isActive) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.comboMenuRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.comboMenuRights.ActiveInActive) {
+      if (isActive) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.comboMenuRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -928,9 +988,16 @@ export class ComboMenuComponent {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: ComboMenuRow): void {
+    const name = String(row.name ?? row.code ?? 'this combo menu');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
   }
 }
 

@@ -9,10 +9,15 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
 import { CategoryService } from '../../../services/Category.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { OrganizationService } from '../../../services/organization.service';
 import { firstValueFrom } from 'rxjs';
@@ -58,11 +63,16 @@ const SUBCATEGORY_COLUMNS: SharedTableColumn<SubCategoryRow>[] = [
   styleUrl: './subcategory.component.css'
 })
 export class SubCategoryComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly SubcategoryService = inject(subCategoryService);
   private readonly categoryService = inject(CategoryService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
   private readonly tableExportService = inject(TableExportService);
 
@@ -119,21 +129,31 @@ export class SubCategoryComponent {
   readonly tableTitle = 'SubCategories';
   readonly tableCaption = 'SubCategories';
   tableColumns = SUBCATEGORY_COLUMNS;
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
-  readonly showDownloadButton = true;
+  showDownloadButton = true;
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   rowActionItems: MenuItem[] = [];
   downloadLoading = false;
   downloadLoadingLabel = 'Exporting...';
   subCategoryEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  subCategoryRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.dialogModel.CreatedBy = Number(this.userDetails.UserId || 0);
     this.OrgId = Number(this.userDetails.OrgId || 0);
+    await this.loadSubCategoryRights();
     this.tableColumns = SUBCATEGORY_COLUMNS.map((x: any) => {
       if (x.field === 'organizationname') {
         x.hidden = this.userDetails.RoleId !== 1;
@@ -145,6 +165,44 @@ export class SubCategoryComponent {
     this.loadSubCategories();
     this.loadCategories();
     this.loadFilterCategories();
+  }
+
+  async loadSubCategoryRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.subCategoryEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.subCategoryRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.subCategoryRights.Create;
+      this.showDownloadButton = this.subCategoryRights.Download;
+      this.showRowActions = this.subCategoryRights.Edit || this.subCategoryRights.Delete || this.subCategoryRights.ActiveInActive || this.subCategoryRights.Print;
+    } catch {
+      this.subCategoryRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load sub category rights. Please check and try again.');
+    }
   }
 
   loadCategories() {
@@ -525,6 +583,10 @@ export class SubCategoryComponent {
     });
   }
 
+  printRow(row: SubCategoryRow): void {
+    this.toast.info('Print Pending', `${String(row.name ?? row.code ?? 'SubCategory')} print will be connected later.`);
+  }
+
   openRowActions(menu: any, event: Event, row: SubCategoryRow): void {
     this.selectedRow = row;
     this.rowActionItems = this.getRowActionItems(row);
@@ -539,15 +601,26 @@ export class SubCategoryComponent {
   }
 
   private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row['isactive'] === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    if (this.subCategoryRights.Edit && row['isactive'] === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.subCategoryRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.subCategoryRights.ActiveInActive && row['isactive'] === true) {
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
+    }
+
+    if (this.subCategoryRights.ActiveInActive && row['isactive'] !== true) {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    if (this.subCategoryRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row as SubCategoryRow) });
     }
 
     return items;

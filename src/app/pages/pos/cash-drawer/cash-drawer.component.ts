@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -9,8 +10,13 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 
 type CashDrawerRow = {
   Id: number;
@@ -57,8 +63,13 @@ const CASH_DRAWER_COLUMNS: SharedTableColumn<CashDrawerRow>[] = [
   styleUrl: './cash-drawer.component.css'
 })
 export class CashDrawerComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly entityMasterService = inject(EntityMasterService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -99,14 +110,54 @@ export class CashDrawerComponent {
   readonly tableTitle = 'Drawer Sessions';
   readonly tableCaption = 'Drawer Sessions';
   tableColumns = CASH_DRAWER_COLUMNS;
-  readonly showAddNewButton = true;
+  cashDrawerRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Open Drawer';
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  userDetails: any = {};
+  cashDrawerEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    await this.loadCashDrawerRights();
     this.loadRows();
+  }
+
+  async loadCashDrawerRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.cashDrawerEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.cashDrawerRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.cashDrawerRights.Create;
+      this.showRowActions = this.cashDrawerRights.Edit || this.cashDrawerRights.Delete || this.cashDrawerRights.ActiveInActive || this.cashDrawerRights.Print;
+    } catch {
+      this.cashDrawerRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load cash drawer rights for this role.');
+    }
   }
 
   loadRows(): void {
@@ -340,21 +391,32 @@ export class CashDrawerComponent {
   }
 
   private getRowActionItems(row: CashDrawerRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.cashDrawerRights.Edit && row.IsActive) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.cashDrawerRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.cashDrawerRights.ActiveInActive) {
+      if (row.IsActive) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.cashDrawerRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -365,8 +427,16 @@ export class CashDrawerComponent {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
   }
+
+  printRow(row: CashDrawerRow): void {
+    const name = String(row.DrawerName ?? row.DrawerCode ?? 'this cash drawer');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
+  }
 }
+

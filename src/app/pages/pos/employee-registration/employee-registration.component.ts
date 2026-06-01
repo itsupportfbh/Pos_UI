@@ -11,9 +11,14 @@ import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../compo
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { employee, EmployeeService } from '../../../services/employeemasters.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { FormsModule } from '@angular/forms';
 import{ BranchService } from '../../../services/branch.service';
 import { TableExportService } from '../../../services/table-export.service';
@@ -101,12 +106,17 @@ const EMPLOYEEREGISTRATION_COLUMNS: SharedTableColumn<EmployeeRegistrationRow>[]
   styleUrl: './employee-registration.component.css'
 })
 export class EmployeeRegistrationComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
   private readonly employeeService = inject(EmployeeService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly branchService = inject(BranchService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly tableExportService = inject(TableExportService);
@@ -159,11 +169,12 @@ dialogGender: string = '';
   readonly tableTitle = 'Employee Registration';
   readonly tableCaption = 'Employee Registration';
   tableColumns = EMPLOYEEREGISTRATION_COLUMNS;
-  readonly showAddNewButton = true;
+  employeeRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showDownloadButton = true;
+  showDownloadButton = true;
   showFilterButton: boolean = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   isLoading=false;
   downloadLoading = false;
@@ -179,15 +190,17 @@ dialogGender: string = '';
   branchOptions: any[] = [];
   dialoggender: any;
   dialogIdProofNo: any;
+  employeeEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
 
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     //debugger
      this.userDetails = JSON.parse(
     localStorage.getItem('userDetails') ?? '{}'
   );
 
+  await this.loadEmployeeRights();
   this.showFilterButton = true;
 
   this.loadRows();
@@ -197,6 +210,43 @@ dialogGender: string = '';
   this.loadBranches();;
    
     
+  }
+
+  async loadEmployeeRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.employeeEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.employeeRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.employeeRights.Create;
+      this.showDownloadButton = this.employeeRights.Download;
+      this.showRowActions = this.employeeRights.Edit || this.employeeRights.Delete || this.employeeRights.ActiveInActive || this.employeeRights.Print;
+    } catch {
+      this.employeeRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load employee registration rights for this role.');
+    }
   }
   loadRows(): void {
     this.allRows = [];
@@ -914,21 +964,32 @@ resetDialogForm(clearSubmitted: boolean = false): void {
   }
 
   private getRowActionItems(row: EmployeeRegistrationRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.employeeRights.Edit && row.IsActive) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.employeeRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.employeeRights.ActiveInActive) {
+      if (row.IsActive) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.employeeRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -939,9 +1000,16 @@ resetDialogForm(clearSubmitted: boolean = false): void {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: EmployeeRegistrationRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this employee');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
   }
 }
 
