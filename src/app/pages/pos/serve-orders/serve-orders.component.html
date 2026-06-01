@@ -1,9 +1,7 @@
 <section class="serve-page">
   <header class="serve-header">
-    <div>
-      <p class="eyebrow">Service Handoff</p>
-      <h1>Serve Orders</h1>
-      <p>Ready orders are split by how the food reaches the customer.</p>
+    <div>      <h1>Serve Orders</h1>
+      
     </div>
     <button pButton type="button" icon="pi pi-refresh" label="Refresh" [disabled]="isLoading" (click)="loadReadyOrders()"></button>
   </header>
@@ -49,7 +47,7 @@
       <header>
         <div>
           <span>Server Delivery</span>
-          <h2>Ready for Staff</h2>
+          <h2>Ready for Collection</h2>
         </div>
         <strong>{{ serverDeliveryOrders.length }}</strong>
       </header>

@@ -2,8 +2,10 @@
   <header class="page-header hero-panel order-header">
     <div>
       <h1>Order Screen</h1>
-      <p class="page-subtitle">Create dine-in, takeaway, and delivery orders from one focused counter screen.</p>
-    </div>
+   <!--  <p class="page-subtitle">Create dine-in, takeaway, and delivery orders from one focused counter screen.</p>
+    --> 
+  
+  </div>
   </header>
 
   <section class="order-stats">
@@ -194,7 +196,7 @@
           <textarea id="order-notes" rows="3" maxlength="500" placeholder="Add kitchen notes or special instructions"
             [value]="orderNotes" (input)="updateOrderNotes($event)"></textarea>
         </label>
-
+<!--
         <div class="cart-section-title">
           <span>Bill Summary</span>
         </div>
@@ -216,14 +218,14 @@
             <strong>{{ grandTotal | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
           </div>
         </section>
-
+-->
         <div class="cart-actions">
           <button pButton type="button" icon="pi pi-pause" [label]="isHoldingOrder ? 'Holding' : 'Hold'" severity="secondary" [outlined]="true"
             [disabled]="isHoldingOrder || !cartItems.length"
             (click)="holdOrder()"></button>
           <button pButton type="button" icon="pi pi-send" [label]="isSendingToKitchen ? 'Sending' : 'Kitchen'"
             [disabled]="isSendingToKitchen || !cartItems.length" (click)="sendToKitchen()"></button>
-       <!--   <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>-->
+         <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>
         </div>
 
         <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Order" severity="danger" [text]="true" (click)="clearOrder()"></button>

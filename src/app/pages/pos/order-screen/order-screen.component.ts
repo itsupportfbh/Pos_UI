@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -145,7 +146,8 @@ export class OrderScreenComponent implements OnInit {
     private readonly orderHoldService: OrderHoldService,
     private readonly organizationService: OrganizationService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
-    private readonly taxService: TaxService
+    private readonly taxService: TaxService,
+    private readonly router: Router
     
 
   ) {}
@@ -652,7 +654,7 @@ export class OrderScreenComponent implements OnInit {
   }
 
   settlePayment(): void {
-    this.toast.info('Pending', 'You can add payment logic later.');
+    this.router.navigate(['/pos/billing']);
   }
 
   private refreshOrderScreenPage(): void {
