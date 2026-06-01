@@ -3,7 +3,6 @@ import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
-import { DialogModule } from 'primeng/dialog';
 import { AppToastService } from '../../../services/app-toast.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { RoleService } from '../../../services/role.service';
@@ -36,7 +35,6 @@ type PermissionRow = {
     CommonModule,
     CardModule,
     ButtonModule,
-    DialogModule,
     SelectFieldComponent,
     TextFieldComponent,
     ActionButtonsComponent,
@@ -61,21 +59,43 @@ export class ReportsPermissionComponent {
   permissionRows: PermissionRow[] = [];
   selectedOrgId = 0;
   selectedRoleId = 0;
-  showPermissionsDialog = false;
   permissionSearchText = '';
+  selectionSubmitted = false;
 
   loadingOrganizations = false;
   loadingRoles = false;
   loadingPermissions = false;
   savingPermissions = false;
+  private lastLoadedOrgId = 0;
+  private lastLoadedRoleId = 0;
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     const currentOrgId = Number(this.userDetails?.OrgId || this.userDetails?.OrganizationId || 0);
+    const currentRoleId = Number(this.userDetails?.RoleId || 0);
     if (currentOrgId > 0) {
       this.selectedOrgId = currentOrgId;
     }
-    void this.loadOrganizations();
+    if (currentRoleId > 0 && !this.canChooseRole) {
+      this.selectedRoleId = currentRoleId;
+    }
+
+    if (this.showOrganizationSelector) {
+      void this.loadOrganizations();
+      return;
+    }
+
+    if (this.selectedOrgId > 0) {
+      void this.loadRoles(this.selectedOrgId);
+    }
+  }
+
+  get showOrganizationSelector(): boolean {
+    return Number(this.userDetails?.RoleId || 0) === 1;
+  }
+
+  get canChooseRole(): boolean {
+    return Boolean(this.userDetails?.IsAdmin);
   }
 
   get selectedRoleLabel(): string {
@@ -120,10 +140,13 @@ export class ReportsPermissionComponent {
   }
 
   async onOrganizationChange(orgId: number): Promise<void> {
+    this.selectionSubmitted = false;
     this.selectedOrgId = Number(orgId || 0);
     this.selectedRoleId = 0;
     this.roleOptions = [];
     this.permissionRows = [];
+    this.lastLoadedOrgId = 0;
+    this.lastLoadedRoleId = 0;
 
     if (this.selectedOrgId) {
       await this.loadRoles(this.selectedOrgId);
@@ -131,8 +154,15 @@ export class ReportsPermissionComponent {
   }
 
   async onRoleChange(roleId: number): Promise<void> {
+    this.selectionSubmitted = false;
     this.selectedRoleId = Number(roleId || 0);
     this.permissionRows = [];
+    this.lastLoadedOrgId = 0;
+    this.lastLoadedRoleId = 0;
+
+    if (this.selectedOrgId && this.selectedRoleId) {
+      await this.loadReportPermissions();
+    }
   }
 
   async loadRoles(orgId: number): Promise<void> {
@@ -149,6 +179,16 @@ export class ReportsPermissionComponent {
         label: String(role.Name ?? role.Code ?? `Role ${role.Id}`),
         value: Number(role.Id ?? 0)
       }));
+
+      if (!this.canChooseRole) {
+        const currentRoleId = Number(this.userDetails?.RoleId || 0);
+        this.selectedRoleId = currentRoleId;
+        this.roleOptions = this.roleOptions.filter((role) => role.value === currentRoleId);
+
+        if (this.selectedOrgId && this.selectedRoleId) {
+          await this.loadReportPermissions();
+        }
+      }
     } catch {
       this.roleOptions = [];
       this.toast.error('Load Failed', 'Unable to load roles. Please try again.');
@@ -160,6 +200,8 @@ export class ReportsPermissionComponent {
   async loadReportPermissions(): Promise<void> {
     if (!this.selectedOrgId || !this.selectedRoleId) {
       this.permissionRows = [];
+      this.lastLoadedOrgId = 0;
+      this.lastLoadedRoleId = 0;
       return;
     }
 
@@ -182,16 +224,22 @@ export class ReportsPermissionComponent {
         exportPdf: Boolean(item.ExportPdf),
         exportExcel: Boolean(item.ExportExcel)
       }));
+      this.lastLoadedOrgId = this.selectedOrgId;
+      this.lastLoadedRoleId = this.selectedRoleId;
     } catch {
       this.permissionRows = [];
+      this.lastLoadedOrgId = 0;
+      this.lastLoadedRoleId = 0;
       this.toast.error('Load Failed', 'Unable to load report permissions. Please try again.');
     } finally {
       this.loadingPermissions = false;
-      this.changeDetector.detectChanges();
+      this.changeDetector.markForCheck();
     }
   }
 
   async saveReportPermissions(): Promise<void> {
+    this.selectionSubmitted = true;
+
     if (!this.selectedOrgId || !this.selectedRoleId) {
       this.toast.warn('Missing Selection', 'Please choose an organization and a role before saving.');
       return;
@@ -234,23 +282,15 @@ export class ReportsPermissionComponent {
   resetReportPermissions(): void {
     if (this.selectedRoleId && this.selectedOrgId) {
       void this.loadReportPermissions();
-    }
-  }
-
-  async openPermissionsDialog(): Promise<void> {
-    if (!this.selectedOrgId || !this.selectedRoleId) {
-      this.toast.warn('Missing Selection', 'Please choose an organization and a role first.');
       return;
     }
 
     this.permissionSearchText = '';
-    await this.loadReportPermissions();
-    this.showPermissionsDialog = true;
-  }
-
-  closePermissionsDialog(): void {
-    this.showPermissionsDialog = false;
-    this.permissionSearchText = '';
+    this.permissionRows = [];
+    this.selectedRoleId = 0;
+    this.lastLoadedOrgId = 0;
+    this.lastLoadedRoleId = 0;
+    this.selectionSubmitted = false;
   }
 
   toggleAllPermissions(event: Event): void {

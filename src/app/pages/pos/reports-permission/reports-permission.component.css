@@ -1,13 +1,59 @@
-.field-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  margin-bottom: 1.5rem;
+.selection-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 0.85rem;
+  align-items: flex-start;
 }
 
-.permission-actions {
+.organization-field {
+  flex: 0 0 18rem;
+  max-width: 18rem;
+}
+
+.role-field {
+  flex: 0 0 18rem;
+  min-width: 0;
+  max-width: 18rem;
+}
+
+.selection-field {
+  min-width: 0;
+}
+
+.selection-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: flex-start;
+  margin-left: auto;
+  padding-top: 1.55rem;
+}
+
+:host ::ng-deep .selection-row .field-block {
+  gap: 0.35rem;
+  align-content: start;
+  min-height: 5.25rem;
+}
+
+:host ::ng-deep .selection-row .field-label {
+  font-size: 0.84rem;
+}
+
+:host ::ng-deep .selection-row .p-select {
+  min-height: 2.5rem;
+}
+
+:host ::ng-deep .selection-row .field-error {
+  min-height: 1rem;
+  line-height: 1rem;
+}
+
+:host ::ng-deep .selection-actions .actions-row {
+  flex-wrap: nowrap;
+}
+
+:host ::ng-deep .selection-actions .p-button {
+  white-space: nowrap;
 }
 
 .permission-summary-card {
@@ -45,8 +91,21 @@
 .permissions-panel {
   display: flex;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
-  padding-bottom: 1rem;
+  padding-bottom: 0.5rem;
+}
+
+.inline-panel {
+  margin-top: 1.5rem;
+}
+
+.permissions-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .permissions-dialog-header {
@@ -207,28 +266,31 @@
   text-align: center;
 }
 
-:host ::ng-deep .permissions-dialog .p-dialog-content {
-  padding-bottom: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-:host ::ng-deep .permissions-dialog .p-dialog {
-  display: flex;
-  flex-direction: column;
-}
-
 @media (max-width: 900px) {
+  .selection-row {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .organization-field {
+    flex: 1 1 16rem;
+    max-width: none;
+  }
+
+  .role-field {
+    flex: 1 1 16rem;
+    max-width: none;
+  }
+
+  .selection-actions {
+    justify-content: flex-start;
+    margin-left: 0;
+    padding-top: 0;
+  }
+
   .permission-summary-card {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  :host ::ng-deep .permissions-dialog .p-dialog {
-    width: min(96vw, 56rem) !important;
-    max-width: 96vw !important;
-    height: min(92vh, 54rem) !important;
   }
 
   .permissions-dialog-header {
@@ -251,6 +313,11 @@
     width: 100%;
   }
 
+  .permissions-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .permissions-row {
     grid-template-columns:
       minmax(7rem, 1fr)
@@ -260,15 +327,6 @@
 }
 
 @media (max-width: 640px) {
-  :host ::ng-deep .permissions-dialog .p-dialog {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
-  }
-
   .permissions-table {
     gap: 0.65rem;
     padding-right: 0;

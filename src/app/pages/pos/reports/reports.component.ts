@@ -117,6 +117,10 @@ export class ReportsComponent {
   private categoryRequestVersion = 0;
   private reportRequestVersion = 0;
 
+  get hasNoReportAccess(): boolean {
+    return !this.loadingCategories && !this.categories.length;
+  }
+
   async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     await this.initializeReportCenter();
@@ -124,6 +128,7 @@ export class ReportsComponent {
 
   async initializeReportCenter(): Promise<void> {
     this.loadingCategories = true;
+    this.changeDetector.detectChanges();
 
     try {
       const orgId = this.orgId;
@@ -133,9 +138,12 @@ export class ReportsComponent {
       this.changeDetector.detectChanges();
 
       if (!this.categories.length) {
-        this.toast.warn('No Reports', 'No report categories are configured for this role.');
         this.selectedCategoryId = null;
         this.reports = [];
+        this.selectedReport = null;
+        this.selectedReportDefinition = null;
+        this.filterFields = [];
+        this.clearPreviewState();
         this.changeDetector.detectChanges();
         return;
       }
@@ -151,6 +159,7 @@ export class ReportsComponent {
       this.toast.error('Reports Load Failed', 'Unable to load report categories. Please check the report catalog setup.');
     } finally {
       this.loadingCategories = false;
+      this.changeDetector.detectChanges();
     }
   }
 
@@ -274,6 +283,7 @@ export class ReportsComponent {
     }
 
     this.loadingPreview = true;
+    this.changeDetector.detectChanges();
 
     try {
       const request: ReportExecutionRequest = {
@@ -287,6 +297,7 @@ export class ReportsComponent {
       this.previewResult = response.result;
       this.previewColumns = this.mapPreviewColumns(this.previewResult.Columns ?? []);
       this.previewRows = this.previewResult.Rows ?? [];
+      this.changeDetector.detectChanges();
 
       if (!this.previewRows.length) {
         this.toast.warn('No Data', 'The report ran successfully but returned no rows.');
@@ -295,8 +306,10 @@ export class ReportsComponent {
     } catch {
       this.clearPreviewState();
       this.toast.error('Report Failed', 'Unable to execute the report. Please verify the stored procedure and filters.');
+      this.changeDetector.detectChanges();
     } finally {
       this.loadingPreview = false;
+      this.changeDetector.detectChanges();
     }
   }
 
@@ -304,6 +317,7 @@ export class ReportsComponent {
     this.submitted = false;
     this.resetForm();
     this.clearPreviewState();
+    this.changeDetector.detectChanges();
   }
 
   async exportExcel(): Promise<void> {

@@ -7,6 +7,29 @@
     </div>
   </header>
 
+  @if (hasNoReportAccess) {
+    <p-card class="feature-card no-access-card">
+      <div class="no-access-shell">
+        <div class="no-access-illustration">
+          <span class="no-access-icon-wrap">
+            <i class="pi pi-lock"></i>
+          </span>
+        </div>
+        <div class="no-access-copy">
+          <p class="no-access-kicker">Report Access Restricted</p>
+          <h2>No reports are assigned to this role</h2>
+          <p>
+            This login does not currently have permission to open any report categories.
+            Contact your administrator to assign report rights for your role.
+          </p>
+          <div class="no-access-meta">
+            <span><strong>Role:</strong> {{ userDetails?.RoleName || 'Unknown Role' }}</span>
+            <span><strong>Organization:</strong> {{ userDetails?.OrgName || 'Unknown Organization' }}</span>
+          </div>
+        </div>
+      </div>
+    </p-card>
+  } @else {
   <div class="report-layout">
     <div class="report-sidebar">
       <p-card class="feature-card compact-card">
@@ -277,4 +300,5 @@
       </p-card>
     </div>
   </div>
+  }
 </section>
