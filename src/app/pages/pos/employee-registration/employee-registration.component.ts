@@ -27,12 +27,6 @@ type EmployeeRegistrationRow = {
 
   DepartmentId: number | null;
 
-  designationId: 0;
-
-  departmentId: 0;
-
-  branchId: 0;
-
   IdProofNo: string;    
 
   Id: number;
@@ -811,7 +805,6 @@ resetDialogForm(clearSubmitted: boolean = false): void {
   this.dialogPhone = '';
 
   this.dialogEmail = '';
-
   this.dialogAddress = '';
 
   this.dialogStatus = true;
