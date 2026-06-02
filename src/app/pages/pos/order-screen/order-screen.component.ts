@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
@@ -10,13 +9,11 @@ import { firstValueFrom } from 'rxjs';
 import { AppToastService } from '../../../services/app-toast.service';
 import { BranchService } from '../../../services/branch.service';
 import { CategoryService } from '../../../services/Category.service';
-import { ComboMenuService } from '../../../services/combo-menu.service';
 import { CounterService } from '../../../services/counter.service';
-import { DiningTableService } from '../../../services/diningtable.service';
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
 import { FloorService } from '../../../services/floor.service';
-import { MenuService } from '../../../services/FoodMenu.service';
 import { OrderHold, OrderHoldItem, OrderHoldService } from '../../../services/order-hold.service';
+import { OrderScreenService } from '../../../services/order-screen.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { subCategoryService } from '../../../services/SubCategory.service';
 import { TaxService } from '../../../services/tax.service';
@@ -49,20 +46,6 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
 };
 
 const DEFAULT_CATEGORY_ICON = 'pi pi-shopping-bag';
-const SUBCATEGORY_ICON_MAP: Record<string, string> = {
-  south: 'pi pi-map-marker',
-  chinese: 'pi pi-globe',
-  north: 'pi pi-compass',
-  grill: 'pi pi-fire',
-  starter: 'pi pi-sparkles',
-  soup: 'pi pi-filter',
-  bread: 'pi pi-stop',
-  rice: 'pi pi-th-large',
-  curry: 'pi pi-circle-fill'
-};
-
-const DEFAULT_SUBCATEGORY_ICON = 'pi pi-tags';
-
 @Component({
   selector: 'app-order-screen',
   standalone: true,
@@ -95,7 +78,6 @@ export class OrderScreenComponent implements OnInit {
   cartItems: any[] = [];
   currentHeldOrder: any = null;
 
-  isLoading = false;
   isCategoryLoading = false;
   isSubCategoryLoading = false;
   isMenuLoading = false;
@@ -111,6 +93,7 @@ export class OrderScreenComponent implements OnInit {
   private currentOrderEntityNo = 0;
   private currentHoldOrderEntityNo = 0;
   private readonly orderEntityNoCache = new Map<string, number>();
+  private menuSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
   activeCategoryId = 0;
   activeSubCategoryId = 0;
@@ -137,17 +120,14 @@ export class OrderScreenComponent implements OnInit {
     private readonly changeDetector: ChangeDetectorRef,
     private readonly branchService: BranchService,
     private readonly categoryService: CategoryService,
-    private readonly comboMenuService: ComboMenuService,
     private readonly counterService: CounterService,
-    private readonly diningTableService: DiningTableService,
     private readonly floorService: FloorService,
     private readonly subCategoryService: subCategoryService,
-    private readonly foodmenuService: MenuService,
     private readonly orderHoldService: OrderHoldService,
+    private readonly orderScreenService: OrderScreenService,
     private readonly organizationService: OrganizationService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
-    private readonly taxService: TaxService,
-    private readonly router: Router
+    private readonly taxService: TaxService
     
 
   ) {}
@@ -170,7 +150,7 @@ export class OrderScreenComponent implements OnInit {
   }
 
   async loadOrderContextNames(): Promise<void> {
-    this.organizationName = this.getStringValue(this.userDetails, 'OrgName', 'OrganizationName', 'organizationName');
+    this.organizationName = this.getStringValue(this.userDetails,  'OrganizationName', 'organizationName');
     this.branchName = this.getStringValue(this.userDetails, 'BranchName', 'branchName');
 
     const counterOrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : this.orgId;
@@ -207,15 +187,13 @@ export class OrderScreenComponent implements OnInit {
   async loadOrderScreenData(): Promise<void> {
     await this.loadCategories();
     await this.loadSubCategories();
-    await this.loadMenus();
-    await this.loadComboMenus();
+    await this.loadTopSixMenus();
     await this.loadFloors();
     await this.loadDiningTables();
   }
 
   async loadCategories(): Promise<void> {
     this.isCategoryLoading = true;
-    this.isLoading = true;
 
     try {
       const response: any = await firstValueFrom(this.categoryService.getAll(this.orgId));
@@ -238,13 +216,11 @@ export class OrderScreenComponent implements OnInit {
       this.toast.error('Load Failed', 'Unable to load categories.');
     } finally {
       this.isCategoryLoading = false;
-      this.isLoading = false;
     }
   }
 
   async loadSubCategories(): Promise<void> {
     this.isSubCategoryLoading = true;
-    this.isLoading = true;
 
     try {
       const response: any = await firstValueFrom(this.subCategoryService.getAll(this.orgId));
@@ -266,87 +242,52 @@ export class OrderScreenComponent implements OnInit {
       this.toast.error('Load Failed', 'Unable to load subcategories.');
     } finally {
       this.isSubCategoryLoading = false;
-      this.isLoading = false;
+    }
+  }
+
+  async loadTopSixMenus(): Promise<void> {
+    this.isMenuLoading = true;
+
+    try {
+      const response: any = await firstValueFrom(
+        this.orderScreenService.getTopSixMenuAndComboMenu(
+          this.getScopedOrgId(),
+          this.getScopedBranchId()
+        )
+      );
+      this.bindMenuRows(response);
+    } catch {
+      this.clearMenuItems();
+      this.toast.error('Load Failed', 'Unable to load top menu and combo menu items.');
+    } finally {
+      this.isMenuLoading = false;
     }
   }
 
   async loadMenus(): Promise<void> {
     this.isMenuLoading = true;
-    this.isLoading = true;
 
     try {
-      const response: any = await firstValueFrom(this.foodmenuService.getAll(this.orgId));
-      const menus = response?.result ?? [];
-      const activeMenus = menus.filter((x: any) => x.isactive === true);
-
-      this.allMenuItems = activeMenus.map((menu: any) => ({
-        id: this.getNumberValue(menu, 'id', 'Id'),
-        cartKey: 'menu-' + this.getNumberValue(menu, 'id', 'Id'),
-        itemType: 'Menu',
-        name: this.getStringValue(menu, 'name', 'Name'),
-        categoryId: this.getNumberValue(menu, 'categoryId', 'CategoryId', 'categoryid'),
-        category: this.getStringValue(menu, 'categoryname', 'CategoryName') || this.getCategoryName(this.getNumberValue(menu, 'categoryId', 'CategoryId', 'categoryid')),
-        subCategoryId: this.getNumberValue(menu, 'subCategoryId', 'SubCategoryId', 'subcategoryid'),
-        subCategory: this.getStringValue(menu, 'subCategoryName', 'SubCategoryName', 'subcategoryname') || this.getSubCategoryName(this.getNumberValue(menu, 'subCategoryId', 'SubCategoryId', 'subcategoryid')),
-        price: this.getNumberValue(menu, 'price', 'Price'),
-        preparationTime: '',
-        isPopular: false
-      }));
-
-      this.applyMenuSelection();
+      const response: any = await firstValueFrom(
+        this.orderScreenService.getAllMenuAndComboMenu(
+          this.getScopedOrgId(),
+          this.getScopedBranchId(),
+          this.activeCategoryId || null,
+          this.activeSubCategoryId || null,
+          this.searchText.trim()
+        )
+      );
+      this.bindMenuRows(response);
     } catch {
-      this.toast.error('Load Failed', 'Unable to load menu items.');
+      this.clearMenuItems();
+      this.toast.error('Load Failed', 'Unable to load menu and combo menu items.');
     } finally {
       this.isMenuLoading = false;
-      this.isLoading = false;
-    }
-  }
-
-  async loadComboMenus(): Promise<void> {
-    this.isMenuLoading = true;
-    this.isLoading = true;
-
-    try {
-      const response: any = await firstValueFrom(this.comboMenuService.getAll(this.orgId));
-      const combos = this.getResponseList(response);
-      const activeCombos = combos.filter((x: any) => this.getBooleanValue(x, 'isactive', 'IsActive', 'isActive'));
-
-      const comboMenuItems = activeCombos.map((combo: any) => {
-        const id = this.getNumberValue(combo, 'id', 'Id');
-        const categoryId = this.getNumberValue(combo, 'categoryId', 'CategoryId');
-        const subCategoryId = this.getNumberValue(combo, 'subCategoryId', 'SubCategoryId');
-        const itemCount = this.getComboItems(combo).length;
-
-        return {
-          id,
-          comboMenuId: id,
-          cartKey: 'combo-' + id,
-          itemType: 'Combo',
-          name: this.getStringValue(combo, 'name', 'Name'),
-          categoryId,
-          category: this.getStringValue(combo, 'categoryname', 'CategoryName') || this.getCategoryName(categoryId),
-          subCategoryId,
-          subCategory: this.getStringValue(combo, 'subcategoryname', 'SubCategoryName') || this.getSubCategoryName(subCategoryId),
-          price: this.getNumberValue(combo, 'price', 'Price'),
-          preparationTime: itemCount ? itemCount + ' items combo' : 'Combo',
-          isPopular: false,
-          comboItems: this.getComboItems(combo)
-        };
-      });
-
-      this.allMenuItems = [...this.allMenuItems, ...comboMenuItems];
-      this.applyMenuSelection();
-    } catch {
-      this.toast.error('Load Failed', 'Unable to load combo menu items.');
-    } finally {
-      this.isMenuLoading = false;
-      this.isLoading = false;
     }
   }
 
   async loadFloors(): Promise<void> {
     this.isFloorLoading = true;
-    this.isLoading = true;
 
     try {
       const response: any = await firstValueFrom(this.floorService.getAll(this.getScopedOrgId(), this.getScopedBranchId()));
@@ -374,16 +315,14 @@ export class OrderScreenComponent implements OnInit {
       this.toast.error('Load Failed', 'Unable to load floors.');
     } finally {
       this.isFloorLoading = false;
-      this.isLoading = false;
     }
   }
 
   async loadDiningTables(): Promise<void> {
     this.isTableLoading = true;
-    this.isLoading = true;
 
     try {
-      const response: any = await firstValueFrom(this.diningTableService.getAll(this.getScopedOrgId(), this.getScopedBranchId()));
+      const response: any = await firstValueFrom(this.orderHoldService.getAllTable(this.orgId, this.branchId));
       const diningTables = response?.result ?? [];
       const activeDiningTables = diningTables.filter((x: any) => this.getBooleanValue(x, 'isactive', 'IsActive', 'isActive'));
       const currentBranchDiningTables = activeDiningTables.filter((x: any) =>
@@ -400,7 +339,6 @@ export class OrderScreenComponent implements OnInit {
       this.toast.error('Load Failed', 'Unable to load dining tables.');
     } finally {
       this.isTableLoading = false;
-      this.isLoading = false;
     }
   }
 
@@ -424,12 +362,12 @@ export class OrderScreenComponent implements OnInit {
     this.activeCategoryId = Number(category?.id || 0);
     this.activeSubCategoryId = 0;
     this.updateVisibleSubCategories();
-    this.applyMenuSelection();
+    void this.loadMenus();
   }
 
   selectSubCategory(subCategory: any): void {
     this.activeSubCategoryId = Number(subCategory?.id || 0);
-    this.applyMenuSelection();
+    void this.loadMenus();
   }
 
   selectCategoryById(categoryId: number | null): void {
@@ -528,6 +466,14 @@ export class OrderScreenComponent implements OnInit {
   updateSearchText(event: Event): void {
     this.searchText = (event.target as HTMLInputElement).value;
     this.updateFilteredMenuItems();
+
+    if (this.menuSearchTimer) {
+      clearTimeout(this.menuSearchTimer);
+    }
+
+    this.menuSearchTimer = setTimeout(() => {
+      void this.loadMenus();
+    }, 300);
   }
 
   updateCustomerName(event: Event): void {
@@ -544,8 +490,8 @@ export class OrderScreenComponent implements OnInit {
 
   applyMenuSelection(): void {
     this.menuItems = this.allMenuItems
-      .filter((x: any) => this.activeCategoryId === 0 || x.categoryId === this.activeCategoryId)
-      .filter((x: any) => this.activeSubCategoryId === 0 || x.subCategoryId === this.activeSubCategoryId);
+      .filter((x: any) => this.activeCategoryId === 0 || x.categoryId === 0 || x.categoryId === this.activeCategoryId)
+      .filter((x: any) => this.activeSubCategoryId === 0 || x.subCategoryId === 0 || x.subCategoryId === this.activeSubCategoryId);
 
     this.updateFilteredMenuItems();
   }
@@ -653,10 +599,6 @@ export class OrderScreenComponent implements OnInit {
     }
   }
 
-  settlePayment(): void {
-    this.router.navigate(['/pos/billing']);
-  }
-
   private refreshOrderScreenPage(): void {
     window.location.reload();
   }
@@ -757,10 +699,8 @@ export class OrderScreenComponent implements OnInit {
       OrderType: this.activeOrderType,
       Ordertype: this.activeOrderType,
       orderType: this.activeOrderType,
-      ServingType: this.activeServingType,
       servingType: this.activeServingType,
-      ServiceType: this.activeServingType,
-      serviceType: this.activeServingType,
+      
       OrderStatus: status,
       ItemCount: this.itemCount,
       Itemcount: this.itemCount,
@@ -904,9 +844,13 @@ export class OrderScreenComponent implements OnInit {
       ? this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid', 'ComboMenuId', 'comboMenuId', 'id', 'Id')
       : 0;
 
+    const itemId = this.getNumberValue(item, 'heldItemId', 'itemid', 'Itemid', 'ItemId', 'itemId');
+
     return {
-      Itemid: this.getNumberValue(item, 'heldItemId', 'itemid', 'Itemid', 'ItemId', 'itemId'),
-      itemid: this.getNumberValue(item, 'heldItemId', 'itemid', 'Itemid', 'ItemId', 'itemId'),
+      Itemid: itemId,
+      itemid: itemId,
+      ItemId: itemId,
+      itemId,
       Orderid: orderId,
       orderid: orderId,
       Menuitemid: isCombo ? 0 : Number(item.id || 0),
@@ -975,6 +919,67 @@ export class OrderScreenComponent implements OnInit {
         || String(x.subCategory ?? '').toLowerCase().includes(search)
         || String(x.itemType ?? '').toLowerCase().includes(search);
     });
+  }
+
+  private bindMenuRows(response: any): void {
+    const menuRows = this.getResponseList(response);
+    const activeMenuRows = menuRows.filter((x: any) => this.getBooleanValue(x, 'isactive', 'IsActive', 'isActive'));
+
+    this.allMenuItems = activeMenuRows.map((menu: any) => this.mapOrderScreenMenuItem(menu));
+    this.applyMenuSelection();
+  }
+
+  private clearMenuItems(): void {
+    this.allMenuItems = [];
+    this.menuItems = [];
+    this.filteredMenuItems = [];
+  }
+
+  private mapOrderScreenMenuItem(menu: any): any {
+    const id = this.getNumberValue(menu, 'id', 'Id');
+    const type = this.getStringValue(menu, 'type', 'Type');
+    const isCombo = type.toLowerCase() === 'combomenu' || type.toLowerCase() === 'combo';
+    const categoryId = this.getNumberValue(menu, 'categoryId', 'CategoryId', 'categoryid', 'Categoryid');
+    const subCategoryId = this.getNumberValue(menu, 'subCategoryId', 'SubCategoryId', 'subcategoryid', 'Subcategoryid');
+    const category = this.getStringValue(
+      menu,
+      'category',
+      'Category',
+      'categoryName',
+      'CategoryName',
+      'categoryname',
+      'Categoryname'
+    ) || this.getCategoryName(categoryId);
+    const subCategory = this.getStringValue(
+      menu,
+      'subCategory',
+      'SubCategory',
+      'subcategory',
+      'Subcategory',
+      'subCategoryName',
+      'SubCategoryName',
+      'subcategoryname',
+      'Subcategoryname'
+    ) || this.getSubCategoryName(subCategoryId);
+    const comboItems = this.getComboItems(menu);
+    const itemCount = this.getNumberValue(menu, 'itemsCount', 'ItemsCount') || comboItems.length;
+
+    return {
+      id,
+      comboMenuId: isCombo ? id : 0,
+      cartKey: (isCombo ? 'combo-' : 'menu-') + id,
+      itemType: isCombo ? 'Combo' : 'Menu',
+      name: this.getStringValue(menu, 'name', 'Name'),
+      categoryId,
+      category,
+      subCategoryId,
+      subCategory,
+      categoryDisplay: [category, subCategory].filter(Boolean).join(' / '),
+      price: this.getNumberValue(menu, 'price', 'Price'),
+      preparationTime: isCombo ? (itemCount ? itemCount + ' items combo' : 'Combo') : '',
+      isPopular: false,
+      comboItems
+    };
   }
 
   private updateVisibleTables(): void {
@@ -1388,17 +1393,6 @@ export class OrderScreenComponent implements OnInit {
     });
   }
 
-  private getCurrentComboMenuId(): number {
-    const comboItem = this.cartItems.find((item: any) => item.itemType === 'Combo');
-
-    if (!comboItem) {
-      return 0;
-    }
-
-    return this.getNumberValue(comboItem, 'ComboMenuId', 'comboMenuId', 'Combomenuid', 'combomenuid', 'id', 'Id')
-      || this.parseMenuItemId(comboItem.cartKey ?? '');
-  }
-
   private getSelectedTableId(): number {
     if (!this.isDineInOrder()) {
       return 0;
@@ -1592,26 +1586,6 @@ export class OrderScreenComponent implements OnInit {
 
   private getCategoryIcon(categoryName: string): string {
     return CATEGORY_ICON_MAP[categoryName.trim().toLowerCase()] ?? DEFAULT_CATEGORY_ICON;
-  }
-
-  getSubCategoryIcon(subCategory: any): string {
-    const subCategoryName = this.getStringValue(subCategory, 'name', 'Name').trim().toLowerCase();
-
-    if (!subCategoryName || subCategoryName === 'all') {
-      return 'pi pi-th-large';
-    }
-
-    const matchedKey = Object.keys(SUBCATEGORY_ICON_MAP).find((key) => subCategoryName.includes(key));
-    return matchedKey ? SUBCATEGORY_ICON_MAP[matchedKey] : DEFAULT_SUBCATEGORY_ICON;
-  }
-
-  getFloorIcon(floor: any): string {
-    const floorId = this.getNumberValue(floor, 'id', 'Id');
-    return floorId ? 'pi pi-building' : 'pi pi-th-large';
-  }
-
-  getTableIcon(table: string): string {
-    return table === ALL_TABLE ? 'pi pi-th-large' : 'pi pi-table';
   }
 
   private getComboItems(source: any): any[] {

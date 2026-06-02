@@ -109,7 +109,7 @@
           @for (item of filteredMenuItems; track item.cartKey) {
           <article class="menu-card">
             <div class="menu-card-top">
-              <span>{{ item.category }} / {{ item.subCategory }}</span>
+              <span>{{ item.categoryDisplay || item.category || item.subCategory || '-' }}</span>
               @if (item.itemType === 'Combo') {
                 <p-tag value="Combo" severity="info"></p-tag>
               }
@@ -225,8 +225,7 @@
             (click)="holdOrder()"></button>
           <button pButton type="button" icon="pi pi-send" [label]="isSendingToKitchen ? 'Sending' : 'Kitchen'"
             [disabled]="isSendingToKitchen || !cartItems.length" (click)="sendToKitchen()"></button>
-         <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>
-        </div>
+  </div>
 
         <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Order" severity="danger" [text]="true" (click)="clearOrder()"></button>
       </p-card>

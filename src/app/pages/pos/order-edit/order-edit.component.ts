@@ -477,25 +477,33 @@ export class OrderEditComponent {
   private toSerializableOrder(order: any): any {
     const source = order as any;
     const orderId = this.getOrderId(order);
-    const items = this.getOrderItems(order).map((item: any) => ({
-      Id: this.getNumberValue(item, 'Id', 'id', 'Itemid', 'itemid'),
-      itemid: this.getNumberValue(item,  'Itemid'),
-      Orderid: this.getNumberValue(item, 'Orderid') || orderId,
-      Menuitemid: this.getStringValue(item, 'Menuitemid'),
-      ComboMenuId: this.getNumberValue(item, 'ComboMenuItemId'),
-      ComboMenuItemId: this.getNumberValue(item,  'ComboMenuItemId'),
-      Itemname: this.getStringValue(item, 'Itemname'),
-      Quantity: this.getNumberValue(item, 'Quantity', 'quantity', 'Qty', 'qty') || 1,
-      Unitprice: this.getNumberValue(item, 'Unitprice'),
-      Totalprice: this.getNumberValue(item, 'Totalprice'),
-      DiscountAmount: this.getNumberValue(item, 'DiscountAmount'),
-      TaxAmount: this.getNumberValue(item, 'TaxAmount'),
-      Modifierdetails: this.getStringValue(item, 'Modifierdetails') || null,
-      Itemstatus: this.getStringValue(item, 'Itemstatus') || this.getOrderStatus(order),
-      Notes: this.getStringValue(item, 'Notes', 'notes') || null,
-      OrgId: this.getNumberValue(item, 'OrgId') || this.getUserOrgId(),
-      BranchId: this.getNumberValue(item, 'BranchId') || this.getUserBranchId()
-    }));
+    const items = this.getOrderItems(order).map((item: any) => {
+      const itemId = this.getNumberValue(item, 'itemid', 'Itemid', 'ItemId', 'itemId', 'Id', 'id');
+
+      return {
+        Id: itemId,
+        id: itemId,
+        Itemid: itemId,
+        itemid: itemId,
+        ItemId: itemId,
+        itemId,
+        Orderid: this.getNumberValue(item, 'Orderid', 'orderid', 'OrderId', 'orderId') || orderId,
+        Menuitemid: this.getStringValue(item, 'Menuitemid', 'menuitemid', 'MenuItemId', 'menuItemId'),
+        ComboMenuId: this.getNumberValue(item, 'ComboMenuId', 'comboMenuId', 'Combomenuid', 'combomenuid'),
+        ComboMenuItemId: this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid'),
+        Itemname: this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName', 'Name', 'name'),
+        Quantity: this.getNumberValue(item, 'Quantity', 'quantity', 'Qty', 'qty') || 1,
+        Unitprice: this.getNumberValue(item, 'Unitprice', 'unitprice', 'UnitPrice', 'unitPrice', 'Price', 'price'),
+        Totalprice: this.getNumberValue(item, 'Totalprice', 'totalprice', 'TotalPrice', 'totalPrice'),
+        DiscountAmount: this.getNumberValue(item, 'DiscountAmount', 'discountAmount'),
+        TaxAmount: this.getNumberValue(item, 'TaxAmount', 'taxAmount'),
+        Modifierdetails: this.getStringValue(item, 'Modifierdetails', 'modifierdetails') || null,
+        Itemstatus: this.getStringValue(item, 'Itemstatus', 'itemstatus') || this.getOrderStatus(order),
+        Notes: this.getStringValue(item, 'Notes', 'notes') || null,
+        OrgId: this.getNumberValue(item, 'OrgId', 'orgId') || this.getUserOrgId(),
+        BranchId: this.getNumberValue(item, 'BranchId', 'branchId') || this.getUserBranchId()
+      };
+    });
 
     return {
       ...source,

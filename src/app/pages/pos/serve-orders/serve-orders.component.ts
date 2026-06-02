@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { catchError, forkJoin, map, of } from 'rxjs';
 
@@ -45,14 +45,16 @@ export class ServeOrdersComponent implements OnInit {
 
   constructor(
     private readonly toast: AppToastService,
-    private readonly displayMenuItemsService: DisplayMenuItemsService
+    private readonly displayMenuItemsService: DisplayMenuItemsService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.OrgId = this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
+    this.OrgId = this.getNumberValue(this.userDetails, 'OrgId'    );
     this.BranchId = this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
     this.loadReadyOrders();
+    this.cdr.detectChanges();
   }
 
   get selfServiceOrders(): ServeOrder[] {
@@ -72,6 +74,7 @@ export class ServeOrdersComponent implements OnInit {
           .filter((order: any) => this.isReadyOrderHeader(order));
 
         this.loadReadyOrderDetails(orderRows);
+        this.cdr.detectChanges();
       },
       error: () => {
         this.isLoading = false;
