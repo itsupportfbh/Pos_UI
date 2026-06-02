@@ -64,6 +64,8 @@ type BillingCartItem = BillItem & {
 })
 export class BillingComponent implements OnInit {
   private readonly shiftService = inject(ShiftAssignmentService);
+  readonly gstPercent = 9;
+  readonly serviceChargePercent = 10;
 
   showShiftAssignment = false;
 
@@ -83,7 +85,8 @@ export class BillingComponent implements OnInit {
     { label: 'UPI', value: 'UPI' },
     { label: 'Debit Card', value: 'Debit Card' },
     { label: 'Credit Card', value: 'Credit Card' },
-    { label: 'QR Scan', value: 'QR Scan' }
+    { label: 'QR Scan', value: 'QR Scan' },
+    { label: 'PayNow', value: 'PayNow' }
   ];
 
   readonly quickMenuItems: QuickMenuItem[] = [
@@ -141,7 +144,53 @@ export class BillingComponent implements OnInit {
         { id: 106, name: 'Family Combo Meal', category: 'Combo', qty: 1, rate: 520, taxPercent: 5, kotNo: 'KOT-228' },
         { id: 107, name: 'Fresh Lime Soda', category: 'Beverages', qty: 2, rate: 65, taxPercent: 5, kotNo: 'KOT-229' }
       ]
-    }
+    },
+    {
+      orderNo: 'ORD-1048',
+      table: 'T2',
+      customer: 'Meera Guests',
+      phone: '9880011223',
+      serviceMode: 'Dine In',
+      branch: 'Trichy',
+      status: 'Ready To Bill',
+      source: 'Order Screen',
+      notes: 'Guest asked to combine dessert into final bill.',
+      items: [
+        { id: 108, name: 'Paneer Butter Masala', category: 'Main Course', qty: 1, rate: 180, taxPercent: 5, kotNo: 'KOT-233' },
+        { id: 109, name: 'Butter Naan', category: 'Bread', qty: 3, rate: 35, taxPercent: 5, kotNo: 'KOT-233' },
+        { id: 110, name: 'Fresh Lime Soda', category: 'Beverages', qty: 1, rate: 65, taxPercent: 5, kotNo: 'KOT-234' }
+      ]
+    },
+    {
+      orderNo: 'TA-2094',
+      table: '-',
+      customer: 'Parcel Counter',
+      phone: '9000002233',
+      serviceMode: 'Take Away',
+      branch: 'Chennai',
+      status: 'Ready To Bill',
+      source: 'Take Away',
+      notes: 'Customer waiting for final packing check.',
+      items: [
+        { id: 111, name: 'Veg Fried Rice', category: 'Rice', qty: 2, rate: 140, taxPercent: 5, kotNo: 'KOT-236' },
+        { id: 112, name: 'Masala Dosa', category: 'Breakfast', qty: 2, rate: 95, taxPercent: 5, kotNo: 'KOT-236' }
+      ]
+    },
+    {
+      orderNo: 'DL-3062',
+      table: '-',
+      customer: 'Rider / Suresh',
+      phone: '9555509876',
+      serviceMode: 'Delivery',
+      branch: 'Trichy',
+      status: 'Out For Delivery',
+      source: 'Counter',
+      notes: 'Rider asked to confirm beverage count before dispatch.',
+      items: [
+        { id: 113, name: 'Chicken Biriyani', category: 'Main Course', qty: 1, rate: 220, taxPercent: 5, kotNo: 'KOT-240' },
+        { id: 114, name: 'Fresh Lime Soda', category: 'Beverages', qty: 3, rate: 65, taxPercent: 5, kotNo: 'KOT-240' }
+      ]
+    },
   ];
 
   billingMode: BillingMode = 'search-order';
@@ -149,19 +198,37 @@ export class BillingComponent implements OnInit {
   orderSearch = '';
   itemSearch = '';
   barcodeSearch = '';
+  cartSearch = '';
   selectedCustomer: string | null = 'Walk-in Customer';
   selectedPaymentMode: string | null = 'Cash';
   discountType: 'Amount' | 'Percent' = 'Amount';
   discountInput = '0';
   receivedAmountInput = '0';
+  paymentReference = '';
+  approvalCode = '';
+  cardLastFour = '';
   notes = '';
   currentOrder: BillOrder | null = null;
   cartItems: BillingCartItem[] = [];
   filteredOrders: BillOrder[] = [];
   filteredQuickItems: QuickMenuItem[] = [];
+  filteredCartItems: BillingCartItem[] = [];
+  activeServiceModeLabel = 'All';
+  orderCount = 0;
+  currentCustomerLabel = 'Walk-in Customer';
+  currentOrderNumber = 'Direct Billing';
+  currentBranchLabel = 'Trichy';
+  isDineInBill = false;
+  isCashPayment = true;
+  isCardPayment = false;
+  isDigitalPayment = false;
+  paymentReferenceLabel = 'Reference';
+  settlementSummaryLabel = 'Received';
+  settlementSummaryValue = '0';
   totalItems = 0;
   subtotal = 0;
   discountAmount = 0;
+  serviceChargeAmount = 0;
   taxAmount = 0;
   grandTotal = 0;
   balanceAmount = 0;
@@ -172,28 +239,11 @@ export class BillingComponent implements OnInit {
     }
 
     this.filteredQuickItems = [...this.quickMenuItems];
+    this.filteredCartItems = [];
     this.updateOrderMatches();
+    this.updateDisplayState();
+    this.updatePaymentState();
     this.updateBillingSummary();
-  }
-
-  get activeServiceModeLabel(): string {
-    return this.currentOrder?.serviceMode ?? this.serviceFilter;
-  }
-
-  get orderCount(): number {
-    return this.filteredOrders.length;
-  }
-
-  get currentCustomerLabel(): string {
-    return this.currentOrder?.customer || this.selectedCustomer || 'Walk-in Customer';
-  }
-
-  get currentOrderNumber(): string {
-    return this.currentOrder?.orderNo || 'Direct Billing';
-  }
-
-  get currentBranchLabel(): string {
-    return this.currentOrder?.branch || 'Trichy';
   }
 
   setBillingMode(mode: BillingMode): void {
@@ -202,15 +252,22 @@ export class BillingComponent implements OnInit {
     this.orderSearch = '';
     this.notes = '';
     this.updateOrderMatches();
+    this.updateDisplayState();
 
     if (mode === 'quick-bill' && !this.cartItems.length) {
       this.selectedCustomer = 'Walk-in Customer';
     }
+
+    this.updateDisplayState();
+    this.updatePaymentState();
+    this.updateBillingSummary();
   }
 
   setServiceFilter(mode: ServiceMode | 'All'): void {
     this.serviceFilter = mode;
     this.updateOrderMatches();
+    this.updateDisplayState();
+    this.updateBillingSummary();
   }
 
   onOrderSearchChange(value: string): void {
@@ -228,6 +285,11 @@ export class BillingComponent implements OnInit {
     this.updateQuickItemMatches();
   }
 
+  onCartSearchChange(value: string): void {
+    this.cartSearch = value;
+    this.updateCartMatches();
+  }
+
   selectOrder(order: BillOrder): void {
     this.currentOrder = order;
     this.selectedCustomer = order.customer;
@@ -236,6 +298,8 @@ export class BillingComponent implements OnInit {
       ...item,
       sourceType: 'order'
     }));
+    this.updateCartMatches();
+    this.updateDisplayState();
     this.updateBillingSummary();
   }
 
@@ -259,6 +323,7 @@ export class BillingComponent implements OnInit {
       ];
     }
 
+    this.updateCartMatches();
     this.updateBillingSummary();
   }
 
@@ -266,6 +331,7 @@ export class BillingComponent implements OnInit {
     this.cartItems = this.cartItems.map((item) =>
       item.id === itemId ? { ...item, qty: item.qty + 1 } : item
     );
+    this.updateCartMatches();
     this.updateBillingSummary();
   }
 
@@ -273,16 +339,42 @@ export class BillingComponent implements OnInit {
     this.cartItems = this.cartItems
       .map((item) => item.id === itemId ? { ...item, qty: item.qty - 1 } : item)
       .filter((item) => item.qty > 0);
+    this.updateCartMatches();
     this.updateBillingSummary();
   }
 
   removeCartItem(itemId: number): void {
     this.cartItems = this.cartItems.filter((item) => item.id !== itemId);
+    this.updateCartMatches();
     this.updateBillingSummary();
   }
 
   setDiscountType(type: 'Amount' | 'Percent'): void {
     this.discountType = type;
+    this.updateBillingSummary();
+  }
+
+  setPaymentMode(mode: string): void {
+    this.selectedPaymentMode = mode;
+
+    if (this.isCashPayment) {
+      this.paymentReference = '';
+      this.approvalCode = '';
+      this.cardLastFour = '';
+    } else {
+      this.receivedAmountInput = '0';
+    }
+
+    if (!this.isCardPayment) {
+      this.approvalCode = '';
+      this.cardLastFour = '';
+    }
+
+    if (!this.isDigitalPayment) {
+      this.paymentReference = '';
+    }
+
+    this.updatePaymentState();
     this.updateBillingSummary();
   }
 
@@ -296,20 +388,41 @@ export class BillingComponent implements OnInit {
     this.updateBillingSummary();
   }
 
+  onPaymentReferenceChange(value: string): void {
+    this.paymentReference = value;
+    this.updatePaymentState();
+  }
+
+  onApprovalCodeChange(value: string): void {
+    this.approvalCode = value;
+    this.updatePaymentState();
+  }
+
+  onCardLastFourChange(value: string): void {
+    this.cardLastFour = value.replace(/\D/g, '').slice(0, 4);
+  }
+
   clearBill(): void {
     this.currentOrder = null;
     this.orderSearch = '';
     this.itemSearch = '';
     this.barcodeSearch = '';
+    this.cartSearch = '';
     this.selectedCustomer = 'Walk-in Customer';
     this.selectedPaymentMode = 'Cash';
     this.discountType = 'Amount';
     this.discountInput = '0';
     this.receivedAmountInput = '0';
+    this.paymentReference = '';
+    this.approvalCode = '';
+    this.cardLastFour = '';
     this.notes = '';
     this.cartItems = [];
     this.updateOrderMatches();
     this.updateQuickItemMatches();
+    this.updateCartMatches();
+    this.updateDisplayState();
+    this.updatePaymentState();
     this.updateBillingSummary();
   }
 
@@ -322,6 +435,9 @@ export class BillingComponent implements OnInit {
       orderNo: this.currentOrder?.orderNo ?? 'DIRECT',
       customer: this.currentCustomerLabel,
       paymentMode: this.selectedPaymentMode,
+      paymentReference: this.paymentReference,
+      approvalCode: this.approvalCode,
+      cardLastFour: this.cardLastFour,
       total: this.grandTotal
     });
   }
@@ -344,6 +460,8 @@ export class BillingComponent implements OnInit {
 
       return serviceMatches && searchMatches;
     });
+
+    this.orderCount = this.filteredOrders.length;
   }
 
   private updateQuickItemMatches(): void {
@@ -353,6 +471,18 @@ export class BillingComponent implements OnInit {
     this.filteredQuickItems = this.quickMenuItems.filter((item) =>
       (!search || item.name.toLowerCase().includes(search) || item.category.toLowerCase().includes(search)) &&
       (!barcode || String(item.id).includes(barcode) || item.name.toLowerCase().replaceAll(' ', '').includes(barcode))
+    );
+  }
+
+  private updateCartMatches(): void {
+    const search = this.cartSearch.toLowerCase().trim();
+
+    this.filteredCartItems = this.cartItems.filter((item) =>
+      !search
+      || item.name.toLowerCase().includes(search)
+      || item.category.toLowerCase().includes(search)
+      || String(item.id).includes(search)
+      || (item.kotNo || '').toLowerCase().includes(search)
     );
   }
 
@@ -370,18 +500,74 @@ export class BillingComponent implements OnInit {
       this.discountAmount = Math.min(discountValue, this.subtotal);
     }
 
-    const taxableAmount = Math.max(this.subtotal - this.discountAmount, 0);
+    const discountedSubtotal = Math.max(this.subtotal - this.discountAmount, 0);
+    this.serviceChargeAmount = this.isDineInBill
+      ? (discountedSubtotal * this.serviceChargePercent) / 100
+      : 0;
+
+    const taxableAmount = discountedSubtotal + this.serviceChargeAmount;
     this.taxAmount = this.cartItems.reduce((sum, item) => {
       const itemBase = item.qty * item.rate;
       const share = this.subtotal > 0 ? itemBase / this.subtotal : 0;
       const itemDiscount = this.discountAmount * share;
       const itemTaxable = Math.max(itemBase - itemDiscount, 0);
-      return sum + ((itemTaxable * item.taxPercent) / 100);
+      const itemServiceCharge = this.isDineInBill ? (itemTaxable * this.serviceChargePercent) / 100 : 0;
+      return sum + (((itemTaxable + itemServiceCharge) * this.gstPercent) / 100);
     }, 0);
 
     this.grandTotal = taxableAmount + this.taxAmount;
 
     const receivedAmount = Number(this.receivedAmountInput || 0);
-    this.balanceAmount = Number.isFinite(receivedAmount) ? receivedAmount - this.grandTotal : 0;
+    this.balanceAmount = this.isCashPayment && Number.isFinite(receivedAmount)
+      ? receivedAmount - this.grandTotal
+      : 0;
+
+    this.updateDisplayState();
+    this.updatePaymentState();
+  }
+
+  private updateDisplayState(): void {
+    this.activeServiceModeLabel = this.currentOrder?.serviceMode || this.serviceFilter;
+    this.currentCustomerLabel = this.currentOrder?.customer || this.selectedCustomer || 'Walk-in Customer';
+    this.currentOrderNumber = this.currentOrder?.orderNo || 'Direct Billing';
+    this.currentBranchLabel = this.currentOrder?.branch || 'Trichy';
+    this.isDineInBill = this.activeServiceModeLabel === 'Dine In';
+  }
+
+  private updatePaymentState(): void {
+    this.isCashPayment = this.selectedPaymentMode === 'Cash';
+    this.isCardPayment = this.selectedPaymentMode === 'Debit Card' || this.selectedPaymentMode === 'Credit Card';
+    this.isDigitalPayment = this.selectedPaymentMode === 'UPI'
+      || this.selectedPaymentMode === 'QR Scan'
+      || this.selectedPaymentMode === 'PayNow';
+
+    this.paymentReferenceLabel = 'Reference';
+
+    if (this.selectedPaymentMode === 'UPI') {
+      this.paymentReferenceLabel = 'UPI Reference';
+    }
+
+    if (this.selectedPaymentMode === 'QR Scan') {
+      this.paymentReferenceLabel = 'QR Reference';
+    }
+
+    if (this.selectedPaymentMode === 'PayNow') {
+      this.paymentReferenceLabel = 'PayNow Reference';
+    }
+
+    if (this.isCashPayment) {
+      this.settlementSummaryLabel = 'Received';
+      this.settlementSummaryValue = this.receivedAmountInput || '0';
+      return;
+    }
+
+    if (this.isCardPayment) {
+      this.settlementSummaryLabel = 'Approval';
+      this.settlementSummaryValue = this.approvalCode || 'Pending';
+      return;
+    }
+
+    this.settlementSummaryLabel = 'Reference';
+    this.settlementSummaryValue = this.paymentReference || 'Pending';
   }
 }

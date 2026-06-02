@@ -122,7 +122,7 @@
                 }
               </div>
               <h3>{{ item.name }}</h3>
-              <p>{{ item.taxPercent }}% tax included at bill stage</p>
+              <p>{{ gstPercent }}% GST at bill stage</p>
               <div class="product-footer">
                 <strong>{{ item.price | currency:'INR':'symbol':'1.2-2' }}</strong>
                 <p-button label="Add" icon="pi pi-plus" (onClick)="addQuickItem(item)" />
@@ -167,13 +167,21 @@
       <div class="cart-section-title compact">
         <span>Selected Items</span>
       </div>
+      <div class="cart-search-row">
+        <app-text-field
+          label=""
+          inputId="cartSearch"
+          placeholder="Search selected items"
+          [model]="cartSearch"
+          (modelChange)="onCartSearchChange($event)" />
+      </div>
       <section class="cart-list">
         @if (cartItems.length) {
-          @for (item of cartItems; track item.id) {
+          @for (item of filteredCartItems; track item.id) {
             <article class="cart-item">
               <div class="cart-item-main">
                 <strong>{{ item.name }}</strong>
-                <p>{{ item.qty }} x {{ item.rate | currency:'INR':'symbol':'1.2-2' }} • {{ item.taxPercent }}% tax</p>
+                <p>{{ item.qty }} x {{ item.rate | currency:'INR':'symbol':'1.2-2' }} • GST {{ gstPercent }}%</p>
                 @if (item.kotNo) {
                   <span class="kot-tag">{{ item.kotNo }}</span>
                 }
@@ -188,6 +196,8 @@
               <strong>{{ item.qty * item.rate | currency:'INR':'symbol':'1.2-2' }}</strong>
               <button type="button" class="remove-link" (click)="removeCartItem(item.id)">Remove</button>
             </article>
+          } @empty {
+            <div class="empty-state compact-empty">No selected items match this search.</div>
           }
         } @else {
           <div class="empty-state">No items added yet.</div>
@@ -210,7 +220,8 @@
       <section class="totals-card">
         <div><span>Subtotal</span><strong>{{ subtotal | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div><span>Discount</span><strong>- {{ discountAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-        <div><span>Tax</span><strong>{{ taxAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Service Charge {{ serviceChargePercent }}%</span><strong>{{ serviceChargeAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span>GST {{ gstPercent }}%</span><strong>{{ taxAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div class="grand-total"><span>Total</span><strong>{{ grandTotal | currency:'INR':'symbol':'1.2-2' }}</strong></div>
       </section>
     </p-card>
@@ -275,7 +286,7 @@
           placeholder="Choose payment mode"
           [options]="paymentModes"
           [model]="selectedPaymentMode"
-          (modelChange)="selectedPaymentMode = $event" />
+          (modelChange)="setPaymentMode('' + $event)" />
 
         <div class="payment-mode-grid">
           @for (mode of paymentModes; track mode.value) {
@@ -283,23 +294,62 @@
               type="button"
               class="payment-tile"
               [class.active]="selectedPaymentMode === mode.value"
-              (click)="selectedPaymentMode = '' + mode.value">
+              (click)="setPaymentMode('' + mode.value)">
               {{ mode.label }}
             </button>
           }
         </div>
 
-        <app-text-field
-          label="Received Amount"
-          inputId="receivedAmount"
-          placeholder="Enter received amount"
-          [model]="receivedAmountInput"
-          (modelChange)="onReceivedAmountChange($event)" />
+        @if (isCashPayment) {
+          <app-text-field
+            label="Received Amount"
+            inputId="receivedAmount"
+            placeholder="Enter received amount"
+            [model]="receivedAmountInput"
+            (modelChange)="onReceivedAmountChange($event)" />
 
-        <div class="payment-balance" [class.change-positive]="balanceAmount >= 0">
-          <span>{{ balanceAmount >= 0 ? 'Change / Balance' : 'Pending Amount' }}</span>
-          <strong>{{ balanceAmount | currency:'INR':'symbol':'1.2-2' }}</strong>
-        </div>
+          <div class="payment-balance" [class.change-positive]="balanceAmount >= 0">
+            <span>{{ balanceAmount >= 0 ? 'Change / Balance' : 'Pending Amount' }}</span>
+            <strong>{{ balanceAmount | currency:'INR':'symbol':'1.2-2' }}</strong>
+          </div>
+        }
+
+        @if (isDigitalPayment) {
+          <div class="payment-reference-grid">
+            <app-text-field
+              [label]="paymentReferenceLabel"
+              inputId="paymentReference"
+              placeholder="Enter transaction reference"
+              [model]="paymentReference"
+              (modelChange)="onPaymentReferenceChange($event)" />
+          </div>
+
+          <div class="payment-note">
+            <span>Digital payment is marked against the bill after reference confirmation.</span>
+          </div>
+        }
+
+        @if (isCardPayment) {
+          <div class="payment-reference-grid two-columns">
+            <app-text-field
+              label="Approval Code"
+              inputId="approvalCode"
+              placeholder="Enter approval code"
+              [model]="approvalCode"
+              (modelChange)="onApprovalCodeChange($event)" />
+
+            <app-text-field
+              label="Card Last 4 Digits"
+              inputId="cardLastFour"
+              placeholder="Last 4 digits"
+              [model]="cardLastFour"
+              (modelChange)="onCardLastFourChange($event)" />
+          </div>
+
+          <div class="payment-note">
+            <span>Use terminal approval code and last 4 digits for settlement tracking.</span>
+          </div>
+        }
       </div>
     </section>
 
@@ -310,12 +360,16 @@
           <strong>{{ currentCustomerLabel }}</strong>
         </div>
         <div>
-          <span>Received</span>
-          <strong>{{ +(receivedAmountInput || 0) | currency:'INR':'symbol':'1.2-2' }}</strong>
+          <span>{{ settlementSummaryLabel }}</span>
+          @if (isCashPayment) {
+            <strong>{{ +(settlementSummaryValue || 0) | currency:'INR':'symbol':'1.2-2' }}</strong>
+          } @else {
+            <strong>{{ settlementSummaryValue }}</strong>
+          }
         </div>
         <div>
-          <span>{{ balanceAmount >= 0 ? 'Balance' : 'Pending' }}</span>
-          <strong>{{ balanceAmount | currency:'INR':'symbol':'1.2-2' }}</strong>
+          <span>{{ isCashPayment ? (balanceAmount >= 0 ? 'Balance' : 'Pending') : 'Amount To Collect' }}</span>
+          <strong>{{ (isCashPayment ? balanceAmount : grandTotal) | currency:'INR':'symbol':'1.2-2' }}</strong>
         </div>
       </div>
 

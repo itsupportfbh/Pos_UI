@@ -4,8 +4,8 @@
 
 .billing-page {
   display: grid;
-  gap: 0.55rem;
-  padding: 0.35rem 0 0.65rem;
+  gap: 0.45rem;
+  padding: 0.25rem 0 0.45rem;
 }
 
 .billing-header h1,
@@ -30,7 +30,7 @@
 .billing-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .summary-card {
@@ -38,7 +38,7 @@
   border: 1px solid var(--app-border);
   border-radius: 1rem;
   background: var(--app-surface);
-  padding: 0.65rem 0.85rem;
+  padding: 0.55rem 0.75rem;
   box-shadow: var(--app-shadow);
 }
 
@@ -54,14 +54,14 @@
 .summary-card strong {
   display: block;
   margin-top: 0.05rem;
-  font-size: 1rem;
+  font-size: 0.96rem;
   color: var(--app-text);
 }
 
 .billing-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(340px, 0.95fr);
-  gap: 0.55rem;
+  gap: 0.45rem;
   align-items: start;
 }
 
@@ -71,15 +71,14 @@
 
 .mode-switch,
 .service-pills,
-.discount-type-toggle,
-.payment-mode-grid {
+.discount-type-toggle {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
 .mode-switch {
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.35rem;
 }
 
 .mode-pill,
@@ -95,13 +94,26 @@
 
 .mode-pill,
 .service-pill {
-  padding: 0.48rem 0.85rem;
+  padding: 0.4rem 0.72rem;
+  font-size: 0.92rem;
+}
+
+.service-pills {
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+}
+
+.service-pill {
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .payment-tile {
-  min-width: 8.5rem;
-  padding: 0.62rem 0.8rem;
+  min-width: 0;
+  padding: 0.48rem 0.22rem;
   text-align: center;
+  white-space: nowrap;
+  font-size: 0.84rem;
 }
 
 .mode-pill.active,
@@ -114,9 +126,9 @@
 
 .lookup-tools {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 0.45rem;
-  padding: 0.55rem;
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.9fr);
+  gap: 0.35rem;
+  padding: 0.45rem;
   border: 1px solid var(--app-border);
   border-radius: 0.9rem;
   background: linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.04), rgba(var(--app-primary-rgb), 0.02));
@@ -153,8 +165,8 @@
 .product-grid,
 .cart-list {
   display: grid;
-  gap: 0.45rem;
-  margin-top: 0.45rem;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
 }
 
 .order-card,
@@ -174,8 +186,8 @@
 
 .order-card {
   display: grid;
-  gap: 0.45rem;
-  padding: 0.68rem;
+  gap: 0.35rem;
+  padding: 0.58rem;
   cursor: pointer;
 }
 
@@ -251,8 +263,8 @@
 .product-card {
   display: grid;
   gap: 0.35rem;
-  min-height: 8rem;
-  padding: 0.7rem;
+  min-height: 7.2rem;
+  padding: 0.6rem;
 }
 
 .product-category {
@@ -280,21 +292,28 @@
 }
 
 .cart-section-title {
-  margin-top: 0.45rem;
-  padding-top: 0.4rem;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
   border-top: 1px solid var(--app-border);
 }
 
 .cart-section-title.compact {
-  margin-top: 0.4rem;
+  margin-top: 0.3rem;
 }
 
 .cart-list {
   margin-top: 0.3rem;
+  max-height: 14.5rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.cart-search-row {
+  margin-top: 0.25rem;
 }
 
 .cart-item {
-  padding: 0.58rem 0.65rem;
+  padding: 0.5rem 0.58rem;
 }
 
 .cart-item-main {
@@ -331,8 +350,8 @@
 
 .notes-box {
   width: 100%;
-  margin-top: 0.3rem;
-  padding: 0.65rem 0.8rem;
+  margin-top: 0.2rem;
+  padding: 0.55rem 0.72rem;
   border: 1px solid var(--app-border-strong);
   border-radius: 1rem;
   background: var(--app-surface-strong);
@@ -347,9 +366,9 @@
 }
 
 .totals-card {
-  margin-top: 0.3rem;
+  margin-top: 0.2rem;
   display: grid;
-  gap: 0.35rem;
+  gap: 0.28rem;
 }
 
 .grand-total {
@@ -364,14 +383,14 @@
 .checkout-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem;
+  gap: 0.35rem;
 }
 
 .payment-overview {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.45rem;
-  margin-bottom: 0.55rem;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
 }
 
 .payment-overview-card,
@@ -384,7 +403,7 @@
 .payment-overview-card {
   display: grid;
   gap: 0.15rem;
-  padding: 0.62rem 0.75rem;
+  padding: 0.52rem 0.65rem;
 }
 
 .payment-overview-card span,
@@ -397,7 +416,7 @@
 }
 
 .payment-overview-card strong {
-  font-size: 0.98rem;
+  font-size: 0.92rem;
 }
 
 .payment-overview-card.total-card {
@@ -407,13 +426,28 @@
 
 .payment-overview-card.total-card strong {
   color: var(--app-primary-strong);
-  font-size: 1.08rem;
+  font-size: 1rem;
+}
+
+.payment-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.payment-reference-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.payment-reference-grid.two-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .checkout-panel {
   display: grid;
-  gap: 0.55rem;
-  padding: 0.72rem;
+  gap: 0.4rem;
+  padding: 0.55rem;
 }
 
 .discount-row {
@@ -426,7 +460,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.55rem;
-  padding: 0.65rem 0.8rem;
+  padding: 0.55rem 0.7rem;
   border-radius: 0.9rem;
   background: rgba(22, 163, 74, 0.08);
 }
@@ -440,19 +474,28 @@
   color: #166534;
 }
 
+.payment-note {
+  padding: 0.45rem 0.6rem;
+  border: 1px dashed var(--app-border-strong);
+  border-radius: 0.85rem;
+  background: rgba(var(--app-primary-rgb), 0.04);
+  color: var(--app-text-muted);
+  font-size: 0.82rem;
+}
+
 .payment-footer {
   display: grid;
-  gap: 0.55rem;
-  margin-top: 0.65rem;
-  padding-top: 0.6rem;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
   border-top: 1px solid var(--app-border);
 }
 
 .payment-footer-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
-  padding: 0.68rem 0.8rem;
+  gap: 0.45rem;
+  padding: 0.58rem 0.72rem;
 }
 
 .payment-footer-summary div {
@@ -461,11 +504,15 @@
 }
 
 .empty-state {
-  padding: 0.85rem;
+  padding: 0.68rem;
   border: 1px dashed var(--app-border-strong);
   border-radius: 1rem;
   text-align: center;
   color: var(--app-text-muted);
+}
+
+.compact-empty {
+  padding: 0.55rem;
 }
 
 .action-row {
@@ -493,6 +540,14 @@
   .cart-card {
     position: static;
   }
+
+  .payment-mode-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .payment-reference-grid.two-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
@@ -507,5 +562,13 @@
   .cart-header,
   .cart-item {
     display: grid;
+  }
+
+  .payment-mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .service-pills {
+    flex-wrap: wrap;
   }
 }
