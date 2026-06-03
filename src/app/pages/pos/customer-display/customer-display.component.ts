@@ -47,8 +47,10 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   readyOrderCount = 0;
   inProgressOrderCount = 0;
   currentTime = new Date();
-  organizationName = 'Unity work POS';
+  organizationName = '';
   branchName = '';
+  OrgId=0;
+  BranchId=0;
   organizationLogoUrl = '';
 viewReady = false;
   constructor(
@@ -65,7 +67,8 @@ viewReady = false;
     this.organizationName = this.getStringValue(this.userDetails,  'OrgName') || 'Unity work POS';
     this.branchName = this.getStringValue(this.userDetails, 'BranchName') || '';
 
-
+     this.OrgId = Number(this.userDetails.OrgId || 0);
+     this.BranchId = Number(this.userDetails.BranchId || 0);
 
     setTimeout(() => {
     this.viewReady = true;
@@ -84,7 +87,7 @@ viewReady = false;
   }
 
   loadCustomerOrders(): void {
-    this.displayMenuItemsService.getAll(this.getUserOrgId(), this.getUserBranchId()).subscribe({
+    this.displayMenuItemsService.getAll(this.OrgId, this.BranchId).subscribe({
       next: (response: any) => {
         const orders = this.getResponseList(response)
           .filter((order: any) => this.isCustomerDisplayOrder(order));
@@ -114,17 +117,17 @@ viewReady = false;
   }
 
   private mapApiOrderToCustomerOrder(order: any): CustomerDisplayOrder {
-    const id = this.getNumberValue(order, 'Orderid', 'orderid', 'OrderId', 'orderId', 'Id', 'id');
-    const orderNo = this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo');
+    const id = this.getNumberValue(order, 'Orderid',  'OrderId');
+    const orderNo = this.getStringValue(order, 'OrderNumber');
 
     return {
       trackKey: `${id || orderNo || 'order'}-${this.getStringValue(order, 'UpdatedDate', 'updatedDate', 'CreatedDate', 'createdDate')}`,
       orderNo,
       status: this.getOrderStatus(order),
-      table: this.getStringValue(order, 'TableName', 'tableName', 'TableCode', 'tableCode', 'TableNo', 'tableNo', 'Tableid', 'tableid', 'TableId', 'tableId', 'TableID', 'tableID') || 'Counter',
-      orderType: this.getStringValue(order, 'OrderType', 'orderType', 'Ordertype', 'ordertype'),
-      customerName: this.getStringValue(order, 'CustomerName', 'customerName', 'GuestName', 'guestName') || 'Walk-in Guest',
-      sentAt: this.getStringValue(order, 'CreatedDate', 'createdDate', 'UpdatedDate', 'updatedDate')
+      table: this.getStringValue(order, 'TableName') || 'Counter',
+      orderType: this.getStringValue(order, 'OrderType'),
+      customerName: this.getStringValue(order, 'CustomerName', ) || 'Walk-in Guest',
+      sentAt: this.getStringValue(order, 'CreatedDate')
     };
   }
 
@@ -298,7 +301,7 @@ viewReady = false;
   }
 
   private getOrderStatus(order: any): string {
-    return this.getStatusLabel(this.getRawValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus', 'Status', 'status'));
+    return this.getStatusLabel(this.getRawValue(order, 'OrderStatus'));
   }
 
   private getStatusCode(status: unknown): number {
@@ -367,17 +370,9 @@ viewReady = false;
       && visibleStatuses.includes(statusCode);
   }
 
-  private getUserOrgId(): number {
-    return Number(this.userDetails.RoleId || 0) === 1
-      ? 0
-      : this.getNumberValue(this.userDetails, 'OrgId');
-  }
+  
 
-  private getUserBranchId(): number {
-    return Number(this.userDetails.IsAdmin || 0) === 1 || Number(this.userDetails.RoleId || 0) === 1
-      ? 0
-      : this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
-  }
+  
 
   private getSessionOrgId(): number {
     return this.getNumberValue(this.userDetails, 'OrgId');

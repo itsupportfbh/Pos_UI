@@ -220,8 +220,8 @@
       <section class="totals-card">
         <div><span>Subtotal</span><strong>{{ subtotal | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div><span>Discount</span><strong>- {{ discountAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-        <div><span>Service Charge {{ serviceChargePercent }}%</span><strong>{{ serviceChargeAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-        <div><span>GST {{ gstPercent }}%</span><strong>{{ taxAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Service Charge</span><strong>{{ serviceChargeAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Tax</span><strong>{{ taxAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div class="grand-total"><span>Total</span><strong>{{ grandTotal | currency:'INR':'symbol':'1.2-2' }}</strong></div>
       </section>
     </p-card>
@@ -379,7 +379,8 @@
           <p-button label="Verify & Deliver" icon="pi pi-send" severity="secondary" [outlined]="true" (onClick)="markDelivered()" />
         }
         <p-button label="Print Bill" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printBill()" />
-        <p-button label="Generate Bill" icon="pi pi-check-circle" (onClick)="generateBill()" />
+        <p-button [label]="isGeneratingBill ? 'Generating' : 'Generate Bill'" icon="pi pi-check-circle"
+          [disabled]="isGeneratingBill || !cartItems.length" (onClick)="generateBill()" />
       </div>
     </section>
   </p-card>

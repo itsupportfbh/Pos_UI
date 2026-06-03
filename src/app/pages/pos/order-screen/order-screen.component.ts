@@ -55,7 +55,7 @@ const DEFAULT_CATEGORY_ICON = 'pi pi-shopping-bag';
 })
 export class OrderScreenComponent implements OnInit {
   readonly orderTypes = ['Dine In', 'Take Away', 'Delivery'];
-  readonly servingTypes = ['Self Service', 'Server Delivery'];
+  readonly servingTypes = ['Server Delivery', 'Self Service'];
 
   userDetails: any = {};
   orgId = 0;
@@ -94,6 +94,7 @@ export class OrderScreenComponent implements OnInit {
   private currentHoldOrderEntityNo = 0;
   private readonly orderEntityNoCache = new Map<string, number>();
   private menuSearchTimer: ReturnType<typeof setTimeout> | null = null;
+  private menuLoadRequestId = 0;
 
   activeCategoryId = 0;
   activeSubCategoryId = 0;
@@ -246,6 +247,7 @@ export class OrderScreenComponent implements OnInit {
   }
 
   async loadTopSixMenus(): Promise<void> {
+    const requestId = ++this.menuLoadRequestId;
     this.isMenuLoading = true;
 
     try {
@@ -255,16 +257,25 @@ export class OrderScreenComponent implements OnInit {
           this.getScopedBranchId()
         )
       );
+      if (requestId !== this.menuLoadRequestId) {
+        return;
+      }
+
       this.bindMenuRows(response);
     } catch {
-      this.clearMenuItems();
-      this.toast.error('Load Failed', 'Unable to load top menu and combo menu items.');
+      if (requestId === this.menuLoadRequestId) {
+        this.clearMenuItems();
+        this.toast.error('Load Failed', 'Unable to load top menu and combo menu items.');
+      }
     } finally {
-      this.isMenuLoading = false;
+      if (requestId === this.menuLoadRequestId) {
+        this.isMenuLoading = false;
+      }
     }
   }
 
   async loadMenus(): Promise<void> {
+    const requestId = ++this.menuLoadRequestId;
     this.isMenuLoading = true;
 
     try {
@@ -272,17 +283,25 @@ export class OrderScreenComponent implements OnInit {
         this.orderScreenService.getAllMenuAndComboMenu(
           this.getScopedOrgId(),
           this.getScopedBranchId(),
-          this.activeCategoryId || null,
-          this.activeSubCategoryId || null,
+          this.activeCategoryId > 0 ? this.activeCategoryId : null,
+        this.activeSubCategoryId > 0 ? this.activeSubCategoryId : null,
           this.searchText.trim()
         )
       );
+      if (requestId !== this.menuLoadRequestId) {
+        return;
+      }
+
       this.bindMenuRows(response);
     } catch {
-      this.clearMenuItems();
-      this.toast.error('Load Failed', 'Unable to load menu and combo menu items.');
+      if (requestId === this.menuLoadRequestId) {
+        this.clearMenuItems();
+        this.toast.error('Load Failed', 'Unable to load menu and combo menu items.');
+      }
     } finally {
-      this.isMenuLoading = false;
+      if (requestId === this.menuLoadRequestId) {
+        this.isMenuLoading = false;
+      }
     }
   }
 
@@ -463,18 +482,26 @@ export class OrderScreenComponent implements OnInit {
     return floorName ? `${this.selectedTable} - ${floorName}` : this.selectedTable;
   }
 
-  updateSearchText(event: Event): void {
-    this.searchText = (event.target as HTMLInputElement).value;
-    this.updateFilteredMenuItems();
+ updateSearchText(event: Event): void {
+  this.searchText = (event.target as HTMLInputElement).value;
 
-    if (this.menuSearchTimer) {
-      clearTimeout(this.menuSearchTimer);
+  if (this.menuSearchTimer) {
+    clearTimeout(this.menuSearchTimer);
+  }
+
+  this.menuSearchTimer = setTimeout(async () => {
+    const search = this.searchText.trim();
+
+    // ✅ search box clear pannumbothu default items show
+    if (!search && this.activeCategoryId === 0 && this.activeSubCategoryId === 0) {
+      await this.loadTopSixMenus();
+      return;
     }
 
-    this.menuSearchTimer = setTimeout(() => {
-      void this.loadMenus();
-    }, 300);
-  }
+    // ✅ category/subcategory selected iruntha, empty search also filtered menu load
+    await this.loadMenus();
+  }, 300);
+}
 
   updateCustomerName(event: Event): void {
     this.customerName = this.normalizeInputText((event.target as HTMLInputElement).value);
@@ -699,7 +726,10 @@ export class OrderScreenComponent implements OnInit {
       OrderType: this.activeOrderType,
       Ordertype: this.activeOrderType,
       orderType: this.activeOrderType,
+      ServingType: this.activeServingType,
       servingType: this.activeServingType,
+      ServiceType: this.activeServingType,
+      serviceType: this.activeServingType,
       
       OrderStatus: status,
       ItemCount: this.itemCount,

@@ -29,15 +29,28 @@
 
   <section class="order-layout">
     <p-card class="menu-panel feature-card">
-      <div class="order-tools">
-        <div class="tool-block tool-block-search">
-          <span class="tool-label">Find Items</span>
-          <label class="search-field" for="menu-search">
-            <i class="pi pi-search"></i>
-            <input id="menu-search" type="search" placeholder="Search menu items" [value]="searchText" (input)="updateSearchText($event)" />
+
+      <div class="customer-tools">
+        <div class="tool-block">
+          <span class="tool-label">Customer Name</span>
+          <label class="search-field" [class.field-invalid]="isCustomerNameInvalid" for="customer-name">
+            <i class="pi pi-user"></i>
+            <input id="customer-name" type="text" placeholder="Enter customer name" [value]="customerName"
+              [attr.aria-invalid]="isCustomerNameInvalid" (input)="updateCustomerName($event)" />
           </label>
         </div>
 
+        <div class="tool-block">
+          <span class="tool-label">Phone Number</span>
+          <label class="search-field" [class.field-invalid]="isPhoneNumberInvalid" for="customer-phone">
+            <i class="pi pi-phone"></i>
+            <input id="customer-phone" type="text" inputmode="numeric" maxlength="13" placeholder="Enter phone number"
+              [value]="ContactNumber || ''" [attr.aria-invalid]="isPhoneNumberInvalid" (input)="updateCustomerPhone($event)" />
+          </label>
+        </div>
+      </div>
+
+      <div class="order-tools">
         <div class="tool-block tool-block-toggle">
           <span class="tool-label">Order Type</span>
           <div class="order-type-toggle" aria-label="Order type">
@@ -59,24 +72,12 @@
             }
           </div>
         </div>
-      </div>
 
-      <div class="customer-tools">
-        <div class="tool-block">
-          <span class="tool-label">Customer Name</span>
-          <label class="search-field" [class.field-invalid]="isCustomerNameInvalid" for="customer-name">
-            <i class="pi pi-user"></i>
-            <input id="customer-name" type="text" placeholder="Enter customer name" [value]="customerName"
-              [attr.aria-invalid]="isCustomerNameInvalid" (input)="updateCustomerName($event)" />
-          </label>
-        </div>
-
-        <div class="tool-block">
-          <span class="tool-label">Phone Number</span>
-          <label class="search-field" [class.field-invalid]="isPhoneNumberInvalid" for="customer-phone">
-            <i class="pi pi-phone"></i>
-            <input id="customer-phone" type="text" inputmode="numeric" maxlength="13" placeholder="Enter phone number"
-              [value]="ContactNumber || ''" [attr.aria-invalid]="isPhoneNumberInvalid" (input)="updateCustomerPhone($event)" />
+        <div class="tool-block tool-block-search">
+          <span class="tool-label">Find Items</span>
+          <label class="search-field" for="menu-search">
+            <i class="pi pi-search"></i>
+            <input id="menu-search" type="search" placeholder="Search menu items" [value]="searchText" (input)="updateSearchText($event)" />
           </label>
         </div>
       </div>
