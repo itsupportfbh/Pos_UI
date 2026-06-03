@@ -182,6 +182,8 @@ export class BillingComponent implements OnInit {
     this.updateBillingSummary();
   }
 
+  
+
   async loadBillingOrders(): Promise<void> {
     this.isLoadingOrders = true;
     this.applyUserScope();
