@@ -26,7 +26,8 @@ type ReservationRow = {
   CustomerName: string;
   CustomerMobile: string;
   ReservationDate: string;
-  Reservationtime: string;
+  ReservationFromtime: string;
+  ReservationTotime: string;
   TableName: string;
   CustomerEmail: string;
   Guestcount: number;
@@ -47,7 +48,8 @@ const RESERVATION_COLUMNS: SharedTableColumn<ReservationRow>[] = [
   { field: 'CustomerName', header: 'Customer', sortable: true, width: '14rem' },
   { field: 'CustomerMobile', header: 'Phone', sortable: true, width: '11rem' },
   { field: 'ReservationDate', header: 'Date', sortable: true, width: '10rem' },
-  { field: 'Reservationtime', header: 'Time', sortable: true, width: '9rem' },
+  { field: 'ReservationFromtime', header: 'From Time', sortable: true, width: '9rem' },
+  { field: 'ReservationTotime', header: 'To Time', sortable: true, width: '9rem' },
   { field: 'Guestcount', header: 'Guests', sortable: true, width: '7rem' }
 ];
 
@@ -101,7 +103,8 @@ export class ReservationComponent {
   dialogGuestName = '';
   dialogContactNo = '';
   dialogVisitDate = '';
-  dialogVisitTime = '';
+  dialogVisitFromTime = '';
+  dialogVisitToTime = '';
   dialogTableName = '';
   dialogGuestCount = '';
   dialogNotes = '';
@@ -127,7 +130,8 @@ export class ReservationComponent {
     CustomerName: '',
     CustomerMobile: '',
     ReservationDate: '',
-    Reservationtime: '',
+    ReservationFromtime: '',
+    ReservationTotime: '',
     TableName: '',
     CustomerEmail: '',
     Guestcount: 0,
@@ -313,7 +317,8 @@ export class ReservationComponent {
       CustomerName: this.dialogGuestName,
       CustomerMobile: this.dialogContactNo,
       ReservationDate: this.dialogVisitDate,
-      Reservationtime: this.dialogVisitTime + ":00",
+      ReservationFromtime: this.dialogVisitFromTime + ":00",
+      ReservationTotime: this.dialogVisitToTime + ":00",
       TableName: this.dialogTableName,
       CustomerEmail: this.dialogEmail,
       Guestcount: Number(this.dialogGuestCount),
@@ -324,7 +329,7 @@ export class ReservationComponent {
       IsActive: this.dialogModel.IsActive ?? true,
       IsDeleted: false,
       EntityNo: this.reservationEntityNo,
-      branchId: this.BranchId
+      BranchId: this.BranchId
     };
     if (this.isEditMode && this.editingReservation) {
       payload.Id = this.editingReservation;
@@ -405,11 +410,12 @@ export class ReservationComponent {
         this.dialogGuestName = String(reservation?.customerName ?? reservation?.CustomerName ?? row.CustomerName);
         this.dialogContactNo = String(reservation?.customerMobile ?? reservation?.CustomerMobile ?? row.CustomerMobile);
         this.dialogVisitDate = toDateInput(reservation?.reservationDate ?? reservation?.ReservationDate ?? row.ReservationDate);
-        this.dialogVisitTime = toTimeInput(reservation?.reservationTime ?? reservation?.Reservationtime ?? row.Reservationtime);
+        this.dialogVisitFromTime = toTimeInput(reservation?.reservationFromtime ?? reservation?.ReservationFromtime ?? row.ReservationFromtime);
+        this.dialogVisitToTime = toTimeInput(reservation?.reservationTotime ?? reservation?.ReservationTotime ?? row.ReservationTotime);
         this.dialogTableName = reservation?.tableName ?? reservation?.TableName ?? row.TableName;
         this.dialogEmail = reservation?.customerEmail ?? reservation?.CustomerEmail ?? row.CustomerEmail;
         this.dialogGuestCount = String(reservation?.guestCount ?? reservation?.GuestCount ?? row.Guestcount);
-        this.dialogNotes = reservation?.notes ?? reservation?.Notes ?? row.Specialrequests;
+        this.dialogNotes = reservation?.specialrequests ?? reservation?.Specialrequests ?? row.Specialrequests;
         // Normalize selected table ids to an array of numeric ids so the multiselect
         // can match against the `tablesOptions` values (which are numbers).
         this.selectedTables = (Array.isArray(rawTableIds) ? rawTableIds : []).map((t: any) => {
@@ -422,21 +428,8 @@ export class ReservationComponent {
         this.dialogCreatedDate = reservation?.createdDate ?? reservation?.CreatedDate;
         this.dialogUpdatedBy = reservation?.updatedBy ?? reservation?.UpdatedBy ?? 1;
         this.dialogUpdatedDate = reservation?.updatedDate ?? reservation?.UpdatedDate;
-        this.dialogIsDeleted = reservation?.isDeleted ?? reservation?.IsDeleted ?? false
-
-
-
-        // this.dialogReservationNo = String(this.dialogModel.ReservationNo ?? '');
-        // this.dialogGuestName = this.dialogModel.CustomerName ?? '';
-        // this.dialogContactNo = this.dialogModel.CustomerMobile ?? '';
-        // this.dialogVisitDate = this.dialogModel.ReservationDate ?? '';
-        // this.dialogVisitTime = this.dialogModel.Reservationtime ?? '';
-        // this.dialogTableName = this.dialogModel.TableName ?? '';
-        // this.dialogEmail = this.dialogModel.CustomerEmail ?? '';
-        // this.dialogGuestCount = String(this.dialogModel.Guestcount ?? '');
-        // this.dialogNotes = this.dialogModel.Specialrequests ?? '';
-        // this.selectedTables = (this.dialogModel.TableIds ?? []).map((item) => Number(item.TableId));
-
+        this.dialogIsDeleted = reservation?.isDeleted ?? reservation?.IsDeleted ?? false;
+ 
         this.showAddDialog = true;
         //this.toast.info('Edit Mode', `Editing ${row.name}.`);
       },
@@ -540,7 +533,8 @@ export class ReservationComponent {
     this.dialogGuestName = '';
     this.dialogContactNo = '';
     this.dialogVisitDate = '';
-    this.dialogVisitTime = '';
+    this.dialogVisitFromTime = '';
+    this.dialogVisitToTime = '';
     this.dialogTableName = '';
     this.dialogGuestCount = '';
     this.dialogNotes = '';
@@ -598,7 +592,7 @@ export class ReservationComponent {
       const datePart = String(row.ReservationDate ?? '')
         .split('T')[0];
 
-      const timePart = String(row.Reservationtime ?? '00:00')
+      const timePart = String(row.ReservationFromtime ?? '00:00')
         .split(':')
         .slice(0, 2)
         .join(':');
@@ -615,11 +609,11 @@ export class ReservationComponent {
     const activeRow =
       upcomingReservations.sort((a, b) => {
         const aDate = new Date(
-          `${String(a.ReservationDate).split('T')[0]}T${String(a.Reservationtime).slice(0, 5)}:00`
+          `${String(a.ReservationDate).split('T')[0]}T${String(a.ReservationFromtime).slice(0, 5)}:00`
         ).getTime();
 
         const bDate = new Date(
-          `${String(b.ReservationDate).split('T')[0]}T${String(b.Reservationtime).slice(0, 5)}:00`
+          `${String(b.ReservationDate).split('T')[0]}T${String(b.ReservationFromtime).slice(0, 5)}:00`
         ).getTime();
 
         return aDate - bDate;
@@ -645,7 +639,7 @@ export class ReservationComponent {
     this.previewGuestName = activeRow?.CustomerName ?? 'Rahul Family';
 
     this.previewVisitSlot = activeRow
-      ? `${formatDate(activeRow.ReservationDate)} ${formatTime(activeRow.Reservationtime)}`
+      ? `${formatDate(activeRow.ReservationDate)} ${formatTime(activeRow.ReservationFromtime)}`
       : '19 May, 8:00 PM';
 
     this.previewTableName = activeRow?.TableName ?? 'Garden 3';
