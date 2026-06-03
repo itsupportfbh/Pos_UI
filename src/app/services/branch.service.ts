@@ -20,6 +20,7 @@ export interface Branch {
   State?: number;
   PostalCode?: number;
   Country?: number;
+  LanguageCode?: string;
   Remarks?: string;
   OrgId?: number;
   IsActive?: boolean;

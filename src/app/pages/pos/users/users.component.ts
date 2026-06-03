@@ -361,6 +361,7 @@ export class UsersComponent implements OnInit {
         label: country.Name ?? '',
         value: country.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.countryOptions = [];
       this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
@@ -410,6 +411,7 @@ export class UsersComponent implements OnInit {
         label: state.Name ?? '',
         value: state.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.stateOptions = [];
       this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
@@ -437,6 +439,7 @@ export class UsersComponent implements OnInit {
         label: city.Name ?? '',
         value: city.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.cityOptions = [];
       this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
@@ -601,6 +604,7 @@ export class UsersComponent implements OnInit {
       }
 
       this.dialogCity = user.City || null;
+      this.changeDetector.detectChanges();
     } catch {
       this.toast.error('Load Failed', 'Unable to load user details. Please check and try again.');
     }

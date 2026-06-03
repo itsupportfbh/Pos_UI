@@ -20,7 +20,7 @@
         <i class="pi pi-search"></i>
         <input
           type="text"
-          placeholder="Search menu"
+          [placeholder]="'menu.search_placeholder' | appTranslate:'Search menu'"
           [value]="menuSearchText"
           (input)="onMenuSearchChange($any($event.target).value)"
         />
@@ -58,7 +58,7 @@
 
       @if (!filteredMenuItems.length) {
         <section class="menu-empty-state">
-          <span>No menus found.</span>
+          <span>{{ 'menu.no_results' | appTranslate:'No menus found.' }}</span>
         </section>
       }
     </nav>

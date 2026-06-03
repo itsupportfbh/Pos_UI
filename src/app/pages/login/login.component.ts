@@ -10,8 +10,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { PasswordModule } from 'primeng/password';
 import { firstValueFrom } from 'rxjs';
+import { AppTranslatePipe } from '../../pipes/app-translate.pipe';
 import { TextFieldComponent } from '../../components/form/text-field.component';
+import { AppLocaleService } from '../../services/app-locale.service';
 import { AppToastService } from '../../services/app-toast.service';
+import { AppTranslationService } from '../../services/app-translation.service';
+import { CommonService } from '../../services/common.service';
 import { LoginService } from '../../services/login.service';
 import { MenuService } from '../../services/menu.service';
 import { ShiftAssignmentComponent } from '../pos/components/shift-assignment/shift-assignment.component';
@@ -19,7 +23,7 @@ import { ShiftAssignmentComponent } from '../pos/components/shift-assignment/shi
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, CardModule, DialogModule, InputTextModule, PasswordModule, ButtonModule, MessageModule, TextFieldComponent, ShiftAssignmentComponent],
+  imports: [CommonModule, FormsModule, CardModule, DialogModule, InputTextModule, PasswordModule, ButtonModule, MessageModule, TextFieldComponent, ShiftAssignmentComponent, AppTranslatePipe],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css'
 })
@@ -47,11 +51,18 @@ export class LoginComponent {
 
   constructor(
     private readonly router: Router,
+    private readonly appLocale: AppLocaleService,
+    private readonly appTranslation: AppTranslationService,
     private readonly toast: AppToastService,
+    private readonly commonService: CommonService,
     private readonly loginService: LoginService,
     private readonly menuService: MenuService,
     private readonly changeDetector: ChangeDetectorRef
   ) { }
+
+  t(key: string, fallbackText: string): string {
+    return this.appTranslation.t(key, fallbackText);
+  }
 
   async submit(): Promise<void> {
     this.loginSaving = true;
@@ -86,13 +97,22 @@ export class LoginComponent {
           return;
         }
 
-        this.toast.error('Login Failed', 'No role details found for this login.');
+        this.toast.error(
+          this.t('login.failed_title', 'Login Failed'),
+          this.t('login.no_role_details', 'No role details found for this login.')
+        );
         return;
       }
 
-      this.toast.error('Login Failed', 'Invalid email or password.');
+      this.toast.error(
+        this.t('login.failed_title', 'Login Failed'),
+        this.t('login.invalid_credentials', 'Invalid email or password.')
+      );
     } catch {
-      this.toast.error('Login Failed', 'Unable to login. Please check your credentials and try again.');
+      this.toast.error(
+        this.t('login.failed_title', 'Login Failed'),
+        this.t('login.unable_to_login', 'Unable to login. Please check your credentials and try again.')
+      );
     } finally {
       this.loginSaving = false;
     }
@@ -111,15 +131,39 @@ export class LoginComponent {
       OrganizationId: selectedUserDetails.OrganizationId ?? selectedUserDetails.OrgId ?? '',
       OrgId: selectedUserDetails.OrgId ?? selectedUserDetails.OrganizationId ?? '',
       OrgName: selectedUserDetails.OrgName ?? '',
+      OrgLanguageCode: selectedUserDetails.OrgLanguageCode ?? '',
+      OrgCurrencyCode: selectedUserDetails.OrgCurrencyCode ?? '',
+      OrgCurrencyName: selectedUserDetails.OrgCurrencyName ?? '',
+      OrgCurrencySymbol: selectedUserDetails.OrgCurrencySymbol ?? '',
+      OrgTimezone: selectedUserDetails.OrgTimezone ?? '',
+      OrgCountry: selectedUserDetails.OrgCountry ?? 0,
+      OrgState: selectedUserDetails.OrgState ?? 0,
+      OrgCity: selectedUserDetails.OrgCity ?? 0,
       BranchId: selectedUserDetails.BranchId ?? '',
-      BranchName: selectedUserDetails.BranchName ?? ''
+      BranchName: selectedUserDetails.BranchName ?? '',
+      BranchLanguageCode: selectedUserDetails.BranchLanguageCode ?? '',
+      BranchCurrencyCode: selectedUserDetails.BranchCurrencyCode ?? '',
+      BranchCurrencyName: selectedUserDetails.BranchCurrencyName ?? '',
+      BranchCurrencySymbol: selectedUserDetails.BranchCurrencySymbol ?? '',
+      BranchTimezone: selectedUserDetails.BranchTimezone ?? '',
+      BranchCountry: selectedUserDetails.BranchCountry ?? 0,
+      BranchState: selectedUserDetails.BranchState ?? 0,
+      BranchCity: selectedUserDetails.BranchCity ?? 0,
+      LanguageCode: this.firstNonEmpty(
+        selectedUserDetails.BranchLanguageCode,
+        selectedUserDetails.OrgLanguageCode
+      )
     };
+
+    await this.refreshUserLocaleContext(userDetails);
 
     const orgId = Number(userDetails.OrganizationId ?? userDetails.OrgId ?? 0);
     const roleId = Number(userDetails.RoleId ?? 0);
 
     localStorage.setItem('loginSession', JSON.stringify(this.loginSession));
     localStorage.setItem('userDetails', JSON.stringify(userDetails));
+    this.appLocale.syncFromUserDetails(userDetails);
+    await this.appTranslation.reload(userDetails.LanguageCode);
 
     try {
       this.menuService.clearMenuCache();
@@ -128,14 +172,20 @@ export class LoginComponent {
       if (!this.accessibleRoutes.length) {
         this.clearLoginState();
         this.showRoleDialog = false;
-        this.toast.warn('No Page Rights', 'There is no any page rights for this user role.');
+        this.toast.warn(
+          this.t('login.no_page_rights_title', 'No Page Rights'),
+          this.t('login.no_page_rights_message', 'There is no any page rights for this user role.')
+        );
         this.changeDetector.detectChanges();
         return;
       }
     } catch {
       this.clearLoginState();
       this.showRoleDialog = false;
-      this.toast.error('Login Failed', 'Unable to load page rights for this user role.');
+      this.toast.error(
+        this.t('login.failed_title', 'Login Failed'),
+        this.t('login.unable_to_load_page_rights', 'Unable to load page rights for this user role.')
+      );
       this.changeDetector.detectChanges();
       return;
     }
@@ -158,7 +208,10 @@ export class LoginComponent {
       if (!accessibleRoutes.length) {
         this.clearLoginState();
         this.showShiftAssignmentDialog = false;
-        this.toast.warn('No Page Rights', 'There is no any page rights for this user role.');
+        this.toast.warn(
+          this.t('login.no_page_rights_title', 'No Page Rights'),
+          this.t('login.no_page_rights_message', 'There is no any page rights for this user role.')
+        );
         this.changeDetector.detectChanges();
         return;
       }
@@ -166,15 +219,18 @@ export class LoginComponent {
       this.showShiftAssignmentDialog = false;
 
       this.toast.success(
-        'Login Successful',
-        `Welcome back, ${this.selectedUserDetails?.UserName || 'User'}.`
+        this.t('login.success_title', 'Login Successful'),
+        `${this.t('login.welcome_back_prefix', 'Welcome back,')} ${this.selectedUserDetails?.UserName || this.t('common.user', 'User')}.`
       );
 
       await this.router.navigate(['/pos', accessibleRoutes[0]]);
     } catch {
       this.clearLoginState();
       this.showShiftAssignmentDialog = false;
-      this.toast.error('Login Failed', 'Unable to load page rights for this user role.');
+      this.toast.error(
+        this.t('login.failed_title', 'Login Failed'),
+        this.t('login.unable_to_load_page_rights', 'Unable to load page rights for this user role.')
+      );
       this.changeDetector.detectChanges();
     }
   }
@@ -201,26 +257,119 @@ export class LoginComponent {
     const email = this.forgotEmail.trim();
 
     if (!email) {
-      this.toast.warn('Email Required', 'Enter your email to continue with password reset.');
+      this.toast.warn(
+        this.t('login.email_required_title', 'Email Required'),
+        this.t('login.email_required_message', 'Enter your email to continue with password reset.')
+      );
       return;
     }
 
     if (!this.isForgotPasswordEmailValid) {
-      this.toast.warn('Invalid Email', this.forgotPasswordEmailMessage);
+      this.toast.warn(
+        this.t('login.invalid_email_title', 'Invalid Email'),
+        this.t('login.invalid_email_message', this.forgotPasswordEmailMessage)
+      );
       return;
     }
 
     this.showForgotPasswordDialog = false;
-    this.toast.info('Forgot Password Ready', `Password recovery is ready for ${email}. Connect the backend API to continue the actual reset flow.`);
+    this.toast.info(
+      this.t('login.forgot_password_ready_title', 'Forgot Password Ready'),
+      `${this.t('login.forgot_password_ready_prefix', 'Password recovery is ready for')} ${email}. ${this.t('login.forgot_password_ready_suffix', 'Connect the backend API to continue the actual reset flow.')}`
+    );
   }
 
   private clearLoginState(): void {
     localStorage.removeItem('loginSession');
     localStorage.removeItem('userDetails');
     localStorage.removeItem('shiftAssignment');
+    this.appTranslation.clear();
+    this.appLocale.clear();
     this.loginSession = null;
     this.selectedUserDetails = null;
     this.userDetailsList = [];
     this.accessibleRoutes = [];
+  }
+
+  private async refreshUserLocaleContext(userDetails: any): Promise<void> {
+    try {
+      const countriesResponse: any = await firstValueFrom(this.commonService.GetCountry());
+      const countries = countriesResponse?.result ?? [];
+
+      const orgCountry = countries.find((country: any) => Number(country.Id || 0) === Number(userDetails.OrgCountry || 0));
+      const branchCountry = countries.find((country: any) => Number(country.Id || 0) === Number(userDetails.BranchCountry || 0));
+
+      if (orgCountry) {
+        userDetails.OrgCurrencyCode = orgCountry.Currency ?? userDetails.OrgCurrencyCode ?? '';
+        userDetails.OrgCurrencyName = orgCountry.CurrencyName ?? userDetails.OrgCurrencyName ?? '';
+        userDetails.OrgCurrencySymbol = orgCountry.CurrencySymbol ?? userDetails.OrgCurrencySymbol ?? '';
+      }
+
+      if (branchCountry) {
+        userDetails.BranchCurrencyCode = branchCountry.Currency ?? userDetails.BranchCurrencyCode ?? '';
+        userDetails.BranchCurrencyName = branchCountry.CurrencyName ?? userDetails.BranchCurrencyName ?? '';
+        userDetails.BranchCurrencySymbol = branchCountry.CurrencySymbol ?? userDetails.BranchCurrencySymbol ?? '';
+      } else if (Number(userDetails.BranchId || 0) <= 0) {
+        userDetails.BranchCurrencyCode = '';
+        userDetails.BranchCurrencyName = '';
+        userDetails.BranchCurrencySymbol = '';
+      }
+
+      userDetails.OrgTimezone = await this.resolveTimezone(
+        Number(userDetails.OrgCountry || 0),
+        Number(userDetails.OrgState || 0),
+        Number(userDetails.OrgCity || 0),
+        userDetails.OrgTimezone
+      );
+
+      userDetails.BranchTimezone = await this.resolveTimezone(
+        Number(userDetails.BranchCountry || 0),
+        Number(userDetails.BranchState || 0),
+        Number(userDetails.BranchCity || 0),
+        userDetails.BranchTimezone
+      );
+
+      if (Number(userDetails.BranchId || 0) <= 0) {
+        userDetails.BranchLanguageCode = '';
+        userDetails.BranchTimezone = '';
+      }
+    } catch {
+      // Keep login working even if locale refresh endpoints are unavailable.
+    }
+  }
+
+  private async resolveTimezone(
+    countryId: number,
+    stateId: number,
+    cityId: number,
+    fallbackTimezone: string
+  ): Promise<string> {
+    try {
+      if (stateId > 0) {
+        const citiesResponse: any = await firstValueFrom(this.commonService.GetCityByStateId(stateId));
+        const cities = citiesResponse?.result ?? [];
+        const selectedCity = cities.find((city: any) => Number(city.Id || 0) === cityId);
+        if (selectedCity?.Timezone) {
+          return String(selectedCity.Timezone).trim();
+        }
+      }
+
+      if (countryId > 0) {
+        const statesResponse: any = await firstValueFrom(this.commonService.GetStateByCountryId(countryId));
+        const states = statesResponse?.result ?? [];
+        const selectedState = states.find((state: any) => Number(state.Id || 0) === stateId);
+        if (selectedState?.Timezone) {
+          return String(selectedState.Timezone).trim();
+        }
+      }
+    } catch {
+      // Fall through to fallback below.
+    }
+
+    return String(fallbackTimezone ?? '').trim();
+  }
+
+  private firstNonEmpty(...values: Array<string | null | undefined>): string {
+    return values.find((value) => String(value ?? '').trim())?.trim() ?? '';
   }
 }

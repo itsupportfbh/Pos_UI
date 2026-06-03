@@ -439,6 +439,7 @@ private async loadLatestTableCode(orgId: number): Promise<void> {
         label: country.Name ?? '',
         value: country.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.countryOptions = [];
       this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
@@ -468,6 +469,7 @@ private async loadLatestTableCode(orgId: number): Promise<void> {
         label: state.Name ?? '',
         value: state.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.stateOptions = [];
       this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
@@ -495,6 +497,7 @@ private async loadLatestTableCode(orgId: number): Promise<void> {
         label: city.Name ?? '',
         value: city.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.cityOptions = [];
       this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
@@ -618,6 +621,7 @@ private async loadLatestTableCode(orgId: number): Promise<void> {
       }
 
       this.dialogCity = customer.CityId ?? customer.cityId ?? null;
+      this.changeDetector.detectChanges();
     } catch {
       this.toast.error('Load Failed', 'Unable to load customers. Please check and try again.');
     }

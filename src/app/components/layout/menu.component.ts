@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AppTranslatePipe } from '../../pipes/app-translate.pipe';
 import { MenuChildItem, MenuGroup, MenuOfficeOption } from './menu.model';
 
 const COMMON_MENU_SCOPE = 0;
@@ -7,7 +8,7 @@ const COMMON_MENU_SCOPE = 0;
 @Component({
   selector: 'app-menu',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AppTranslatePipe],
   templateUrl: './menu.component.html',
   styleUrl: './menu.component.css'
 })

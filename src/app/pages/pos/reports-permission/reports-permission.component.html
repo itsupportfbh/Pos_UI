@@ -1,0 +1,110 @@
+<section class="feature-page">
+  <header class="page-header hero-panel">
+    <div>
+      <p class="eyebrow">{{ pageEyebrow }}</p>
+      <h1>{{ pageTitle }}</h1>
+      <p class="page-subtitle">{{ pageSubtitle }}</p>
+    </div>
+  </header>
+
+  <p-card class="feature-card">
+    <section class="selection-row">
+      <app-select-field
+        *ngIf="showOrganizationSelector"
+        class="selection-field organization-field"
+        label="Organization"
+        inputId="report-permission-organization"
+        placeholder="Choose organization"
+        [options]="organizationOptions"
+        [model]="selectedOrgId"
+        [numberValue]="true"
+        [required]="true"
+        [showRequiredMark]="true"
+        [submitted]="selectionSubmitted"
+        errorMessage="Organization is required."
+        (modelChange)="onOrganizationChange($event)"
+      />
+
+      <app-select-field
+        class="selection-field role-field"
+        label="Role"
+        inputId="report-permission-role"
+        placeholder="Choose role"
+        [options]="roleOptions"
+        [model]="selectedRoleId"
+        [numberValue]="true"
+        [required]="true"
+        [showRequiredMark]="true"
+        [submitted]="selectionSubmitted"
+        errorMessage="Role is required."
+        [disabled]="!canChooseRole"
+        (modelChange)="onRoleChange($event)"
+      />
+
+      <div class="selection-actions">
+        <app-action-buttons
+          [primaryLabel]="'Save'"
+          [secondaryLabel]="'Reset'"
+          [showSecondary]="true"
+          [primaryIcon]="'pi pi-save'"
+          [secondaryIcon]="'pi pi-refresh'"
+          [primaryLoading]="savingPermissions"
+          [secondaryLoading]="loadingPermissions"
+          (primaryClick)="saveReportPermissions()"
+          (secondaryClick)="resetReportPermissions()"
+        />
+      </div>
+    </section>
+
+    <section class="permissions-panel inline-panel" *ngIf="selectedOrgId && selectedRoleId">
+      <div class="permissions-toolbar">
+        <label class="permissions-select-all">
+          <input type="checkbox" [checked]="isAllPermissionsSelected" (change)="toggleAllPermissions($event)" />
+          <span>Select All</span>
+        </label>
+
+        <div class="permissions-search">
+          <app-text-field label="Search Reports" inputId="report-permissions-search" placeholder="Search category or report"
+            [model]="permissionSearchText" (modelChange)="permissionSearchText = $event" />
+        </div>
+      </div>
+
+      @if (loadingPermissions) {
+        <div class="permissions-loading">
+          <i class="pi pi-spinner pi-spin"></i>
+          <span>Loading report permissions...</span>
+        </div>
+      } @else {
+        <div class="permissions-table">
+          <div class="permissions-row permissions-header">
+            <span>Category</span>
+            <span>Report</span>
+            <span>View</span>
+            <span>Print</span>
+            <span>PDF</span>
+            <span>Excel</span>
+            <span>All</span>
+          </div>
+
+          @for (row of filteredPermissionRows; track row.reportId) {
+            <div class="permissions-row">
+              <strong class="permission-module">{{ row.categoryName }}</strong>
+              <span class="permission-page">{{ row.reportLabel }}</span>
+              <label class="permission-check" data-label="View"><input type="checkbox" [checked]="row.canView" (change)="setPermission(row, 'canView', $event)" /></label>
+              <label class="permission-check" data-label="Print"><input type="checkbox" [checked]="row.canPrint" (change)="setPermission(row, 'canPrint', $event)" /></label>
+              <label class="permission-check" data-label="PDF"><input type="checkbox" [checked]="row.exportPdf" (change)="setPermission(row, 'exportPdf', $event)" /></label>
+              <label class="permission-check" data-label="Excel"><input type="checkbox" [checked]="row.exportExcel" (change)="setPermission(row, 'exportExcel', $event)" /></label>
+              <label class="permission-check permission-full" data-label="All"><input type="checkbox" [checked]="isFullAccess(row)" (change)="setAllPermissions(row, $event)" /></label>
+            </div>
+          }
+
+          @if (!filteredPermissionRows.length) {
+            <div class="permissions-empty">
+              No matching reports found.
+            </div>
+          }
+        </div>
+      }
+    </section>
+  </p-card>
+</section>
