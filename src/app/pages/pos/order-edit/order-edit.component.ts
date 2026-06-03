@@ -20,6 +20,16 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 const ACTIVE_HELD_ORDER_STORAGE_KEY = 'activeHeldOrder';
 
+const ORDER_STATUS = {
+  Hold: 0,
+  InKitchen: 1,
+  Preparing: 2,
+  Ready: 3,
+  Served: 4,
+  Cancelled: 5,
+  Completed: 6
+} as const;
+
 type OrderEditRow = {
   Id: number;
   OrderNo: string;
@@ -441,7 +451,8 @@ export class OrderEditComponent {
   }
 
   private mapOrderToRow(order: any, index: number): OrderEditRow {
-    const status = this.getStringValue(order, 'OrderStatus') || 'Open';
+    const rawStatus = this.getRawValue(order, 'OrderStatus', 'Orderstatus', 'orderStatus', 'orderstatus', 'Status', 'status');
+    const status = this.getStatusLabel(rawStatus);
 
     return {
       Id: this.getNumberValue(order,  'OrderId'),
@@ -626,7 +637,7 @@ export class OrderEditComponent {
   }
 
   private getOrderStatus(order: any): string {
-    return this.getStringValue(order, 'OrderStatus') || 'Open';
+    return this.getStatusLabel(this.getRawValue(order, 'OrderStatus', 'Orderstatus', 'orderStatus', 'orderstatus', 'Status', 'status'));
   }
 
   private isOrderLikeObject(value: any): boolean {
@@ -663,6 +674,68 @@ export class OrderEditComponent {
   private getStringValue(source: any, ...keys: string[]): string {
     const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
     return value?.toString() ?? '';
+  }
+
+  private getRawValue(source: any, ...keys: string[]): unknown {
+    return keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
+  }
+
+  private getStatusCode(status: unknown): number | null {
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status;
+    }
+
+    const normalizedStatus = String(status ?? '').trim().toLowerCase().replace(/\s+/g, '');
+
+    switch (normalizedStatus) {
+      case '0':
+      case 'hold':
+        return ORDER_STATUS.Hold;
+      case '1':
+      case 'inkitchen':
+        return ORDER_STATUS.InKitchen;
+      case '2':
+      case 'inprocess':
+      case 'preparing':
+        return ORDER_STATUS.Preparing;
+      case '3':
+      case 'ready':
+      case 'readytoserve':
+        return ORDER_STATUS.Ready;
+      case '4':
+      case 'served':
+        return ORDER_STATUS.Served;
+      case '5':
+      case 'cancelled':
+      case 'canceled':
+        return ORDER_STATUS.Cancelled;
+      case '6':
+      case 'completed':
+        return ORDER_STATUS.Completed;
+      default:
+        return null;
+    }
+  }
+
+  private getStatusLabel(status: unknown): string {
+    switch (this.getStatusCode(status)) {
+      case ORDER_STATUS.Hold:
+        return 'Hold';
+      case ORDER_STATUS.InKitchen:
+        return 'In Kitchen';
+      case ORDER_STATUS.Preparing:
+        return 'Preparing';
+      case ORDER_STATUS.Ready:
+        return 'Ready';
+      case ORDER_STATUS.Served:
+        return 'Served';
+      case ORDER_STATUS.Cancelled:
+        return 'Cancelled';
+      case ORDER_STATUS.Completed:
+        return 'Completed';
+      default:
+        return this.getStringValue({ status }, 'status') || 'Open';
+    }
   }
 
   private getNumberValue(source: any, ...keys: string[]): number {
