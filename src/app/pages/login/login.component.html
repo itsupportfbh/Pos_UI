@@ -1,4 +1,4 @@
-<main class="login-page">
+<main class="login-page" [class.login-page--modal-open]="showRoleDialog || showForgotPasswordDialog || showShiftAssignmentDialog">
   @if (showShiftAssignmentDialog) {
   <app-shift-assignment [(visible)]="showShiftAssignmentDialog" [currentUser]="selectedUserDetails"
     (shiftAssigned)="onShiftAssigned($event)">
@@ -15,18 +15,17 @@
           </span>
           <div>
             <strong>Unity work POS</strong>
-            <p>Restaurant billing workspace</p>
+            <p>{{ 'login.mobile_workspace' | appTranslate:'Restaurant billing workspace' }}</p>
           </div>
         </div>
 
-        <span class="status-pill">Store Online</span>
-      </div>
+        <span class="status-pill">{{ 'login.store_online' | appTranslate:'Store Online' }}</span>
+      </div>  
 
       <div class="hero-copy">
-        <p class="eyebrow">Restaurant POS</p>
-        <h1>Simple sign in for your sales desk.</h1>
-        <p class="hero-text">A clean billing workspace for restaurant teams, terminal control, and day-to-day counter
-          work.</p>
+        <p class="eyebrow">{{ 'login.eyebrow' | appTranslate:'Restaurant POS' }}</p>
+        <h1>{{ 'login.mobile_title' | appTranslate:'Simple sign in for your sales desk.' }}</h1>
+        <p class="hero-text">{{ 'login.mobile_subtitle' | appTranslate:'A clean billing workspace for restaurant teams, terminal control, and day-to-day counter work.' }}</p>
       </div>
 
       <div class="hero-product-mark">
@@ -36,34 +35,34 @@
 
     <p-card class="login-card mobile-login-card">
       <div class="login-card-copy">
-        <p class="eyebrow">Cashier Access</p>
-        <h2>Continue to register</h2>
-        <p>Use your account to open the sales counter and daily restaurant POS tools.</p>
+        <p class="eyebrow">{{ 'login.cashier_access' | appTranslate:'Cashier Access' }}</p>
+        <h2>{{ 'login.mobile_card_title' | appTranslate:'Continue to register' }}</h2>
+        <p>{{ 'login.mobile_card_subtitle' | appTranslate:'Use your account to open the sales counter and daily restaurant POS tools.' }}</p>
       </div>
 
       <form (ngSubmit)="submit()" #loginForm="ngForm">
         <div class="field">
-          <label for="email">Email</label>
+          <label for="email">{{ 'login.email' | appTranslate:'Email' }}</label>
           <input pInputText id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email"
-            placeholder="Enter email" />
+            [placeholder]="'login.enter_email' | appTranslate:'Enter email'" />
         </div>
 
         <div class="field">
-          <label for="password">Password</label>
+          <label for="password">{{ 'login.password' | appTranslate:'Password' }}</label>
           <p-password id="password" name="password" [(ngModel)]="password" required autocomplete="current-password"
-            placeholder="Enter password" [feedback]="false" [toggleMask]="true" inputStyleClass="full-width"
-            styleClass="full-width" />
+            [placeholder]="'login.enter_password' | appTranslate:'Enter password'" [feedback]="false" [toggleMask]="true" inputStyleClass="full-width"
+            class="full-width" />
         </div>
 
         @if (errorMessage) {
-        <p-message severity="error" [text]="errorMessage" />
+        <p-message severity="error">{{ errorMessage }}</p-message>
         }
 
-        <button pButton type="submit" label="Start Counter" [loading]="loginSaving"
+        <button pButton type="submit" [label]="'login.start_counter' | appTranslate:'Start Counter'" [loading]="loginSaving"
           [disabled]="loginForm.invalid || loginSaving"></button>
 
         <div class="login-assist-row">
-          <button type="button" class="auth-link-button" (click)="openForgotPasswordDialog()">Forgot password?</button>
+          <button type="button" class="auth-link-button" (click)="openForgotPasswordDialog()">{{ 'login.forgot_password' | appTranslate:'Forgot password?' }}</button>
         </div>
       </form>
     </p-card>
@@ -78,18 +77,17 @@
           </span>
           <div>
             <strong>Unity work POS</strong>
-            <p>Restaurant billing operations</p>
+            <p>{{ 'login.desktop_workspace' | appTranslate:'Restaurant billing operations' }}</p>
           </div>
         </div>
 
-        <span class="status-pill">Shift Ready</span>
+        <span class="status-pill">{{ 'login.shift_ready' | appTranslate:'Shift Ready' }}</span>
       </div>
 
       <div class="hero-copy">
-        <p class="eyebrow">Restaurant POS</p>
-        <h1>Open your restaurant billing workspace.</h1>
-        <p class="hero-text">Sign in to continue billing, counters, printers, and restaurant reports from one focused
-          POS screen.</p>
+        <p class="eyebrow">{{ 'login.eyebrow' | appTranslate:'Restaurant POS' }}</p>
+        <h1>{{ 'login.desktop_title' | appTranslate:'Open your restaurant billing workspace.' }}</h1>
+        <p class="hero-text">{{ 'login.desktop_subtitle' | appTranslate:'Sign in to continue billing, counters, printers, and restaurant reports from one focused POS screen.' }}</p>
       </div>
 
       <section class="hero-brand-panel">
@@ -102,41 +100,41 @@
         </div>
 
         <div class="hero-brand-copy">
-          <p>Fast counter access for daily restaurant work.</p>
+          <p>{{ 'login.desktop_brand_copy' | appTranslate:'Fast counter access for daily restaurant work.' }}</p>
         </div>
       </section>
     </article>
 
     <p-card class="login-card">
       <div class="login-card-copy">
-        <p class="eyebrow">Sign In</p>
-        <h2>Open your POS session</h2>
-        <p>Use your restaurant login to continue.</p>
+        <p class="eyebrow">{{ 'login.sign_in' | appTranslate:'Sign In' }}</p>
+        <h2>{{ 'login.open_pos_session' | appTranslate:'Open your POS session' }}</h2>
+        <p>{{ 'login.use_restaurant_login' | appTranslate:'Use your restaurant login to continue.' }}</p>
       </div>
 
       <form (ngSubmit)="submit()" #loginForm="ngForm">
         <div class="field">
-          <label for="email">Email</label>
+          <label for="email">{{ 'login.email' | appTranslate:'Email' }}</label>
           <input pInputText id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email"
-            placeholder="Enter email" />
+            [placeholder]="'login.enter_email' | appTranslate:'Enter email'" />
         </div>
 
         <div class="field">
-          <label for="password">Password</label>
+          <label for="password">{{ 'login.password' | appTranslate:'Password' }}</label>
           <p-password id="password" name="password" [(ngModel)]="password" required autocomplete="current-password"
-            placeholder="Enter password" [feedback]="false" [toggleMask]="true" inputStyleClass="full-width"
-            styleClass="full-width" />
+            [placeholder]="'login.enter_password' | appTranslate:'Enter password'" [feedback]="false" [toggleMask]="true" inputStyleClass="full-width"
+            class="full-width" />
         </div>
 
         @if (errorMessage) {
-        <p-message severity="error" [text]="errorMessage" />
+        <p-message severity="error">{{ errorMessage }}</p-message>
         }
 
-        <button pButton type="submit" label="Open POS" [loading]="loginSaving"
+        <button pButton type="submit" [label]="'login.open_pos' | appTranslate:'Open POS'" [loading]="loginSaving"
           [disabled]="loginForm.invalid || loginSaving"></button>
 
         <div class="login-assist-row">
-          <button type="button" class="auth-link-button" (click)="openForgotPasswordDialog()">Forgot password?</button>
+          <button type="button" class="auth-link-button" (click)="openForgotPasswordDialog()">{{ 'login.forgot_password' | appTranslate:'Forgot password?' }}</button>
         </div>
       </form>
     </p-card>
@@ -145,24 +143,25 @@
 </main>
 
 <p-dialog [(visible)]="showRoleDialog" [modal]="true" [draggable]="false" [resizable]="false" [closable]="true"
+  appendTo="body" [blockScroll]="true"
   (onHide)="closeRoleDialog()" [style]="{ width: '46rem', maxWidth: '94vw' }">
   <ng-template pTemplate="header">
     <div class="role-dialog-copy">
-      <h3>Select your role</h3>
-      <p>This login has multiple roles. Choose one role to continue.</p>
+      <h3>{{ 'login.select_role' | appTranslate:'Select your role' }}</h3>
+      <p>{{ 'login.select_role_subtitle' | appTranslate:'This login has multiple roles. Choose one role to continue.' }}</p>
     </div>
   </ng-template>
 
   <section class="role-card-grid">
     @for (userDetail of userDetailsList; track userDetail.RoleId) {
     <button type="button" class="role-card" (click)="selectUserDetails(userDetail)">
-      <span class="role-card-label">Role</span>
+      <span class="role-card-label">{{ 'login.role' | appTranslate:'Role' }}</span>
       <strong>{{ userDetail.RoleName }}</strong>
       <small>{{ userDetail.UserName }}</small>
 
       <div class="role-card-meta">
-        <span>{{ userDetail.OrgName || 'Organization' }}</span>
-        <span>{{ userDetail.BranchName || 'Branch' }}</span>
+        <span>{{ userDetail.OrgName || ('login.organization' | appTranslate:'Organization') }}</span>
+        <span>{{ userDetail.BranchName || ('login.branch' | appTranslate:'Branch') }}</span>
       </div>
     </button>
     }
@@ -170,21 +169,22 @@
 </p-dialog>
 
 <p-dialog [(visible)]="showForgotPasswordDialog" [modal]="true" [draggable]="false" [resizable]="false"
+  appendTo="body" [blockScroll]="true"
   [closable]="true" (onHide)="closeForgotPasswordDialog()" [style]="{ width: '28rem', maxWidth: '94vw' }">
   <ng-template pTemplate="header">
     <div class="role-dialog-copy">
-      <h3>Forgot password</h3>
-      <p>Enter your registered email address to start password recovery.</p>
+      <h3>{{ 'login.forgot_password' | appTranslate:'Forgot password' }}</h3>
+      <p>{{ 'login.forgot_password_subtitle' | appTranslate:'Enter your registered email address to start password recovery.' }}</p>
     </div>
   </ng-template>
 
   <section class="auth-dialog-body">
-    <app-text-field label="Email" inputId="forgot-email" type="email" placeholder="Enter email" [required]="true"
+    <app-text-field [label]="'login.email' | appTranslate:'Email'" inputId="forgot-email" type="email" [placeholder]="'login.enter_email' | appTranslate:'Enter email'" [required]="true"
       [showRequiredMark]="true" [submitted]="forgotPasswordSubmitted" [emailOnly]="true"
       [formatErrorMessage]="forgotPasswordEmailMessage" [model]="forgotEmail" (modelChange)="forgotEmail = $event" />
 
     <div class="auth-dialog-actions">
-      <button type="button" pButton label="Continue" (click)="continueToResetPassword()"></button>
+      <button type="button" pButton [label]="'login.continue' | appTranslate:'Continue'" (click)="continueToResetPassword()"></button>
     </div>
   </section>
 </p-dialog>

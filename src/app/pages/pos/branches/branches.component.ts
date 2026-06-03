@@ -16,6 +16,7 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 
 
 import { AppToastService } from '../../../services/app-toast.service';
+import { AppLocaleService } from '../../../services/app-locale.service';
 
 
 import { Branch, BranchService } from '../../../services/branch.service';
@@ -32,6 +33,7 @@ type BranchRow = Branch & {
 const cityOptions: any[] = [];
 const stateOptions: any[] = [];
 const countryOptions: any[] = [];
+const languageOptions: any[] = [];
 
 const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
@@ -68,6 +70,7 @@ export class BranchesComponent implements OnInit {
   private readonly toast = inject(AppToastService);
   
   
+  private readonly appLocale = inject(AppLocaleService);
   private readonly branchService = inject(BranchService);
   private readonly commonService = inject(CommonService);
   private readonly entityMasterService = inject(EntityMasterService);
@@ -100,6 +103,8 @@ export class BranchesComponent implements OnInit {
   dialogCity: SelectFieldValue = null;
   dialogState: SelectFieldValue = null;
   dialogCountry: SelectFieldValue = null;
+  dialogLanguageCode: SelectFieldValue = null;
+  dialogCurrencyDisplay = '';
   dialogPostalCode = '';
   dialogRemarks = '';
 
@@ -111,6 +116,7 @@ export class BranchesComponent implements OnInit {
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
+  languageOptions = languageOptions;
   organizationOptions: any[] = [];
   branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
   branchRights = {
@@ -340,7 +346,9 @@ export class BranchesComponent implements OnInit {
       await this.loadLatestBranchCode(Number(this.userDetails.OrgId || 0));
     }
 
+    await this.loadLanguages();
     await this.loadCountries();
+    this.dialogLanguageCode = null;
   }
 
   closeAddDialog(): void {
@@ -357,8 +365,12 @@ export class BranchesComponent implements OnInit {
 
       this.countryOptions = countries.map((country: any) => ({
         label: country.Name ?? '',
-        value: country.Id ?? 0
+        value: country.Id ?? 0,
+        Currency: country.Currency ?? '',
+        CurrencyName: country.CurrencyName ?? '',
+        CurrencySymbol: country.CurrencySymbol ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.countryOptions = [];
       this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
@@ -380,6 +392,23 @@ export class BranchesComponent implements OnInit {
     }
   }
 
+  async loadLanguages(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetLanguage());
+      const languages = response?.result ?? [];
+      this.languageOptions = languages.map((language: any) => ({
+        label: language.NativeName
+          ? `${language.Name ?? language.Code} (${language.NativeName})`
+          : (language.Name ?? language.Code ?? ''),
+        value: language.Code ?? ''
+      }));
+      this.changeDetector.detectChanges();
+    } catch {
+      this.languageOptions = [];
+      this.toast.error('Load Failed', 'Unable to load languages. Please check and try again.');
+    }
+  }
+
   async onDialogOrganizationChange(value: SelectFieldValue): Promise<void> {
     this.dialogOrganization = value;
 
@@ -397,6 +426,10 @@ export class BranchesComponent implements OnInit {
 
   onCountryChange(value: SelectFieldValue): void {
     this.dialogCountry = value;
+    const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(value || 0));
+    this.dialogCurrencyDisplay = selectedCountry
+      ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+      : [this.userDetails?.OrgCurrencyCode, this.userDetails?.OrgCurrencyName, this.userDetails?.OrgCurrencySymbol].filter(Boolean).join(' - ');
     this.dialogState = null;
     this.dialogCity = null;
     this.stateOptions = [];
@@ -416,8 +449,10 @@ export class BranchesComponent implements OnInit {
 
       this.stateOptions = states.map((state: any) => ({
         label: state.Name ?? '',
-        value: state.Id ?? 0
+        value: state.Id ?? 0,
+        Timezone: state.Timezone ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.stateOptions = [];
       this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
@@ -443,8 +478,10 @@ export class BranchesComponent implements OnInit {
 
       this.cityOptions = cities.map((city: any) => ({
         label: city.Name ?? '',
-        value: city.Id ?? 0
+        value: city.Id ?? 0,
+        Timezone: city.Timezone ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.cityOptions = [];
       this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
@@ -474,6 +511,7 @@ export class BranchesComponent implements OnInit {
       City: Number(this.dialogCity || 0),
       State: Number(this.dialogState || 0),
       Country: Number(this.dialogCountry || 0),
+      LanguageCode: String(this.dialogLanguageCode || '').trim() || undefined,
       PostalCode: Number(this.dialogPostalCode || 0),
       Remarks: this.dialogRemarks,
       OrgId: this.userDetails.RoleId === 1
@@ -504,12 +542,14 @@ export class BranchesComponent implements OnInit {
       }
 
       if (response.ErrorInfo.Message === true && !payload.Id) {
+        this.syncCurrentBranchLocale(Number(response.result || 0), payload.LanguageCode);
         this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
         this.closeAddDialog();
         return;
       }
 
       if (response.ErrorInfo.Message === true && payload.Id) {
+        this.syncCurrentBranchLocale(Number(payload.Id || response.result || 0), payload.LanguageCode);
         this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
         this.closeAddDialog();
         return;
@@ -548,13 +588,19 @@ export class BranchesComponent implements OnInit {
       this.dialogAddress2 = branch.Address2 ?? '';
       this.dialogPostalCode = branch.PostalCode ? String(branch.PostalCode) : '';
       this.dialogRemarks = branch.Remarks ?? '';
+      this.dialogLanguageCode = String(branch.LanguageCode ?? '').trim() || null;
 
       if (this.userDetails.RoleId === 1) {
         await this.loadOrganizations();
       }
 
+      await this.loadLanguages();
       await this.loadCountries();
       this.dialogCountry = branch.Country ?? null;
+      const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(this.dialogCountry || 0));
+      this.dialogCurrencyDisplay = selectedCountry
+        ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+        : [this.userDetails?.OrgCurrencyCode, this.userDetails?.OrgCurrencyName, this.userDetails?.OrgCurrencySymbol].filter(Boolean).join(' - ');
 
       if (this.dialogCountry) {
         await this.loadStates(Number(this.dialogCountry));
@@ -567,6 +613,7 @@ export class BranchesComponent implements OnInit {
       }
 
       this.dialogCity = branch.City ?? null;
+      this.changeDetector.detectChanges();
     } catch {
       this.toast.error('Load Failed', 'Unable to load branch details. Please check and try again.');
     }
@@ -697,6 +744,8 @@ export class BranchesComponent implements OnInit {
     this.dialogCity = null;
     this.dialogState = null;
     this.dialogCountry = null;
+    this.dialogLanguageCode = null;
+    this.dialogCurrencyDisplay = '';
     this.dialogPostalCode = '';
     this.dialogRemarks = '';
   }
@@ -769,5 +818,35 @@ export class BranchesComponent implements OnInit {
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  private syncCurrentBranchLocale(savedBranchId: number, languageCode?: string): void {
+    const currentBranchId = Number(this.userDetails?.BranchId || 0);
+    if (!savedBranchId || savedBranchId !== currentBranchId) {
+      return;
+    }
+
+    const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(this.dialogCountry || 0));
+    const selectedState = this.stateOptions.find((state: any) => Number(state.value || 0) === Number(this.dialogState || 0));
+    const selectedCity = this.cityOptions.find((city: any) => Number(city.value || 0) === Number(this.dialogCity || 0));
+    const timezone = selectedCity?.Timezone || selectedState?.Timezone || this.userDetails?.BranchTimezone || '';
+
+    const updatedUserDetails = {
+      ...this.userDetails,
+      BranchLanguageCode: String(languageCode ?? '').trim(),
+      BranchCurrencyCode: selectedCountry?.Currency ?? '',
+      BranchCurrencyName: selectedCountry?.CurrencyName ?? '',
+      BranchCurrencySymbol: selectedCountry?.CurrencySymbol ?? '',
+      BranchTimezone: selectedCountry ? timezone : '',
+      LanguageCode: String(
+        String(languageCode ?? '').trim()
+        || this.userDetails?.OrgLanguageCode
+        || ''
+      ).trim()
+    };
+
+    this.userDetails = updatedUserDetails;
+    localStorage.setItem('userDetails', JSON.stringify(updatedUserDetails));
+    this.appLocale.syncFromUserDetails(updatedUserDetails);
   }
 }

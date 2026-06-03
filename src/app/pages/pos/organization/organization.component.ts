@@ -19,6 +19,7 @@ import { AppToastService } from '../../../services/app-toast.service';
 
 
 import { BranchService } from '../../../services/branch.service';
+import { AppLocaleService } from '../../../services/app-locale.service';
 import { CommonService } from '../../../services/common.service';
 import { EntityMasterService } from '../../../services/entitymaster.service';
 import { Organization, OrganizationConfig, OrganizationService } from '../../../services/organization.service';
@@ -27,6 +28,7 @@ import { RuntimeConfigService } from '../../../services/runtime-config.service';
 const cityOptions: any[] = [];
 const stateOptions: any[] = [];
 const countryOptions: any[] = [];
+const languageOptions: any[] = [];
 
 const CODE_TEMPLATE_COLUMNS: SharedTableColumn<any>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
@@ -59,6 +61,7 @@ export class OrganizationComponent implements OnInit {
   
   
   private readonly branchService = inject(BranchService);
+  private readonly appLocale = inject(AppLocaleService);
   private readonly organizationService = inject(OrganizationService);
   private readonly commonService = inject(CommonService);
   private readonly entityMasterService = inject(EntityMasterService);
@@ -89,6 +92,8 @@ export class OrganizationComponent implements OnInit {
   dialogCity: SelectFieldValue = null;
   dialogState: SelectFieldValue = null;
   dialogCountry: SelectFieldValue = null;
+  dialogLanguageCode: SelectFieldValue = null;
+  dialogCurrencyDisplay = '';
   dialogPostalCode = '';
   dialogRemarks = '';
   showConfigDialog = false;
@@ -126,6 +131,7 @@ export class OrganizationComponent implements OnInit {
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
+  languageOptions = languageOptions;
   dialogTitle = 'Create Organization';
   dialogSubtitle = 'Create a new restaurant organization profile.';
   dialogPrimaryActionLabel = 'Save';
@@ -215,7 +221,30 @@ export class OrganizationComponent implements OnInit {
     this.showAddDialog = true;
 
     await this.loadLatestOrganizationCode();
+    await this.loadLanguages();
     await this.loadCountries();
+    this.dialogLanguageCode = String(
+      this.userDetails?.OrgLanguageCode
+      ?? this.userDetails?.LanguageCode
+      ?? 'en-IN'
+    ).trim() || 'en-IN';
+  }
+
+  async loadLanguages(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetLanguage());
+      const languages = response?.result ?? [];
+      this.languageOptions = languages.map((language: any) => ({
+        label: language.NativeName
+          ? `${language.Name ?? language.Code} (${language.NativeName})`
+          : (language.Name ?? language.Code ?? ''),
+        value: language.Code ?? ''
+      }));
+      this.changeDetector.detectChanges();
+    } catch {
+      this.languageOptions = [];
+      this.toast.error('Load Failed', 'Unable to load languages. Please check and try again.');
+    }
   }
 
   openCodeTemplateDialog(): void {
@@ -380,8 +409,12 @@ export class OrganizationComponent implements OnInit {
 
       this.countryOptions = countries.map((country: any) => ({
         label: country.Name ?? '',
-        value: country.Id ?? 0
+        value: country.Id ?? 0,
+        Currency: country.Currency ?? '',
+        CurrencyName: country.CurrencyName ?? '',
+        CurrencySymbol: country.CurrencySymbol ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.countryOptions = [];
       this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
@@ -390,6 +423,10 @@ export class OrganizationComponent implements OnInit {
 
   onCountryChange(value: SelectFieldValue): void {
     this.dialogCountry = value;
+    const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(value || 0));
+    this.dialogCurrencyDisplay = selectedCountry
+      ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+      : '';
     this.dialogState = null;
     this.dialogCity = null;
     this.stateOptions = [];
@@ -409,8 +446,10 @@ export class OrganizationComponent implements OnInit {
 
       this.stateOptions = states.map((state: any) => ({
         label: state.Name ?? '',
-        value: state.Id ?? 0
+        value: state.Id ?? 0,
+        Timezone: state.Timezone ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.stateOptions = [];
       this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
@@ -436,8 +475,10 @@ export class OrganizationComponent implements OnInit {
 
       this.cityOptions = cities.map((city: any) => ({
         label: city.Name ?? '',
-        value: city.Id ?? 0
+        value: city.Id ?? 0,
+        Timezone: city.Timezone ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.cityOptions = [];
       this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
@@ -470,6 +511,7 @@ export class OrganizationComponent implements OnInit {
       City: Number(this.dialogCity || 0),
       State: Number(this.dialogState || 0),
       Country: Number(this.dialogCountry || 0),
+      LanguageCode: String(this.dialogLanguageCode || '').trim() || undefined,
       PostalCode: Number(this.dialogPostalCode || 0),
       Remarks: this.dialogRemarks,
       IsActive: true,
@@ -493,11 +535,13 @@ export class OrganizationComponent implements OnInit {
         return;
       }
       else if (response.ErrorInfo.Message == true && !payload.Id) {
+        this.syncCurrentOrganizationLocale(Number(response.result || 0), payload.LanguageCode);
         this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
         this.closeAddDialog();
         return;
       }
       else if (response.ErrorInfo.Message == true && payload.Id) {
+        this.syncCurrentOrganizationLocale(Number(payload.Id || response.result || 0), payload.LanguageCode);
         this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
         this.closeAddDialog();
         return;
@@ -577,9 +621,15 @@ export class OrganizationComponent implements OnInit {
       this.dialogAddressLine2 = organization.Address2 ?? '';
       this.dialogPostalCode = organization.PostalCode ? String(organization.PostalCode) : '';
       this.dialogRemarks = organization.Remarks ?? '';
+      this.dialogLanguageCode = String(organization.LanguageCode ?? '').trim() || null;
 
+      await this.loadLanguages();
       await this.loadCountries();
       this.dialogCountry = organization.Country ?? null;
+      const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(this.dialogCountry || 0));
+      this.dialogCurrencyDisplay = selectedCountry
+        ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+        : '';
 
       if (this.dialogCountry) {
         await this.loadStates(Number(this.dialogCountry));
@@ -592,6 +642,7 @@ export class OrganizationComponent implements OnInit {
       }
 
       this.dialogCity = organization.City ?? null;
+      this.changeDetector.detectChanges();
     } catch {
       this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
     }
@@ -883,11 +934,16 @@ export class OrganizationComponent implements OnInit {
 
   async viewRow(row: any): Promise<void> {
     try {
+      await this.loadCountries();
       this.showViewSidebar = true;
 
       const response: any = await firstValueFrom(this.organizationService.getById(row['Id']));
       const organization = response.result ?? {};
       const imageUrl = await this.getOrganizationConfigImageUrl(Number(row['Id'] ?? 0));
+      const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(organization.Country || 0));
+      const currencyDisplay = selectedCountry
+        ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+        : '-';
 
       this.viewOrganization = {
         Code: organization.Code ?? '',
@@ -901,6 +957,8 @@ export class OrganizationComponent implements OnInit {
         ContactPerson: organization.ContactPerson ?? '',
         ContactMobileNo: organization.ContactMobileNo ?? '',
         ContactEmail: organization.ContactEmail ?? '',
+        CurrencyDisplay: currencyDisplay,
+        LanguageCode: organization.LanguageCode ?? '-',
         Remarks: organization.Remarks ?? '',
         Status: organization.IsActive ? 'Active' : 'Inactive'
       };
@@ -985,6 +1043,8 @@ export class OrganizationComponent implements OnInit {
     this.dialogCity = null;
     this.dialogState = null;
     this.dialogCountry = null;
+    this.dialogLanguageCode = null;
+    this.dialogCurrencyDisplay = '';
     this.dialogPostalCode = '';
     this.dialogRemarks = '';
   }
@@ -1233,6 +1293,37 @@ export class OrganizationComponent implements OnInit {
 
   printRow(row: any): void {
     this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'Organization')} print will be connected later.`);
+  }
+
+  private syncCurrentOrganizationLocale(savedOrgId: number, languageCode?: string): void {
+    const currentOrgId = Number(this.userDetails?.OrgId || this.userDetails?.OrganizationId || 0);
+    if (!savedOrgId || savedOrgId !== currentOrgId) {
+      return;
+    }
+
+    const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(this.dialogCountry || 0));
+    const selectedState = this.stateOptions.find((state: any) => Number(state.value || 0) === Number(this.dialogState || 0));
+    const selectedCity = this.cityOptions.find((city: any) => Number(city.value || 0) === Number(this.dialogCity || 0));
+    const timezone = selectedCity?.Timezone || selectedState?.Timezone || this.userDetails?.OrgTimezone || '';
+
+    const updatedUserDetails = {
+      ...this.userDetails,
+      OrgLanguageCode: languageCode || this.userDetails?.OrgLanguageCode || '',
+      OrgCurrencyCode: selectedCountry?.Currency || this.userDetails?.OrgCurrencyCode || '',
+      OrgCurrencyName: selectedCountry?.CurrencyName || this.userDetails?.OrgCurrencyName || '',
+      OrgCurrencySymbol: selectedCountry?.CurrencySymbol || this.userDetails?.OrgCurrencySymbol || '',
+      OrgTimezone: timezone,
+      LanguageCode: String(
+        this.userDetails?.BranchLanguageCode
+        || languageCode
+        || this.userDetails?.OrgLanguageCode
+        || ''
+      ).trim()
+    };
+
+    this.userDetails = updatedUserDetails;
+    localStorage.setItem('userDetails', JSON.stringify(updatedUserDetails));
+    this.appLocale.syncFromUserDetails(updatedUserDetails);
   }
 }
 

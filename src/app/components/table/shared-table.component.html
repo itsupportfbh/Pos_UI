@@ -23,7 +23,7 @@
   [size]="size"
   [globalFilterFields]="globalFilterFields"
   [showCurrentPageReport]="showCurrentPageReport"
-  [currentPageReportTemplate]="currentPageReportTemplate"
+  [currentPageReportTemplate]="resolvedCurrentPageReportTemplate"
   [paginatorDropdownAppendTo]="'body'"
   [tableStyle]="{ 'min-width': '100%' }"
   responsiveLayout="scroll"
@@ -40,7 +40,7 @@
           <button
             pButton
             type="button"
-            [label]="filterButtonLabel"
+            [label]="resolvedFilterButtonLabel"
             [icon]="filterButtonIcon"
             severity="secondary"
             outlined="true"
@@ -66,7 +66,7 @@
               <button
                 pButton
                 type="button"
-                [label]="downloadButtonLabel"
+                [label]="resolvedDownloadButtonLabel"
                 [icon]="downloadButtonIcon"
                 severity="secondary"
                 outlined="true"
@@ -98,7 +98,7 @@
             type="text"
             [(ngModel)]="globalFilterValue"
             (input)="dt.filterGlobal(globalFilterValue, 'contains')"
-            [placeholder]="globalFilterPlaceholder"
+            [placeholder]="resolvedGlobalFilterPlaceholder"
           />
         </div>
 
@@ -142,7 +142,7 @@
       @if (showRowActions) {
         <th class="action-column">
           <div class="header-cell">
-            <span>{{ rowActionHeader }}</span>
+            <span>{{ resolvedRowActionHeader }}</span>
           </div>
         </th>
       }
@@ -184,7 +184,7 @@
   <ng-template pTemplate="emptymessage">
     <tr>
       <td [attr.colspan]="visibleColumns.length + (selectionMode === 'multiple' ? 1 : 0) + (showRowActions ? 1 : 0)" class="empty-message">
-        {{ emptyMessage }}
+        {{ resolvedEmptyMessage }}
       </td>
     </tr>
   </ng-template>

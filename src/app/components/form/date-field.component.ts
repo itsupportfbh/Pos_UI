@@ -22,6 +22,9 @@ export class DateFieldComponent {
   @Input() disabled = false;
   @Input() showIcon = true;
   @Input() showButtonBar = true;
+  @Input() showTime = false;
+  @Input() showSeconds = false;
+  @Input() hourFormat: '12' | '24' = '24';
   @Input() dateFormat = 'dd/mm/yy';
   @Input() minDate?: Date;
   @Input() maxDate?: Date;

@@ -31,35 +31,35 @@
   >
     <ng-template pTemplate="header">
       <div class="role-dialog-copy">
-        <h3>Change password</h3>
-        <p>Use this form to set a new password for your account.</p>
+        <h3>{{ 'workspace.change_password_title' | appTranslate:'Change password' }}</h3>
+        <p>{{ 'workspace.change_password_subtitle' | appTranslate:'Use this form to set a new password for your account.' }}</p>
       </div>
     </ng-template>
 
     <section class="auth-dialog-body">
       <section class="field-grid auth-dialog-grid">
         <app-text-field
-          label="Current Password"
+          [label]="'workspace.current_password' | appTranslate:'Current Password'"
           inputId="profile-current-password"
           type="password"
-          placeholder="Enter current password"
+          [placeholder]="'workspace.enter_current_password' | appTranslate:'Enter current password'"
           [required]="true"
           [showRequiredMark]="true"
           [submitted]="changePasswordSubmitted"
-          errorMessage="Current Password is required."
+          [errorMessage]="'workspace.current_password_required' | appTranslate:'Current Password is required.'"
           [model]="changePasswordCurrent"
           (modelChange)="changePasswordCurrent = $event"
         />
 
         <app-text-field
-          label="New Password"
+          [label]="'workspace.new_password' | appTranslate:'New Password'"
           inputId="profile-new-password"
           type="password"
-          placeholder="Enter new password"
+          [placeholder]="'workspace.enter_new_password' | appTranslate:'Enter new password'"
           [required]="true"
           [showRequiredMark]="true"
           [submitted]="changePasswordSubmitted"
-          errorMessage="New Password is required."
+          [errorMessage]="'workspace.new_password_required' | appTranslate:'New Password is required.'"
           [model]="changePasswordNew"
           (modelChange)="changePasswordNew = $event"
         />
@@ -68,25 +68,25 @@
         }
 
         <app-text-field
-          label="Confirm Password"
+          [label]="'workspace.confirm_password' | appTranslate:'Confirm Password'"
           inputId="profile-confirm-password"
           type="password"
-          placeholder="Confirm new password"
+          [placeholder]="'workspace.confirm_new_password' | appTranslate:'Confirm new password'"
           [required]="true"
           [showRequiredMark]="true"
           [submitted]="changePasswordSubmitted"
-          errorMessage="Confirm Password is required."
+          [errorMessage]="'workspace.confirm_password_required' | appTranslate:'Confirm Password is required.'"
           [model]="changePasswordConfirm"
           (modelChange)="changePasswordConfirm = $event"
         />
         @if (showConfirmPasswordMismatch) {
-          <small class="dialog-validation-error">Confirm password should match the new password.</small>
+          <small class="dialog-validation-error">{{ 'workspace.confirm_password_mismatch' | appTranslate:'Confirm password should match the new password.' }}</small>
         }
       </section>
 
       <app-action-buttons
-        primaryLabel="Change Password"
-        secondaryLabel="Clear"
+        [primaryLabel]="'workspace.change_password_action' | appTranslate:'Change Password'"
+        [secondaryLabel]="'common.clear' | appTranslate:'Clear'"
         primaryIcon="pi pi-key"
         secondaryIcon="pi pi-refresh"
         (primaryClick)="submitChangePassword()"

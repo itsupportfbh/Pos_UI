@@ -327,6 +327,7 @@ export class CountersComponent implements OnInit {
           label: branch.Name ?? '',
           value: branch.Id ?? 0
         }));
+        this.changeDetector.detectChanges();
       },
       error: () => {
         this.branchOptions = [];
@@ -348,6 +349,7 @@ export class CountersComponent implements OnInit {
       label: branch.Name ?? '',
       value: branch.Id ?? 0
     }));
+    this.changeDetector.detectChanges();
   }
 
   loadCounter(): void {

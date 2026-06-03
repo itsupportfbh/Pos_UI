@@ -187,6 +187,7 @@ export class DiningTableComponent implements OnInit {
         label: x.Name ?? '',
         value: x.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch (error: any) {
       console.error('Error loading organizations:', error);
       this.organizationOptions = [];
@@ -208,6 +209,7 @@ export class DiningTableComponent implements OnInit {
         label: x.Name ?? '',
         value: x.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch (error: any) {
       console.error('Error loading branches:', error);
       this.branchOptions = [];
@@ -229,6 +231,7 @@ export class DiningTableComponent implements OnInit {
         label: x.Name ?? '',
         value: x.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch (error: any) {
       console.error('Error loading floors:', error);
       this.floorOptions = [];
@@ -496,6 +499,7 @@ export class DiningTableComponent implements OnInit {
       }
 
       this.dialogFloorId = Number(diningTable.FloorId ?? diningTable.floorId ?? 0);
+      this.changeDetector.detectChanges();
     } catch (error: any) {
       //console.error('Error loading dining table:', error);
       this.toast.error('Load Failed', 'Unable to load dining table details. Please check and try again.');

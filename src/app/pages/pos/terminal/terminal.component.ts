@@ -225,6 +225,7 @@ export class TerminalComponent implements OnInit {
                 label: branch.Name ?? '',
                 value: branch.Id ?? 0
             }));
+            this.changeDetector.detectChanges();
         } catch {
             this.branchOptions = [];
             this.toast.error('Load Failed', 'Unable to load branches. Please check API and try again.');
@@ -253,6 +254,7 @@ export class TerminalComponent implements OnInit {
                 label: item.Name ?? '',
                 value: item.Id ?? 0
             }));
+            this.changeDetector.detectChanges();
         } catch {
             this.counterOptions = [];
             this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
@@ -270,6 +272,7 @@ export class TerminalComponent implements OnInit {
                     : item.Name ?? '',
                 value: item.Id ?? 0
             }));
+            this.changeDetector.detectChanges();
         } catch {
             this.counterfilterOptions = [];
             this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
@@ -557,6 +560,7 @@ export class TerminalComponent implements OnInit {
 
             this.dialogBranch = this.dialogModel.branchId ?? null;
             this.showAddDialog = true;
+            this.changeDetector.detectChanges();
         } catch {
             this.toast.error('Load Failed', 'Unable to load terminal details.');
         }
