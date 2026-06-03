@@ -399,6 +399,7 @@ export class FloorComponent implements OnInit {
         label: organization.Name ?? '',
         value: organization.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.organizationOptions = [];
       this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
@@ -422,6 +423,7 @@ export class FloorComponent implements OnInit {
           value: branch.Id ?? 0,
           orgId: branch.OrgId ?? branch.orgId ?? orgId
         }));
+      this.changeDetector.detectChanges();
     } catch {
       this.branchOptions = [];
       this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
@@ -478,6 +480,7 @@ export class FloorComponent implements OnInit {
       });
 
       this.branchOptions = [...branchMap.values()];
+      this.changeDetector.detectChanges();
     } catch {
       this.branchOptions = [];
       this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
@@ -565,6 +568,7 @@ export class FloorComponent implements OnInit {
       }
       this.dialogBranch = floor.BranchId ?? floor.branchId ?? null;
       this.dialogRemarks = floor.Remarks ?? floor.remarks ?? '';
+      this.changeDetector.detectChanges();
     } catch {
       this.toast.error('Load Failed', 'Unable to load floor details. Please check and try again.');
     }

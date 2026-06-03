@@ -257,6 +257,8 @@ export class TaxComponent implements OnInit {
         } else {
             await this.loadLatestTaxCode(Number(this.userDetails.OrgId || 0));
         }
+
+        this.changeDetector.detectChanges();
     }
 
     closeAddDialog(): void {
@@ -276,6 +278,7 @@ export class TaxComponent implements OnInit {
                 label: organization.Name ?? '',
                 value: organization.Id ?? 0
             }));
+            this.changeDetector.detectChanges();
         } catch {
             this.organizationOptions = [];
             this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
@@ -386,6 +389,7 @@ export class TaxComponent implements OnInit {
             }
 
             this.showAddDialog = true;
+            this.changeDetector.detectChanges();
         } catch {
             this.toast.error('Load Failed', 'Unable to load tax details.');
         }

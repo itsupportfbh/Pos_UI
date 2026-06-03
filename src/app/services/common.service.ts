@@ -15,6 +15,10 @@ export class CommonService {
 
 
 
+  GetLanguage() {
+    return this.http.get(`${this.baseUrl}/${this.controllerPath}/GetLanguage`);
+  }
+
   GetCountry() {
     return this.http.get(`${this.baseUrl}/${this.controllerPath}/GetCountry`);
   }

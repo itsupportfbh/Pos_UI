@@ -690,6 +690,7 @@ export class ComboMenuComponent {
         label: this.getStringValue(item, 'name', 'Name'),
         value: this.getNumberValue(item, 'id', 'Id', 'ID')
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.categoryOptions = [];
       this.toast.error('Load Failed', 'Unable to load categories.');
@@ -708,6 +709,7 @@ export class ComboMenuComponent {
         categoryId: this.getNumberValue(item, 'categoryId', 'CategoryId', 'categoryid', 'categoryID', 'CategoryID', 'Categoryid')
       }));
       this.setSubCategoryOptions(this.dialogCategoryIds, false);
+      this.changeDetector.detectChanges();
     } catch {
       this.allSubCategoryOptions = [];
       this.subCategoryOptions = [];
@@ -727,6 +729,7 @@ export class ComboMenuComponent {
         price: this.getNumberValue(item, 'price', 'Price')
       }));
       this.setFoodMenuOptions(this.dialogSubCategoryIds);
+      this.changeDetector.detectChanges();
     } catch {
       this.allFoodMenuOptions = [];
       this.foodMenuOptions = [];

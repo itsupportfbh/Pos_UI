@@ -131,6 +131,12 @@
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="City is required."
       [numberValue]="true" [model]="dialogCity" (modelChange)="dialogCity = $event" />
 
+    <app-select-field label="Language" inputId="dialog-language-code" placeholder="Choose language"
+      [options]="languageOptions" [model]="dialogLanguageCode" (modelChange)="dialogLanguageCode = $event" />
+
+    <app-text-field label="Currency" inputId="dialog-currency" placeholder="Currency" [disabled]="true"
+      [model]="dialogCurrencyDisplay" (modelChange)="dialogCurrencyDisplay = $event" />
+
     <app-text-field label="Postal Code" inputId="dialog-postal-code" placeholder="Postal Code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Postal Code is required."
       [numbersOnly]="true" formatErrorMessage="Postal Code allows numbers only." [model]="dialogPostalCode"

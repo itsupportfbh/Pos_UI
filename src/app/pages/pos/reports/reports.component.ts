@@ -4,6 +4,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { AppTranslatePipe } from '../../../pipes/app-translate.pipe';
 import { AutocompleteFieldComponent } from '../../../components/form/autocomplete-field.component';
 import { CheckboxFieldComponent } from '../../../components/form/checkbox-field.component';
 import { DateFieldComponent } from '../../../components/form/date-field.component';
@@ -13,6 +14,7 @@ import { SelectFieldComponent } from '../../../components/form/select-field.comp
 import { TextareaFieldComponent } from '../../../components/form/textarea-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { AppLocaleService } from '../../../services/app-locale.service';
 import { AppToastService } from '../../../services/app-toast.service';
 import {
   ReportCatalogService,
@@ -24,6 +26,7 @@ import {
   RuntimePreviewResult
 } from '../../../services/report-catalog.service';
 import { TableExportService } from '../../../services/table-export.service';
+import { AppTranslationService } from '../../../services/app-translation.service';
 
 type ReportFieldOption = {
   label: string | number;
@@ -77,13 +80,16 @@ type CategoryOption = {
     RadioFieldComponent,
     AutocompleteFieldComponent,
     DateFieldComponent,
-    SharedTableComponent
+    SharedTableComponent,
+    AppTranslatePipe
   ],
   templateUrl: './reports.component.html',
   styleUrl: './reports.component.css'
 })
 export class ReportsComponent {
   private readonly toast = inject(AppToastService);
+  private readonly appLocale = inject(AppLocaleService);
+  private readonly appTranslation = inject(AppTranslationService);
   private readonly reportCatalogService = inject(ReportCatalogService);
   private readonly tableExportService = inject(TableExportService);
   private readonly changeDetector = inject(ChangeDetectorRef);
@@ -119,6 +125,10 @@ export class ReportsComponent {
 
   get hasNoReportAccess(): boolean {
     return !this.loadingCategories && !this.categories.length;
+  }
+
+  t(key: string, fallbackText: string): string {
+    return this.appTranslation.t(key, fallbackText);
   }
 
   async ngOnInit(): Promise<void> {
@@ -397,30 +407,34 @@ export class ReportsComponent {
   get resultStatusMessage(): string {
     if (this.previewResult && this.previewRows.length) {
       const reportName = this.selectedReportDefinition?.DisplayName || 'Report';
-      return `Showing ${this.previewRows.length} row${this.previewRows.length === 1 ? '' : 's'} from ${reportName}.`;
+      const template = this.t('reports.result_showing', 'Showing {count} row(s) from {report}.');
+      return template
+        .replace('{count}', String(this.previewRows.length))
+        .replace('{report}', reportName)
+        .replace('row(s)', this.previewRows.length === 1 ? 'row' : 'rows');
     }
 
     if (this.previewResult && !this.previewRows.length) {
-      return 'No data found for selected filters.';
+      return this.t('reports.no_data', 'No data found for selected filters.');
     }
 
-    return 'Run the report to display the result set here.';
+    return this.t('reports.result_subtitle', 'Run the report to display the result set here.');
   }
 
   get loadingStatusLabel(): string {
-    return 'Loading Reports . . . . .';
+    return this.t('reports.loading_title', 'Loading Reports . . . . .');
   }
 
   get resultEmptyMessage(): string {
     if (this.loadingPreview) {
-      return 'Loading report...';
+      return this.t('reports.loading_short', 'Loading report...');
     }
 
     if (this.previewResult && !this.previewRows.length) {
-      return 'No data found for selected filters.';
+      return this.t('reports.no_data', 'No data found for selected filters.');
     }
 
-    return 'No report data available.';
+    return this.t('reports.no_result_data', 'No report data available.');
   }
 
   get currentCategoryName(): string {
@@ -704,7 +718,7 @@ export class ReportsComponent {
     }
 
     if (value instanceof Date) {
-      return value.toLocaleDateString();
+      return this.appLocale.formatDate(value);
     }
 
     return String(value);
@@ -906,7 +920,7 @@ export class ReportsComponent {
             </div>
 
             <div class="receipt-footer">
-              Printed on ${this.escapeHtml(new Date().toLocaleString('en-IN'))}
+              Printed on ${this.escapeHtml(this.appLocale.formatDateTime(new Date()))}
             </div>
           </div>
         </body>
@@ -976,12 +990,7 @@ export class ReportsComponent {
   }
 
   private formatCurrencyLike(value: unknown): string {
-    const numericValue = typeof value === 'number' ? value : Number(value);
-    if (Number.isFinite(numericValue)) {
-      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(numericValue);
-    }
-
-    return this.formatPrintValue(value);
+    return this.appLocale.formatCurrency(value, { maximumFractionDigits: 2, minimumFractionDigits: 2 });
   }
 
   private escapeHtml(value: string): string {
@@ -1113,22 +1122,13 @@ export class ReportsComponent {
       case 'currency':
         return this.formatCurrencyLike(value);
       case 'number': {
-        const numericValue = this.toNumericValue(value);
-        return Number.isFinite(numericValue)
-          ? new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(numericValue)
-          : String(value);
+        return this.appLocale.formatNumber(value, { maximumFractionDigits: 2 });
       }
       case 'date': {
-        const parsedDate = new Date(String(value));
-        return Number.isNaN(parsedDate.getTime())
-          ? String(value)
-          : parsedDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        return this.appLocale.formatDate(value);
       }
       case 'datetime': {
-        const parsedDate = new Date(String(value));
-        return Number.isNaN(parsedDate.getTime())
-          ? String(value)
-          : parsedDate.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return this.appLocale.formatDateTime(value);
       }
       case 'boolean':
         return value === true || String(value).toLowerCase() === 'true' ? 'Yes' : 'No';

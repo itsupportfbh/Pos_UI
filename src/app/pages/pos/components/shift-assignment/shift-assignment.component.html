@@ -1,5 +1,6 @@
-<p-dialog [(visible)]="visible" [modal]="true" [style]="{ width: '36rem' }" [draggable]="false"
-  [resizable]="false" [closable]="false" [dismissableMask]="false" [closeOnEscape]="false">
+<p-dialog [(visible)]="visible" [modal]="true" [style]="{ width: '36rem', maxWidth: '94vw' }" [draggable]="false"
+  [resizable]="false" [closable]="false" [dismissableMask]="false" [closeOnEscape]="false"
+  appendTo="body" [blockScroll]="true" styleClass="shift-assignment-dialog">
   <ng-template pTemplate="header">
     <div class="dialog-header">
       <h2>Assign Shift (Required)</h2>

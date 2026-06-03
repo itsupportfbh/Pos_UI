@@ -23,6 +23,7 @@ export interface Organization {
   City?: number;
   State?: number;
   Country?: number;
+  LanguageCode?: string;
   PostalCode?: number;
   Remarks?: string;
   IsActive?: boolean;

@@ -2,8 +2,8 @@
   <header class="page-header hero-panel">
     <div>
       <p class="eyebrow">{{ pageEyebrow }}</p>
-      <h1>{{ pageTitle }}</h1>
-      <p class="page-subtitle">{{ pageSubtitle }}</p>
+      <h1>{{ 'reports.title' | appTranslate:pageTitle }}</h1>
+      <p class="page-subtitle">{{ 'reports.subtitle' | appTranslate:pageSubtitle }}</p>
     </div>
   </header>
 
@@ -16,15 +16,14 @@
           </span>
         </div>
         <div class="no-access-copy">
-          <p class="no-access-kicker">Report Access Restricted</p>
-          <h2>No reports are assigned to this role</h2>
+          <p class="no-access-kicker">{{ 'reports.no_access_kicker' | appTranslate:'Report Access Restricted' }}</p>
+          <h2>{{ 'reports.no_access_title' | appTranslate:'No reports are assigned to this role' }}</h2>
           <p>
-            This login does not currently have permission to open any report categories.
-            Contact your administrator to assign report rights for your role.
+            {{ 'reports.no_access_message' | appTranslate:'This login does not currently have permission to open any report categories. Contact your administrator to assign report rights for your role.' }}
           </p>
           <div class="no-access-meta">
-            <span><strong>Role:</strong> {{ userDetails?.RoleName || 'Unknown Role' }}</span>
-            <span><strong>Organization:</strong> {{ userDetails?.OrgName || 'Unknown Organization' }}</span>
+            <span><strong>{{ 'reports.role' | appTranslate:'Role' }}:</strong> {{ userDetails?.RoleName || ('reports.unknown_role' | appTranslate:'Unknown Role') }}</span>
+            <span><strong>{{ 'reports.organization' | appTranslate:'Organization' }}:</strong> {{ userDetails?.OrgName || ('reports.unknown_organization' | appTranslate:'Unknown Organization') }}</span>
           </div>
         </div>
       </div>
@@ -35,15 +34,15 @@
       <p-card class="feature-card compact-card">
         <div class="section-heading compact-heading">
           <div>
-            <h2>Report Categories</h2>
-            <p>Select a category to load its reports.</p>
+            <h2>{{ 'reports.categories_title' | appTranslate:'Report Categories' }}</h2>
+            <p>{{ 'reports.categories_subtitle' | appTranslate:'Select a category to load its reports.' }}</p>
           </div>
         </div>
 
         <app-select-field
-          label="Category"
+          [label]="'reports.category' | appTranslate:'Category'"
           inputId="report-category"
-          placeholder="Choose report category"
+          [placeholder]="'reports.category_placeholder' | appTranslate:'Choose report category'"
           [options]="categoryOptions"
           [filter]="true"
           [showClear]="false"
@@ -57,8 +56,8 @@
       <p-card class="feature-card compact-card">
         <div class="section-heading compact-heading">
           <div>
-            <h2>{{ currentCategoryName || 'Reports' }}</h2>
-            <p>Pick a report from this category.</p>
+            <h2>{{ currentCategoryName || ('reports.title' | appTranslate:'Reports') }}</h2>
+            <p>{{ 'reports.pick_report' | appTranslate:'Pick a report from this category.' }}</p>
           </div>
         </div>
 
@@ -85,8 +84,8 @@
           </div>
         } @else {
           <div class="empty-panel compact-empty">
-            <h3>No reports available</h3>
-            <p>No reports are mapped to the selected category for this role.</p>
+            <h3>{{ 'reports.no_reports_available' | appTranslate:'No reports available' }}</h3>
+            <p>{{ 'reports.no_reports_available_message' | appTranslate:'No reports are mapped to the selected category for this role.' }}</p>
           </div>
         }
       </p-card>
@@ -96,8 +95,8 @@
       <p-card class="feature-card compact-card">
         <div class="section-heading compact-heading">
           <div>
-            <h2>{{ selectedReportDefinition?.DisplayName || 'Report Filters' }}</h2>
-            <p>{{ selectedReportDefinition?.Description || 'Select a report to load the runtime filter fields.' }}</p>
+            <h2>{{ selectedReportDefinition?.DisplayName || ('reports.filters_title' | appTranslate:'Report Filters') }}</h2>
+            <p>{{ selectedReportDefinition?.Description || ('reports.filters_subtitle' | appTranslate:'Select a report to load the runtime filter fields.') }}</p>
           </div>
         </div>
 
@@ -240,23 +239,23 @@
             </div>
 
             <div class="action-row sticky-actions">
-              <button pButton type="button" class="report-action-btn is-view" label="View" icon="pi pi-eye" [loading]="loadingPreview" [disabled]="loadingDefinition" (click)="viewReport()"></button>
+              <button pButton type="button" class="report-action-btn is-view" [label]="'reports.view' | appTranslate:'View'" icon="pi pi-eye" [loading]="loadingPreview" [disabled]="loadingDefinition" (click)="viewReport()"></button>
               @if (selectedReportDefinition.CanPrint) {
-                <button pButton type="button" class="report-action-btn is-print" label="Print" icon="pi pi-print" [disabled]="!previewRows.length" (click)="printReport()"></button>
+                <button pButton type="button" class="report-action-btn is-print" [label]="'reports.print' | appTranslate:'Print'" icon="pi pi-print" [disabled]="!previewRows.length" (click)="printReport()"></button>
               }
               @if (selectedReportDefinition.ExportPdf) {
-                <button pButton type="button" class="report-action-btn is-pdf" label="Export PDF" icon="pi pi-file-pdf" [disabled]="!previewRows.length" (click)="exportPdf()"></button>
+                <button pButton type="button" class="report-action-btn is-pdf" [label]="'reports.export_pdf' | appTranslate:'Export PDF'" icon="pi pi-file-pdf" [disabled]="!previewRows.length" (click)="exportPdf()"></button>
               }
               @if (selectedReportDefinition.ExportExcel) {
-                <button pButton type="button" class="report-action-btn is-excel" label="Export Excel" icon="pi pi-file-excel" [disabled]="!previewRows.length" (click)="exportExcel()"></button>
+                <button pButton type="button" class="report-action-btn is-excel" [label]="'reports.export_excel' | appTranslate:'Export Excel'" icon="pi pi-file-excel" [disabled]="!previewRows.length" (click)="exportExcel()"></button>
               }
-              <button pButton type="button" class="report-action-btn is-clear" label="Clear" icon="pi pi-times" [disabled]="loadingPreview" (click)="clearFilters()"></button>
+              <button pButton type="button" class="report-action-btn is-clear" [label]="'reports.clear' | appTranslate:'Clear'" icon="pi pi-times" [disabled]="loadingPreview" (click)="clearFilters()"></button>
             </div>
           </section>
         } @else {
           <div class="empty-panel compact-empty">
-            <h3>Select a report</h3>
-            <p>The filter form will appear here once you choose a report from the selected category.</p>
+            <h3>{{ 'reports.select_report' | appTranslate:'Select a report' }}</h3>
+            <p>{{ 'reports.select_report_message' | appTranslate:'The filter form will appear here once you choose a report from the selected category.' }}</p>
           </div>
         }
       </p-card>
@@ -264,7 +263,7 @@
       <p-card class="feature-card compact-card result-card">
         <div class="section-heading compact-heading">
           <div>
-            <h2>Report Result</h2>
+            <h2>{{ 'reports.result_title' | appTranslate:'Report Result' }}</h2>
             <p>{{ resultStatusMessage }}</p>
           </div>
         </div>
@@ -276,7 +275,7 @@
             </div>
             <div class="loading-state-copy">
               <strong>{{ loadingStatusLabel }}</strong>
-              <span>Preparing your report template and result set.</span>
+              <span>{{ 'reports.loading_detail' | appTranslate:'Preparing your report template and result set.' }}</span>
             </div>
           </div>
         }
