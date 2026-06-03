@@ -33,6 +33,7 @@ const orderScreenPage = () => import('../order-screen/order-screen.component').t
 const orderHoldPage = () => import('../order-hold/order-hold.component').then((module) => module.OrderHoldComponent);
 const orderEditPage = () => import('../order-edit/order-edit.component').then((module) => module.OrderEditComponent);
 const displayMenuItemsPage = () => import('../display-menu-items/display-menu-items.component').then((module) => module.DisplayMenuItemsComponent);
+const serveOrdersPage = () => import('../serve-orders/serve-orders.component').then((module) => module.ServeOrdersComponent);
 const menuPriceChangePage = () => import('../menu-price-change/menu-price-change.component').then((module) => module.MenuPriceChangeComponent);
 const quickServePage = () => import('../quick-serve/quick-serve.component').then((module) => module.QuickServeComponent);
 const recallPage = () => import('../recall/recall.component').then((module) => module.RecallComponent);
@@ -116,8 +117,9 @@ export const POS_ROUTES: Routes = [
       { path: 'order-hold', loadComponent: orderHoldPage },
       { path: 'order-edit', loadComponent: orderEditPage },
       { path: 'display-menu-items', loadComponent: displayMenuItemsPage },
+      //{ path: 'serve-orders', loadComponent: serveOrdersPage },
       { path: 'menu-price-change', loadComponent: menuPriceChangePage },
-      { path: 'quick-serve', loadComponent: quickServePage },
+      { path: 'quick-serve', loadComponent: serveOrdersPage },
       { path: 'recall', loadComponent: recallPage },
       { path: 'tender', loadComponent: tenderPage },
       { path: 'shift-close', loadComponent: shiftClosePage },

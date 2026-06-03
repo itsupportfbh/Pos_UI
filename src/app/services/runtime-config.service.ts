@@ -10,7 +10,7 @@ type AppConfig = {
   providedIn: 'root'
 })
 export class RuntimeConfigService {
-  apiBaseUrl = 'https://localhost:5001';
+  apiBaseUrl = 'https://localhost:7230';
 
   constructor(private readonly http: HttpClient) {}
 

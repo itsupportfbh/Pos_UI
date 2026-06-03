@@ -10,7 +10,8 @@ export interface Reservation {
   CustomerName: string;
   CustomerMobile: string;
   ReservationDate: string;
-  Reservationtime: string;
+  ReservationFromtime: string;
+  ReservationTotime: string;
   TableName: string;
   CustomerEmail: string;
   Guestcount: number;
@@ -25,7 +26,7 @@ export interface Reservation {
   UpdatedDate?: string | null;
   IsDeleted?: boolean;
   EntityNo?: number;
-  branchId?: number;
+  BranchId?: number;
 }
 
 @Injectable({

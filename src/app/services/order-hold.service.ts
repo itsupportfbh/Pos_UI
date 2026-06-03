@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
 import { RuntimeConfigService } from './runtime-config.service';
+import { DiningTable } from './diningtable.service';
 
 export interface OrderHold {
   Id?: number;
@@ -27,6 +28,10 @@ export interface OrderHold {
   combomenuid?: number;
   Ordertype?: string;
   ordertype?: string;
+  ServingType?: string;
+  servingType?: string;
+  ServiceType?: string;
+  serviceType?: string;
   Orderstatus?: number;
   orderstatus?: number;
   CustomerName?: string;
@@ -181,6 +186,16 @@ export class OrderHoldService {
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
+  }
+  getAllTable(orgid: number, branchId: number): Observable<ApiListResponse<DiningTable>> {
+    const params = new HttpParams()
+      .set('orgid', orgid.toString())
+      .set('branchid', branchId.toString());
+
+    return this.http.get<ApiListResponse<DiningTable>>(
+      `${this.baseUrl}/Orders/GetAllTable`,
+      { params }
+    );
   }
 
   private get baseUrl(): string {

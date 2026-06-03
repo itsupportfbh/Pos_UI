@@ -184,7 +184,7 @@ export class OrderHoldComponent implements OnInit {
 
   readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Hold Orders';
-  readonly pageSubtitle = 'Review held tickets, tables, and totals before sending them back to service.';
+ // readonly pageSubtitle = 'Review held tickets, tables, and totals before sending them back to service.';
   readonly tableTitle = 'Hold Orders';
   readonly tableCaption = 'Hold Orders';
   readonly tableColumns = ORDER_HOLD_COLUMNS;

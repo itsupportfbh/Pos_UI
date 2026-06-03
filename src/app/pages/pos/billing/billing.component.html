@@ -1,5 +1,5 @@
 <section class="billing-page">
-  <app-shift-assignment 
+  <app-shift-assignment
     [(visible)]="showShiftAssignment"
     (shiftAssigned)="showShiftAssignment = false">
   </app-shift-assignment>
@@ -18,98 +18,211 @@
     </article>
     <article class="summary-card">
       <span>Customer</span>
-      <strong>{{ selectedCustomer || '-' }}</strong>
+      <strong>{{ currentCustomerLabel }}</strong>
     </article>
     <article class="summary-card">
       <span>Discount</span>
-      <strong>{{ discountAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+      <strong>{{ discountAmount | currency:'INR':'symbol':'1.2-2' }}</strong>
     </article>
     <article class="summary-card">
       <span>Total</span>
-      <strong>{{ grandTotal | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+      <strong>{{ grandTotal | currency:'INR':'symbol':'1.2-2' }}</strong>
     </article>
   </section>
 
   <section class="billing-layout">
-    <p-card class="catalog-card feature-card">
-      <div class="billing-tools">
-        <div class="tool-block">
-          <span class="tool-label">Find Items</span>
-          <app-text-field label="" inputId="productSearch" placeholder="Search menu or category"
-            [model]="productSearch" (modelChange)="onProductSearchChange($event)" />
-        </div>
-
-        <div class="tool-block">
-          <span class="tool-label">Barcode</span>
-          <app-text-field label="" inputId="barcodeSearch" placeholder="Search barcode" [model]="barcodeSearch"
-            (modelChange)="onBarcodeSearchChange($event)" />
-        </div>
+    <p-card class="lookup-card feature-card">
+      <div class="mode-switch">
+        <button type="button" class="mode-pill" [class.active]="billingMode === 'search-order'" (click)="setBillingMode('search-order')">
+          Search Order
+        </button>
+        <button type="button" class="mode-pill" [class.active]="billingMode === 'quick-bill'" (click)="setBillingMode('quick-bill')">
+          Quick Bill
+        </button>
       </div>
 
-      <section class="product-grid">
-        @for (product of filteredProducts; track product.id) {
-          <article class="product-card">
-            <div class="product-top">
-              <span class="product-category">{{ product.category }}</span>
-              <span class="product-stock" [class.low-stock]="product.stock < 20">{{ product.stock }} in stock</span>
+      @if (billingMode === 'search-order') {
+        <section class="lookup-tools">
+          <div class="tool-block wide">
+            <span class="tool-label">Order Number / Customer / Table</span>
+            <app-text-field
+              label=""
+              inputId="orderSearch"
+              placeholder="Search order number, table, customer, or phone"
+              [model]="orderSearch"
+              (modelChange)="onOrderSearchChange($event)" />
+          </div>
+
+          <div class="tool-block">
+            <span class="tool-label">Service Mode</span>
+            <div class="service-pills">
+              <button type="button" class="service-pill" [class.active]="serviceFilter === 'All'" (click)="setServiceFilter('All')">All</button>
+              <button type="button" class="service-pill" [class.active]="serviceFilter === 'Dine In'" (click)="setServiceFilter('Dine In')">Dine In</button>
+              <button type="button" class="service-pill" [class.active]="serviceFilter === 'Take Away'" (click)="setServiceFilter('Take Away')">Take Away</button>
+              <button type="button" class="service-pill" [class.active]="serviceFilter === 'Delivery'" (click)="setServiceFilter('Delivery')">Delivery</button>
             </div>
-            <h3>{{ product.name }}</h3>
-            <p class="barcode-text">Barcode {{ product.barcode }}</p>
-            <div class="product-footer">
-              <strong>{{ product.price | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
-              <p-button label="Add" icon="pi pi-plus" (onClick)="addToCart(product)" />
-            </div>
-          </article>
-        } @empty {
-          <div class="empty-state">No menu items found.</div>
-        }
-      </section>
+          </div>
+        </section>
+
+        <section class="order-list">
+          @for (order of filteredOrders; track order.orderNo) {
+            <article class="order-card" [class.selected]="currentOrder?.orderNo === order.orderNo" (click)="selectOrder(order)">
+              <div class="order-top">
+                <div>
+                  <span class="order-no">{{ order.orderNo }}</span>
+                  <h3>{{ order.customer }}</h3>
+                </div>
+                <span class="service-badge">{{ order.serviceMode }}</span>
+              </div>
+
+              <div class="order-meta">
+                <span>Table {{ order.table }}</span>
+                <span>{{ order.branch }}</span>
+              </div>
+
+              <div class="order-footer">
+                <span>{{ order.items.length }} items</span>
+                <strong>{{ order.status }}</strong>
+              </div>
+            </article>
+          } @empty {
+            <div class="empty-state">No open orders match this search.</div>
+          }
+        </section>
+      } @else {
+        <section class="lookup-tools">
+          <div class="tool-block wide">
+            <span class="tool-label">Find Items</span>
+            <app-text-field
+              label=""
+              inputId="itemSearch"
+              placeholder="Search menu item or category"
+              [model]="itemSearch"
+              (modelChange)="onItemSearchChange($event)" />
+          </div>
+
+          <div class="tool-block">
+            <span class="tool-label">Barcode</span>
+            <app-text-field
+              label=""
+              inputId="barcodeSearch"
+              placeholder="Search barcode or quick code"
+              [model]="barcodeSearch"
+              (modelChange)="onBarcodeSearchChange($event)" />
+          </div>
+        </section>
+
+        <section class="product-grid">
+          @for (item of filteredQuickItems; track item.id) {
+            <article class="product-card">
+              <div class="product-top">
+                <span class="product-category">{{ item.category }}</span>
+                @if (item.badge) {
+                  <span class="product-badge">{{ item.badge }}</span>
+                }
+              </div>
+              <h3>{{ item.name }}</h3>
+              <p>{{ gstPercent }}% GST at bill stage</p>
+              <div class="product-footer">
+                <strong>{{ item.price | currency:'INR':'symbol':'1.2-2' }}</strong>
+                <p-button label="Add" icon="pi pi-plus" (onClick)="addQuickItem(item)" />
+              </div>
+            </article>
+          } @empty {
+            <div class="empty-state">No menu items found for quick billing.</div>
+          }
+        </section>
+      }
     </p-card>
 
     <p-card class="cart-card feature-card">
       <div class="cart-header">
         <div>
           <p class="eyebrow">Current Bill</p>
-          <h2>Items Added</h2>
+          <h2>{{ currentOrderNumber }}</h2>
+          <p class="cart-subtitle">{{ activeServiceModeLabel }} / {{ currentBranchLabel }}</p>
         </div>
-        <span class="cart-customer-name">{{ selectedCustomer || '-' }}</span>
+        <span class="cart-customer-name">{{ currentCustomerLabel }}</span>
       </div>
 
-      <div class="cart-section-title">
+      <div class="bill-context">
+        <div>
+          <span>Service</span>
+          <strong>{{ activeServiceModeLabel }}</strong>
+        </div>
+        <div>
+          <span>Table</span>
+          <strong>{{ currentOrder?.table || '-' }}</strong>
+        </div>
+        <div>
+          <span>Branch</span>
+          <strong>{{ currentBranchLabel }}</strong>
+        </div>
+        <div>
+          <span>Status</span>
+          <strong>{{ currentOrder?.status || 'Draft Bill' }}</strong>
+        </div>
+      </div>
+
+      <div class="cart-section-title compact">
         <span>Selected Items</span>
+      </div>
+      <div class="cart-search-row">
+        <app-text-field
+          label=""
+          inputId="cartSearch"
+          placeholder="Search selected items"
+          [model]="cartSearch"
+          (modelChange)="onCartSearchChange($event)" />
       </div>
       <section class="cart-list">
         @if (cartItems.length) {
-          @for (item of cartItems; track item.id) {
+          @for (item of filteredCartItems; track item.id) {
             <article class="cart-item">
               <div class="cart-item-main">
                 <strong>{{ item.name }}</strong>
-                <p>{{ item.price | currency: 'USD' : 'symbol' : '1.2-2' }} each</p>
+                <p>{{ item.qty }} x {{ item.rate | currency:'INR':'symbol':'1.2-2' }} • GST {{ gstPercent }}%</p>
+                @if (item.kotNo) {
+                  <span class="kot-tag">{{ item.kotNo }}</span>
+                }
               </div>
 
               <div class="qty-actions">
                 <button type="button" (click)="decreaseQuantity(item.id)">-</button>
-                <span>{{ item.quantity }}</span>
+                <span>{{ item.qty }}</span>
                 <button type="button" (click)="increaseQuantity(item.id)">+</button>
               </div>
 
-              <strong>{{ item.price * item.quantity | currency: 'USD' : 'symbol' : '1.2-2' }}</strong>
+              <strong>{{ item.qty * item.rate | currency:'INR':'symbol':'1.2-2' }}</strong>
               <button type="button" class="remove-link" (click)="removeCartItem(item.id)">Remove</button>
             </article>
+          } @empty {
+            <div class="empty-state compact-empty">No selected items match this search.</div>
           }
         } @else {
           <div class="empty-state">No items added yet.</div>
         }
       </section>
 
-      <div class="cart-section-title">
+      <div class="cart-section-title compact">
+        <span>Billing Notes</span>
+      </div>
+      <textarea
+        class="notes-box"
+        rows="3"
+        placeholder="Add bill remarks, parcel notes, or delivery handover note"
+        [value]="notes"
+        (input)="notes = $any($event.target).value"></textarea>
+
+      <div class="cart-section-title compact">
         <span>Bill Summary</span>
       </div>
       <section class="totals-card">
-        <div><span>Subtotal</span><strong>{{ subtotal | currency: 'USD' : 'symbol' : '1.2-2' }}</strong></div>
-        <div><span>Discount</span><strong>- {{ discountAmount | currency: 'USD' : 'symbol' : '1.2-2' }}</strong></div>
-        <div><span>Tax 5%</span><strong>{{ tax | currency: 'USD' : 'symbol' : '1.2-2' }}</strong></div>
-        <div class="grand-total"><span>Total</span><strong>{{ grandTotal | currency: 'USD' : 'symbol' : '1.2-2' }}</strong></div>
+        <div><span>Subtotal</span><strong>{{ subtotal | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Discount</span><strong>- {{ discountAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Service Charge</span><strong>{{ serviceChargeAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Tax</span><strong>{{ taxAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div class="grand-total"><span>Total</span><strong>{{ grandTotal | currency:'INR':'symbol':'1.2-2' }}</strong></div>
       </section>
     </p-card>
   </section>
@@ -117,34 +230,155 @@
   <p-card class="payment-card feature-card">
     <div class="section-heading">
       <div>
-        <h2>Checkout</h2>
+        <h2>Payment</h2>
       </div>
     </div>
 
-    <section class="payment-grid">
-      <app-autocomplete-field label="Select Customer" inputId="customer" placeholder="Search customer"
-        [suggestions]="customers" [model]="selectedCustomer" (modelChange)="selectedCustomer = $event" />
+    <section class="payment-overview">
+      <article class="payment-overview-card">
+        <span>Bill Mode</span>
+        <strong>{{ billingMode === 'search-order' ? 'Order Billing' : 'Quick Bill' }}</strong>
+      </article>
+      <article class="payment-overview-card">
+        <span>Payment Mode</span>
+        <strong>{{ selectedPaymentMode || 'Choose Mode' }}</strong>
+      </article>
+      <article class="payment-overview-card total-card">
+        <span>Amount To Collect</span>
+        <strong>{{ grandTotal | currency:'INR':'symbol':'1.2-2' }}</strong>
+      </article>
+    </section>
 
-      <app-select-field label="Payment Mode" inputId="paymentMode" placeholder="Choose payment mode"
-        [options]="paymentModes" [model]="selectedPaymentMode" (modelChange)="selectedPaymentMode = $event" />
+    <section class="checkout-grid">
+      <div class="checkout-panel">
+        <h3>Customer & Discount</h3>
 
-      <app-text-field label="Discount" inputId="discount" placeholder="Enter discount amount" [model]="discountInput"
-        (modelChange)="onDiscountChange($event)" />
+        <app-autocomplete-field
+          label="Select Customer"
+          inputId="billingCustomer"
+          placeholder="Search customer"
+          [suggestions]="customers"
+          [model]="selectedCustomer"
+          (modelChange)="selectedCustomer = $event" />
 
-      <div class="payment-summary">
-        <span>Customer</span>
-        <strong>{{ selectedCustomer || 'Walk-in Customer' }}</strong>
-        <span>Mode</span>
-        <strong>{{ selectedPaymentMode || 'Cash' }}</strong>
+        <div class="discount-row">
+          <div class="discount-type-toggle">
+            <button type="button" class="mode-pill" [class.active]="discountType === 'Amount'" (click)="setDiscountType('Amount')">Amount</button>
+            <button type="button" class="mode-pill" [class.active]="discountType === 'Percent'" (click)="setDiscountType('Percent')">Percent</button>
+          </div>
+
+          <app-text-field
+            label="Discount"
+            inputId="discount"
+            [placeholder]="discountType === 'Amount' ? 'Enter discount amount' : 'Enter discount %'"
+            [model]="discountInput"
+            (modelChange)="onDiscountChange($event)" />
+        </div>
+
+      </div>
+
+      <div class="checkout-panel">
+        <h3>Payment Collection</h3>
+
+        <app-select-field
+          label="Payment Mode"
+          inputId="paymentMode"
+          placeholder="Choose payment mode"
+          [options]="paymentModes"
+          [model]="selectedPaymentMode"
+          (modelChange)="setPaymentMode('' + $event)" />
+
+        <div class="payment-mode-grid">
+          @for (mode of paymentModes; track mode.value) {
+            <button
+              type="button"
+              class="payment-tile"
+              [class.active]="selectedPaymentMode === mode.value"
+              (click)="setPaymentMode('' + mode.value)">
+              {{ mode.label }}
+            </button>
+          }
+        </div>
+
+        @if (isCashPayment) {
+          <app-text-field
+            label="Received Amount"
+            inputId="receivedAmount"
+            placeholder="Enter received amount"
+            [model]="receivedAmountInput"
+            (modelChange)="onReceivedAmountChange($event)" />
+
+          <div class="payment-balance" [class.change-positive]="balanceAmount >= 0">
+            <span>{{ balanceAmount >= 0 ? 'Change / Balance' : 'Pending Amount' }}</span>
+            <strong>{{ balanceAmount | currency:'INR':'symbol':'1.2-2' }}</strong>
+          </div>
+        }
+
+        @if (isDigitalPayment) {
+          <div class="payment-reference-grid">
+            <app-text-field
+              [label]="paymentReferenceLabel"
+              inputId="paymentReference"
+              placeholder="Enter transaction reference"
+              [model]="paymentReference"
+              (modelChange)="onPaymentReferenceChange($event)" />
+          </div>
+
+          <div class="payment-note">
+            <span>Digital payment is marked against the bill after reference confirmation.</span>
+          </div>
+        }
+
+        @if (isCardPayment) {
+          <div class="payment-reference-grid two-columns">
+            <app-text-field
+              label="Approval Code"
+              inputId="approvalCode"
+              placeholder="Enter approval code"
+              [model]="approvalCode"
+              (modelChange)="onApprovalCodeChange($event)" />
+
+            <app-text-field
+              label="Card Last 4 Digits"
+              inputId="cardLastFour"
+              placeholder="Last 4 digits"
+              [model]="cardLastFour"
+              (modelChange)="onCardLastFourChange($event)" />
+          </div>
+
+          <div class="payment-note">
+            <span>Use terminal approval code and last 4 digits for settlement tracking.</span>
+          </div>
+        }
       </div>
     </section>
 
-    <div class="action-row">
-      <p-button label="Generate Bill" icon="pi pi-check-circle" />
-      <p-button label="Print Bill" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printBill()" />
-    </div>
+    <section class="payment-footer">
+      <div class="payment-footer-summary">
+        <div>
+          <span>Customer</span>
+          <strong>{{ currentCustomerLabel }}</strong>
+        </div>
+        <div>
+          <span>{{ settlementSummaryLabel }}</span>
+          @if (isCashPayment) {
+            <strong>{{ +(settlementSummaryValue || 0) | currency:'INR':'symbol':'1.2-2' }}</strong>
+          } @else {
+            <strong>{{ settlementSummaryValue }}</strong>
+          }
+        </div>
+        <div>
+          <span>{{ isCashPayment ? (balanceAmount >= 0 ? 'Balance' : 'Pending') : 'Amount To Collect' }}</span>
+          <strong>{{ (isCashPayment ? balanceAmount : grandTotal) | currency:'INR':'symbol':'1.2-2' }}</strong>
+        </div>
+      </div>
 
-    <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Bill"
-      severity="danger" [text]="true" (click)="clearBill()"></button>
+      <div class="action-row">
+        <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Bill" severity="danger" [text]="true" (click)="clearBill()"></button>
+        <p-button label="Print Bill" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printBill()" />
+        <p-button [label]="isGeneratingBill ? 'Completing' : 'Complete Bill'" icon="pi pi-check-circle"
+          [disabled]="isGeneratingBill || !cartItems.length" (onClick)="generateBill()" />
+      </div>
+    </section>
   </p-card>
 </section>

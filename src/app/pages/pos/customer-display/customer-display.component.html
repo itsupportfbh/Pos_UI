@@ -36,9 +36,7 @@
             <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
             <span class="status-label" [ngClass]="getStatusClass(order)">{{ getOrderStatusDisplay(order) }}</span>
             <small>{{ getOrderNumberDisplay(order) }}</small>
-            @if (getElapsedMinutes(order)) {
-              <em>{{ getElapsedMinutes(order) }}</em>
-            }
+           
           </div>
         } @empty {
           <div class="customer-order-empty">No orders in progress</div>

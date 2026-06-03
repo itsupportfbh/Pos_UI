@@ -191,10 +191,18 @@ viewReady = false;
   }
 
   markKitchenOrderItemPreparing(order: KitchenOrder, item: KitchenOrderItem): void {
+    if (this.isItemLocked(item)) {
+      return;
+    }
+
     this.updateKitchenOrderItemStatus(order, item, 'Preparing');
   }
 
   markKitchenOrderItemReady(order: KitchenOrder, item: KitchenOrderItem): void {
+    if (this.isItemLocked(item)) {
+      return;
+    }
+
     this.updateKitchenOrderItemStatus(order, item, 'Ready');
   }
 
@@ -243,7 +251,11 @@ viewReady = false;
     } else {
       this.kitchenOrders = this.kitchenOrders.map((item) =>
         item.id === order.id
-          ? { ...item, status, items: item.items.map((orderItem) => ({ ...orderItem, status })) }
+          ? {
+              ...item,
+              status,
+              items: item.items.map((orderItem) => this.isItemLocked(orderItem) ? orderItem : { ...orderItem, status })
+            }
           : item
       );
     }
@@ -304,6 +316,10 @@ viewReady = false;
 
   isItemPreparing(item: KitchenOrderItem): boolean {
     return this.isInProcessStatus(item.status);
+  }
+
+  isItemLocked(item: KitchenOrderItem): boolean {
+    return this.isLockedKitchenStatus(item.status);
   }
 
   getVisibleItemCount(order: KitchenOrder): number {
@@ -367,35 +383,36 @@ viewReady = false;
 
     return {
       ...rawOrder,
-      orderid: this.getNumberValue(rawOrder, 'orderid', 'Orderid', 'OrderId', 'Id') || order.id,
-      orderNumber: this.getStringValue(rawOrder, 'orderNumber', 'OrderNumber') || order.orderNo,
-      orderType: this.getStringValue(rawOrder, 'orderType', 'OrderType') || order.orderType,
+      orderid: this.getNumberValue(rawOrder,  'Orderid', 'OrderId') || order.id,
+      orderNumber: this.getStringValue(rawOrder,  'OrderNumber') || order.orderNo,
+      orderType: this.getStringValue(rawOrder,  'OrderType') || order.orderType,
       OrderStatus: statusCode,
       Orderstatus: statusCode,
-      orderStatus: statusCode,
-      orderstatus: statusCode,
+      
       itemCount: this.getNumberValue(rawOrder, 'itemCount', 'ItemCount') || order.itemCount,
-      subtotalAmount: this.getNumberValue(rawOrder, 'subtotalAmount', 'SubtotalAmount'),
-      taxAmount: this.getNumberValue(rawOrder, 'taxAmount', 'TaxAmount'),
-      discountAmount: this.getNumberValue(rawOrder, 'discountAmount', 'DiscountAmount'),
-      totalAmount: this.getNumberValue(rawOrder, 'totalAmount', 'TotalAmount') || order.grandTotal,
-      customerName: this.getStringValue(rawOrder, 'customerName', 'CustomerName') || order.customerName,
-      contactNumber: this.getStringValue(rawOrder, 'contactNumber', 'ContactNumber', 'CustomerPhone') || order.customerPhone,
-      tableId: this.getNumberValue(rawOrder, 'tableId', 'TableId') || order.tableId,
-      shiftId: this.getNumberValue(rawOrder, 'shiftId', 'ShiftId', 'Shiftid'),
+      subtotalAmount: this.getNumberValue(rawOrder,  'SubtotalAmount'),
+      taxAmount: this.getNumberValue(rawOrder,  'TaxAmount'),
+      discountAmount: this.getNumberValue(rawOrder,  'DiscountAmount'),
+      totalAmount: this.getNumberValue(rawOrder,  'TotalAmount') || order.grandTotal,
+      customerName: this.getStringValue(rawOrder,  'CustomerName') || order.customerName,
+      contactNumber: this.getStringValue(rawOrder, 'ContactNumber'),
+      tableId: this.getNumberValue(rawOrder, 'TableId') || order.tableId,
+      shiftId: this.getNumberValue(rawOrder,  'ShiftId', 'Shiftid'),
       orgId: this.getNumberValue(rawOrder, 'orgId', 'OrgId') || this.getUserOrgId(),
-      branchId: this.getNumberValue(rawOrder, 'branchId', 'BranchId') || this.getUserBranchId(),
-      createdBy: this.getNumberValue(rawOrder, 'createdBy', 'CreatedBy') || userId || 0,
-      createdDate: this.getStringValue(rawOrder, 'createdDate', 'CreatedDate') || now,
-      updatedBy: userId || this.getNumberValue(rawOrder, 'updatedBy', 'UpdatedBy') || 0,
+      branchId: this.getNumberValue(rawOrder, 'BranchId') || this.getUserBranchId(),
+      createdBy: this.getNumberValue(rawOrder,  'CreatedBy') || userId || 0,
+      createdDate: this.getStringValue(rawOrder,  'CreatedDate') || now,
+      updatedBy: userId || this.getNumberValue(rawOrder,  'UpdatedBy') || 0,
       updatedDate: now,
       isDeleted: this.getBooleanValue(rawOrder, 'isDeleted', 'IsDeleted') ?? false,
       items: this.getOrderItems(rawOrder).map((item: any) => ({
         ...item,
-        itemstatus: statusCode,
-        Itemstatus: statusCode,
-        updatedBy: userId || this.getNumberValue(item, 'updatedBy', 'UpdatedBy') || 0,
-        UpdatedBy: userId || this.getNumberValue(item, 'updatedBy', 'UpdatedBy') || 0,
+       
+        Itemstatus: this.isLockedKitchenStatus(this.getRawValue(item, 'Itemstatus', 'itemstatus', 'ItemStatus', 'itemStatus'))
+          ? this.getStatusCode(this.getRawValue(item, 'Itemstatus', 'itemstatus', 'ItemStatus', 'itemStatus'))
+          : statusCode,
+        
+        UpdatedBy: userId || this.getNumberValue(item,  'UpdatedBy') || 0,
         updatedDate: now,
         UpdatedDate: now
       }))
@@ -407,29 +424,18 @@ viewReady = false;
     const rawItem = item.rawItem ?? {};
     const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
     const now = new Date().toISOString();
-    const orderId = this.getNumberValue(rawOrder, 'orderid', 'Orderid', 'OrderId', 'Id') || order.id;
-    const itemId = this.getNumberValue(rawItem, 'itemid', 'Itemid', 'ItemId', 'id', 'Id') || item.id;
+    const orderId = this.getNumberValue(rawOrder,  'Orderid', 'OrderId') || order.id;
+    const itemId = this.getNumberValue(rawItem, 'Itemid') || item.id;
     const statusCode = this.getStatusCode(status);
 
     return {
-      Orderid: orderId,
-      OrderId: orderId,
-      orderid: orderId,
-      orderId,
-      itemid: itemId,
-      Itemid: itemId,
-      ItemId: itemId,
-      itemId,
-      OrderStatus: statusCode,
-      Orderstatus: statusCode,
-      orderStatus: statusCode,
-      orderstatus: statusCode,
-      itemstatus: statusCode,
-      Itemstatus: statusCode,
-      updatedBy: userId || this.getNumberValue(rawItem, 'updatedBy', 'UpdatedBy') || 0,
-      UpdatedBy: userId || this.getNumberValue(rawItem, 'updatedBy', 'UpdatedBy') || 0,
-      updatedDate: now,
-      UpdatedDate: now
+     
+            OrderId: orderId,
+            Itemid: itemId,
+            Orderstatus: statusCode,
+            Itemstatus: statusCode,
+            UpdatedBy: userId || this.getNumberValue(rawItem, 'UpdatedBy') || 0,
+            UpdatedDate: now
     };
   }
 
@@ -448,8 +454,8 @@ viewReady = false;
       quantity,
       price,
       lineTotal: this.getNumberValue(item, 'Totalprice') || quantity * price,
-      status: this.getStatusLabel(this.getRawValue(item, 'Itemstatus', 'itemstatus') ?? orderStatus),
-      comboItems: this.parseComboDetails(this.getStringValue(item, 'Modifierdetails', 'modifierdetails')),
+      status: this.getStatusLabel(this.getRawValue(item, 'Itemstatus') ?? orderStatus),
+      comboItems: this.parseComboDetails(this.getStringValue(item, 'Modifierdetails')),
       rawItem: item
     };
   }
@@ -592,6 +598,20 @@ viewReady = false;
   private isReadyStatus(status: unknown): boolean {
     const normalizedStatus = String(status || '').trim().toLowerCase();
     return normalizedStatus === '3' || normalizedStatus === 'ready' || normalizedStatus === 'ready to serve';
+  }
+
+  private isServedStatus(status: unknown): boolean {
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    return normalizedStatus === '4' || normalizedStatus === 'served';
+  }
+
+  private isCancelledStatus(status: unknown): boolean {
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    return normalizedStatus === '5' || normalizedStatus === 'cancelled' || normalizedStatus === 'canceled';
+  }
+
+  private isLockedKitchenStatus(status: unknown): boolean {
+    return this.isServedStatus(status) || this.isCancelledStatus(status);
   }
 
   private hasVisibleKitchenItems(order: KitchenOrder): boolean {

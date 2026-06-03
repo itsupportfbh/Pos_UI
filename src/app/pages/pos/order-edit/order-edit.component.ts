@@ -20,6 +20,16 @@ import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableCompone
 
 const ACTIVE_HELD_ORDER_STORAGE_KEY = 'activeHeldOrder';
 
+const ORDER_STATUS = {
+  Hold: 0,
+  InKitchen: 1,
+  Preparing: 2,
+  Ready: 3,
+  Served: 4,
+  Cancelled: 5,
+  Completed: 6
+} as const;
+
 type OrderEditRow = {
   Id: number;
   OrderNo: string;
@@ -441,7 +451,8 @@ export class OrderEditComponent {
   }
 
   private mapOrderToRow(order: any, index: number): OrderEditRow {
-    const status = this.getStringValue(order, 'OrderStatus') || 'Open';
+    const rawStatus = this.getRawValue(order, 'OrderStatus', 'Orderstatus', 'orderStatus', 'orderstatus', 'Status', 'status');
+    const status = this.getStatusLabel(rawStatus);
 
     return {
       Id: this.getNumberValue(order,  'OrderId'),
@@ -477,25 +488,33 @@ export class OrderEditComponent {
   private toSerializableOrder(order: any): any {
     const source = order as any;
     const orderId = this.getOrderId(order);
-    const items = this.getOrderItems(order).map((item: any) => ({
-      Id: this.getNumberValue(item, 'Id', 'id', 'Itemid', 'itemid'),
-      itemid: this.getNumberValue(item,  'Itemid'),
-      Orderid: this.getNumberValue(item, 'Orderid') || orderId,
-      Menuitemid: this.getStringValue(item, 'Menuitemid'),
-      ComboMenuId: this.getNumberValue(item, 'ComboMenuItemId'),
-      ComboMenuItemId: this.getNumberValue(item,  'ComboMenuItemId'),
-      Itemname: this.getStringValue(item, 'Itemname'),
-      Quantity: this.getNumberValue(item, 'Quantity', 'quantity', 'Qty', 'qty') || 1,
-      Unitprice: this.getNumberValue(item, 'Unitprice'),
-      Totalprice: this.getNumberValue(item, 'Totalprice'),
-      DiscountAmount: this.getNumberValue(item, 'DiscountAmount'),
-      TaxAmount: this.getNumberValue(item, 'TaxAmount'),
-      Modifierdetails: this.getStringValue(item, 'Modifierdetails') || null,
-      Itemstatus: this.getStringValue(item, 'Itemstatus') || this.getOrderStatus(order),
-      Notes: this.getStringValue(item, 'Notes', 'notes') || null,
-      OrgId: this.getNumberValue(item, 'OrgId') || this.getUserOrgId(),
-      BranchId: this.getNumberValue(item, 'BranchId') || this.getUserBranchId()
-    }));
+    const items = this.getOrderItems(order).map((item: any) => {
+      const itemId = this.getNumberValue(item, 'itemid', 'Itemid', 'ItemId', 'itemId', 'Id', 'id');
+
+      return {
+        Id: itemId,
+        id: itemId,
+        Itemid: itemId,
+        itemid: itemId,
+        ItemId: itemId,
+        itemId,
+        Orderid: this.getNumberValue(item, 'Orderid', 'orderid', 'OrderId', 'orderId') || orderId,
+        Menuitemid: this.getStringValue(item, 'Menuitemid', 'menuitemid', 'MenuItemId', 'menuItemId'),
+        ComboMenuId: this.getNumberValue(item, 'ComboMenuId', 'comboMenuId', 'Combomenuid', 'combomenuid'),
+        ComboMenuItemId: this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid'),
+        Itemname: this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName', 'Name', 'name'),
+        Quantity: this.getNumberValue(item, 'Quantity', 'quantity', 'Qty', 'qty') || 1,
+        Unitprice: this.getNumberValue(item, 'Unitprice', 'unitprice', 'UnitPrice', 'unitPrice', 'Price', 'price'),
+        Totalprice: this.getNumberValue(item, 'Totalprice', 'totalprice', 'TotalPrice', 'totalPrice'),
+        DiscountAmount: this.getNumberValue(item, 'DiscountAmount', 'discountAmount'),
+        TaxAmount: this.getNumberValue(item, 'TaxAmount', 'taxAmount'),
+        Modifierdetails: this.getStringValue(item, 'Modifierdetails', 'modifierdetails') || null,
+        Itemstatus: this.getStringValue(item, 'Itemstatus', 'itemstatus') || this.getOrderStatus(order),
+        Notes: this.getStringValue(item, 'Notes', 'notes') || null,
+        OrgId: this.getNumberValue(item, 'OrgId', 'orgId') || this.getUserOrgId(),
+        BranchId: this.getNumberValue(item, 'BranchId', 'branchId') || this.getUserBranchId()
+      };
+    });
 
     return {
       ...source,
@@ -618,7 +637,7 @@ export class OrderEditComponent {
   }
 
   private getOrderStatus(order: any): string {
-    return this.getStringValue(order, 'OrderStatus') || 'Open';
+    return this.getStatusLabel(this.getRawValue(order, 'OrderStatus', 'Orderstatus', 'orderStatus', 'orderstatus', 'Status', 'status'));
   }
 
   private isOrderLikeObject(value: any): boolean {
@@ -655,6 +674,68 @@ export class OrderEditComponent {
   private getStringValue(source: any, ...keys: string[]): string {
     const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
     return value?.toString() ?? '';
+  }
+
+  private getRawValue(source: any, ...keys: string[]): unknown {
+    return keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
+  }
+
+  private getStatusCode(status: unknown): number | null {
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status;
+    }
+
+    const normalizedStatus = String(status ?? '').trim().toLowerCase().replace(/\s+/g, '');
+
+    switch (normalizedStatus) {
+      case '0':
+      case 'hold':
+        return ORDER_STATUS.Hold;
+      case '1':
+      case 'inkitchen':
+        return ORDER_STATUS.InKitchen;
+      case '2':
+      case 'inprocess':
+      case 'preparing':
+        return ORDER_STATUS.Preparing;
+      case '3':
+      case 'ready':
+      case 'readytoserve':
+        return ORDER_STATUS.Ready;
+      case '4':
+      case 'served':
+        return ORDER_STATUS.Served;
+      case '5':
+      case 'cancelled':
+      case 'canceled':
+        return ORDER_STATUS.Cancelled;
+      case '6':
+      case 'completed':
+        return ORDER_STATUS.Completed;
+      default:
+        return null;
+    }
+  }
+
+  private getStatusLabel(status: unknown): string {
+    switch (this.getStatusCode(status)) {
+      case ORDER_STATUS.Hold:
+        return 'Hold';
+      case ORDER_STATUS.InKitchen:
+        return 'In Kitchen';
+      case ORDER_STATUS.Preparing:
+        return 'Preparing';
+      case ORDER_STATUS.Ready:
+        return 'Ready';
+      case ORDER_STATUS.Served:
+        return 'Served';
+      case ORDER_STATUS.Cancelled:
+        return 'Cancelled';
+      case ORDER_STATUS.Completed:
+        return 'Completed';
+      default:
+        return this.getStringValue({ status }, 'status') || 'Open';
+    }
   }
 
   private getNumberValue(source: any, ...keys: string[]): number {
