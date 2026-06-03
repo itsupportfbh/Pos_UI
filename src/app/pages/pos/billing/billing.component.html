@@ -375,11 +375,8 @@
 
       <div class="action-row">
         <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Bill" severity="danger" [text]="true" (click)="clearBill()"></button>
-        @if (currentOrder?.serviceMode === 'Delivery') {
-          <p-button label="Verify & Deliver" icon="pi pi-send" severity="secondary" [outlined]="true" (onClick)="markDelivered()" />
-        }
         <p-button label="Print Bill" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printBill()" />
-        <p-button [label]="isGeneratingBill ? 'Generating' : 'Generate Bill'" icon="pi pi-check-circle"
+        <p-button [label]="isGeneratingBill ? 'Completing' : 'Complete Bill'" icon="pi pi-check-circle"
           [disabled]="isGeneratingBill || !cartItems.length" (onClick)="generateBill()" />
       </div>
     </section>
