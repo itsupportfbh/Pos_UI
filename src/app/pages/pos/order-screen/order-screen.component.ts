@@ -95,6 +95,7 @@ export class OrderScreenComponent implements OnInit {
   private readonly orderEntityNoCache = new Map<string, number>();
   private menuSearchTimer: ReturnType<typeof setTimeout> | null = null;
   private menuLoadRequestId = 0;
+  private newCartLineSequence = 0;
 
   activeCategoryId = 0;
   activeSubCategoryId = 0;
@@ -515,6 +516,34 @@ export class OrderScreenComponent implements OnInit {
     this.orderNotes = this.normalizeInputText((event.target as HTMLTextAreaElement).value).slice(0, 500);
   }
 
+  getCartItemStatusDisplay(item: any): string {
+    return this.getStatusLabel(this.getItemStatusCode(item) ?? ORDER_STATUS.InKitchen);
+  }
+
+  getCartItemStatusClass(item: any): string {
+    switch (this.getItemStatusCode(item) ?? ORDER_STATUS.InKitchen) {
+      case ORDER_STATUS.Hold:
+        return 'item-status-hold';
+      case ORDER_STATUS.InKitchen:
+        return 'item-status-kitchen';
+      case ORDER_STATUS.Preparing:
+        return 'item-status-preparing';
+      case ORDER_STATUS.Ready:
+        return 'item-status-ready';
+      case ORDER_STATUS.Served:
+        return 'item-status-served';
+      case ORDER_STATUS.Cancelled:
+        return 'item-status-cancelled';
+      default:
+        return 'item-status-kitchen';
+    }
+  }
+
+  isCartItemEditable(item: any): boolean {
+    const itemStatus = this.getItemStatusCode(item);
+    return itemStatus === null || itemStatus === ORDER_STATUS.InKitchen;
+  }
+
   applyMenuSelection(): void {
     this.menuItems = this.allMenuItems
       .filter((x: any) => this.activeCategoryId === 0 || x.categoryId === 0 || x.categoryId === this.activeCategoryId)
@@ -524,18 +553,63 @@ export class OrderScreenComponent implements OnInit {
   }
 
   addToCart(item: any): void {
-    const existing = this.cartItems.find((x: any) => x.cartKey === item.cartKey);
+    const baseCartKey = this.getCartItemBaseKey(item);
+    const existing = this.cartItems.find((x: any) =>
+      this.getCartItemBaseKey(x) === baseCartKey && this.canMergeCartItemQuantity(x)
+    );
 
     if (existing) {
       existing.quantity += 1;
     } else {
-      this.cartItems = [{ ...item, quantity: 1 }, ...this.cartItems];
+      this.cartItems = [this.createNewCartLine(item), ...this.cartItems];
     }
 
     this.updateBillingSummary();
   }
 
+  private getCartItemBaseKey(item: any): string {
+    return this.getStringValue(item, 'baseCartKey', 'sourceCartKey', 'cartKey');
+  }
+
+  private canMergeCartItemQuantity(item: any): boolean {
+    return this.isCartItemEditable(item);
+  }
+
+  private createNewCartLine(item: any): any {
+    const baseCartKey = this.getCartItemBaseKey(item);
+    const cartKeyExists = this.cartItems.some((x: any) => x.cartKey === item.cartKey);
+
+    if (!cartKeyExists) {
+      return {
+        ...item,
+        baseCartKey,
+        quantity: 1
+      };
+    }
+
+    this.newCartLineSequence += 1;
+
+    return {
+      ...item,
+      heldItemId: 0,
+      itemid: 0,
+      Itemid: 0,
+      ItemId: 0,
+      itemId: 0,
+      itemStatus: ORDER_STATUS.InKitchen,
+      Itemstatus: ORDER_STATUS.InKitchen,
+      itemstatus: ORDER_STATUS.InKitchen,
+      baseCartKey,
+      cartKey: `${baseCartKey}-new-${Date.now()}-${this.newCartLineSequence}`,
+      quantity: 1
+    };
+  }
+
   increaseQuantity(itemKey: string): void {
+    if (!this.isCartItemKeyEditable(itemKey)) {
+      return;
+    }
+
     this.cartItems = this.cartItems.map((x: any) =>
       x.cartKey === itemKey ? { ...x, quantity: x.quantity + 1 } : x
     );
@@ -544,6 +618,10 @@ export class OrderScreenComponent implements OnInit {
   }
 
   decreaseQuantity(itemKey: string): void {
+    if (!this.isCartItemKeyEditable(itemKey)) {
+      return;
+    }
+
     this.cartItems = this.cartItems
       .map((x: any) => x.cartKey === itemKey ? { ...x, quantity: x.quantity - 1 } : x)
       .filter((x: any) => x.quantity > 0);
@@ -552,8 +630,17 @@ export class OrderScreenComponent implements OnInit {
   }
 
   removeItem(itemKey: string): void {
+    if (!this.isCartItemKeyEditable(itemKey)) {
+      return;
+    }
+
     this.cartItems = this.cartItems.filter((x: any) => x.cartKey !== itemKey);
     this.updateBillingSummary();
+  }
+
+  private isCartItemKeyEditable(itemKey: string): boolean {
+    const item = this.cartItems.find((x: any) => x.cartKey === itemKey);
+    return Boolean(item && this.isCartItemEditable(item));
   }
 
   clearOrder(): void {
@@ -869,6 +956,9 @@ export class OrderScreenComponent implements OnInit {
   private buildKitchenOrderItem(item: any, orderId: number, userId: number, timestamp: string, status: OrderStatusCode): any {
     const quantity = Number(item.quantity || 0);
     const unitPrice = Number(item.price || 0);
+    const itemStatus = this.canMergeCartItemQuantity(item)
+      ? status
+      : this.getItemStatusCode(item) ?? status;
     const isCombo = item.itemType === 'Combo';
     const comboMenuItemId = isCombo
       ? this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid', 'ComboMenuId', 'comboMenuId', 'id', 'Id')
@@ -902,8 +992,8 @@ export class OrderScreenComponent implements OnInit {
       taxAmount: 0,
       Modifierdetails: isCombo && item.comboItems?.length ? JSON.stringify(item.comboItems) : '',
       modifierdetails: isCombo && item.comboItems?.length ? JSON.stringify(item.comboItems) : '',
-      Itemstatus: status,
-      itemstatus: status,
+      Itemstatus: itemStatus,
+      itemstatus: itemStatus,
       Notes: isCombo ? 'Combo Menu' : '',
       notes: isCombo ? 'Combo Menu' : '',
       OrgId: this.orgId,
@@ -1107,6 +1197,7 @@ export class OrderScreenComponent implements OnInit {
       const quantity = this.getNumberValue(item, 'Quantity', 'quantity', 'Qty', 'qty') || 1;
       const unitPrice = this.getNumberValue(item, 'Unitprice', 'unitprice', 'UnitPrice', 'unitPrice', 'price', 'Price');
       const heldItemId = this.getNumberValue(item, 'itemid', 'Itemid', 'ItemId', 'itemId', 'Id', 'id');
+      const itemStatus = this.getItemStatusCode(item) ?? this.getStatusCode(heldOrder, 'Orderstatus', 'orderstatus', 'OrderStatus', 'orderStatus');
       const cartKey = isCombo
         ? menuItemId.startsWith('combo-') ? menuItemId : 'combo-' + (numericId || heldItemId || index + 1)
         : 'menu-' + (numericId || heldItemId || index + 1);
@@ -1122,6 +1213,7 @@ export class OrderScreenComponent implements OnInit {
         orderid: this.getNumberValue(item, 'orderid', 'Orderid', 'OrderId', 'orderId'),
         id: numericId || existingMenuItem?.id || 0,
         cartKey: numericId ? cartKey : existingMenuItem?.cartKey || cartKey,
+        baseCartKey: numericId ? cartKey : existingMenuItem?.cartKey || cartKey,
         itemType: isCombo ? 'Combo' : 'Menu',
         ComboMenuId: isCombo ? comboMenuId || numericId || existingMenuItem?.comboMenuId || 0 : 0,
         Combomenuid: isCombo ? comboMenuId || numericId || existingMenuItem?.comboMenuId || 0 : 0,
@@ -1132,6 +1224,9 @@ export class OrderScreenComponent implements OnInit {
         subCategory: existingMenuItem?.subCategory ?? '',
         price: unitPrice || existingMenuItem?.price || 0,
         quantity,
+        itemStatus,
+        Itemstatus: itemStatus,
+        itemstatus: itemStatus,
         comboItems: existingMenuItem?.comboItems ?? this.parseComboDetails(item)
       };
     });
@@ -1558,6 +1653,37 @@ export class OrderScreenComponent implements OnInit {
   private isCurrentHeldOrder(): boolean {
     const status = this.getStatusCode(this.currentHeldOrder, 'Orderstatus', 'orderstatus', 'OrderStatus', 'orderStatus');
     return status === ORDER_STATUS.Hold;
+  }
+
+  private getItemStatusCode(item: any): OrderStatusCode | null {
+    return this.getStatusCode(
+      item,
+      'Itemstatus',
+      'itemstatus',
+      'ItemStatus',
+      'itemStatus',
+      'Status',
+      'status'
+    );
+  }
+
+  private getStatusLabel(status: OrderStatusCode | null): string {
+    switch (status) {
+      case ORDER_STATUS.Hold:
+        return 'Hold';
+      case ORDER_STATUS.InKitchen:
+        return 'In Kitchen';
+      case ORDER_STATUS.Preparing:
+        return 'Preparing';
+      case ORDER_STATUS.Ready:
+        return 'Ready';
+      case ORDER_STATUS.Served:
+        return 'Served';
+      case ORDER_STATUS.Cancelled:
+        return 'Cancelled';
+      default:
+        return 'In Kitchen';
+    }
   }
 
   private getStatusCode(source: any, ...keys: string[]): OrderStatusCode | null {

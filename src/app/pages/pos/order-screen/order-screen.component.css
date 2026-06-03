@@ -466,6 +466,10 @@
   background: var(--app-item-bg);
 }
 
+.cart-item-disabled {
+  background: rgba(248, 250, 252, 0.72);
+}
+
 .order-notes-field {
   display: block;
   margin-top: 0.25rem;
@@ -510,6 +514,46 @@
   white-space: nowrap;
 }
 
+.item-status-pill {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.18rem;
+  padding: 0.1rem 0.38rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.item-status-hold {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.item-status-kitchen,
+.item-status-preparing {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.item-status-ready {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.item-status-served {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.item-status-cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .quantity-control {
   min-width: 4.7rem;
   justify-content: center;
@@ -528,6 +572,12 @@
   border-color: var(--app-border);
   background: var(--app-surface-strong);
   color: var(--app-text);
+}
+
+.quantity-control button:disabled,
+.remove-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .quantity-control span {

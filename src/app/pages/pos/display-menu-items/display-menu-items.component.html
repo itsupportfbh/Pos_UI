@@ -68,7 +68,7 @@
                   
       <div class="detail-items">
         @for (item of order.items; track item.cartKey) {
-          <article class="detail-item" [class.detail-item-ready]="isItemReady(item)">
+          <article class="detail-item" [class.detail-item-ready]="isItemReady(item)" [class.detail-item-locked]="isItemLocked(item)">
             <div class="detail-item-main">
               <div>
                 <small>Item Name</small>
@@ -99,10 +99,10 @@
             </div>
             <div class="detail-item-actions">
               <button pButton type="button" icon="pi pi-clock" label="In Process"
-                [disabled]="isItemPreparing(item) || isItemReady(item)"
+                [disabled]="isItemPreparing(item) || isItemReady(item) || isItemLocked(item)"
                 (click)="markKitchenOrderItemPreparing(order, item); $event.stopPropagation()"></button>
               <button pButton type="button" icon="pi pi-check" label="Ready"
-                [disabled]="isItemReady(item)"
+                [disabled]="isItemReady(item) || isItemLocked(item)"
                 (click)="markKitchenOrderItemReady(order, item); $event.stopPropagation()"></button>
             </div>
           </article>

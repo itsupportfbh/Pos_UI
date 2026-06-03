@@ -377,6 +377,15 @@
   opacity: 0.7;
 }
 
+.detail-item-locked {
+  opacity: 0.72;
+}
+
+.detail-item-locked .detail-item-main span {
+  background: #f1f5f9;
+  color: #475569;
+}
+
 .detail-item-main {
   display: flex;
   align-items: flex-start;

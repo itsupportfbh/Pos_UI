@@ -191,10 +191,18 @@ viewReady = false;
   }
 
   markKitchenOrderItemPreparing(order: KitchenOrder, item: KitchenOrderItem): void {
+    if (this.isItemLocked(item)) {
+      return;
+    }
+
     this.updateKitchenOrderItemStatus(order, item, 'Preparing');
   }
 
   markKitchenOrderItemReady(order: KitchenOrder, item: KitchenOrderItem): void {
+    if (this.isItemLocked(item)) {
+      return;
+    }
+
     this.updateKitchenOrderItemStatus(order, item, 'Ready');
   }
 
@@ -243,7 +251,11 @@ viewReady = false;
     } else {
       this.kitchenOrders = this.kitchenOrders.map((item) =>
         item.id === order.id
-          ? { ...item, status, items: item.items.map((orderItem) => ({ ...orderItem, status })) }
+          ? {
+              ...item,
+              status,
+              items: item.items.map((orderItem) => this.isItemLocked(orderItem) ? orderItem : { ...orderItem, status })
+            }
           : item
       );
     }
@@ -304,6 +316,10 @@ viewReady = false;
 
   isItemPreparing(item: KitchenOrderItem): boolean {
     return this.isInProcessStatus(item.status);
+  }
+
+  isItemLocked(item: KitchenOrderItem): boolean {
+    return this.isLockedKitchenStatus(item.status);
   }
 
   getVisibleItemCount(order: KitchenOrder): number {
@@ -392,7 +408,9 @@ viewReady = false;
       items: this.getOrderItems(rawOrder).map((item: any) => ({
         ...item,
        
-        Itemstatus: statusCode,
+        Itemstatus: this.isLockedKitchenStatus(this.getRawValue(item, 'Itemstatus', 'itemstatus', 'ItemStatus', 'itemStatus'))
+          ? this.getStatusCode(this.getRawValue(item, 'Itemstatus', 'itemstatus', 'ItemStatus', 'itemStatus'))
+          : statusCode,
         
         UpdatedBy: userId || this.getNumberValue(item,  'UpdatedBy') || 0,
         updatedDate: now,
@@ -580,6 +598,20 @@ viewReady = false;
   private isReadyStatus(status: unknown): boolean {
     const normalizedStatus = String(status || '').trim().toLowerCase();
     return normalizedStatus === '3' || normalizedStatus === 'ready' || normalizedStatus === 'ready to serve';
+  }
+
+  private isServedStatus(status: unknown): boolean {
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    return normalizedStatus === '4' || normalizedStatus === 'served';
+  }
+
+  private isCancelledStatus(status: unknown): boolean {
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    return normalizedStatus === '5' || normalizedStatus === 'cancelled' || normalizedStatus === 'canceled';
+  }
+
+  private isLockedKitchenStatus(status: unknown): boolean {
+    return this.isServedStatus(status) || this.isCancelledStatus(status);
   }
 
   private hasVisibleKitchenItems(order: KitchenOrder): boolean {

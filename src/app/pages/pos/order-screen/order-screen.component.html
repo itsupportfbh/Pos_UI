@@ -163,25 +163,28 @@
         </div>
         <section class="cart-list">
           @for (item of cartItems; track item.cartKey) {
-            <article class="cart-item">
+            <article class="cart-item" [class.cart-item-disabled]="!isCartItemEditable(item)">
               <div class="cart-item-main">
                 <strong>{{ item.name }}</strong>
                 <span>{{ item.price | currency: 'INR' : 'symbol' : '1.2-2' }} each</span>
+                <em class="item-status-pill" [ngClass]="getCartItemStatusClass(item)">
+                  {{ getCartItemStatusDisplay(item) }}
+                </em>
               </div>
 
               <div class="quantity-control">
-                <button type="button" aria-label="Decrease quantity" (click)="decreaseQuantity(item.cartKey)">
+                <button type="button" aria-label="Decrease quantity" [disabled]="!isCartItemEditable(item)" (click)="decreaseQuantity(item.cartKey)">
                   <i class="pi pi-minus"></i>
                 </button>
                 <span>{{ item.quantity }}</span>
-                <button type="button" aria-label="Increase quantity" (click)="increaseQuantity(item.cartKey)">
+                <button type="button" aria-label="Increase quantity" [disabled]="!isCartItemEditable(item)" (click)="increaseQuantity(item.cartKey)">
                   <i class="pi pi-plus"></i>
                 </button>
               </div>
 
               <strong class="line-total">{{ item.price * item.quantity | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
 
-              <button type="button" class="remove-button" aria-label="Remove item" (click)="removeItem(item.cartKey)">
+              <button type="button" class="remove-button" aria-label="Remove item" [disabled]="!isCartItemEditable(item)" (click)="removeItem(item.cartKey)">
                 <i class="pi pi-trash"></i>
               </button>
             </article>
