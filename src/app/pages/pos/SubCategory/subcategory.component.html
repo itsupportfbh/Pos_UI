@@ -17,6 +17,9 @@
     </div>
 
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [showDownloadButton]="showDownloadButton" (excelDownloadClick)="exportSubCategoriesAsExcel()"
+      (pdfDownloadClick)="exportSubCategoriesAsPdf()" [downloadLoading]="downloadLoading"
+      [downloadLoadingLabel]="downloadLoadingLabel"
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
@@ -69,8 +72,8 @@
 
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-subcategoryCode" placeholder="Enter sub category code"
-      [required]="true" [maxlength]="50" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogModel.code ?? ''"
-      (modelChange)="dialogModel.code = $event" />
+      [required]="true" [maxlength]="50" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
+      [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
 
     <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-subcategoryName" placeholder="Enter sub category name"
       [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Name is required." [model]="dialogModel.name ?? ''"

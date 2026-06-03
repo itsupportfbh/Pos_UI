@@ -17,6 +17,9 @@
     </div>
 
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [showDownloadButton]="showDownloadButton" (excelDownloadClick)="exportPrintersAsExcel()"
+      (pdfDownloadClick)="exportPrintersAsPdf()" [downloadLoading]="downloadLoading"
+      [downloadLoadingLabel]="downloadLoadingLabel"
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
@@ -79,7 +82,7 @@
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" inputId="dialog-printerCode" placeholder="Enter printer code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Printer Code is required."
-      [model]="dialogPrinterCode" (modelChange)="dialogPrinterCode = $event" [readonly]="true" />
+      [model]="dialogPrinterCode" (modelChange)="dialogPrinterCode = $event" [disabled]="true" />
 
     <app-text-field label="Printer Name" inputId="dialog-printerName" placeholder="Enter printer name" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Printer Name is required."

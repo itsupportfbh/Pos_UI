@@ -302,7 +302,9 @@
 }
 
 .organization-card-image {
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 0.18rem;
   border: 1px solid var(--app-border);
   background: var(--app-surface-strong);
 }
@@ -477,7 +479,9 @@
   width: 3.15rem;
   height: 3.15rem;
   border-radius: 0.95rem;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 0.18rem;
   border: 1px solid var(--app-border);
   background: var(--app-surface-strong);
   flex-shrink: 0;

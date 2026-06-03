@@ -23,7 +23,7 @@
   [size]="size"
   [globalFilterFields]="globalFilterFields"
   [showCurrentPageReport]="showCurrentPageReport"
-  [currentPageReportTemplate]="currentPageReportTemplate"
+  [currentPageReportTemplate]="resolvedCurrentPageReportTemplate"
   [paginatorDropdownAppendTo]="'body'"
   [tableStyle]="{ 'min-width': '100%' }"
   responsiveLayout="scroll"
@@ -40,7 +40,7 @@
           <button
             pButton
             type="button"
-            [label]="filterButtonLabel"
+            [label]="resolvedFilterButtonLabel"
             [icon]="filterButtonIcon"
             severity="secondary"
             outlined="true"
@@ -49,13 +49,56 @@
           ></button>
         }
 
+        @if (showDownloadButton) {
+          @if (resolvedDownloadLoading) {
+            <button
+              pButton
+              type="button"
+              [label]="resolvedDownloadLoadingLabel"
+              icon="pi pi-spinner pi-spin"
+              severity="secondary"
+              outlined="true"
+              class="table-download-button table-download-loading"
+              [disabled]="true"
+            ></button>
+          } @else {
+            <div class="table-download">
+              <button
+                pButton
+                type="button"
+                [label]="resolvedDownloadButtonLabel"
+                [icon]="downloadButtonIcon"
+                severity="secondary"
+                outlined="true"
+                class="table-download-button"
+                (click)="toggleDownloadMenu($event)"
+              ></button>
+
+              @if (showDownloadMenu) {
+                <div class="table-download-menu" role="menu">
+                  @for (item of downloadMenuItems; track item.action) {
+                    <button
+                      type="button"
+                      class="table-download-menu-item"
+                      (click)="handleDownloadMenuClick(item.action, $event)"
+                    >
+                      <i [class]="item.icon"></i>
+                      <span>{{ item.label }}</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+
         <div class="table-search">
           <input
             pInputText
             type="text"
             [(ngModel)]="globalFilterValue"
             (input)="dt.filterGlobal(globalFilterValue, 'contains')"
-            [placeholder]="globalFilterPlaceholder"
+            [placeholder]="resolvedGlobalFilterPlaceholder"
           />
         </div>
 
@@ -99,7 +142,7 @@
       @if (showRowActions) {
         <th class="action-column">
           <div class="header-cell">
-            <span>{{ rowActionHeader }}</span>
+            <span>{{ resolvedRowActionHeader }}</span>
           </div>
         </th>
       }
@@ -141,7 +184,7 @@
   <ng-template pTemplate="emptymessage">
     <tr>
       <td [attr.colspan]="visibleColumns.length + (selectionMode === 'multiple' ? 1 : 0) + (showRowActions ? 1 : 0)" class="empty-message">
-        {{ emptyMessage }}
+        {{ resolvedEmptyMessage }}
       </td>
     </tr>
   </ng-template>

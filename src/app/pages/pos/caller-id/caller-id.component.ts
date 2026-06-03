@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -9,8 +10,14 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { EntityMasterService } from '../../../services/entitymaster.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type CallerIdRow = {
   Id: number;
@@ -50,8 +57,14 @@ const CALLERID_COLUMNS: SharedTableColumn<CallerIdRow>[] = [
   styleUrl: './caller-id.component.css'
 })
 export class CallerIdComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly entityMasterService = inject(EntityMasterService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -83,18 +96,127 @@ export class CallerIdComponent {
   readonly tableTitle = 'Caller ID';
   readonly tableCaption = 'Caller ID';
   tableColumns = CALLERID_COLUMNS;
-  readonly showAddNewButton = true;
+  callerIdRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  showDownloadButton = true;
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
+  userDetails: any = {};
+  callerIdEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    await this.loadCallerIdRights();
     this.loadRows();
+  }
+
+  async loadCallerIdRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.callerIdEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.callerIdRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.callerIdRights.Create;
+      this.showDownloadButton = this.callerIdRights.Download;
+      this.showRowActions = this.callerIdRights.Edit || this.callerIdRights.Delete || this.callerIdRights.ActiveInActive || this.callerIdRights.Print;
+    } catch {
+      this.callerIdRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load caller ID rights for this role.');
+    }
   }
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+  }
+
+  async exportCallerIdsAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const fileName = 'OrgName-Caller-ID';
+      const searchText = this.filterSearchText.trim().toLowerCase();
+      let exportRows = [...this.allRows];
+
+      if (searchText) {
+        exportRows = exportRows.filter((row) =>
+          row.Code.toLowerCase().includes(searchText) ||
+          row.Name.toLowerCase().includes(searchText) ||
+          row.Remarks.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No caller ID records are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Caller ID');
+      this.toast.success('Export Ready', 'Caller ID Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export caller ID records to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportCallerIdsAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const fileName = 'OrgName-Caller-ID';
+      const searchText = this.filterSearchText.trim().toLowerCase();
+      let exportRows = [...this.allRows];
+
+      if (searchText) {
+        exportRows = exportRows.filter((row) =>
+          row.Code.toLowerCase().includes(searchText) ||
+          row.Name.toLowerCase().includes(searchText) ||
+          row.Remarks.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No caller ID records are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Caller ID', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Caller ID PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export caller ID records to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   searchRows(): void {
@@ -303,21 +425,32 @@ export class CallerIdComponent {
   }
 
   private getRowActionItems(row: CallerIdRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.callerIdRights.Edit && row.IsActive) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.callerIdRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.callerIdRights.ActiveInActive) {
+      if (row.IsActive) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.callerIdRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -328,9 +461,16 @@ export class CallerIdComponent {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: CallerIdRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this caller ID');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
   }
 }
 

@@ -1,60 +1,125 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
-
+import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { employee, EmployeeService } from '../../../services/employeemasters.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
+import { FormsModule } from '@angular/forms';
+import{ BranchService } from '../../../services/branch.service';
+import { TableExportService } from '../../../services/table-export.service';
+
 
 type EmployeeRegistrationRow = {
+
+  BranchId: number | null;
+
+  DesignationId: number | null;
+
+  DepartmentId: number | null;
+
+  designationId: 0;
+
+  departmentId: 0;
+
+  branchId: 0;
+
+  IdProofNo: string;    
+
   Id: number;
+
   Code: string;
+
   Name: string;
+
+  Designation: string;
+
+  Department: string;
+
+  BranchName: string;
+
+  MobileNo: string;
+
+  EmailId: string;
+
+  AddressLine1: string;
+
   Remarks: string;
+
   IsActive: boolean;
+
   Status: string;
+
   RowNumber: number;
+
+  Gender?: string;
 };
 
 const EMPLOYEEREGISTRATION_COLUMNS: SharedTableColumn<EmployeeRegistrationRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
   { field: 'Code', header: 'Code', sortable: true, width: '10rem' },
   { field: 'Name', header: 'Name', sortable: true, width: '18rem' },
-  { field: 'Remarks', header: 'Remarks', sortable: true, width: '20rem' },
+  { field: 'Designation', header: 'Designation', sortable: true, width: '8rem' },
+  { field: 'Department', header: 'Department', sortable: true, width: '8rem' },
+  { field: 'BranchName', header: 'BranchName', sortable: true, width: '8rem' },
+  { field: 'EmailId', header: 'EmailID', sortable: true, width: '8rem' },
+  { field: 'MobileNo', header: 'MobileNo', sortable: true, width: '8rem' },
   { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
+  
+  
 ];
 
 @Component({
   selector: 'app-employee-registration',
   standalone: true,
-  imports: [
-    CommonModule,
-    ConfirmDialogModule,
-    ButtonModule,
-    CardModule,
-    DialogModule,
-    TextFieldComponent,
-    ActionButtonsComponent,
-    MenuModule,
-    SharedTableComponent,
-    SharedTableCellTemplateDirective
-  ],
+ imports: [
+  CommonModule,
+  FormsModule,
+  ConfirmDialogModule,
+  ButtonModule,
+  CardModule,
+  DialogModule,
+  TextFieldComponent,
+  MultiSelectFieldComponent,
+  SelectFieldComponent,
+  ActionButtonsComponent,
+  MenuModule,
+  SharedTableComponent,
+  SharedTableCellTemplateDirective,
+],
   providers: [ConfirmationService],
   templateUrl: './employee-registration.component.html',
   styleUrl: './employee-registration.component.css'
 })
 export class EmployeeRegistrationComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
-
+  @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
+  private readonly employeeService = inject(EmployeeService);
+  private readonly entityMasterService = inject(EntityMasterService);
+  private readonly branchService = inject(BranchService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
   showAddDialog = false;
   showFilterSidebar = false;
   isEditMode = false;
@@ -63,39 +128,338 @@ export class EmployeeRegistrationComponent {
   rowActionItems: MenuItem[] = [];
   allRows: EmployeeRegistrationRow[] = [];
   tableRows: EmployeeRegistrationRow[] = [];
+  
 
   filterSearchText = '';
   dialogId = 0;
   dialogCode = '';
   dialogName = '';
-  dialogRemarks = '';
+  filterEmployee: MultiSelectFieldValue = [];
 
+dialogDepartment: number | null = 0;
+
+dialogDesignation: number | null = 0;
+
+dialogBranch: number | null = 0;
+
+dialogPhone: string = '';
+
+dialogEmail: string = '';
+
+dialogAddress: string = '';
+
+dialogStatus: boolean = true;
+
+dialogRemarks: string = '';
+
+dialogGender: string = '';
+
+
+  
   readonly pageEyebrow = 'POS';
   readonly pageTitle = 'Employee Registration';
   readonly pageSubtitle = 'Manage employee registration records here.';
-  readonly filterTitle = 'Employee Registration Filters';
-  readonly primaryActionLabel = 'Search Employee Registration';
+  readonly filterTitle = 'Employee Filters';
+  readonly primaryActionLabel = 'Search';
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
   dialogTitle = 'Create Employee Registration';
   dialogSubtitle = 'Create a new employee registration record.';
-  dialogPrimaryActionLabel = 'Save';
+  dialogPrimaryActionLabel = 'Save';  
   readonly tableTitle = 'Employee Registration';
   readonly tableCaption = 'Employee Registration';
   tableColumns = EMPLOYEEREGISTRATION_COLUMNS;
-  readonly showAddNewButton = true;
+  employeeRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showDownloadButton = true;
+  showFilterButton: boolean = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  isLoading=false;
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
+  userDetails: any = {};
+  isBranchSelectionLocked=false;
+  CodeOptions: any[] = [];
+  selectAll: any;
+  model: never[] | undefined;
+  modelChange: any;
+  options: any;
+  DepartmentOptions: any;
+  branchOptions: any[] = [];
+  dialoggender: any;
+  dialogIdProofNo: any;
+  employeeEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
-  ngOnInit(): void {
-    this.loadRows();
+
+
+  async ngOnInit(): Promise<void> {
+    //debugger
+     this.userDetails = JSON.parse(
+    localStorage.getItem('userDetails') ?? '{}'
+  );
+
+  await this.loadEmployeeRights();
+  this.showFilterButton = true;
+
+  this.loadRows();
+
+  this.loadEmployee();
+
+  this.loadBranches();;
+   
+    
+  }
+
+  async loadEmployeeRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.employeeEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.employeeRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.employeeRights.Create;
+      this.showDownloadButton = this.employeeRights.Download;
+      this.showRowActions = this.employeeRights.Edit || this.employeeRights.Delete || this.employeeRights.ActiveInActive || this.employeeRights.Print;
+    } catch {
+      this.employeeRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load employee registration rights for this role.');
+    }
   }
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
   }
+  loadEmployee(): void {
+    this.changeDetector.detectChanges();
+
+  const orgId = Number(this.userDetails?.OrgId || 0);
+
+  const branchId = Number(this.userDetails?.BranchId || 0);
+
+  this.employeeService
+    .getAll(orgId, branchId)
+    .subscribe({
+
+      next: (response: any) => {
+
+        const data = response.result || [];
+
+        this.allRows = data.map((item: any) => {
+
+  const department =
+    this.departmentOptions.find(
+      (x: any) => x.value == item.DepartmentId
+    )?.label || '';
+
+  const designation =
+    this.designationOptions.find(
+      (x: any) => x.value == item.DesignationId
+    )?.label || '';
+
+  return {
+
+    ...item,
+
+    Department: department,
+
+    Designation: designation
+
+  };
+
+});
+
+this.refreshRows();
+
+// FIX
+this.changeDetector.detectChanges();
+
+      },
+
+      error: (err: any) => {
+
+        console.error(err);
+
+      }
+
+    });
+
+}
+
+  async exportEmployeesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const branchId = Number(this.userDetails?.BranchId || 0);
+      const response: any = await firstValueFrom(this.employeeService.getAll(orgId, branchId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((item: any) => {
+        const department = this.departmentOptions.find((x: any) => x.value == item.DepartmentId)?.label || '';
+        const designation = this.designationOptions.find((x: any) => x.value == item.DesignationId)?.label || '';
+        return {
+          ...item,
+          Department: department,
+          Designation: designation,
+          RowNumber: rowNumber++,
+          Status: (item.IsActive ?? item.isActive ?? item.isactive) ? 'Active' : 'Inactive'
+        };
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Employee-Registration`;
+
+      if (this.filterEmployee.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterEmployee.includes(`${row.Department}-${row.BranchName}`)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No employees are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Employee Registration');
+      this.toast.success('Export Ready', 'Employee Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export employees to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportEmployeesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const branchId = Number(this.userDetails?.BranchId || 0);
+      const response: any = await firstValueFrom(this.employeeService.getAll(orgId, branchId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((item: any) => {
+        const department = this.departmentOptions.find((x: any) => x.value == item.DepartmentId)?.label || '';
+        const designation = this.designationOptions.find((x: any) => x.value == item.DesignationId)?.label || '';
+        return {
+          ...item,
+          Department: department,
+          Designation: designation,
+          RowNumber: rowNumber++,
+          Status: (item.IsActive ?? item.isActive ?? item.isactive) ? 'Active' : 'Inactive'
+        };
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Employee-Registration`;
+
+      if (this.filterEmployee.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterEmployee.includes(`${row.Department}-${row.BranchName}`)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No employees are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Employee Registration', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Employee PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export employees to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  genderOptions = [
+  { label: 'Male', value: 'Male' },
+  { label: 'Female', value: 'Female' },
+  { label: 'Other', value: 'Other' }
+];
+
+
+  loadBranches(): void {
+
+  const orgId = Number(this.userDetails?.OrgId || 0);
+
+  console.log('ORG ID =>', orgId);
+
+  this.branchService.getAll(orgId)
+    .subscribe({
+
+      next: (response: any) => {
+
+        console.log('API RESPONSE =>', response);
+
+        this.branchOptions = response.result.map(
+          (branch: any) => {
+
+            return {
+
+              label: branch.Name,
+
+              value: branch.Id
+
+            };
+
+          }
+        );
+
+        console.log(
+          'BRANCH DROPDOWN =>',
+          this.branchOptions
+        );
+
+      },
+
+      error: (error: any) => {
+
+        console.error(error);
+
+      }
+
+    });
+
+}
+
+  departmentOptions = [
+  { label: 'Admin', value: 1 },
+  { label: 'Development', value: 2 },
+  { label: 'HR', value: 3 },
+  { label: 'Testing', value: 4 }
+];
+
+designationOptions = [
+  { label: 'Manager', value: 1 },
+  { label: 'Supervisor', value: 2 },
+  { label: 'Staff', value: 3 },
+  { label: 'Admin', value: 4 }
+];
 
   searchRows(): void {
     const searchText = this.filterSearchText.trim().toLowerCase();
@@ -108,32 +472,107 @@ export class EmployeeRegistrationComponent {
     this.tableRows = this.allRows.filter((row) =>
       row.Code.toLowerCase().includes(searchText) ||
       row.Name.toLowerCase().includes(searchText) ||
-      row.Remarks.toLowerCase().includes(searchText)
+      row.Designation.toLowerCase().includes(searchText)
     );
   }
 
   resetForm(): void {
-    this.filterSearchText = '';
-    this.tableRows = [...this.allRows];
-  }
+  this.filterEmployee = [];
+  this.tableRows = [...this.allRows];
+}
 
   openFilterSidebar(): void {
     this.resetForm();
+    if (!this.CodeOptions.length) {
+      this.loadcode();
+    }
     this.showFilterSidebar = true;
   }
+loadcode(): void {
+
+  const uniqueOptions = new Map();
+
+  this.allRows.forEach((employee: any) => {
+
+    const label =
+      `${employee.Department} - ${employee.BranchName}`;
+
+    const value =
+      `${employee.Department}-${employee.BranchName}`;
+
+    // DUPLICATE REMOVE
+    if (!uniqueOptions.has(value)) {
+
+      uniqueOptions.set(value, {
+        label: label,
+        value: value
+      });
+
+    }
+
+  });
+
+  this.CodeOptions = Array.from(
+    uniqueOptions.values()
+  );
+
+}
+applyFilters(): void {
+
+  if (!this.filterEmployee.length) {
+    this.tableRows = [...this.allRows];
+    return;
+  }
+
+  this.tableRows = this.allRows.filter((row) =>
+    this.filterEmployee.includes(
+      `${row.Department}-${row.BranchName}`
+    )
+  );
+
+}
 
   closeFilterSidebar(): void {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
-    this.resetDialogForm();
-    this.isEditMode = false;
-    this.dialogTitle = 'Create ' + this.pageTitle;
-    this.dialogSubtitle = 'Create a new ' + this.pageTitle.toLowerCase() + ' record.';
-    this.dialogPrimaryActionLabel = 'Save';
-    this.showAddDialog = true;
-  }
+ openAddDialog(): void {
+
+  this.resetDialogForm();
+
+  this.isEditMode = false;
+
+  this.dialogTitle = 'Create Employee Registration';
+
+  this.dialogSubtitle =
+    'Create a new employee registration record.';
+
+  this.dialogPrimaryActionLabel = 'Save';
+
+  this.dialogStatus = true;
+
+  this.dialogDepartment = null;
+
+  this.dialogDesignation = null;
+
+  this.dialogBranch = null;
+
+  this.dialogPhone = '';
+
+  this.dialogEmail = '';
+
+  this.dialogAddress = '';
+
+  this.showAddDialog = true; // IMPORTANT
+
+  this.dialogRemarks = '';
+
+  this.dialogGender = '';
+
+  this.dialogIdProofNo = '';
+
+  
+}
 
   closeAddDialog(): void {
     this.resetDialogForm();
@@ -142,55 +581,169 @@ export class EmployeeRegistrationComponent {
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
-    this.dialogSubmitted = true;
+submitAddDialog(): void {
 
-    if (!this.isDialogFormValid()) {
-      return;
-    }
+  this.dialogSubmitted = true;
 
-    if (this.isEditMode && this.dialogId) {
-      this.allRows = this.allRows.map((row) => {
-        if (row.Id === this.dialogId) {
-          row.Code = this.dialogCode;
-          row.Name = this.dialogName;
-          row.Remarks = this.dialogRemarks;
+  if (!this.isDialogFormValid()) {
+    return;
+  }
+
+const payload: employee = {
+
+  Id: this.dialogId || 0,
+
+  Code: this.dialogCode,
+
+  Name: this.dialogName,
+
+  DepartmentId: Number(this.dialogDepartment),
+
+  DesignationId: Number(this.dialogDesignation),
+
+  BranchId: Number(this.dialogBranch),
+
+  MobileNo: this.dialogPhone,
+
+  EmailId: this.dialogEmail,
+
+  AddressLine1: this.dialogAddress,
+
+  Gender: this.dialogGender,
+
+  Remarks: this.dialogRemarks,
+
+  IdProofNo: this.dialogIdProofNo || '',
+
+  IsActive: this.dialogStatus,
+
+  OrgId: Number(this.userDetails?.OrgId || 0)
+
+};
+
+
+  // UPDATE
+  if (this.isEditMode && this.dialogId) {
+
+    this.employeeService.update(payload)
+      .subscribe({
+
+        next: (response: any) => {
+
+          this.toast.success(
+            'Updated',
+            'Employee updated successfully.'
+          );
+const orgId = Number(this.userDetails?.OrgId || 0);
+    const BranchId = Number(this.userDetails?.BranchId || 0);
+          this.loadEmployee();
+
+          this.closeAddDialog();
+
+        },
+
+        error: (err: any) => {
+
+          console.error(err);
+
+          this.toast.error(
+            'Update Failed',
+            err?.error?.message || 'Unable to update employee.'
+          );
+
         }
 
-        return row;
       });
 
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
-    } else {
-      this.allRows.unshift({
-        Id: Date.now(),
-        Code: this.dialogCode,
-        Name: this.dialogName,
-        Remarks: this.dialogRemarks,
-        IsActive: true,
-        Status: 'Active',
-        RowNumber: 0
+  }
+
+  // CREATE
+  else {
+
+    this.employeeService.create(payload)
+      .subscribe({
+
+        next: (response: any) => {
+
+          this.toast.success(
+            'Saved',
+            'Employee saved successfully.'
+          );
+ const orgId = Number(this.userDetails?.OrgId || 0);
+    const BranchId = Number(this.userDetails?.BranchId || 0);
+         this.loadEmployee();
+
+          this.closeAddDialog();
+
+        },
+
+        error: (err: any) => {
+
+          console.error(err);
+
+          this.toast.error(
+            'Save Failed',
+            err?.error?.message || 'Unable to save employee.'
+          );
+
+        }
+
       });
 
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
-    }
-
-    this.refreshRows();
-    this.closeAddDialog();
   }
 
-  editRow(row: EmployeeRegistrationRow): void {
-    this.isEditMode = true;
-    this.dialogId = row.Id;
-    this.dialogCode = row.Code;
-    this.dialogName = row.Name;
-    this.dialogRemarks = row.Remarks;
-    this.dialogTitle = 'Edit ' + this.pageTitle;
-    this.dialogSubtitle = 'Update the selected ' + this.pageTitle.toLowerCase() + ' record.';
-    this.dialogPrimaryActionLabel = 'Update';
-    this.showAddDialog = true;
+}
+  dialogdesignation(dialogdesignation: any) {
+    throw new Error('Method not implemented.');
+  }
+  dialogdepartment(dialogdepartment: any) {
+    throw new Error('Method not implemented.');
   }
 
+editRow(row: EmployeeRegistrationRow): void {
+
+  this.isEditMode = true;
+
+  this.dialogId = row.Id;
+
+  this.dialogCode = row.Code;
+
+  this.dialogName = row.Name;
+
+  // IMPORTANT
+  this.dialogDepartment = row.DepartmentId;
+
+  this.dialogDesignation = row.DesignationId;
+
+  this.dialogBranch = row.BranchId;
+
+  this.dialogPhone = row.MobileNo;
+
+  this.dialogEmail = row.EmailId;
+
+  this.dialogAddress = row.AddressLine1;
+
+  this.dialogRemarks = row.Remarks;
+
+  this.dialogIdProofNo = row.IdProofNo;
+
+  this.dialogStatus = row.IsActive;
+
+  this.dialogTitle = 'Edit ' + this.pageTitle;
+
+  this.dialogSubtitle =
+    'Update the selected ' +
+    this.pageTitle.toLowerCase() +
+    ' record.';
+
+  this.dialogPrimaryActionLabel = 'Update';
+
+  this.showAddDialog = true;
+ 
+  this.dialogRemarks = row.Remarks;
+  this.dialogGender = row.Gender || '';
+  this.dialogIdProofNo = row.IdProofNo || '';
+}
   deleteRow(row: EmployeeRegistrationRow): void {
     this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
     this.refreshRows();
@@ -215,7 +768,7 @@ export class EmployeeRegistrationComponent {
     this.allRows = this.allRows.map((item) => {
       if (item.Id === row.Id) {
         item.IsActive = false;
-        item.Status = 'Inactive';
+        item.Status = 'InActive';
       }
 
       return item;
@@ -230,6 +783,21 @@ export class EmployeeRegistrationComponent {
     this.rowActionItems = this.getRowActionItems(row);
     menu.toggle(event);
   }
+  toggleAll(): void {
+
+  if (this.selectAll) {
+
+    this.model = this.options.map((x: any) => x.value);
+
+  } else {
+
+    this.model = [];
+
+  }
+
+  this.modelChange.emit(this.model);
+
+}
 
   confirmDeleteRow(row: EmployeeRegistrationRow): void {
     this.confirmationService.confirm({
@@ -276,18 +844,38 @@ export class EmployeeRegistrationComponent {
     });
   }
 
-  resetDialogForm(keepCode: boolean = false): void {
+resetDialogForm(clearSubmitted: boolean = false): void {
+
+  this.dialogId = 0;
+
+  this.dialogCode = '';
+
+  this.dialogName = '';
+
+  this.dialogDepartment = null;
+
+  this.dialogDesignation = null;
+
+  this.dialogBranch = null;
+
+  this.dialogPhone = '';
+
+  this.dialogEmail = '';
+
+  this.dialogAddress = '';
+
+  this.dialogStatus = true;
+
+  this.dialogGender = '';
+
+  this.dialogRemarks = '';
+  
+  this.dialogIdProofNo = '';
+
+  if (clearSubmitted) {
     this.dialogSubmitted = false;
-    this.dialogId = 0;
-
-    if (!keepCode) {
-      this.dialogCode = '';
-    }
-
-    this.dialogName = '';
-    this.dialogRemarks = '';
   }
-
+}
   private refreshRows(): void {
     this.allRows = this.allRows.map((row, index) => {
       row.RowNumber = index + 1;
@@ -295,29 +883,43 @@ export class EmployeeRegistrationComponent {
       return row;
     });
 
-    this.searchRows();
+    this.applyFilters();
   }
 
   private isDialogFormValid(): boolean {
-    return this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const textFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const selectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+
+    return textFieldsValid && selectFieldsValid;
   }
 
   private getRowActionItems(row: EmployeeRegistrationRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.employeeRights.Edit && row.IsActive) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.employeeRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.employeeRights.ActiveInActive) {
+      if (row.IsActive) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.employeeRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -328,9 +930,28 @@ export class EmployeeRegistrationComponent {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
   }
+
+  printRow(row: EmployeeRegistrationRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this employee');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
+  }
 }
+
+// function resetDialogForm(clearSubmitted: any, arg1: boolean) {
+//   throw new Error('Function not implemented.');
+// }
+
+// function editRow(row: any, EmployeeRegistrationRow: any) {
+//   throw new Error('Function not implemented.');
+// }
+
+// function confirmDeactivateRow(row: any, EmployeeRegistrationRow: any) {
+//   throw new Error('Function not implemented.');
+// }
 

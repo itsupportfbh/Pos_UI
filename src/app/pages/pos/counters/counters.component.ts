@@ -13,10 +13,16 @@ import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../compo
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { BranchService } from '../../../services/branch.service';
 import { Counter, CounterService } from '../../../services/counter.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 type CounterRow = Counter & {
   RowNumber: number;
   Status: string;
@@ -56,12 +62,18 @@ const COUNTER_COLUMNS: SharedTableColumn<CounterRow>[] = [
   styleUrl: './counters.component.css'
 })
 export class CountersComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly counterService = inject(CounterService);
   private readonly branchService = inject(BranchService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -103,18 +115,31 @@ export class CountersComponent implements OnInit {
   readonly tableTitle = 'Counters';
   readonly tableCaption = 'Counters';
   tableColumns = COUNTER_COLUMNS;
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  showDownloadButton = true;
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  counterRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.BranchId = Number(this.userDetails.BranchId || 0);
     this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
+    await this.loadCounterRights();
     this.tableColumns = COUNTER_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
         x.hidden = this.userDetails.RoleId !== 1;
@@ -125,6 +150,44 @@ export class CountersComponent implements OnInit {
 
 
     this.loadCounter();
+  }
+
+  async loadCounterRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.branchEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.counterRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.counterRights.Create;
+      this.showDownloadButton = this.counterRights.Download;
+      this.showRowActions = this.counterRights.Edit || this.counterRights.Delete || this.counterRights.ActiveInActive || this.counterRights.Print;
+    } catch {
+      this.counterRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load counter role rights. Please check and try again.');
+    }
   }
 
   resetForm(): void {
@@ -264,6 +327,7 @@ export class CountersComponent implements OnInit {
           label: branch.Name ?? '',
           value: branch.Id ?? 0
         }));
+        this.changeDetector.detectChanges();
       },
       error: () => {
         this.branchOptions = [];
@@ -285,6 +349,7 @@ export class CountersComponent implements OnInit {
       label: branch.Name ?? '',
       value: branch.Id ?? 0
     }));
+    this.changeDetector.detectChanges();
   }
 
   loadCounter(): void {
@@ -294,14 +359,18 @@ export class CountersComponent implements OnInit {
 
     this.counterService.getAll(this.OrgId, this.BranchId).subscribe({
       next: (response: any) => {
-        let RowNumber = 1;
+        let rowNumber = 1;
 
         this.tableRows = (response.result ?? []).map((x: any) => {
-          x.RowNumber = RowNumber++;
-          x.BranchName = x.BranchName ?? x.Branch ?? x.branchName ?? '';
-          x.IsActive = x.IsActive ?? x.isActive ?? x.isactive ?? false;
-          x.Status = x.IsActive ? 'Active' : 'Inactive';
-          return x;
+          const isActive = x.IsActive ?? x.isActive ?? x.isactive ?? false;
+
+          return {
+            ...x,
+            RowNumber: rowNumber++,
+            BranchName: x.BranchName ?? x.Branch ?? x.branchName ?? '',
+            IsActive: isActive,
+            Status: isActive ? 'Active' : 'Inactive'
+          };
         });
 
         this.hiddenTableRow = [...this.tableRows];
@@ -311,6 +380,100 @@ export class CountersComponent implements OnInit {
         this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
       }
     });
+  }
+
+  async exportCountersAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const branchId = Number(this.userDetails.IsAdmin || 0) === 1
+        ? 0
+        : Number(this.userDetails.RoleId || 0) === 1
+          ? 0
+          : Number(this.userDetails.BranchId || 0);
+
+      const response: any = this.selectedBranchIds.length
+        ? await firstValueFrom(this.counterService.getMultiAll(orgId, this.selectedBranchIds.map((id) => Number(id))))
+        : await firstValueFrom(this.counterService.getAll(orgId, branchId));
+
+      let rowNumber = 1;
+      const exportRows = (response?.result ?? []).map((x: any) => {
+        const isActive = x.IsActive ?? x.isActive ?? x.isactive ?? false;
+
+        return {
+          ...x,
+          RowNumber: rowNumber++,
+          BranchName: x.BranchName ?? x.Branch ?? x.branchName ?? '',
+          IsActive: isActive,
+          Status: isActive ? 'Active' : 'Inactive'
+        };
+      });
+
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Counters`;
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No counters are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Counters');
+      this.toast.success('Export Ready', 'Counter Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export counters to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportCountersAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const branchId = Number(this.userDetails.IsAdmin || 0) === 1
+        ? 0
+        : Number(this.userDetails.RoleId || 0) === 1
+          ? 0
+          : Number(this.userDetails.BranchId || 0);
+
+      const response: any = this.selectedBranchIds.length
+        ? await firstValueFrom(this.counterService.getMultiAll(orgId, this.selectedBranchIds.map((id) => Number(id))))
+        : await firstValueFrom(this.counterService.getAll(orgId, branchId));
+
+      let rowNumber = 1;
+      const exportRows = (response?.result ?? []).map((x: any) => {
+        const isActive = x.IsActive ?? x.isActive ?? x.isactive ?? false;
+
+        return {
+          ...x,
+          RowNumber: rowNumber++,
+          BranchName: x.BranchName ?? x.Branch ?? x.branchName ?? '',
+          IsActive: isActive,
+          Status: isActive ? 'Active' : 'Inactive'
+        };
+      });
+
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Counters`;
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No counters are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Counters', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Counter PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export counters to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   async editRow(row: CounterRow): Promise<void> {
@@ -416,6 +579,10 @@ export class CountersComponent implements OnInit {
     }
   }
 
+  printRow(row: CounterRow): void {
+    this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'Counter')} print will be connected later.`);
+  }
+
   openRowActions(menu: any, event: Event, row: CounterRow): void {
     this.selectedRow = row;
     this.rowActionItems = this.getRowActionItems(row);
@@ -496,15 +663,26 @@ export class CountersComponent implements OnInit {
   }
 
   private getRowActionItems(row: CounterRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    if (this.counterRights.Edit && row.IsActive === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.counterRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.counterRights.ActiveInActive && row.IsActive === true) {
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
+    }
+
+    if (this.counterRights.ActiveInActive && row.IsActive !== true) {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    if (this.counterRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row) });
     }
 
     return items;
@@ -526,3 +704,4 @@ export class CountersComponent implements OnInit {
     }
   }
 }
+

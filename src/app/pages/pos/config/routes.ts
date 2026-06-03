@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { WorkspaceComponent } from '../workspace/workspace.component';
+import { posRouteAccessGuard } from './route-access.guard';
 import { shiftAssignmentGuard } from './shift-assignment.guard';
 
 const dashboardPage = () => import('../dashboard/dashboard.component').then((module) => module.DashboardComponent);
@@ -18,9 +19,8 @@ const creditTrackingPage = () => import('../credit-tracking/credit-tracking.comp
 const returnRefundPage = () => import('../return-refund/return-refund.component').then((module) => module.ReturnRefundComponent);
 const paymentsPage = () => import('../payments/payments.component').then((module) => module.PaymentsComponent);
 const pendingPaymentsPage = () => import('../pending-payments/pending-payments.component').then((module) => module.PendingPaymentsComponent);
-const dailySalesPage = () => import('../daily-sales/daily-sales.component').then((module) => module.DailySalesComponent);
-const monthlySalesPage = () => import('../monthly-sales/monthly-sales.component').then((module) => module.MonthlySalesComponent);
-const menuSalesPage = () => import('../menu-sales/menu-sales.component').then((module) => module.MenuSalesComponent);
+const reportsPage = () => import('../reports/reports.component').then((module) => module.ReportsComponent);
+const reportsPermissionPage = () => import('../reports-permission/reports-permission.component').then((module) => module.ReportsPermissionComponent);
 const organizationPage = () => import('../organization/organization.component').then((module) => module.OrganizationComponent);
 const branchesPage = () => import('../branches/branches.component').then((module) => module.BranchesComponent);
 const countersPage = () => import('../counters/counters.component').then((module) => module.CountersComponent);
@@ -80,6 +80,7 @@ export const POS_ROUTES: Routes = [
     path: '',
     component: WorkspaceComponent,
     canActivate: [shiftAssignmentGuard],
+    canActivateChild: [posRouteAccessGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'dashboard', loadComponent: dashboardPage },
@@ -100,9 +101,9 @@ export const POS_ROUTES: Routes = [
       { path: 'return-refund', loadComponent: returnRefundPage },
       { path: 'payments', loadComponent: paymentsPage },
       { path: 'pending-payments', loadComponent: pendingPaymentsPage },
-      { path: 'daily-sales', loadComponent: dailySalesPage },
-      { path: 'monthly-sales', loadComponent: monthlySalesPage },
-      { path: 'menu-sales', loadComponent: menuSalesPage },
+      { path: 'daily-sales', redirectTo: 'reports', pathMatch: 'full' },
+      { path: 'reports', loadComponent: reportsPage },
+      { path: 'reports-permission', loadComponent: reportsPermissionPage },
       { path: 'organization', loadComponent: organizationPage },
       { path: 'branches', loadComponent: branchesPage },
       { path: 'counters', loadComponent: countersPage },
@@ -157,6 +158,8 @@ export const POS_ROUTES: Routes = [
       { path: 'kitchen-display', loadComponent: displayMenuItemsPage },
 
       { path: 'Tax', redirectTo: 'tax', pathMatch: 'full' },
+      { path: 'monthly-sales', redirectTo: 'reports', pathMatch: 'full' },
+      { path: 'menu-sales', redirectTo: 'reports', pathMatch: 'full' },
       { path: 'display-menu-items', redirectTo: 'kitchen-display', pathMatch: 'full' },
       { path: 'membership-management', redirectTo: 'reward-point', pathMatch: 'full' },
       { path: 'reward-points', redirectTo: 'reward-point', pathMatch: 'full' }

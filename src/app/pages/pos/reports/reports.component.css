@@ -1,0 +1,479 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep .page-header.hero-panel {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 252, 248, 0.9));
+  backdrop-filter: blur(10px);
+  padding-block: 0.35rem 0.6rem;
+}
+
+.no-access-card {
+  overflow: hidden;
+}
+
+.no-access-shell {
+  align-items: center;
+  background:
+    radial-gradient(circle at top right, rgba(var(--app-primary-rgb), 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 250, 245, 0.96));
+  border: 1px solid rgba(var(--app-primary-rgb), 0.1);
+  border-radius: 1.25rem;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+  min-height: 20rem;
+  padding: 2rem;
+}
+
+.no-access-illustration {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.no-access-icon-wrap {
+  align-items: center;
+  background: linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.12), rgba(var(--app-primary-rgb), 0.05));
+  border: 1px solid rgba(var(--app-primary-rgb), 0.14);
+  border-radius: 1.5rem;
+  box-shadow: 0 18px 36px rgba(84, 51, 28, 0.08);
+  color: var(--app-primary);
+  display: inline-flex;
+  font-size: 2.2rem;
+  height: 6.5rem;
+  justify-content: center;
+  width: 6.5rem;
+}
+
+.no-access-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 46rem;
+}
+
+.no-access-kicker {
+  color: var(--app-primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.no-access-copy h2 {
+  margin: 0;
+}
+
+.no-access-copy p {
+  color: var(--app-text-muted);
+  margin: 0;
+  max-width: 42rem;
+}
+
+.no-access-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+}
+
+.no-access-meta span {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(var(--app-primary-rgb), 0.1);
+  border-radius: 999px;
+  color: var(--app-text);
+  font-size: 0.84rem;
+  padding: 0.48rem 0.8rem;
+}
+
+.report-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(13rem, 17rem) minmax(0, 1fr);
+  align-items: start;
+}
+
+.report-sidebar,
+.report-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.report-sidebar {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+}
+
+.compact-card {
+  padding-bottom: 0.15rem;
+}
+
+.compact-heading h2 {
+  margin-bottom: 0.2rem;
+  font-size: 1rem;
+}
+
+.compact-heading p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.report-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.compact-report-grid {
+  grid-template-columns: 1fr;
+  max-height: calc(100vh - 19rem);
+  min-height: 12rem;
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.report-card {
+  align-items: center;
+  background: linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.06), rgba(var(--app-primary-rgb), 0.02));
+  border: 1px solid rgba(var(--app-primary-rgb), 0.12);
+  border-radius: 0.85rem;
+  color: var(--app-text);
+  cursor: pointer;
+  display: flex;
+  gap: 0.9rem;
+  padding: 0.78rem 0.82rem;
+  text-align: left;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  width: 100%;
+}
+
+.report-card:hover {
+  border-color: rgba(var(--app-primary-rgb), 0.26);
+  box-shadow: 0 12px 24px rgba(84, 51, 28, 0.1);
+  transform: translateY(-1px);
+}
+
+.report-card.is-active {
+  background: linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.16), rgba(var(--app-primary-rgb), 0.08));
+  border-color: rgba(var(--app-primary-rgb), 0.42);
+  box-shadow: 0 0 0 2px rgba(var(--app-primary-rgb), 0.12);
+}
+
+.report-card.is-loading {
+  opacity: 0.78;
+}
+
+.report-card-icon {
+  align-items: center;
+  background: #fff;
+  border-radius: 0.85rem;
+  color: var(--app-primary);
+  display: inline-flex;
+  font-size: 1rem;
+  height: 2.5rem;
+  justify-content: center;
+  min-width: 2.5rem;
+}
+
+.report-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.report-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.report-card-code {
+  color: var(--app-text-muted);
+  font-size: 0.79rem;
+  line-height: 1.35;
+}
+
+.report-card:focus-visible {
+  outline: 2px solid rgba(var(--app-primary-rgb), 0.35);
+  outline-offset: 2px;
+}
+
+.report-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.status-badge {
+  align-items: center;
+  background: rgba(var(--app-primary-rgb), 0.08);
+  border-radius: 999px;
+  color: var(--app-text);
+  display: inline-flex;
+  gap: 0.38rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.45rem 0.8rem;
+}
+
+.status-badge i {
+  color: var(--app-primary);
+  font-size: 0.76rem;
+}
+
+.status-badge.is-muted {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--app-text-muted);
+}
+
+.status-badge.is-muted i {
+  color: var(--app-text-muted);
+}
+
+.filter-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.report-filter-grid {
+  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+:host ::ng-deep .report-filter-grid .field-block {
+  gap: 0.3rem;
+}
+
+:host ::ng-deep .report-filter-grid .field-label {
+  font-size: 0.84rem;
+}
+
+:host ::ng-deep .report-filter-grid .field-help,
+:host ::ng-deep .report-filter-grid .field-error {
+  font-size: 0.72rem;
+}
+
+:host ::ng-deep .report-filter-grid .p-inputtext,
+:host ::ng-deep .report-filter-grid .p-select,
+:host ::ng-deep .report-filter-grid .p-datepicker-input,
+:host ::ng-deep .report-filter-grid .p-autocomplete-input,
+:host ::ng-deep .report-filter-grid textarea {
+  min-height: 2.55rem;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.sticky-actions {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.98));
+  border-top: 1px solid rgba(var(--app-primary-rgb), 0.08);
+  padding-top: 0.6rem;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+:host ::ng-deep .report-action-btn.p-button {
+  border-radius: 0.68rem;
+  box-shadow: none;
+  font-weight: 700;
+  min-height: 2.15rem;
+  padding-inline: 0.72rem;
+}
+
+:host ::ng-deep .report-action-btn .p-button-icon {
+  font-size: 0.78rem;
+}
+
+:host ::ng-deep .report-action-btn .p-button-label {
+  font-size: 0.86rem;
+}
+
+:host ::ng-deep .report-action-btn.is-view.p-button {
+  background: var(--app-primary);
+  border-color: var(--app-primary);
+  color: #fff;
+}
+
+:host ::ng-deep .report-action-btn.is-view.p-button:not(:disabled):hover {
+  background: rgba(var(--app-primary-rgb), 0.92);
+  border-color: rgba(var(--app-primary-rgb), 0.92);
+}
+
+:host ::ng-deep .report-action-btn.is-print.p-button {
+  background: #fff8f1;
+  border-color: #f0d3b8;
+  color: #8a4b15;
+}
+
+:host ::ng-deep .report-action-btn.is-print.p-button:not(:disabled):hover {
+  background: #ffedd5;
+  border-color: #e8bc8a;
+}
+
+:host ::ng-deep .report-action-btn.is-pdf.p-button {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+:host ::ng-deep .report-action-btn.is-pdf.p-button:not(:disabled):hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
+:host ::ng-deep .report-action-btn.is-excel.p-button {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+:host ::ng-deep .report-action-btn.is-excel.p-button:not(:disabled):hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+:host ::ng-deep .report-action-btn.is-clear.p-button {
+  background: #fff;
+  border-color: #d8c4b1;
+  color: var(--app-text);
+}
+
+:host ::ng-deep .report-action-btn.is-clear.p-button:not(:disabled):hover {
+  background: #fcf6ef;
+  border-color: #cba98a;
+}
+
+:host ::ng-deep .report-action-btn.p-button:disabled {
+  opacity: 0.55;
+}
+
+.empty-panel {
+  align-items: center;
+  color: var(--app-text-muted);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 8rem;
+  text-align: center;
+}
+
+.empty-panel h3 {
+  color: var(--app-text);
+  margin-bottom: 0.35rem;
+}
+
+.compact-empty {
+  min-height: 7rem;
+}
+
+.result-card {
+  min-height: 24rem;
+}
+
+.loading-state-card {
+  align-items: center;
+  background: linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.06), rgba(var(--app-primary-rgb), 0.02));
+  border: 1px solid rgba(var(--app-primary-rgb), 0.12);
+  border-radius: 1rem;
+  display: flex;
+  gap: 0.95rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.05rem;
+}
+
+.loading-state-spinner {
+  align-items: center;
+  background: #fff;
+  border-radius: 0.9rem;
+  color: var(--app-primary);
+  display: inline-flex;
+  font-size: 1.05rem;
+  height: 2.9rem;
+  justify-content: center;
+  min-width: 2.9rem;
+}
+
+.loading-state-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+}
+
+.loading-state-copy strong {
+  color: var(--app-text);
+  font-size: 0.96rem;
+}
+
+.loading-state-copy span {
+  color: var(--app-text-muted);
+  font-size: 0.84rem;
+}
+
+.html-template-preview {
+  background: #fff;
+  border: 1px solid rgba(var(--app-primary-rgb), 0.1);
+  border-radius: 1rem;
+  margin-bottom: 1rem;
+  overflow: auto;
+  padding: 1rem;
+}
+
+:host ::ng-deep .html-template-preview .report-template-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+:host ::ng-deep .html-template-preview .report-template-table th,
+:host ::ng-deep .html-template-preview .report-template-table td {
+  border: 1px solid rgba(var(--app-primary-rgb), 0.12);
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+:host ::ng-deep .html-template-preview .report-template-table thead th {
+  background: rgba(var(--app-primary-rgb), 0.06);
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .no-access-shell {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    min-height: auto;
+    padding: 1.4rem;
+  }
+
+  .no-access-illustration {
+    justify-content: flex-start;
+  }
+
+  .report-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .report-sidebar {
+    position: static;
+    max-height: none;
+  }
+
+  .action-row {
+    flex-direction: column;
+  }
+
+  .compact-report-grid {
+    max-height: 18rem;
+    overflow: auto;
+  }
+}

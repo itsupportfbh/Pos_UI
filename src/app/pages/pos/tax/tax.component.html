@@ -17,6 +17,9 @@
     </div>
 
     <app-shared-table
+      [showDownloadButton]="showDownloadButton" (excelDownloadClick)="exportTaxesAsExcel()"
+      (pdfDownloadClick)="exportTaxesAsPdf()" [downloadLoading]="downloadLoading"
+      [downloadLoadingLabel]="downloadLoadingLabel"
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
@@ -54,8 +57,8 @@
       }
 
     <app-text-field label="Tax Code" inputId="dialog-taxCode" [showRequiredMark]="true" placeholder="Enter tax code"
-      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [maxlength]="100"
-      [model]="dialogTaxCode" (modelChange)="dialogTaxCode = $event" />
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
+      [maxlength]="100" [model]="dialogTaxCode" (modelChange)="dialogTaxCode = $event" />
 
     <app-text-field label="Tax Name" inputId="dialog-taxName" [showRequiredMark]="true" placeholder="Enter tax name"
       [required]="true" [maxlength]="200" [submitted]="dialogSubmitted" errorMessage="Name is required."

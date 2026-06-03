@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef,Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, forkJoin, of } from 'rxjs';
 import { MenuItem } from 'primeng/api';
@@ -55,8 +55,8 @@ type HeldOrder = {
   tableName?: string;
   ordertype?: string;
   Ordertype?: string;
-  orderstatus?: string;
-  Orderstatus?: string;
+  orderstatus?: string | number;
+  Orderstatus?: string | number;
   CustomerName?: string;
   GuestName?: string;
   guestName?: string;
@@ -66,6 +66,10 @@ type HeldOrder = {
   customerPhone?: string;
   Phone?: string;
   phone?: string;
+  Notes?: string | null;
+  notes?: string | null;
+  Remarks?: string | null;
+  remarks?: string | null;
   itemcount?: number;
   Itemcount?: number;
   itemCount?: number;
@@ -116,10 +120,20 @@ type HeldOrderRow = Omit<HeldOrder, 'Items'> & {
   Tax: number;
   Discount: number;
   Total: number;
+  Notes: string;
   HeldTime: string;
 };
 
 const ACTIVE_HELD_ORDER_STORAGE_KEY = 'activeHeldOrder';
+const ORDER_STATUS = {
+  Hold: 0,
+  InKitchen: 1,
+  Preparing: 2,
+  Ready: 3,
+  Served: 4,
+  Cancelled: 5
+} as const;
+
 const HELD_TIME_FORMATTER = new Intl.DateTimeFormat('en-IN', {
   day: '2-digit',
   month: 'short',
@@ -131,15 +145,15 @@ const HELD_TIME_FORMATTER = new Intl.DateTimeFormat('en-IN', {
 const ORDER_HOLD_COLUMNS: SharedTableColumn<HeldOrderRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
   { field: 'OrderNo', header: 'Order No', sortable: true, width: '13rem' },
+   { field: 'CustomerName', header: 'CustomerName', sortable: true, width: '13rem' },
   { field: 'Type', header: 'Type', sortable: true, width: '10rem' },
   { field: 'TableName', header: 'Table', sortable: true, width: '8rem' },
-  { field: 'Status', header: 'Status', sortable: true, width: '8rem' },
   { field: 'Items', header: 'NOofItems', sortable: true, width: '7rem' },
-  { field: 'Subtotal', header: 'Subtotal', sortable: true, width: '10rem' },
-  { field: 'Tax', header: 'Tax', sortable: true, width: '9rem' },
-  { field: 'Discount', header: 'Discount', sortable: true, width: '10rem' },
   { field: 'Total', header: 'Total', sortable: true, width: '10rem' },
-  { field: 'HeldTime', header: 'Held Time', sortable: true, width: '14rem' }
+  { field: 'Notes', header: 'Notes', sortable: true, width: '8rem' },
+  { field: 'Status', header: 'Status', sortable: true, width: '8rem' },
+  
+  
 ];
 
 @Component({
@@ -179,18 +193,24 @@ export class OrderHoldComponent implements OnInit {
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
   readonly tableDataKey = 'HoldId';
+viewReady = false;
+ constructor(
+  private readonly toast: AppToastService,
+  private readonly orderHoldService: OrderHoldService,
+  private readonly router: Router,
+  private readonly cdr: ChangeDetectorRef
+) {}
 
-  constructor(
-    private readonly toast: AppToastService,
-    private readonly orderHoldService: OrderHoldService,
-    private readonly router: Router
-  ) {}
+ngOnInit(): void {
+  this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+  this.orgId = this.getUserOrgId();
 
-  ngOnInit(): void {
-    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.orgId = this.getUserOrgId();
+  setTimeout(() => {
+    this.viewReady = true;
     this.loadHeldOrders();
-  }
+    this.cdr.detectChanges();
+  });
+}
 
   get totalHeldOrders(): number {
     return this.totalHeldOrdersCount;
@@ -220,9 +240,12 @@ export class OrderHoldComponent implements OnInit {
         this.totalHeldAmountValue = 0;
         this.toast.error('Load Failed', 'Unable to load held orders from API.');
       },
-      complete: () => {
-        this.isLoading = false;
-      }
+     complete: () => {
+  setTimeout(() => {
+    this.isLoading = false;
+    this.cdr.detectChanges();
+  });
+}
     });
   }
 
@@ -320,7 +343,7 @@ export class OrderHoldComponent implements OnInit {
 
   getOrderStatus(order: HeldOrder): string {
     const source = order as any;
-    return source.Orderstatus ?? source.orderstatus ?? source.orderStatus ?? source.OrderStatus ?? 'Hold';
+    return this.getStatusLabel(source.Orderstatus ?? source.orderstatus ?? source.orderStatus ?? source.OrderStatus ?? ORDER_STATUS.Hold);
   }
 
   getOrderTable(order: HeldOrder): string {
@@ -330,7 +353,7 @@ export class OrderHoldComponent implements OnInit {
 
   getOrderTableName(order: HeldOrder): string {
     const source = order as any;
-    return source.TableName ?? source.tableName ?? source.TableCode ?? source.tableCode ?? source.Table ?? source.table ?? this.getOrderTable(order);
+    return source.TableName  ?? this.getOrderTable(order);
   }
 
   getOrderHeldDate(order: HeldOrder): string {
@@ -338,24 +361,29 @@ export class OrderHoldComponent implements OnInit {
     return source.CreatedDate ?? source.createdDate ?? source.heldAt ?? '';
   }
 
+  getOrderNotes(order: HeldOrder | HeldOrderRow): string {
+    const source = order as any;
+    return this.normalizeText(source.Notes ?? source.notes ?? source.Remarks ?? source.remarks);
+  }
+
   getOrderSubtotal(order: HeldOrder): number {
     const source = order as any;
-    return this.toNumber(source.SubtotalAmount ?? source.subtotalAmount ?? source.subtotal);
+    return this.toNumber(source.SubtotalAmount );
   }
 
   getOrderDiscount(order: HeldOrder): number {
     const source = order as any;
-    return this.toNumber(source.DiscountAmount ?? source.discountAmount);
+    return this.toNumber(source.DiscountAmount );
   }
 
   getOrderTax(order: HeldOrder): number {
     const source = order as any;
-    return this.toNumber(source.TaxAmount ?? source.taxAmount);
+    return this.toNumber(source.TaxAmount );
   }
 
   getOrderTotal(order: HeldOrder): number {
     const source = order as any;
-    return this.toNumber(source.TotalAmount ?? source.totalAmount ?? source.grandTotal);
+    return this.toNumber(source.TotalAmount );
   }
 
   formatHeldTime(value: string): string {
@@ -403,6 +431,7 @@ export class OrderHoldComponent implements OnInit {
       Tax: this.getOrderTax(order),
       Discount: this.getOrderDiscount(order),
       Total: orderTotal,
+      Notes: this.getOrderNotes(order),
       HeldTime: this.formatHeldTime(this.getOrderHeldDate(order))
     };
   }
@@ -475,6 +504,7 @@ export class OrderHoldComponent implements OnInit {
     const source = order as any;
     const customerName = this.getCustomerName(source);
     const contactNumber = this.getContactNumber(source);
+    const notes = this.getOrderNotes(order);
     const orderId = this.getOrderDetailId(order);
     const tableName = this.getOrderTableName(order);
     const items = this.getOrderItems(order).map((item: any) => ({
@@ -501,8 +531,8 @@ export class OrderHoldComponent implements OnInit {
       taxAmount: item.taxAmount ?? item.TaxAmount ?? 0,
       Modifierdetails: item.Modifierdetails ?? item.modifierdetails ?? null,
       modifierdetails: item.modifierdetails ?? item.Modifierdetails ?? null,
-      Itemstatus: item.Itemstatus ?? item.itemstatus ?? source.Orderstatus ?? source.orderstatus ?? 'Hold',
-      itemstatus: item.itemstatus ?? item.Itemstatus ?? source.orderstatus ?? source.Orderstatus ?? 'Hold',
+      Itemstatus: this.getStatusCode(item.Itemstatus ?? item.itemstatus ?? source.Orderstatus ?? source.orderstatus ?? ORDER_STATUS.Hold),
+      itemstatus: this.getStatusCode(item.itemstatus ?? item.Itemstatus ?? source.orderstatus ?? source.Orderstatus ?? ORDER_STATUS.Hold),
       Notes: item.Notes ?? item.notes ?? null,
       notes: item.notes ?? item.Notes ?? null,
       OrgId: item.OrgId ?? item.orgId ?? source.OrgId ?? source.orgId ?? 0,
@@ -524,14 +554,18 @@ export class OrderHoldComponent implements OnInit {
       tableName,
       Ordertype: this.getOrderType(order),
       ordertype: this.getOrderType(order),
-      Orderstatus: this.getOrderStatus(order),
-      orderstatus: this.getOrderStatus(order),
+      Orderstatus: this.getStatusCode(source.Orderstatus ?? source.orderstatus ?? source.orderStatus ?? source.OrderStatus ?? ORDER_STATUS.Hold),
+      orderstatus: this.getStatusCode(source.orderstatus ?? source.Orderstatus ?? source.orderStatus ?? source.OrderStatus ?? ORDER_STATUS.Hold),
       CustomerName: customerName,
       customerName,
       ContactNumber: contactNumber,
       contactNumber,
       CustomerPhone: contactNumber,
       customerPhone: contactNumber,
+      Notes: notes,
+      notes,
+      Remarks: notes,
+      remarks: notes,
       Itemcount: this.getItemCount(order),
       itemcount: this.getItemCount(order),
       Guestcount: source.Guestcount ?? source.guestcount ?? this.getItemCount(order),
@@ -578,6 +612,7 @@ export class OrderHoldComponent implements OnInit {
     const detailItems = this.extractOrderItems(apiResult, apiOrderDetails, listOrder);
     const customerName = this.getCustomerName(apiOrderDetails) || this.getCustomerName(listOrder);
     const contactNumber = this.getContactNumber(apiOrderDetails) || this.getContactNumber(listOrder);
+    const notes = this.getOrderNotes(apiOrderDetails) || this.getOrderNotes(listOrder);
 
     return {
       ...listOrder,
@@ -588,6 +623,10 @@ export class OrderHoldComponent implements OnInit {
       contactNumber,
       CustomerPhone: contactNumber,
       customerPhone: contactNumber,
+      Notes: notes,
+      notes,
+      Remarks: notes,
+      remarks: notes,
       Items: detailItems,
       items: detailItems,
       OrderHoldItems: detailItems,
@@ -664,6 +703,59 @@ export class OrderHoldComponent implements OnInit {
       source?.Phone ??
       source?.phone
     );
+  }
+
+  private getStatusCode(status: unknown): number {
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status;
+    }
+
+    const normalizedStatus = String(status ?? '').trim().toLowerCase().replace(/\s+/g, '');
+
+    switch (normalizedStatus) {
+      case '0':
+      case 'hold':
+        return ORDER_STATUS.Hold;
+      case '1':
+      case 'inkitchen':
+        return ORDER_STATUS.InKitchen;
+      case '2':
+      case 'inprocess':
+      case 'preparing':
+        return ORDER_STATUS.Preparing;
+      case '3':
+      case 'ready':
+      case 'readytoserve':
+        return ORDER_STATUS.Ready;
+      case '4':
+      case 'served':
+        return ORDER_STATUS.Served;
+      case '5':
+      case 'cancelled':
+      case 'canceled':
+        return ORDER_STATUS.Cancelled;
+      default:
+        return ORDER_STATUS.Hold;
+    }
+  }
+
+  private getStatusLabel(status: unknown): string {
+    switch (this.getStatusCode(status)) {
+      case ORDER_STATUS.Hold:
+        return 'Hold';
+      case ORDER_STATUS.InKitchen:
+        return 'In Kitchen';
+      case ORDER_STATUS.Preparing:
+        return 'Preparing';
+      case ORDER_STATUS.Ready:
+        return 'Ready';
+      case ORDER_STATUS.Served:
+        return 'Served';
+      case ORDER_STATUS.Cancelled:
+        return 'Cancelled';
+      default:
+        return this.normalizeText(status);
+    }
   }
 
   private normalizeText(value: unknown): string {

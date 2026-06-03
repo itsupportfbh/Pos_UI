@@ -14,6 +14,9 @@ export type MultiSelectFieldValue = Array<string | number>;
   styleUrl: './multiselect-field.component.css'
 })
 export class MultiSelectFieldComponent {
+toggleAll() {
+throw new Error('Method not implemented.');
+}
   @Input({ required: true }) label = '';
   @Input({ required: true }) inputId = '';
   @Input() placeholder = 'Select';
@@ -31,6 +34,7 @@ export class MultiSelectFieldComponent {
   @Input() display: 'comma' | 'chip' = 'chip';
   @Input() model: MultiSelectFieldValue = [];
   @Output() modelChange = new EventEmitter<MultiSelectFieldValue>();
+selectAll: any;
 
   get isValid(): boolean {
     return !(this.required && this.model.length === 0);

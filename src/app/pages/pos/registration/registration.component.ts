@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -9,7 +10,11 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
 type RegistrationRow = {
@@ -51,6 +56,7 @@ const REGISTRATION_COLUMNS: SharedTableColumn<RegistrationRow>[] = [
 })
 export class RegistrationComponent {
   private readonly toast = inject(AppToastService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly confirmationService = inject(ConfirmationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
@@ -63,6 +69,17 @@ export class RegistrationComponent {
   rowActionItems: MenuItem[] = [];
   allRows: RegistrationRow[] = [];
   tableRows: RegistrationRow[] = [];
+  userDetails: any = {};
+  registrationEntityNo = Number(sessionStorage.getItem('currentMenuEntityNo') || 0);
+  registrationRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
   filterSearchText = '';
   dialogId = 0;
@@ -83,14 +100,55 @@ export class RegistrationComponent {
   readonly tableTitle = 'Gift Card Registration';
   readonly tableCaption = 'Gift Card Registration';
   tableColumns = REGISTRATION_COLUMNS;
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showDownloadButton = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    await this.loadRegistrationRights();
     this.loadRows();
+  }
+
+  async loadRegistrationRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.registrationEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.registrationRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.registrationRights.Create;
+      this.showDownloadButton = this.registrationRights.Download;
+      this.showRowActions = this.registrationRights.Edit || this.registrationRights.Delete || this.registrationRights.ActiveInActive || this.registrationRights.Print;
+    } catch {
+      this.registrationRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load gift card registration role rights. Please check and try again.');
+    }
   }
   loadRows(): void {
     this.allRows = [];
@@ -225,6 +283,10 @@ export class RegistrationComponent {
     this.toast.success('Deactivated', row.Name + ' deactivated successfully.');
   }
 
+  printRow(row: RegistrationRow): void {
+    this.toast.info('Print', 'Print is not connected yet for ' + row.Name + '.');
+  }
+
   openRowActions(menu: any, event: Event, row: RegistrationRow): void {
     this.selectedRow = row;
     this.rowActionItems = this.getRowActionItems(row);
@@ -303,21 +365,32 @@ export class RegistrationComponent {
   }
 
   private getRowActionItems(row: RegistrationRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.registrationRights.Edit && row.IsActive) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.registrationRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.registrationRights.ActiveInActive) {
+      if (row.IsActive) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.registrationRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -328,6 +401,8 @@ export class RegistrationComponent {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }

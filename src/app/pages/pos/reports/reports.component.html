@@ -1,0 +1,303 @@
+<section class="feature-page">
+  <header class="page-header hero-panel">
+    <div>
+      <p class="eyebrow">{{ pageEyebrow }}</p>
+      <h1>{{ 'reports.title' | appTranslate:pageTitle }}</h1>
+      <p class="page-subtitle">{{ 'reports.subtitle' | appTranslate:pageSubtitle }}</p>
+    </div>
+  </header>
+
+  @if (hasNoReportAccess) {
+    <p-card class="feature-card no-access-card">
+      <div class="no-access-shell">
+        <div class="no-access-illustration">
+          <span class="no-access-icon-wrap">
+            <i class="pi pi-lock"></i>
+          </span>
+        </div>
+        <div class="no-access-copy">
+          <p class="no-access-kicker">{{ 'reports.no_access_kicker' | appTranslate:'Report Access Restricted' }}</p>
+          <h2>{{ 'reports.no_access_title' | appTranslate:'No reports are assigned to this role' }}</h2>
+          <p>
+            {{ 'reports.no_access_message' | appTranslate:'This login does not currently have permission to open any report categories. Contact your administrator to assign report rights for your role.' }}
+          </p>
+          <div class="no-access-meta">
+            <span><strong>{{ 'reports.role' | appTranslate:'Role' }}:</strong> {{ userDetails?.RoleName || ('reports.unknown_role' | appTranslate:'Unknown Role') }}</span>
+            <span><strong>{{ 'reports.organization' | appTranslate:'Organization' }}:</strong> {{ userDetails?.OrgName || ('reports.unknown_organization' | appTranslate:'Unknown Organization') }}</span>
+          </div>
+        </div>
+      </div>
+    </p-card>
+  } @else {
+  <div class="report-layout">
+    <div class="report-sidebar">
+      <p-card class="feature-card compact-card">
+        <div class="section-heading compact-heading">
+          <div>
+            <h2>{{ 'reports.categories_title' | appTranslate:'Report Categories' }}</h2>
+            <p>{{ 'reports.categories_subtitle' | appTranslate:'Select a category to load its reports.' }}</p>
+          </div>
+        </div>
+
+        <app-select-field
+          [label]="'reports.category' | appTranslate:'Category'"
+          inputId="report-category"
+          [placeholder]="'reports.category_placeholder' | appTranslate:'Choose report category'"
+          [options]="categoryOptions"
+          [filter]="true"
+          [showClear]="false"
+          [numberValue]="true"
+          [disabled]="loadingCategories || categorySwitching"
+          [model]="selectedCategoryId"
+          (modelChange)="onCategoryChange($event)"
+        />
+      </p-card>
+
+      <p-card class="feature-card compact-card">
+        <div class="section-heading compact-heading">
+          <div>
+            <h2>{{ currentCategoryName || ('reports.title' | appTranslate:'Reports') }}</h2>
+            <p>{{ 'reports.pick_report' | appTranslate:'Pick a report from this category.' }}</p>
+          </div>
+        </div>
+
+        @if (reports.length) {
+          <div class="report-grid compact-report-grid">
+            @for (report of reports; track report.Id) {
+              <button
+                type="button"
+                class="report-card"
+                [class.is-active]="selectedReport?.Id === report.Id"
+                [class.is-loading]="reportSwitching && selectedReport?.Id === report.Id"
+                [attr.aria-pressed]="selectedReport?.Id === report.Id"
+                (click)="selectReport(report)"
+              >
+                <div class="report-card-icon">
+                  <i [class]="report.Icon || 'pi pi-chart-bar'"></i>
+                </div>
+                <div class="report-card-copy">
+                  <span class="report-card-title">{{ report.DisplayName }}</span>
+                  <span class="report-card-code">{{ report.Description || report.ReportName || report.ReportCode }}</span>
+                </div>
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="empty-panel compact-empty">
+            <h3>{{ 'reports.no_reports_available' | appTranslate:'No reports available' }}</h3>
+            <p>{{ 'reports.no_reports_available_message' | appTranslate:'No reports are mapped to the selected category for this role.' }}</p>
+          </div>
+        }
+      </p-card>
+    </div>
+
+    <div class="report-main">
+      <p-card class="feature-card compact-card">
+        <div class="section-heading compact-heading">
+          <div>
+            <h2>{{ selectedReportDefinition?.DisplayName || ('reports.filters_title' | appTranslate:'Report Filters') }}</h2>
+            <p>{{ selectedReportDefinition?.Description || ('reports.filters_subtitle' | appTranslate:'Select a report to load the runtime filter fields.') }}</p>
+          </div>
+        </div>
+
+        @if (selectedReportDefinition) {
+          <section class="filter-panel">
+            <div class="field-grid report-filter-grid">
+              @for (field of filterFields; track trackByField($index, field)) {
+              @switch (field.type) {
+                  @case ('textbox') {
+                    <app-text-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      [placeholder]="field.placeholder"
+                      [helperText]="field.helperText ?? ''"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [model]="($any(getFieldValue(field.key)) ?? '')"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                  @case ('textarea') {
+                    <app-textarea-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      [placeholder]="field.placeholder"
+                      [helperText]="field.helperText ?? ''"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [rows]="field.rows ?? 4"
+                      [model]="asTextValue(getFieldValue(field.key))"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                  @case ('number') {
+                    <app-text-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      type="number"
+                      [placeholder]="field.placeholder"
+                      [helperText]="field.helperText ?? ''"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [inputMode]="field.inputMode ?? 'decimal'"
+                      [step]="field.step ?? '1'"
+                      [model]="($any(getFieldValue(field.key)) ?? '')"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                  @case ('dropdown') {
+                    <app-select-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      [placeholder]="field.placeholder"
+                      [helperText]="field.helperText ?? ''"
+                      [options]="field.options ?? []"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [model]="($any(getFieldValue(field.key)) ?? null)"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                  @case ('multiselect') {
+                    <app-multiselect-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      [placeholder]="field.placeholder"
+                      [helperText]="field.helperText ?? ''"
+                      [options]="field.options ?? []"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [model]="($any(getFieldValue(field.key)) ?? [])"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                  @case ('checkbox') {
+                    <app-checkbox-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      [helperText]="field.helperText ?? ''"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [model]="asCheckboxValue(getFieldValue(field.key))"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                  @case ('radio') {
+                    <app-radio-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      [helperText]="field.helperText ?? ''"
+                      [options]="field.options ?? []"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [model]="($any(getFieldValue(field.key)) ?? null)"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                  @case ('autocomplete') {
+                    <app-autocomplete-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      [placeholder]="field.placeholder"
+                      [helperText]="field.helperText ?? ''"
+                      [suggestions]="field.suggestions ?? []"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [model]="($any(getFieldValue(field.key)) ?? null)"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                  @case ('date') {
+                    <app-date-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      [placeholder]="field.placeholder"
+                      [helperText]="field.helperText ?? ''"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [model]="($any(getFieldValue(field.key)) ?? null)"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                  @case ('datetime') {
+                    <app-date-field
+                      [label]="field.label"
+                      [inputId]="field.key"
+                      [placeholder]="field.placeholder"
+                      [helperText]="field.helperText ?? ''"
+                      [required]="field.required"
+                      [submitted]="submitted"
+                      [showTime]="true"
+                      hourFormat="24"
+                      [dateFormat]="'dd/mm/yy'"
+                      [model]="($any(getFieldValue(field.key)) ?? null)"
+                      (modelChange)="setFieldValue(field.key, $event)"
+                    />
+                  }
+                }
+              }
+            </div>
+
+            <div class="action-row sticky-actions">
+              <button pButton type="button" class="report-action-btn is-view" [label]="'reports.view' | appTranslate:'View'" icon="pi pi-eye" [loading]="loadingPreview" [disabled]="loadingDefinition" (click)="viewReport()"></button>
+              @if (selectedReportDefinition.CanPrint) {
+                <button pButton type="button" class="report-action-btn is-print" [label]="'reports.print' | appTranslate:'Print'" icon="pi pi-print" [disabled]="!previewRows.length" (click)="printReport()"></button>
+              }
+              @if (selectedReportDefinition.ExportPdf) {
+                <button pButton type="button" class="report-action-btn is-pdf" [label]="'reports.export_pdf' | appTranslate:'Export PDF'" icon="pi pi-file-pdf" [disabled]="!previewRows.length" (click)="exportPdf()"></button>
+              }
+              @if (selectedReportDefinition.ExportExcel) {
+                <button pButton type="button" class="report-action-btn is-excel" [label]="'reports.export_excel' | appTranslate:'Export Excel'" icon="pi pi-file-excel" [disabled]="!previewRows.length" (click)="exportExcel()"></button>
+              }
+              <button pButton type="button" class="report-action-btn is-clear" [label]="'reports.clear' | appTranslate:'Clear'" icon="pi pi-times" [disabled]="loadingPreview" (click)="clearFilters()"></button>
+            </div>
+          </section>
+        } @else {
+          <div class="empty-panel compact-empty">
+            <h3>{{ 'reports.select_report' | appTranslate:'Select a report' }}</h3>
+            <p>{{ 'reports.select_report_message' | appTranslate:'The filter form will appear here once you choose a report from the selected category.' }}</p>
+          </div>
+        }
+      </p-card>
+
+      <p-card class="feature-card compact-card result-card">
+        <div class="section-heading compact-heading">
+          <div>
+            <h2>{{ 'reports.result_title' | appTranslate:'Report Result' }}</h2>
+            <p>{{ resultStatusMessage }}</p>
+          </div>
+        </div>
+
+        @if (loadingPreview) {
+          <div class="loading-state-card">
+            <div class="loading-state-spinner">
+              <i class="pi pi-spin pi-spinner"></i>
+            </div>
+            <div class="loading-state-copy">
+              <strong>{{ loadingStatusLabel }}</strong>
+              <span>{{ 'reports.loading_detail' | appTranslate:'Preparing your report template and result set.' }}</span>
+            </div>
+          </div>
+        }
+
+        @if (previewRows.length && hasHtmlTemplate && renderedHtmlTemplate) {
+          <div class="html-template-preview" [innerHTML]="renderedHtmlTemplate"></div>
+        }
+
+        @if (!hasHtmlTemplate) {
+          <app-shared-table
+            [caption]="previewCaption"
+            [columns]="previewColumns"
+            [value]="previewRows"
+            [loading]="loadingPreview"
+            [showFilterButton]="false"
+            [showDownloadButton]="false"
+            [showAddNewButton]="false"
+            [emptyMessage]="resultEmptyMessage"
+          />
+        }
+      </p-card>
+    </div>
+  </div>
+  }
+</section>

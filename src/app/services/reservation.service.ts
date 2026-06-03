@@ -6,17 +6,26 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface Reservation {
   Id?: number;
-  RowNumber?: number;
-  Code?: string;
-  Name?: string;
-  Remarks?: string;
-  IsActive?: boolean;
-  Status?: string;
+  ReservationNo: string;
+  CustomerName: string;
+  CustomerMobile: string;
+  ReservationDate: string;
+  Reservationtime: string;
+  TableName: string;
+  CustomerEmail: string;
+  Guestcount: number;
+  Specialrequests: string;
+  TableIds?: Array<{ TableId: number }>;
+  Bookingsource?: string;
+  OrgId?: number;
+  IsActive?: boolean;  
   CreatedBy?: number | null;
   CreatedDate?: string;
   UpdatedBy?: number | null;
   UpdatedDate?: string | null;
   IsDeleted?: boolean;
+  EntityNo?: number;
+  branchId?: number;
 }
 
 @Injectable({
@@ -52,7 +61,7 @@ export class ReservationService {
   }
 
   delete(id: number | string): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/Delete?Id=${id}`);
+    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`);
   }
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
@@ -63,13 +72,3 @@ export class ReservationService {
     return this.runtimeConfig.apiBaseUrl;
   }
 }
-
-
-
-
-
-
-
-
-
-

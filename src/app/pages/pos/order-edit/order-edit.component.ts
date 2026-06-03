@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, ViewChildren, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -10,7 +10,11 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
@@ -38,7 +42,8 @@ const ORDER_EDIT_COLUMNS: SharedTableColumn<OrderEditRow>[] = [
   { field: 'GuestName', header: 'Guest', sortable: true, width: '14rem' },
   { field: 'ItemCount', header: 'Items', sortable: true, width: '7rem' },
   { field: 'OrderTotal', header: 'Total', sortable: true, width: '10rem' },
-  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
+  { field: 'Status', header: 'Status', sortable: true, width: '8rem' },
+  { field: 'Notes', header: 'Notes', sortable: true, width: '14rem' }
 ];
 
 @Component({
@@ -61,11 +66,15 @@ const ORDER_EDIT_COLUMNS: SharedTableColumn<OrderEditRow>[] = [
   styleUrl: './order-edit.component.css'
 })
 export class OrderEditComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly displayMenuItemsService = inject(DisplayMenuItemsService);
   private readonly router = inject(Router);
   private readonly confirmationService = inject(ConfirmationService);
-
+  private readonly cdr = inject(ChangeDetectorRef);
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
   showAddDialog = false;
@@ -116,10 +125,16 @@ export class OrderEditComponent {
   readonly showFilterButton = true;
   readonly showRowActions = true;
   readonly rowActionHeader = 'Actions';
-
+  viewReady = false;
   ngOnInit(): void {
+
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    setTimeout(() => {
+    this.viewReady = true;
     this.loadRows();
+    this.cdr.detectChanges();
+  });
+    
   }
 
   loadRows(): void {
@@ -143,7 +158,10 @@ export class OrderEditComponent {
         this.toast.error('Load Failed', 'Unable to load edit orders.');
       },
       complete: () => {
-        this.isLoading = false;
+         setTimeout(() => {
+    this.isLoading = false;
+    this.cdr.detectChanges();
+  });
       }
     });
   }
@@ -390,8 +408,8 @@ export class OrderEditComponent {
   private updatePreview(): void {
     const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
 
-    this.previewOrderNo = activeRow?.OrderNo ?? 'ORD-EDIT-01';
-    this.previewTableName = activeRow?.TableName ?? 'Table 6';
+    this.previewOrderNo = activeRow?.OrderNo ?? '0';
+    this.previewTableName = activeRow?.TableName ?? '0';
     this.previewGuestName = activeRow?.GuestName ?? 'Walk-in Guest';
     this.previewNotes = activeRow?.Notes ?? 'Guest changed one item before billing';
   }
@@ -423,17 +441,17 @@ export class OrderEditComponent {
   }
 
   private mapOrderToRow(order: any, index: number): OrderEditRow {
-    const status = this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus') || 'Open';
+    const status = this.getStringValue(order, 'OrderStatus') || 'Open';
 
     return {
-      Id: this.getNumberValue(order, 'Orderid', 'orderid', 'OrderId', 'orderId', 'Id', 'id'),
+      Id: this.getNumberValue(order,  'OrderId'),
       OrderNo: this.getOrderNumber(order) || '-',
-      TableName: this.getStringValue(order, 'TableName', 'tableName', 'TableCode', 'tableCode', 'TableId', 'tableId') || 'Counter',
-      GuestName: this.getStringValue(order, 'CustomerName', 'customerName', 'GuestName', 'guestName') || 'Walk-in Guest',
-      ItemCount: this.getNumberValue(order, 'ItemCount', 'itemCount', 'Itemcount', 'itemcount') || this.getOrderItems(order).length,
-      OrderTotal: this.getNumberValue(order, 'TotalAmount', 'totalAmount', 'GrandTotal', 'grandTotal'),
+      TableName: this.getStringValue(order, 'TableName') || 'Counter',
+      GuestName: this.getStringValue(order, 'CustomerName') || 'Walk-in Guest',
+      ItemCount: this.getNumberValue(order, 'ItemCount') || this.getOrderItems(order).length,
+      OrderTotal: this.getNumberValue(order, 'TotalAmount'),
       UpdatedBy: this.getStringValue(order, 'UpdatedBy', 'updatedBy', 'CreatedBy', 'createdBy') || '-',
-      Notes: this.getStringValue(order, 'Notes', 'notes', 'Remarks', 'remarks') || status,
+      Notes: this.getStringValue(order, 'Notes' ) ,
       IsActive: status.trim().toLowerCase() !== 'completed' && !this.getBooleanValue(order, 'IsDeleted', 'isDeleted'),
       Status: status,
       RowNumber: index + 1,
@@ -461,22 +479,22 @@ export class OrderEditComponent {
     const orderId = this.getOrderId(order);
     const items = this.getOrderItems(order).map((item: any) => ({
       Id: this.getNumberValue(item, 'Id', 'id', 'Itemid', 'itemid'),
-      itemid: this.getNumberValue(item, 'itemid', 'Itemid', 'Id', 'id'),
-      Orderid: this.getNumberValue(item, 'Orderid', 'orderid', 'OrderId', 'orderId') || orderId,
-      Menuitemid: this.getStringValue(item, 'Menuitemid', 'menuitemid', 'MenuItemId', 'menuItemId', 'FoodMenuId', 'foodMenuId'),
-      ComboMenuId: this.getNumberValue(item, 'ComboMenuId', 'comboMenuId', 'Combomenuid', 'combomenuid'),
-      ComboMenuItemId: this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid'),
-      Itemname: this.getStringValue(item, 'Itemname', 'itemname', 'ItemName', 'itemName', 'name', 'Name'),
+      itemid: this.getNumberValue(item,  'Itemid'),
+      Orderid: this.getNumberValue(item, 'Orderid') || orderId,
+      Menuitemid: this.getStringValue(item, 'Menuitemid'),
+      ComboMenuId: this.getNumberValue(item, 'ComboMenuItemId'),
+      ComboMenuItemId: this.getNumberValue(item,  'ComboMenuItemId'),
+      Itemname: this.getStringValue(item, 'Itemname'),
       Quantity: this.getNumberValue(item, 'Quantity', 'quantity', 'Qty', 'qty') || 1,
-      Unitprice: this.getNumberValue(item, 'Unitprice', 'unitprice', 'UnitPrice', 'unitPrice', 'price', 'Price'),
-      Totalprice: this.getNumberValue(item, 'Totalprice', 'totalprice', 'TotalPrice', 'totalPrice'),
-      DiscountAmount: this.getNumberValue(item, 'DiscountAmount', 'discountAmount'),
-      TaxAmount: this.getNumberValue(item, 'TaxAmount', 'taxAmount'),
-      Modifierdetails: this.getStringValue(item, 'Modifierdetails', 'modifierdetails') || null,
-      Itemstatus: this.getStringValue(item, 'Itemstatus', 'itemstatus') || this.getOrderStatus(order),
+      Unitprice: this.getNumberValue(item, 'Unitprice'),
+      Totalprice: this.getNumberValue(item, 'Totalprice'),
+      DiscountAmount: this.getNumberValue(item, 'DiscountAmount'),
+      TaxAmount: this.getNumberValue(item, 'TaxAmount'),
+      Modifierdetails: this.getStringValue(item, 'Modifierdetails') || null,
+      Itemstatus: this.getStringValue(item, 'Itemstatus') || this.getOrderStatus(order),
       Notes: this.getStringValue(item, 'Notes', 'notes') || null,
-      OrgId: this.getNumberValue(item, 'OrgId', 'orgId') || this.getNumberValue(source, 'OrgId', 'orgId') || this.getUserOrgId(),
-      BranchId: this.getNumberValue(item, 'BranchId', 'branchId') || this.getNumberValue(source, 'BranchId', 'branchId') || this.getUserBranchId()
+      OrgId: this.getNumberValue(item, 'OrgId') || this.getUserOrgId(),
+      BranchId: this.getNumberValue(item, 'BranchId') || this.getUserBranchId()
     }));
 
     return {
@@ -486,31 +504,27 @@ export class OrderEditComponent {
       SavedOrderId: orderId,
       Orderid: orderId,
       orderId,
-      Ordernumber: this.getOrderNumber(order),
       OrderNumber: this.getOrderNumber(order),
-      Tableid: this.getNumberValue(source, 'Tableid', 'tableid', 'TableId', 'tableId'),
-      TableId: this.getNumberValue(source, 'Tableid', 'tableid', 'TableId', 'tableId'),
-      Ordertype: this.getStringValue(source, 'Ordertype', 'ordertype', 'OrderType', 'orderType'),
-      OrderType: this.getStringValue(source, 'Ordertype', 'ordertype', 'OrderType', 'orderType'),
-      Orderstatus: this.getOrderStatus(order),
+      TableId: this.getNumberValue(source,  'TableId'),
+      OrderType: this.getStringValue(source,  'OrderType', ),
       OrderStatus: this.getOrderStatus(order),
-      CustomerName: this.getStringValue(source, 'CustomerName', 'customerName', 'GuestName', 'guestName'),
-      CustomerPhone: this.getStringValue(source, 'CustomerPhone', 'customerPhone', 'Phone', 'phone'),
-      Itemcount: this.getNumberValue(source, 'ItemCount', 'itemCount', 'Itemcount', 'itemcount') || items.length,
+      CustomerName: this.getStringValue(source, 'CustomerName'),
+      CustomerPhone: this.getStringValue(source, 'CustomerPhone' ),
+      Itemcount: this.getNumberValue(source, 'ItemCount',) || items.length,
       SubtotalAmount: this.getNumberValue(source, 'SubtotalAmount', 'subtotalAmount', 'Subtotal', 'subtotal'),
-      TaxAmount: this.getNumberValue(source, 'TaxAmount', 'taxAmount'),
-      DiscountAmount: this.getNumberValue(source, 'DiscountAmount', 'discountAmount'),
-      TotalAmount: this.getNumberValue(source, 'TotalAmount', 'totalAmount', 'GrandTotal', 'grandTotal'),
+      TaxAmount: this.getNumberValue(source, 'TaxAmount'),
+      DiscountAmount: this.getNumberValue(source, 'DiscountAmount'),
+      TotalAmount: this.getNumberValue(source, 'TotalAmount'),
       Shiftid: this.getNumberValue(source, 'Shiftid', 'shiftid', 'ShiftId', 'shiftId'),
-      OrgId: this.getNumberValue(source, 'OrgId', 'orgId') || this.getUserOrgId(),
-      BranchId: this.getNumberValue(source, 'BranchId', 'branchId') || this.getUserBranchId(),
+      OrgId: this.getNumberValue(source, 'OrgId') || this.getUserOrgId(),
+      BranchId: this.getNumberValue(source, 'BranchId') || this.getUserBranchId(),
       orderNo: this.getOrderNumber(order),
-      table: this.getStringValue(source, 'TableName', 'tableName', 'TableCode', 'tableCode'),
-      customerName: this.getStringValue(source, 'CustomerName', 'customerName', 'GuestName', 'guestName'),
+      table: this.getStringValue(source, 'TableName'),
+      customerName: this.getStringValue(source, 'CustomerName', ),
       Items: items,
       items,
       OrderHoldItems: items,
-      orderHoldItems: items
+     // orderHoldItems: items
     };
   }
 
@@ -566,17 +580,7 @@ export class OrderEditComponent {
 
   private getOrderItems(order: any): any[] {
     const items = order?.Items ??
-      order?.items ??
-      order?.OrderItems ??
-      order?.orderItems ??
-      order?.Orderitems ??
-      order?.orderitems ??
-      order?.OrderDetails ??
-      order?.orderDetails ??
-      order?.Details ??
-      order?.details ??
-      order?.OrderHoldItems ??
-      order?.orderHoldItems ??
+      
       [];
 
     return Array.isArray(items) ? items : [];
@@ -584,58 +588,68 @@ export class OrderEditComponent {
 
   private getResponseList(response: any): any[] {
     const result = response?.result ?? response?.Result ?? response;
-    return Array.isArray(result) ? result : [];
+
+    if (Array.isArray(result)) {
+      return result;
+    }
+
+    const nestedList = result?.data ??
+      result?.Data ??
+      result?.items ??
+      result?.Items ??
+      result?.orders ??
+      result?.Orders ??
+      result?.list ??
+      result?.List;
+
+    if (Array.isArray(nestedList)) {
+      return nestedList;
+    }
+
+    return result && typeof result === 'object' ? [result] : [];
   }
 
   private getOrderId(order: any): number {
-    return this.getNumberValue(order, 'Orderid', 'orderid', 'OrderId', 'orderId', 'Id', 'id');
+    return this.getNumberValue(order,  'OrderId');
   }
 
   private getOrderNumber(order: any): string {
-    return this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo');
+    return this.getStringValue(order, 'OrderNumber');
   }
 
   private getOrderStatus(order: any): string {
-    return this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus') || 'Open';
+    return this.getStringValue(order, 'OrderStatus') || 'Open';
   }
 
   private isOrderLikeObject(value: any): boolean {
     return Boolean(value && typeof value === 'object' && (
       value.Orderid !== undefined ||
-      value.orderid !== undefined ||
-      value.OrderId !== undefined ||
-      value.orderId !== undefined ||
-      value.OrderNumber !== undefined ||
-      value.orderNumber !== undefined ||
-      value.Ordernumber !== undefined ||
-      value.ordernumber !== undefined
+     
+      value.OrderNumber !== undefined 
+     
     ));
   }
 
   private isOrderItemLikeObject(value: any): boolean {
     return Boolean(value && typeof value === 'object' && (
       value.Menuitemid !== undefined ||
-      value.menuitemid !== undefined ||
-      value.MenuItemId !== undefined ||
       value.ComboMenuItemId !== undefined ||
-      value.comboMenuItemId !== undefined ||
       value.Itemname !== undefined ||
-      value.itemname !== undefined ||
-      value.Quantity !== undefined ||
-      value.quantity !== undefined
+      value.Quantity !== undefined 
+      
     ));
   }
 
   private getUserOrgId(): number {
     return Number(this.userDetails.RoleId || 0) === 1
       ? 0
-      : this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
+      : this.getNumberValue(this.userDetails, 'OrgId');
   }
 
   private getUserBranchId(): number {
     return Number(this.userDetails.IsAdmin || 0) === 1 || Number(this.userDetails.RoleId || 0) === 1
       ? 0
-      : this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
+      : this.getNumberValue(this.userDetails, 'BranchId');
   }
 
   private getStringValue(source: any, ...keys: string[]): string {

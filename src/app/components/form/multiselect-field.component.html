@@ -5,21 +5,28 @@
       <span class="required-mark">*</span>
     }
   </label>
-  <p-multiselect
-    class="field-input"
-    [class.field-invalid]="showRequiredError"
-    [inputId]="inputId"
-    [options]="options"
-    [optionLabel]="optionLabel"
-    [optionValue]="optionValue"
-    [placeholder]="placeholder"
-    [filter]="filter"
-    [disabled]="disabled"
-    [appendTo]="appendTo"
-    [display]="display"
-    [(ngModel)]="model"
-    (ngModelChange)="onModelChange($event)"
-  />
+  <p-multiSelect
+  class="field-input"
+  [class.field-invalid]="showRequiredError"
+  [inputId]="inputId"
+  [options]="options"
+  [optionLabel]="optionLabel"
+  [optionValue]="optionValue"
+  [placeholder]="placeholder"
+
+  [filter]="true"
+  filterPlaceholder="Search"
+
+  [showToggleAll]="true"
+
+  [disabled]="disabled"
+  [appendTo]="appendTo"
+  [display]="display"
+
+  [(ngModel)]="model"
+  (ngModelChange)="onModelChange($event)">
+
+</p-multiSelect>
   @if (showRequiredError) {
     <small class="field-error">{{ requiredErrorMessage }}</small>
   } @else if (helperText) {

@@ -17,6 +17,9 @@
     </div>
 
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [showDownloadButton]="showDownloadButton" (excelDownloadClick)="exportBranchesAsExcel()"
+      (pdfDownloadClick)="exportBranchesAsPdf()" [downloadLoading]="downloadLoading"
+      [downloadLoadingLabel]="downloadLoadingLabel"
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
@@ -76,8 +79,8 @@
       }
 
     <app-text-field label="Code" inputId="dialog-code" placeholder="Branch Code" [required]="true"
-      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [model]="dialogCode"
-      (modelChange)="dialogCode = $event" />
+      [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
+      [model]="dialogCode" (modelChange)="dialogCode = $event" />
 
     <app-text-field label="Name" inputId="dialog-name" placeholder="Branch Name" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Name is required."
@@ -127,6 +130,12 @@
     <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="City is required."
       [numberValue]="true" [model]="dialogCity" (modelChange)="dialogCity = $event" />
+
+    <app-select-field label="Language" inputId="dialog-language-code" placeholder="Choose language"
+      [options]="languageOptions" [model]="dialogLanguageCode" (modelChange)="dialogLanguageCode = $event" />
+
+    <app-text-field label="Currency" inputId="dialog-currency" placeholder="Currency" [disabled]="true"
+      [model]="dialogCurrencyDisplay" (modelChange)="dialogCurrencyDisplay = $event" />
 
     <app-text-field label="Postal Code" inputId="dialog-postal-code" placeholder="Postal Code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Postal Code is required."

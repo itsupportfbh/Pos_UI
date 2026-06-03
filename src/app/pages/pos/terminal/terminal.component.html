@@ -16,6 +16,9 @@
     </div>
 
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+      [showDownloadButton]="showDownloadButton" (excelDownloadClick)="exportTerminalsAsExcel()"
+      (pdfDownloadClick)="exportTerminalsAsPdf()" [downloadLoading]="downloadLoading"
+      [downloadLoadingLabel]="downloadLoadingLabel"
       [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
       [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
       (toolbarButtonClick)="openAddDialog()">
@@ -70,7 +73,7 @@
 
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-terminalCode" placeholder="Enter terminal code"
-      [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Code is required."
+      [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
       [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
 
     <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-terminalName" placeholder="Enter terminal name"

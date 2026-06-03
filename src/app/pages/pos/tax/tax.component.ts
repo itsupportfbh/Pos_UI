@@ -9,11 +9,17 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { Tax, TaxService } from '../../../services/tax.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { firstValueFrom } from 'rxjs';
+import { TableExportService } from '../../../services/table-export.service';
 
 const TAX_COLUMNS: SharedTableColumn<any>[] = [
     { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
@@ -38,11 +44,17 @@ const TAX_COLUMNS: SharedTableColumn<any>[] = [
     styleUrl: './tax.component.css'
 })
 export class TaxComponent implements OnInit {
-    private readonly toast = inject(AppToastService);
+    
+  
+  private readonly toast = inject(AppToastService);
+  
+  
     private readonly TaxService = inject(TaxService);
+    private readonly entityMasterService = inject(EntityMasterService);
     private readonly organizationService = inject(OrganizationService);
     private readonly confirmationService = inject(ConfirmationService);
     private readonly changeDetector = inject(ChangeDetectorRef);
+    private readonly tableExportService = inject(TableExportService);
 
     @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
     @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -74,15 +86,28 @@ export class TaxComponent implements OnInit {
     readonly tableTitle = 'Taxes';
     readonly tableCaption = 'Taxes';
     tableColumns = TAX_COLUMNS;
-    readonly showAddNewButton = true;
+    showAddNewButton = true;
     readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+    showDownloadButton = true;
     readonly showFilterButton = true;
-    readonly showRowActions = true;
+    showRowActions = true;
     readonly rowActionHeader = 'Actions';
     rowActionItems: MenuItem[] = [];
+    downloadLoading = false;
+    downloadLoadingLabel = 'Exporting...';
+    taxRights = {
+        View: true,
+        Create: true,
+        Edit: true,
+        Delete: true,
+        ActiveInActive: true,
+        Print: true,
+        Download: true
+    };
 
-    ngOnInit(): void {
+    async ngOnInit(): Promise<void> {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+        await this.loadTaxRights();
         this.tableColumns = TAX_COLUMNS.map((x: any) => {
             if (x.field === 'OrganizationName') {
                 x.hidden = this.userDetails.RoleId !== 1;
@@ -92,6 +117,44 @@ export class TaxComponent implements OnInit {
         });
 
         this.loadTaxes();
+    }
+
+    async loadTaxRights(): Promise<void> {
+        try {
+            const orgId = Number(this.userDetails?.OrgId || 0);
+            const roleId = Number(this.userDetails?.RoleId || 0);
+            const entityNo = Number(this.taxEntityNo || 0);
+            const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+            const rights = response?.result?.[0] ?? {};
+
+            this.taxRights = {
+                View: rights.View,
+                Create: rights.Create,
+                Edit: rights.Edit,
+                Delete: rights.Delete,
+                ActiveInActive: rights.ActiveInActive,
+                Print: rights.Print,
+                Download: rights.Download
+            };
+
+            this.showAddNewButton = this.taxRights.Create;
+            this.showDownloadButton = this.taxRights.Download;
+            this.showRowActions = this.taxRights.Edit || this.taxRights.Delete || this.taxRights.ActiveInActive || this.taxRights.Print;
+        } catch {
+            this.taxRights = {
+                View: true,
+                Create: false,
+                Edit: false,
+                Delete: false,
+                ActiveInActive: false,
+                Print: false,
+                Download: false
+            };
+            this.showAddNewButton = false;
+            this.showDownloadButton = false;
+            this.showRowActions = false;
+            this.toast.error('Rights Load Failed', 'Unable to load tax rights. Please check and try again.');
+        }
     }
 
     loadTaxes(): void {
@@ -119,6 +182,68 @@ export class TaxComponent implements OnInit {
         });
     }
 
+    async exportTaxesAsExcel(): Promise<void> {
+        this.downloadLoading = true;
+        this.downloadLoadingLabel = 'Excel exporting...';
+
+        try {
+            const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+            const response: any = await firstValueFrom(this.TaxService.getAll(orgId));
+            let RowNumber = 1;
+            const exportRows = (response.result ?? []).map((x: any) => {
+                x.RowNumber = RowNumber++;
+                x.Status = x.IsActive ? 'Active' : 'Inactive';
+                return x;
+            });
+            const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+            const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Taxes`;
+
+            if (!exportRows.length) {
+                this.toast.warn('No Records', 'No taxes are available to export.');
+                return;
+            }
+
+            await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Taxes');
+            this.toast.success('Export Ready', 'Tax Excel export downloaded successfully.');
+        } catch {
+            this.toast.error('Export Failed', 'Unable to export taxes to Excel.');
+        } finally {
+            this.downloadLoading = false;
+            this.downloadLoadingLabel = 'Exporting...';
+        }
+    }
+
+    async exportTaxesAsPdf(): Promise<void> {
+        this.downloadLoading = true;
+        this.downloadLoadingLabel = 'PDF exporting...';
+
+        try {
+            const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+            const response: any = await firstValueFrom(this.TaxService.getAll(orgId));
+            let RowNumber = 1;
+            const exportRows = (response.result ?? []).map((x: any) => {
+                x.RowNumber = RowNumber++;
+                x.Status = x.IsActive ? 'Active' : 'Inactive';
+                return x;
+            });
+            const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+            const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Taxes`;
+
+            if (!exportRows.length) {
+                this.toast.warn('No Records', 'No taxes are available to export.');
+                return;
+            }
+
+            await this.tableExportService.exportPdf(fileName, 'Taxes', this.tableColumns, exportRows);
+            this.toast.success('Export Ready', 'Tax PDF export downloaded successfully.');
+        } catch {
+            this.toast.error('Export Failed', 'Unable to export taxes to PDF.');
+        } finally {
+            this.downloadLoading = false;
+            this.downloadLoadingLabel = 'Exporting...';
+        }
+    }
+
     async openAddDialog(): Promise<void> {
         this.isEditMode = false;
         this.resetDialogForm();
@@ -132,6 +257,8 @@ export class TaxComponent implements OnInit {
         } else {
             await this.loadLatestTaxCode(Number(this.userDetails.OrgId || 0));
         }
+
+        this.changeDetector.detectChanges();
     }
 
     closeAddDialog(): void {
@@ -151,6 +278,7 @@ export class TaxComponent implements OnInit {
                 label: organization.Name ?? '',
                 value: organization.Id ?? 0
             }));
+            this.changeDetector.detectChanges();
         } catch {
             this.organizationOptions = [];
             this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
@@ -261,6 +389,7 @@ export class TaxComponent implements OnInit {
             }
 
             this.showAddDialog = true;
+            this.changeDetector.detectChanges();
         } catch {
             this.toast.error('Load Failed', 'Unable to load tax details.');
         }
@@ -350,6 +479,10 @@ export class TaxComponent implements OnInit {
         });
     }
 
+    printRow(row: any): void {
+        this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'Tax')} print will be connected later.`);
+    }
+
     openRowActions(menu: any, event: Event, row: any): void {
         this.selectedRow = row;
         this.rowActionItems = this.getRowActionItems(row);
@@ -369,15 +502,26 @@ export class TaxComponent implements OnInit {
     }
 
     private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-        const items: MenuItem[] = [
-            { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-        ];
+        const items: MenuItem[] = [];
 
-        if (row['IsActive'] === true) {
-            items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+        if (this.taxRights.Edit && row['IsActive'] === true) {
+            items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+        }
+
+        if (this.taxRights.Delete) {
+            items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+        }
+
+        if (this.taxRights.ActiveInActive && row['IsActive'] === true) {
             items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-        } else {
+        }
+
+        if (this.taxRights.ActiveInActive && row['IsActive'] !== true) {
             items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+        }
+
+        if (this.taxRights.Print) {
+            items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row) });
         }
 
         return items;

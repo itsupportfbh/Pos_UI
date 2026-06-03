@@ -136,7 +136,6 @@ export class ShiftAssignmentComponent implements OnInit, OnChanges {
     };
 
     this.shiftService.assignShift(shiftAssignment);
-    this.toast.success('Success', 'Shift assigned successfully');
     this.shiftAssigned.emit(shiftAssignment);
     this.closeDialog();
   }

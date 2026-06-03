@@ -17,10 +17,16 @@ import {
   SharedTableColumn,
   SharedTableComponent
 } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { BranchService } from '../../../services/branch.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { Floor, FloorService } from '../../../services/floor.service';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type FloorRow = Floor & {
   RowNumber: number;
@@ -60,12 +66,18 @@ const FLOOR_COLUMNS: SharedTableColumn<FloorRow>[] = [
   styleUrl: './floor.component.css'
 })
 export class FloorComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly floorService = inject(FloorService);
   private readonly branchService = inject(BranchService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -108,14 +120,20 @@ export class FloorComponent implements OnInit {
   readonly tableTitle = 'Floors';
   readonly tableCaption = 'Floors';
   tableColumns = FLOOR_COLUMNS;
-  readonly showAddNewButton = true;
+  floorEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  floorRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
-  readonly showFilterButton = true;
-  readonly showRowActions = true;
-  readonly rowActionHeader = 'Actions';
+  public showDownloadButton = true;
+  public readonly showFilterButton = true;
+  public showRowActions = true;
+  public readonly rowActionHeader = 'Actions';
+  public downloadLoading = false;
+  public downloadLoadingLabel = 'Exporting...';
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    await this.loadFloorRights();
      this.tableColumns = FLOOR_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
         x.hidden = this.userDetails.RoleId !== 1;
@@ -124,6 +142,43 @@ export class FloorComponent implements OnInit {
       return x;
     });
     this.loadFloors();
+  }
+
+  async loadFloorRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.floorEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.floorRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.floorRights.Create;
+      this.showDownloadButton = this.floorRights.Download;
+      this.showRowActions = this.floorRights.Edit || this.floorRights.Delete || this.floorRights.ActiveInActive || this.floorRights.Print;
+    } catch {
+      this.floorRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load floor rights for this role.');
+    }
   }
 
   loadFloors(): void {
@@ -157,6 +212,102 @@ export class FloorComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  async exportFloorsAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.RoleId || 0) === 1 ? 0 : Number(this.userDetails?.OrgId || 0);
+      const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+      const response: any = await firstValueFrom(this.floorService.getAll(orgId, BranchId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((floor: any) => ({
+        ...floor,
+        Id: floor.Id ?? floor.id ?? 0,
+        Code: floor.Code ?? floor.code ?? '',
+        Name: floor.Name ?? floor.name ?? '',
+        BranchId: floor.BranchId ?? floor.branchId ?? 0,
+        OrganizationName: floor.OrganizationName ?? '',
+        BranchName: floor.BranchName ?? floor.branchName ?? floor.Branch ?? '',
+        OrgId: floor.OrgId ?? floor.orgId ?? 0,
+        IsActive: floor.IsActive ?? floor.isActive ?? false,
+        RowNumber: rowNumber++,
+        Status: (floor.IsActive ?? floor.isActive) ? 'Active' : 'Inactive'
+      }));
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Floors`;
+      const searchText = this.filterFloorName.trim().toLowerCase();
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText || row.Name?.toLowerCase().includes(searchText) || row.Code?.toLowerCase().includes(searchText);
+        const matchesOrganization = !this.filterOrganizations.length || this.filterOrganizations.includes(Number(row.OrgId || 0));
+        const matchesBranch = !this.filterBranches.length || this.filterBranches.includes(Number(row.BranchId || 0));
+        return matchesText && matchesOrganization && matchesBranch;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No floors are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Floors');
+      this.toast.success('Export Ready', 'Floor Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export floors to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportFloorsAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails?.RoleId || 0) === 1 ? 0 : Number(this.userDetails?.OrgId || 0);
+      const BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+      const response: any = await firstValueFrom(this.floorService.getAll(orgId, BranchId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((floor: any) => ({
+        ...floor,
+        Id: floor.Id ?? floor.id ?? 0,
+        Code: floor.Code ?? floor.code ?? '',
+        Name: floor.Name ?? floor.name ?? '',
+        BranchId: floor.BranchId ?? floor.branchId ?? 0,
+        OrganizationName: floor.OrganizationName ?? '',
+        BranchName: floor.BranchName ?? floor.branchName ?? floor.Branch ?? '',
+        OrgId: floor.OrgId ?? floor.orgId ?? 0,
+        IsActive: floor.IsActive ?? floor.isActive ?? false,
+        RowNumber: rowNumber++,
+        Status: (floor.IsActive ?? floor.isActive) ? 'Active' : 'Inactive'
+      }));
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Floors`;
+      const searchText = this.filterFloorName.trim().toLowerCase();
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText || row.Name?.toLowerCase().includes(searchText) || row.Code?.toLowerCase().includes(searchText);
+        const matchesOrganization = !this.filterOrganizations.length || this.filterOrganizations.includes(Number(row.OrgId || 0));
+        const matchesBranch = !this.filterBranches.length || this.filterBranches.includes(Number(row.BranchId || 0));
+        return matchesText && matchesOrganization && matchesBranch;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No floors are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Floors', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Floor PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export floors to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   resetForm(): void {
@@ -248,6 +399,7 @@ export class FloorComponent implements OnInit {
         label: organization.Name ?? '',
         value: organization.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.organizationOptions = [];
       this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
@@ -271,6 +423,7 @@ export class FloorComponent implements OnInit {
           value: branch.Id ?? 0,
           orgId: branch.OrgId ?? branch.orgId ?? orgId
         }));
+      this.changeDetector.detectChanges();
     } catch {
       this.branchOptions = [];
       this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
@@ -327,6 +480,7 @@ export class FloorComponent implements OnInit {
       });
 
       this.branchOptions = [...branchMap.values()];
+      this.changeDetector.detectChanges();
     } catch {
       this.branchOptions = [];
       this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
@@ -414,6 +568,7 @@ export class FloorComponent implements OnInit {
       }
       this.dialogBranch = floor.BranchId ?? floor.branchId ?? null;
       this.dialogRemarks = floor.Remarks ?? floor.remarks ?? '';
+      this.changeDetector.detectChanges();
     } catch {
       this.toast.error('Load Failed', 'Unable to load floor details. Please check and try again.');
     }
@@ -578,21 +733,32 @@ export class FloorComponent implements OnInit {
   }
 
   private getRowActionItems(row: FloorRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.floorRights.Edit && row.IsActive === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.floorRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.floorRights.ActiveInActive) {
+      if (row.IsActive === true) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.floorRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -603,8 +769,15 @@ export class FloorComponent implements OnInit {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: FloorRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this floor');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
   }
 }

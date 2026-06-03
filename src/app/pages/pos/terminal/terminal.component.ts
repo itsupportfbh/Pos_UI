@@ -10,13 +10,19 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { Terminal, TerminalService } from '../../../services/terminal.service';
 import { BranchService } from '../../../services/branch.service';
 import { CounterService } from '../../../services/counter.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type TerminalRow = {
     id: number;
@@ -63,13 +69,19 @@ const TERMINAL_COLUMNS: SharedTableColumn<TerminalRow>[] = [
 })
 
 export class TerminalComponent implements OnInit {
-    private readonly toast = inject(AppToastService);
+    
+  
+  private readonly toast = inject(AppToastService);
+  
+  
     private readonly TerminalService = inject(TerminalService);
     private readonly branchService = inject(BranchService);
     private readonly counterService = inject(CounterService);
     private readonly changeDetector = inject(ChangeDetectorRef);
     private readonly confirmationService = inject(ConfirmationService);
+    private readonly entityMasterService = inject(EntityMasterService);
     private readonly organizationService = inject(OrganizationService);
+    private readonly tableExportService = inject(TableExportService);
 
     @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
     @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -125,21 +137,34 @@ export class TerminalComponent implements OnInit {
     readonly tableTitle = 'Terminals';
     readonly tableCaption = 'Terminals';
     tableColumns = TERMINAL_COLUMNS;
-    readonly showAddNewButton = true;
+    showAddNewButton = true;
     readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+    showDownloadButton = true;
     readonly showFilterButton = true;
-    readonly showRowActions = true;
+    showRowActions = true;
     readonly rowActionHeader = 'Actions';
     rowActionItems: MenuItem[] = [];
-    branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+    terminalEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+    terminalRights = {
+        View: true,
+        Create: true,
+        Edit: true,
+        Delete: true,
+        ActiveInActive: true,
+        Print: true,
+        Download: true
+    };
+    downloadLoading = false;
+    downloadLoadingLabel = 'Exporting...';
 
-    ngOnInit(): void {
+    async ngOnInit(): Promise<void> {
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
         this.UserId = Number(this.userDetails.UserId || 0);
         this.OrgId = Number(this.userDetails.OrgId || 0);
         this.BranchId = Number(this.userDetails.BranchId || 0);
         this.isAdmin = this.userDetails.IsAdmin == true || this.userDetails.IsAdmin == 1;
         this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
+        await this.loadTerminalRights();
 
         this.tableColumns = TERMINAL_COLUMNS.map((x: any) => {
             if (x.field === 'organizationname') {
@@ -152,6 +177,44 @@ export class TerminalComponent implements OnInit {
         void this.loadTerminals();
     }
 
+    async loadTerminalRights(): Promise<void> {
+        try {
+            const orgId = Number(this.userDetails?.OrgId || 0);
+            const roleId = Number(this.userDetails?.RoleId || 0);
+            const entityNo = Number(this.terminalEntityNo || 0);
+            const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+            const rights = response?.result?.[0] ?? {};
+
+            this.terminalRights = {
+                View: rights.View,
+                Create: rights.Create,
+                Edit: rights.Edit,
+                Delete: rights.Delete,
+                ActiveInActive: rights.ActiveInActive,
+                Print: rights.Print,
+                Download: rights.Download
+            };
+
+            this.showAddNewButton = this.terminalRights.Create;
+            this.showDownloadButton = this.terminalRights.Download;
+            this.showRowActions = this.terminalRights.Edit || this.terminalRights.Delete || this.terminalRights.ActiveInActive || this.terminalRights.Print;
+        } catch {
+            this.terminalRights = {
+                View: true,
+                Create: false,
+                Edit: false,
+                Delete: false,
+                ActiveInActive: false,
+                Print: false,
+                Download: false
+            };
+            this.showAddNewButton = false;
+            this.showDownloadButton = false;
+            this.showRowActions = false;
+            this.toast.error('Rights Load Failed', 'Unable to load terminal role rights. Please check and try again.');
+        }
+    }
+
     async loadBranches(): Promise<void> {
         try {
             const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId || 0);
@@ -162,6 +225,7 @@ export class TerminalComponent implements OnInit {
                 label: branch.Name ?? '',
                 value: branch.Id ?? 0
             }));
+            this.changeDetector.detectChanges();
         } catch {
             this.branchOptions = [];
             this.toast.error('Load Failed', 'Unable to load branches. Please check API and try again.');
@@ -190,6 +254,7 @@ export class TerminalComponent implements OnInit {
                 label: item.Name ?? '',
                 value: item.Id ?? 0
             }));
+            this.changeDetector.detectChanges();
         } catch {
             this.counterOptions = [];
             this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
@@ -207,6 +272,7 @@ export class TerminalComponent implements OnInit {
                     : item.Name ?? '',
                 value: item.Id ?? 0
             }));
+            this.changeDetector.detectChanges();
         } catch {
             this.counterfilterOptions = [];
             this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
@@ -237,19 +303,98 @@ export class TerminalComponent implements OnInit {
         }
     }
 
+    async exportTerminalsAsExcel(): Promise<void> {
+        this.downloadLoading = true;
+        this.downloadLoadingLabel = 'Excel exporting...';
+
+        try {
+            const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+            const branchId = this.isAdmin ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+            const response: any = await firstValueFrom(this.TerminalService.getAll(orgId, branchId, 0));
+            let RowNumber = 1;
+            let exportRows = (response.result ?? []).map((x: any) => {
+                x.RowNumber = RowNumber++;
+                x.Status = x.isactive ? 'Active' : 'Inactive';
+                return x;
+            });
+            const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+            const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Terminals`;
+            const branchIds = this.selectedBranchIds.map((id) => Number(id));
+            const counterIds = this.selectedCounterIds.map((id) => Number(id));
+
+            exportRows = exportRows.filter((row: any) => {
+                const matchesBranch = !branchIds.length || branchIds.includes(Number(row.branchid ?? 0));
+                const matchesCounter = !counterIds.length || counterIds.includes(Number(row.counterid ?? 0));
+                return matchesBranch && matchesCounter;
+            });
+
+            if (!exportRows.length) {
+                this.toast.warn('No Records', 'No terminals are available to export.');
+                return;
+            }
+
+            await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Terminals');
+            this.toast.success('Export Ready', 'Terminal Excel export downloaded successfully.');
+        } catch {
+            this.toast.error('Export Failed', 'Unable to export terminals to Excel.');
+        } finally {
+            this.downloadLoading = false;
+            this.downloadLoadingLabel = 'Exporting...';
+        }
+    }
+
+    async exportTerminalsAsPdf(): Promise<void> {
+        this.downloadLoading = true;
+        this.downloadLoadingLabel = 'PDF exporting...';
+
+        try {
+            const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+            const branchId = this.isAdmin ? 0 : Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+            const response: any = await firstValueFrom(this.TerminalService.getAll(orgId, branchId, 0));
+            let RowNumber = 1;
+            let exportRows = (response.result ?? []).map((x: any) => {
+                x.RowNumber = RowNumber++;
+                x.Status = x.isactive ? 'Active' : 'Inactive';
+                return x;
+            });
+            const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+            const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Terminals`;
+            const branchIds = this.selectedBranchIds.map((id) => Number(id));
+            const counterIds = this.selectedCounterIds.map((id) => Number(id));
+
+            exportRows = exportRows.filter((row: any) => {
+                const matchesBranch = !branchIds.length || branchIds.includes(Number(row.branchid ?? 0));
+                const matchesCounter = !counterIds.length || counterIds.includes(Number(row.counterid ?? 0));
+                return matchesBranch && matchesCounter;
+            });
+
+            if (!exportRows.length) {
+                this.toast.warn('No Records', 'No terminals are available to export.');
+                return;
+            }
+
+            await this.tableExportService.exportPdf(fileName, 'Terminals', this.tableColumns, exportRows);
+            this.toast.success('Export Ready', 'Terminal PDF export downloaded successfully.');
+        } catch {
+            this.toast.error('Export Failed', 'Unable to export terminals to PDF.');
+        } finally {
+            this.downloadLoading = false;
+            this.downloadLoadingLabel = 'Exporting...';
+        }
+    }
+
     private async loadLatestTerminalCode(orgId: number): Promise<void> {
-        if (!this.branchEntityNo || !orgId) {
+        if (!this.terminalEntityNo || !orgId) {
             this.dialogModel.code = '';
             return;
         }
-
         try {
-            const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+            const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.terminalEntityNo, orgId, this.BranchId));
             console.log('Latest Terminal Code Response:', response.result);
             this.dialogModel.code = response?.result ?? '';
         } catch {
             this.dialogModel.code = '';
-            this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+            this.toast.error('Load Failed', 'Unable to load terminal code. Please check and try again.');
         }
     }
 
@@ -352,7 +497,8 @@ export class TerminalComponent implements OnInit {
             ...this.dialogModel,
             OrgId: this.OrgId,
             IsActive: this.dialogModel.IsActive ?? true,
-            IsDeleted: false
+            IsDeleted: false,
+            EntityNo: this.terminalEntityNo,
         };
 
         try {
@@ -414,6 +560,7 @@ export class TerminalComponent implements OnInit {
 
             this.dialogBranch = this.dialogModel.branchId ?? null;
             this.showAddDialog = true;
+            this.changeDetector.detectChanges();
         } catch {
             this.toast.error('Load Failed', 'Unable to load terminal details.');
         }
@@ -447,6 +594,10 @@ export class TerminalComponent implements OnInit {
         } catch {
             this.toast.error('Update Failed', 'Unable to deactivate terminal.');
         }
+    }
+
+    printRow(row: TerminalRow): void {
+        this.toast.info('Print Pending', `${String(row.name ?? row.code ?? 'Terminal')} print will be connected later.`);
     }
 
     confirmDeleteRow(row: TerminalRow): void {
@@ -512,15 +663,26 @@ export class TerminalComponent implements OnInit {
     }
 
     private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-        const items: MenuItem[] = [
-            { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-        ];
+        const items: MenuItem[] = [];
 
-        if (row['isactive'] === true) {
-            items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+        if (this.terminalRights.Edit && row['isactive'] === true) {
+            items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+        }
+
+        if (this.terminalRights.Delete) {
+            items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+        }
+
+        if (this.terminalRights.ActiveInActive && row['isactive'] === true) {
             items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-        } else {
+        }
+
+        if (this.terminalRights.ActiveInActive && row['isactive'] !== true) {
             items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+        }
+
+        if (this.terminalRights.Print) {
+            items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row as TerminalRow) });
         }
 
         return items;

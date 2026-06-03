@@ -68,65 +68,25 @@
         </div>
       </div>
 
-      <div class="filter-group">
-        <div class="filter-group-label">
-          <span>Categories</span>
-        </div>
-      <nav class="category-strip" aria-label="Menu categories">
-        @for (category of categories; track category.id) {
-          <button type="button" [class.active]="activeCategoryId === category.id" (click)="selectCategory(category)">
-            <i [class]="category.icon"></i>
-            <span>{{ category.name }}</span>
-          </button>
-        }
-      </nav>
-      </div>
+      <div class="menu-filter-selectors">
+        <app-select-field label="Category" inputId="menu-category" placeholder="Choose category"
+          [options]="categoryOptions" [model]="activeCategoryId" [numberValue]="true" [showClear]="false"
+          [filter]="true" [disabled]="isCategoryLoading" (modelChange)="selectCategoryById($event)" />
 
-      <div class="filter-group">
-        <div class="filter-group-label">
-          <span>Sub Categories</span>
-        </div>
-      <nav class="subcategory-strip" aria-label="Menu subcategories">
-        @for (subCategory of visibleSubCategories; track subCategory.id) {
-          <button type="button" [class.active]="activeSubCategoryId === subCategory.id" (click)="selectSubCategory(subCategory)">
-            {{ subCategory.name }}
-          </button>
-        }
-      </nav>
-      </div>
+        <app-select-field label="Sub Category" inputId="menu-subcategory" placeholder="Choose sub category"
+          [options]="subCategoryOptions" [model]="activeSubCategoryId" [numberValue]="true" [showClear]="false"
+          [filter]="true" [disabled]="isSubCategoryLoading"
+          (modelChange)="selectSubCategoryById($event)" />
 
-      <div class="filter-group">
-        <div class="filter-group-label">
-          <span>Floors</span>
-        </div>
-      <section class="floor-strip" aria-label="Floors">
-        @if (isFloorLoading && floors.length === 1) {
-          <span class="strip-loading">Loading floors...</span>
-        } @else {
-          @for (floor of floors; track floor.id) {
-            <button type="button" [class.active]="activeFloorId === floor.id" (click)="selectFloor(floor)">
-              {{ floor.name }}
-            </button>
-          }
-        }
-      </section>
-      </div>
+        <app-select-field label="Floor" inputId="order-floor" placeholder="Choose floor"
+          [options]="floorOptions" [model]="activeFloorId" [numberValue]="true" [showClear]="false"
+          [filter]="true" [disabled]="isFloorLoading" (modelChange)="selectFloorById($event)" />
 
-      <div class="filter-group">
-        <div class="filter-group-label">
-          <span>Tables</span>
-        </div>
-      <section class="table-strip" [class.field-invalid]="isTableSelectionInvalid" aria-label="Tables">
-        @if (isTableLoading && tables.length === 1) {
-          <span class="strip-loading">Loading tables...</span>
-        } @else {
-          @for (table of tables; track table) {
-            <button type="button" [class.active]="selectedTable === table" (click)="selectTable(table)">
-              {{ table }}
-            </button>
-          }
-        }
-      </section>
+        <app-select-field label="Table" inputId="order-table" placeholder="Choose table"
+          [options]="tableOptions" [model]="selectedTable" [showClear]="false"
+          [filter]="true" [disabled]="isTableLoading"
+          [submitted]="orderValidationSubmitted" [required]="isDineInOrder()" errorMessage="Select a table."
+          (modelChange)="selectTableByName($event)" />
       </div>
 
       <section class="menu-grid">
@@ -217,6 +177,14 @@
         </section>
 
         <div class="cart-section-title">
+          <span>Notes</span>
+        </div>
+        <label class="order-notes-field" for="order-notes">
+          <textarea id="order-notes" rows="3" maxlength="500" placeholder="Add kitchen notes or special instructions"
+            [value]="orderNotes" (input)="updateOrderNotes($event)"></textarea>
+        </label>
+
+        <div class="cart-section-title">
           <span>Bill Summary</span>
         </div>
         <section class="bill-summary">
@@ -225,7 +193,7 @@
             <strong>{{ subtotal | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
           </div>
           <div>
-            <span>Discount {{ discountPercent }}%</span>
+            <span>Discount {{ discountPercent | number: '1.0-0' }}%</span>
             <strong>-{{ discountAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
           </div>
           <div>
@@ -244,7 +212,7 @@
             (click)="holdOrder()"></button>
           <button pButton type="button" icon="pi pi-send" [label]="isSendingToKitchen ? 'Sending' : 'Kitchen'"
             [disabled]="isSendingToKitchen || !cartItems.length" (click)="sendToKitchen()"></button>
-          <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>
+       <!--   <button pButton type="button" icon="pi pi-credit-card" label="Pay" (click)="settlePayment()"></button>-->
         </div>
 
         <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Order" severity="danger" [text]="true" (click)="clearOrder()"></button>
@@ -275,4 +243,5 @@
       <button pButton type="button" label="OK" icon="pi pi-check" (click)="closeOrderValidationDialog()"></button>
     </div>
   </p-dialog>
+
 </section>

@@ -13,15 +13,22 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { firstValueFrom } from 'rxjs';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { BranchService } from '../../../services/branch.service';
+import { AppLocaleService } from '../../../services/app-locale.service';
 import { CommonService } from '../../../services/common.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { Organization, OrganizationConfig, OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
 const cityOptions: any[] = [];
 const stateOptions: any[] = [];
 const countryOptions: any[] = [];
+const languageOptions: any[] = [];
 
 const CODE_TEMPLATE_COLUMNS: SharedTableColumn<any>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
@@ -48,10 +55,16 @@ const CODE_TEMPLATE_COLUMNS: SharedTableColumn<any>[] = [
   styleUrl: './organization.component.css'
 })
 export class OrganizationComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly branchService = inject(BranchService);
+  private readonly appLocale = inject(AppLocaleService);
   private readonly organizationService = inject(OrganizationService);
   private readonly commonService = inject(CommonService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly runtimeConfig = inject(RuntimeConfigService);
@@ -79,6 +92,8 @@ export class OrganizationComponent implements OnInit {
   dialogCity: SelectFieldValue = null;
   dialogState: SelectFieldValue = null;
   dialogCountry: SelectFieldValue = null;
+  dialogLanguageCode: SelectFieldValue = null;
+  dialogCurrencyDisplay = '';
   dialogPostalCode = '';
   dialogRemarks = '';
   showConfigDialog = false;
@@ -116,6 +131,7 @@ export class OrganizationComponent implements OnInit {
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
+  languageOptions = languageOptions;
   dialogTitle = 'Create Organization';
   dialogSubtitle = 'Create a new restaurant organization profile.';
   dialogPrimaryActionLabel = 'Save';
@@ -126,18 +142,69 @@ export class OrganizationComponent implements OnInit {
   isSuperAdmin = false;
   isAdminUser = false;
   organizationEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  organizationRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
   showAddNewButton = false;
+  showRowActions = true;
   readonly addNewButtonLabel = 'Add New';
   readonly addCodeTemplateButtonLabel = 'Add Code Template';
   rowActionItems: MenuItem[] = [];
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.isSuperAdmin = this.userDetails.RoleId == 1;
     this.isAdminUser = this.userDetails.IsAdmin == 1;
-    this.showAddNewButton = this.isSuperAdmin;
+    await this.loadOrganizationRights();
     this.loadOrganizations();
+  }
+
+  async loadOrganizationRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.organizationEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.organizationRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.isSuperAdmin && this.organizationRights.Create;
+      this.showRowActions =
+        this.organizationRights.View
+        || this.organizationRights.Edit
+        || this.organizationRights.Delete
+        || this.organizationRights.ActiveInActive
+        || this.organizationRights.Print;
+    } catch {
+      this.organizationRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showRowActions = this.organizationRights.View || this.organizationRights.Print;
+      this.toast.error('Rights Load Failed', 'Unable to load organization role rights. Please check and try again.');
+    }
   }
 
   onCardSearchChange(value: string): void {
@@ -154,7 +221,30 @@ export class OrganizationComponent implements OnInit {
     this.showAddDialog = true;
 
     await this.loadLatestOrganizationCode();
+    await this.loadLanguages();
     await this.loadCountries();
+    this.dialogLanguageCode = String(
+      this.userDetails?.OrgLanguageCode
+      ?? this.userDetails?.LanguageCode
+      ?? 'en-IN'
+    ).trim() || 'en-IN';
+  }
+
+  async loadLanguages(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetLanguage());
+      const languages = response?.result ?? [];
+      this.languageOptions = languages.map((language: any) => ({
+        label: language.NativeName
+          ? `${language.Name ?? language.Code} (${language.NativeName})`
+          : (language.Name ?? language.Code ?? ''),
+        value: language.Code ?? ''
+      }));
+      this.changeDetector.detectChanges();
+    } catch {
+      this.languageOptions = [];
+      this.toast.error('Load Failed', 'Unable to load languages. Please check and try again.');
+    }
   }
 
   openCodeTemplateDialog(): void {
@@ -319,8 +409,12 @@ export class OrganizationComponent implements OnInit {
 
       this.countryOptions = countries.map((country: any) => ({
         label: country.Name ?? '',
-        value: country.Id ?? 0
+        value: country.Id ?? 0,
+        Currency: country.Currency ?? '',
+        CurrencyName: country.CurrencyName ?? '',
+        CurrencySymbol: country.CurrencySymbol ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.countryOptions = [];
       this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
@@ -329,6 +423,10 @@ export class OrganizationComponent implements OnInit {
 
   onCountryChange(value: SelectFieldValue): void {
     this.dialogCountry = value;
+    const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(value || 0));
+    this.dialogCurrencyDisplay = selectedCountry
+      ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+      : '';
     this.dialogState = null;
     this.dialogCity = null;
     this.stateOptions = [];
@@ -348,8 +446,10 @@ export class OrganizationComponent implements OnInit {
 
       this.stateOptions = states.map((state: any) => ({
         label: state.Name ?? '',
-        value: state.Id ?? 0
+        value: state.Id ?? 0,
+        Timezone: state.Timezone ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.stateOptions = [];
       this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
@@ -375,8 +475,10 @@ export class OrganizationComponent implements OnInit {
 
       this.cityOptions = cities.map((city: any) => ({
         label: city.Name ?? '',
-        value: city.Id ?? 0
+        value: city.Id ?? 0,
+        Timezone: city.Timezone ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.cityOptions = [];
       this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
@@ -409,6 +511,7 @@ export class OrganizationComponent implements OnInit {
       City: Number(this.dialogCity || 0),
       State: Number(this.dialogState || 0),
       Country: Number(this.dialogCountry || 0),
+      LanguageCode: String(this.dialogLanguageCode || '').trim() || undefined,
       PostalCode: Number(this.dialogPostalCode || 0),
       Remarks: this.dialogRemarks,
       IsActive: true,
@@ -432,11 +535,13 @@ export class OrganizationComponent implements OnInit {
         return;
       }
       else if (response.ErrorInfo.Message == true && !payload.Id) {
+        this.syncCurrentOrganizationLocale(Number(response.result || 0), payload.LanguageCode);
         this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
         this.closeAddDialog();
         return;
       }
       else if (response.ErrorInfo.Message == true && payload.Id) {
+        this.syncCurrentOrganizationLocale(Number(payload.Id || response.result || 0), payload.LanguageCode);
         this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
         this.closeAddDialog();
         return;
@@ -516,9 +621,15 @@ export class OrganizationComponent implements OnInit {
       this.dialogAddressLine2 = organization.Address2 ?? '';
       this.dialogPostalCode = organization.PostalCode ? String(organization.PostalCode) : '';
       this.dialogRemarks = organization.Remarks ?? '';
+      this.dialogLanguageCode = String(organization.LanguageCode ?? '').trim() || null;
 
+      await this.loadLanguages();
       await this.loadCountries();
       this.dialogCountry = organization.Country ?? null;
+      const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(this.dialogCountry || 0));
+      this.dialogCurrencyDisplay = selectedCountry
+        ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+        : '';
 
       if (this.dialogCountry) {
         await this.loadStates(Number(this.dialogCountry));
@@ -531,6 +642,7 @@ export class OrganizationComponent implements OnInit {
       }
 
       this.dialogCity = organization.City ?? null;
+      this.changeDetector.detectChanges();
     } catch {
       this.toast.error('Load Failed', 'Unable to load organizations. Please check and try again.');
     }
@@ -822,11 +934,16 @@ export class OrganizationComponent implements OnInit {
 
   async viewRow(row: any): Promise<void> {
     try {
+      await this.loadCountries();
       this.showViewSidebar = true;
 
       const response: any = await firstValueFrom(this.organizationService.getById(row['Id']));
       const organization = response.result ?? {};
       const imageUrl = await this.getOrganizationConfigImageUrl(Number(row['Id'] ?? 0));
+      const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(organization.Country || 0));
+      const currencyDisplay = selectedCountry
+        ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+        : '-';
 
       this.viewOrganization = {
         Code: organization.Code ?? '',
@@ -840,6 +957,8 @@ export class OrganizationComponent implements OnInit {
         ContactPerson: organization.ContactPerson ?? '',
         ContactMobileNo: organization.ContactMobileNo ?? '',
         ContactEmail: organization.ContactEmail ?? '',
+        CurrencyDisplay: currencyDisplay,
+        LanguageCode: organization.LanguageCode ?? '-',
         Remarks: organization.Remarks ?? '',
         Status: organization.IsActive ? 'Active' : 'Inactive'
       };
@@ -924,6 +1043,8 @@ export class OrganizationComponent implements OnInit {
     this.dialogCity = null;
     this.dialogState = null;
     this.dialogCountry = null;
+    this.dialogLanguageCode = null;
+    this.dialogCurrencyDisplay = '';
     this.dialogPostalCode = '';
     this.dialogRemarks = '';
   }
@@ -1089,38 +1210,66 @@ export class OrganizationComponent implements OnInit {
   }
 
   private getRowActionItems(row: any): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'View', icon: 'pi pi-eye', styleClass: 'row-action-view', command: () => this.handleRowAction('view') }
-    ];
+    const items: MenuItem[] = [];
+
+    if (this.organizationRights.View) {
+      items.push({ label: 'View', icon: 'pi pi-eye', styleClass: 'row-action-view', command: () => this.handleRowAction('view') });
+    }
 
     if (this.userDetails.RoleId === 1) {
-      if (row['IsActive'] === true) {
+      if (this.organizationRights.Edit && row['IsActive'] === true) {
         items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+      }
+
+      if (this.organizationRights.ActiveInActive && row['IsActive'] === true) {
         items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-      } else {
+      }
+
+      if (this.organizationRights.ActiveInActive && row['IsActive'] !== true) {
         items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
       }
 
-      items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
-      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+      if (this.organizationRights.Edit) {
+        items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+      }
+
+      if (this.organizationRights.Delete) {
+        items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+      }
+
+      if (this.organizationRights.Print) {
+        items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
+      }
+
       return items;
     }
 
     if (this.userDetails.IsAdmin === true) {
-      if (row['IsActive'] === true) {
+      if (this.organizationRights.Edit && row['IsActive'] === true) {
         items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+      }
+
+      if (this.organizationRights.ActiveInActive && row['IsActive'] === true) {
         items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-      } else {
+      }
+
+      if (this.organizationRights.ActiveInActive && row['IsActive'] !== true) {
         items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
       }
 
-      items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+      if (this.organizationRights.Edit) {
+        items.push({ label: 'Add Config', icon: 'pi pi-cog', styleClass: 'row-action-config', command: () => this.handleRowAction('config') });
+      }
+
+      if (this.organizationRights.Print) {
+        items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
+      }
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'view' | 'config' | 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'view' | 'config' | 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -1135,9 +1284,46 @@ export class OrganizationComponent implements OnInit {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: any): void {
+    this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'Organization')} print will be connected later.`);
+  }
+
+  private syncCurrentOrganizationLocale(savedOrgId: number, languageCode?: string): void {
+    const currentOrgId = Number(this.userDetails?.OrgId || this.userDetails?.OrganizationId || 0);
+    if (!savedOrgId || savedOrgId !== currentOrgId) {
+      return;
+    }
+
+    const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(this.dialogCountry || 0));
+    const selectedState = this.stateOptions.find((state: any) => Number(state.value || 0) === Number(this.dialogState || 0));
+    const selectedCity = this.cityOptions.find((city: any) => Number(city.value || 0) === Number(this.dialogCity || 0));
+    const timezone = selectedCity?.Timezone || selectedState?.Timezone || this.userDetails?.OrgTimezone || '';
+
+    const updatedUserDetails = {
+      ...this.userDetails,
+      OrgLanguageCode: languageCode || this.userDetails?.OrgLanguageCode || '',
+      OrgCurrencyCode: selectedCountry?.Currency || this.userDetails?.OrgCurrencyCode || '',
+      OrgCurrencyName: selectedCountry?.CurrencyName || this.userDetails?.OrgCurrencyName || '',
+      OrgCurrencySymbol: selectedCountry?.CurrencySymbol || this.userDetails?.OrgCurrencySymbol || '',
+      OrgTimezone: timezone,
+      LanguageCode: String(
+        this.userDetails?.BranchLanguageCode
+        || languageCode
+        || this.userDetails?.OrgLanguageCode
+        || ''
+      ).trim()
+    };
+
+    this.userDetails = updatedUserDetails;
+    localStorage.setItem('userDetails', JSON.stringify(updatedUserDetails));
+    this.appLocale.syncFromUserDetails(updatedUserDetails);
   }
 }
 

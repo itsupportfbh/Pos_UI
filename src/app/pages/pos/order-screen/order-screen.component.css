@@ -139,6 +139,34 @@
   margin-top: 0.28rem;
 }
 
+.menu-filter-selectors {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.42rem;
+  margin-top: 0.36rem;
+}
+
+:host ::ng-deep .menu-filter-selectors .field-block {
+  gap: 0.28rem;
+}
+
+:host ::ng-deep .menu-filter-selectors .field-label {
+  color: var(--app-text-muted);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+:host ::ng-deep .menu-filter-selectors .p-select {
+  width: 100%;
+  min-height: 2.12rem;
+  border-color: var(--app-border);
+  border-radius: 0.65rem;
+  background: var(--app-surface-strong);
+  box-shadow: var(--app-shadow);
+}
+
 .search-field input {
   width: 100%;
   min-width: 0;
@@ -241,6 +269,21 @@
   color: var(--app-text-muted);
   font-size: 0.72rem;
   font-weight: 800;
+}
+
+.category-strip button i,
+.subcategory-strip button i,
+.floor-strip button i,
+.table-strip button i {
+  font-size: 0.92rem;
+  line-height: 1;
+}
+
+.category-strip button span,
+.subcategory-strip button span,
+.floor-strip button span,
+.table-strip button span {
+  min-width: 0;
 }
 
 .menu-grid {
@@ -391,6 +434,35 @@
   border: 1px solid var(--app-border);
   border-radius: 0.75rem;
   background: var(--app-item-bg);
+}
+
+.order-notes-field {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.order-notes-field textarea {
+  display: block;
+  width: 100%;
+  min-height: 4.4rem;
+  resize: vertical;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  outline: 0;
+  background: var(--app-surface-strong);
+  color: var(--app-text);
+  font: inherit;
+  line-height: 1.35;
+}
+
+.order-notes-field textarea:focus {
+  border-color: rgba(var(--app-primary-rgb), 0.45);
+  box-shadow: 0 0 0 2px rgba(var(--app-primary-rgb), 0.12);
+}
+
+.order-notes-field textarea::placeholder {
+  color: var(--app-text-muted);
 }
 
 .cart-item-main {
@@ -551,6 +623,10 @@
     grid-template-columns: 1fr;
   }
 
+  .menu-filter-selectors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .cart-panel {
     position: static;
   }
@@ -570,6 +646,10 @@
   }
 
   .customer-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .menu-filter-selectors {
     grid-template-columns: 1fr;
   }
 

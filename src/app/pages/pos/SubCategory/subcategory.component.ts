@@ -9,13 +9,19 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
 import { CategoryService } from '../../../services/Category.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { OrganizationService } from '../../../services/organization.service';
 import { firstValueFrom } from 'rxjs';
+import { TableExportService } from '../../../services/table-export.service';
 
 type SubCategoryRow = {
   id: number;
@@ -57,12 +63,18 @@ const SUBCATEGORY_COLUMNS: SharedTableColumn<SubCategoryRow>[] = [
   styleUrl: './subcategory.component.css'
 })
 export class SubCategoryComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly SubcategoryService = inject(subCategoryService);
   private readonly categoryService = inject(CategoryService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -117,18 +129,31 @@ export class SubCategoryComponent {
   readonly tableTitle = 'SubCategories';
   readonly tableCaption = 'SubCategories';
   tableColumns = SUBCATEGORY_COLUMNS;
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = this.showAddNewButton ? 'Add New' : '';
+  showDownloadButton = true;
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
   rowActionItems: MenuItem[] = [];
-  branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
+  subCategoryEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  subCategoryRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.dialogModel.CreatedBy = Number(this.userDetails.UserId || 0);
     this.OrgId = Number(this.userDetails.OrgId || 0);
+    await this.loadSubCategoryRights();
     this.tableColumns = SUBCATEGORY_COLUMNS.map((x: any) => {
       if (x.field === 'organizationname') {
         x.hidden = this.userDetails.RoleId !== 1;
@@ -140,6 +165,44 @@ export class SubCategoryComponent {
     this.loadSubCategories();
     this.loadCategories();
     this.loadFilterCategories();
+  }
+
+  async loadSubCategoryRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.subCategoryEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.subCategoryRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.subCategoryRights.Create;
+      this.showDownloadButton = this.subCategoryRights.Download;
+      this.showRowActions = this.subCategoryRights.Edit || this.subCategoryRights.Delete || this.subCategoryRights.ActiveInActive || this.subCategoryRights.Print;
+    } catch {
+      this.subCategoryRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load sub category rights. Please check and try again.');
+    }
   }
 
   loadCategories() {
@@ -195,6 +258,90 @@ export class SubCategoryComponent {
     });
   }
 
+  async exportSubCategoriesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+      const response: any = await firstValueFrom(this.SubcategoryService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-SubCategories`;
+      const searchText = this.filterSubCategoryName.trim().toLowerCase();
+      const CategoryIds = this.selectedCategoryIds.map((id) => Number(id));
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText ||
+          row.name?.toLowerCase().includes(searchText) ||
+          row.code?.toLowerCase().includes(searchText);
+
+        const matchesCategory = !CategoryIds.length || CategoryIds.includes(Number(row.categoryId ?? 0));
+        return matchesText && matchesCategory;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No subcategories are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'SubCategories');
+      this.toast.success('Export Ready', 'SubCategory Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export subcategories to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportSubCategoriesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
+      const response: any = await firstValueFrom(this.SubcategoryService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-SubCategories`;
+      const searchText = this.filterSubCategoryName.trim().toLowerCase();
+      const CategoryIds = this.selectedCategoryIds.map((id) => Number(id));
+
+      exportRows = exportRows.filter((row: any) => {
+        const matchesText = !searchText ||
+          row.name?.toLowerCase().includes(searchText) ||
+          row.code?.toLowerCase().includes(searchText);
+
+        const matchesCategory = !CategoryIds.length || CategoryIds.includes(Number(row.categoryId ?? 0));
+        return matchesText && matchesCategory;
+      });
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No subcategories are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'SubCategories', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'SubCategory PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export subcategories to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
   searchSubCategories(): void {
     const searchText = this.filterSubCategoryName.trim().toLowerCase();
     const CategoryIds = this.selectedCategoryIds.map((id) => Number(id));
@@ -237,18 +384,18 @@ export class SubCategoryComponent {
   }
 
   private async loadLatestSubCategoryCode(orgId: number): Promise<void> {
-    if (!this.branchEntityNo || !orgId) {
+    if (!this.subCategoryEntityNo || !orgId) {
       this.dialogModel.code = '';
       return;
     }
 
     try {
-      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.branchEntityNo, orgId, this.BranchId));
+      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.subCategoryEntityNo, orgId, this.BranchId));
 
       this.dialogModel.code = response?.result ?? '';
     } catch {
       this.dialogModel.code = '';
-      this.toast.error('Load Failed', 'Unable to load branch code. Please check and try again.');
+      this.toast.error('Load Failed', 'Unable to load subcategory code. Please check and try again.');
     }
   }
 
@@ -271,7 +418,9 @@ export class SubCategoryComponent {
       ...this.dialogModel,
       OrgId: this.OrgId,
       IsActive: this.dialogModel.IsActive ?? true,
-      IsDeleted: false
+      IsDeleted: false,
+      EntityNo: this.subCategoryEntityNo,
+      BranchId: this.BranchId
     };
 
     if (this.isEditMode && this.editingSubCategoryId) {
@@ -434,6 +583,10 @@ export class SubCategoryComponent {
     });
   }
 
+  printRow(row: SubCategoryRow): void {
+    this.toast.info('Print Pending', `${String(row.name ?? row.code ?? 'SubCategory')} print will be connected later.`);
+  }
+
   openRowActions(menu: any, event: Event, row: SubCategoryRow): void {
     this.selectedRow = row;
     this.rowActionItems = this.getRowActionItems(row);
@@ -448,15 +601,26 @@ export class SubCategoryComponent {
   }
 
   private getRowActionItems(row: Record<string, unknown>): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row['isactive'] === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    if (this.subCategoryRights.Edit && row['isactive'] === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.subCategoryRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.subCategoryRights.ActiveInActive && row['isactive'] === true) {
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
+    }
+
+    if (this.subCategoryRights.ActiveInActive && row['isactive'] !== true) {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    if (this.subCategoryRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row as SubCategoryRow) });
     }
 
     return items;

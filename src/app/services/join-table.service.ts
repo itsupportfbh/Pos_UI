@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiListResponse } from './api-response.model';
@@ -6,24 +6,28 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface JoinTable {
   Id?: number;
-  RowNumber?: number;
-  Code?: string;
-  Name?: string;
-  Remarks?: string;
+  JoinNo: string;
+  PrimaryTable: number;
+  TableIds?: Array<{ TableId: number }>;
+  GuestCount: number;
+  StewardId: number;
+  Notes: string;
+  OrgId?: number;
   IsActive?: boolean;
-  Status?: string;
   CreatedBy?: number | null;
   CreatedDate?: string;
   UpdatedBy?: number | null;
   UpdatedDate?: string | null;
   IsDeleted?: boolean;
+  EntityNo?: number;
+  branchId?: number;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class JoinTableService {
-  private readonly controllerPath = 'JoinTable';
+  private readonly controllerPath = 'JoinTables';
 
   constructor(
     private readonly http: HttpClient,
@@ -38,16 +42,21 @@ export class JoinTableService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(): Observable<ApiListResponse<JoinTable>> {
-    return this.http.get<ApiListResponse<JoinTable>>(`${this.baseUrl}/${this.controllerPath}/GetAll`);
+  getAll(orgid: number): Observable<ApiListResponse<JoinTable>> {
+    const params = new HttpParams().set('orgid', orgid.toString());
+
+    return this.http.get<ApiListResponse<JoinTable>>(
+      `${this.baseUrl}/${this.controllerPath}/GetAllJoinTables`,
+      { params }
+    );
   }
 
   getById(id: number | string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetById?Id=${id}`);
+    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetJoinTableById?id=${id}`);
   }
 
   delete(id: number | string): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/Delete?Id=${id}`);
+    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/DeleteById?id=${id}`);
   }
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
@@ -57,14 +66,4 @@ export class JoinTableService {
   private get baseUrl(): string {
     return this.runtimeConfig.apiBaseUrl;
   }
-}
-
-
-
-
-
-
-
-
-
-
+}  

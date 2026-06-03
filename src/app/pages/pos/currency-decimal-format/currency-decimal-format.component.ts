@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -9,8 +10,14 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+import { EntityMasterService } from '../../../services/entitymaster.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type CurrencyDecimalFormatRow = {
   Id: number;
@@ -50,8 +57,14 @@ const CURRENCYDECIMALFORMAT_COLUMNS: SharedTableColumn<CurrencyDecimalFormatRow>
   styleUrl: './currency-decimal-format.component.css'
 })
 export class CurrencyDecimalFormatComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly entityMasterService = inject(EntityMasterService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
 
@@ -83,18 +96,127 @@ export class CurrencyDecimalFormatComponent {
   readonly tableTitle = 'Currency & Decimal Format';
   readonly tableCaption = 'Currency & Decimal Format';
   tableColumns = CURRENCYDECIMALFORMAT_COLUMNS;
-  readonly showAddNewButton = true;
+  currencyFormatRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  showDownloadButton = true;
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
+  userDetails: any = {};
+  currencyDecimalEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    await this.loadCurrencyFormatRights();
     this.loadRows();
+  }
+
+  async loadCurrencyFormatRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.currencyDecimalEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.currencyFormatRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.currencyFormatRights.Create;
+      this.showDownloadButton = this.currencyFormatRights.Download;
+      this.showRowActions = this.currencyFormatRights.Edit || this.currencyFormatRights.Delete || this.currencyFormatRights.ActiveInActive || this.currencyFormatRights.Print;
+    } catch {
+      this.currencyFormatRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load currency format rights for this role.');
+    }
   }
   loadRows(): void {
     this.allRows = [];
     this.tableRows = [];
+  }
+
+  async exportCurrencyFormatsAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const fileName = 'OrgName-Currency-Decimal-Format';
+      const searchText = this.filterSearchText.trim().toLowerCase();
+      let exportRows = [...this.allRows];
+
+      if (searchText) {
+        exportRows = exportRows.filter((row) =>
+          row.Code.toLowerCase().includes(searchText) ||
+          row.Name.toLowerCase().includes(searchText) ||
+          row.Remarks.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No currency format records are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Currency Decimal Format');
+      this.toast.success('Export Ready', 'Currency format Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export currency format records to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportCurrencyFormatsAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const fileName = 'OrgName-Currency-Decimal-Format';
+      const searchText = this.filterSearchText.trim().toLowerCase();
+      let exportRows = [...this.allRows];
+
+      if (searchText) {
+        exportRows = exportRows.filter((row) =>
+          row.Code.toLowerCase().includes(searchText) ||
+          row.Name.toLowerCase().includes(searchText) ||
+          row.Remarks.toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No currency format records are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Currency Decimal Format', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Currency format PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export currency format records to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   searchRows(): void {
@@ -303,21 +425,32 @@ export class CurrencyDecimalFormatComponent {
   }
 
   private getRowActionItems(row: CurrencyDecimalFormatRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.currencyFormatRights.Edit && row.IsActive) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.currencyFormatRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.currencyFormatRights.ActiveInActive) {
+      if (row.IsActive) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.currencyFormatRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -328,11 +461,19 @@ export class CurrencyDecimalFormatComponent {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
   }
+
+  printRow(row: CurrencyDecimalFormatRow): void {
+    const name = String(row.Name ?? row.Code ?? 'this currency format');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
+  }
 }
+
 
 
 

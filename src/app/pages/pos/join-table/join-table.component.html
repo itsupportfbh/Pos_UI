@@ -28,27 +28,6 @@
   </section>
 
   <section class="workflow-layout">
-    <p-card class="feature-card workflow-preview-card">
-      <div class="section-heading">
-        <div>
-          <h2>Join Snapshot</h2>
-          <p class="section-note">Keep joined groups visible so service and billing stay under one captain.</p>
-        </div>
-      </div>
-
-      <section class="workflow-preview-surface">
-        <div class="workflow-preview-topline">
-          <span>{{ previewPrimaryTable }}</span>
-          <strong>{{ previewSecondaryTables }}</strong>
-        </div>
-        <div class="workflow-preview-copy">
-          <p class="workflow-preview-title">Join note</p>
-          <h3>Tables merged under one bill</h3>
-          <p>{{ previewNotes }}</p>
-        </div>
-      </section>
-    </p-card>
-
     <p-card class="feature-card">
       <div class="section-heading">
         <div>
@@ -57,23 +36,17 @@
         </div>
       </div>
 
-      <app-shared-table
-        [showFilterButton]="showFilterButton"
-        (filterButtonClick)="openFilterSidebar()"
-        [caption]="tableCaption"
-        [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
-        [columns]="tableColumns"
-        [value]="tableRows"
-        [showAddNewButton]="showAddNewButton"
-        [toolbarButtonLabel]="addNewButtonLabel"
-        [showRowActions]="showRowActions"
-        [rowActionHeader]="rowActionHeader"
+      <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
+        [caption]="tableCaption" [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
+        [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
+        [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
         (toolbarButtonClick)="openAddDialog()">
         <ng-template #rowActions let-row>
-          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body"
+            styleClass="row-action-menu"></p-menu>
 
-          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
-            (click)="openRowActions(rowMenu, $event, row)"></button>
+          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true"
+            class="row-action-trigger" (click)="openRowActions(rowMenu, $event, row)"></button>
         </ng-template>
 
         <ng-template appTableCellTemplate="Status" let-row>
@@ -120,31 +93,30 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Join No" inputId="dialog-join-no" [showRequiredMark]="true"
-      placeholder="Enter join number" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Join number is required." [maxlength]="100" [model]="dialogJoinNo"
-      (modelChange)="dialogJoinNo = $event"></app-text-field>
+    <app-text-field label="Join No" inputId="dialog-join-no" [showRequiredMark]="true" placeholder="Enter join number"
+      [required]="true" [submitted]="dialogSubmitted" errorMessage="Join number is required." [maxlength]="100"
+      [model]="dialogJoinNo" (modelChange)="dialogJoinNo = $event"></app-text-field>
 
-    <app-text-field label="Primary Table" inputId="dialog-primary-table" [showRequiredMark]="true"
-      placeholder="Enter primary table" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Primary table is required." [maxlength]="100" [model]="dialogPrimaryTable"
-      (modelChange)="dialogPrimaryTable = $event"></app-text-field>
+    <app-select-field label="Primary Table" inputId="dialog-primary-table" placeholder="Enter primary table"
+      [options]="primaryTablesOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Primary table is required." [model]="dialogPrimaryTable"
+      (modelChange)="dialogPrimaryTable = $event" />
 
-    <app-text-field label="Merged Tables" inputId="dialog-secondary-tables" [showRequiredMark]="true"
-      placeholder="Enter merged tables" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Merged tables are required." [maxlength]="150" [model]="dialogSecondaryTables"
-      (modelChange)="dialogSecondaryTables = $event"></app-text-field>
+    <app-multiselect-field label="Merged Tables" inputId="dialog-secondary-tables" placeholder="Choose merged tables"
+      [showRequiredMark]="true" [options]="secondaryTablesOptions" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Merged tables are required." [model]="dialogSecondaryTables"
+      (modelChange)="onfiltertableChange($event)" />
 
     <app-text-field label="Guest Count" inputId="dialog-guest-count" type="number" [showRequiredMark]="true"
       placeholder="Enter guest count" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Guest count is required." [model]="dialogGuestCount"
       (modelChange)="dialogGuestCount = $event"></app-text-field>
 
-    <app-text-field label="Steward" inputId="dialog-steward-name" [showRequiredMark]="true"
-      placeholder="Enter steward name" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Steward is required." [maxlength]="150" [model]="dialogStewardName"
-      (modelChange)="dialogStewardName = $event"></app-text-field>
-
+    <app-select-field label="Steward" inputId="dialog-steward" placeholder="Choose steward"
+      [options]="stewardOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Steward is required." [model]="dialogSteward"
+      (modelChange)="dialogSteward = $event" /> 
+      
     <app-text-field label="Notes" inputId="dialog-notes" placeholder="Enter join notes" [maxlength]="250"
       [model]="dialogNotes" (modelChange)="dialogNotes = $event"></app-text-field>
   </section>

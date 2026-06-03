@@ -7,6 +7,8 @@ import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
 
 import { routes } from './app.routes';
+import { AppLocaleService } from './services/app-locale.service';
+import { AppTranslationService } from './services/app-translation.service';
 import { authTokenInterceptor } from './services/auth-token.interceptor';
 import { RuntimeConfigService } from './services/runtime-config.service';
 import { unauthorizedInterceptor } from './services/unauthorized.interceptor';
@@ -16,6 +18,8 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(withInterceptors([authTokenInterceptor, unauthorizedInterceptor])),
     provideAppInitializer(() => inject(RuntimeConfigService).load()),
+    provideAppInitializer(() => inject(AppLocaleService).initialize()),
+    provideAppInitializer(() => inject(AppTranslationService).initialize()),
     provideRouter(routes),
     { provide: LocationStrategy, useClass: HashLocationStrategy },
     MessageService,

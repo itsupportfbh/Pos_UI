@@ -9,7 +9,11 @@ import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
 type RecallRow = {
@@ -57,7 +61,11 @@ const RECALL_COLUMNS: SharedTableColumn<RecallRow>[] = [
   styleUrl: './recall.component.css'
 })
 export class RecallComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;

@@ -1,4 +1,4 @@
-<section class="feature-page">
+<section class="feature-page" *ngIf="viewReady">
   <header class="page-header hero-panel">
     <div>
       <p class="eyebrow">{{ pageEyebrow }}</p>
@@ -10,29 +10,47 @@
   <section class="summary-grid">
     <article class="summary-card">
       <span>Held Orders</span>
-      <strong>{{ totalHeldOrders }}</strong>
+      <strong>{{ totalHeldOrdersCount }}</strong>
     </article>
+
     <article class="summary-card">
       <span>Total Items</span>
-      <strong>{{ totalHeldItems }}</strong>
+      <strong>{{ totalHeldItemsCount }}</strong>
     </article>
+
     <article class="summary-card">
       <span>Total Amount</span>
-      <strong>{{ totalHeldAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+      <strong>{{ totalHeldAmountValue | currency:'INR':'symbol':'1.2-2' }}</strong>
     </article>
   </section>
 
   <div class="hold-toolbar">
-    <button pButton type="button" icon="pi pi-arrow-left" label="Order Screen" [outlined]="true" (click)="backToOrderScreen()"></button>
-    <button pButton type="button" icon="pi pi-trash" label="Clear Holds" severity="danger" [outlined]="true"
-      [disabled]="!heldOrders.length" (click)="clearHeldOrders()"></button>
+    <button
+      pButton
+      type="button"
+      icon="pi pi-arrow-left"
+      label="Order Screen"
+      [outlined]="true"
+      (click)="backToOrderScreen()">
+    </button>
+
+    <button
+      pButton
+      type="button"
+      icon="pi pi-trash"
+      label="Clear Holds"
+      severity="danger"
+      [outlined]="true"
+      [disabled]="!heldOrders.length || isLoading"
+      (click)="clearHeldOrders()">
+    </button>
   </div>
 
   <p-card class="feature-card">
     <div class="section-heading">
       <div>
         <h2>{{ tableTitle }}</h2>
-        <p class="section-note">Open or remove held tickets when service is ready to continue.</p>
+       
       </div>
     </div>
 
@@ -46,12 +64,27 @@
       [showRowActions]="showRowActions"
       [rowActionHeader]="rowActionHeader"
       [dataKey]="tableDataKey"
-      emptyMessage="No held orders found."
-    >
+      emptyMessage="No held orders found.">
+
       <ng-template #rowActions let-row>
-        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
-        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
-          aria-label="Order hold actions" (click)="openRowActions(rowMenu, $event, row)"></button>
+        <p-menu
+          #rowMenu
+          [model]="rowActionItems"
+          [popup]="true"
+          appendTo="body"
+          styleClass="row-action-menu">
+        </p-menu>
+
+        <button
+          pButton
+          type="button"
+          icon="pi pi-ellipsis-v"
+          text="true"
+          rounded="true"
+          class="row-action-trigger"
+          aria-label="Order hold actions"
+          (click)="openRowActions(rowMenu, $event, row)">
+        </button>
       </ng-template>
 
       <ng-template appTableCellTemplate="Status" let-row>
@@ -63,19 +96,19 @@
       </ng-template>
 
       <ng-template appTableCellTemplate="Subtotal" let-row>
-        {{ row.Subtotal | currency: 'INR' : 'symbol' : '1.2-2' }}
+        {{ row.Subtotal | currency:'INR':'symbol':'1.2-2' }}
       </ng-template>
 
       <ng-template appTableCellTemplate="Tax" let-row>
-        {{ row.Tax | currency: 'INR' : 'symbol' : '1.2-2' }}
+        {{ row.Tax | currency:'INR':'symbol':'1.2-2' }}
       </ng-template>
 
       <ng-template appTableCellTemplate="Discount" let-row>
-        {{ row.Discount | currency: 'INR' : 'symbol' : '1.2-2' }}
+        {{ row.Discount | currency:'INR':'symbol':'1.2-2' }}
       </ng-template>
 
       <ng-template appTableCellTemplate="Total" let-row>
-        <strong>{{ row.Total | currency: 'INR' : 'symbol' : '1.2-2' }}</strong>
+        <strong>{{ row.Total | currency:'INR':'symbol':'1.2-2' }}</strong>
       </ng-template>
     </app-shared-table>
   </p-card>

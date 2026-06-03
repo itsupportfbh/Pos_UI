@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
@@ -17,6 +17,15 @@ type CustomerDisplayOrder = {
   customerName?: string;
   sentAt?: string;
 };
+
+const ORDER_STATUS = {
+  Hold: 0,
+  InKitchen: 1,
+  Preparing: 2,
+  Ready: 3,
+  Served: 4,
+  Cancelled: 5
+} as const;
 
 @Component({
   selector: 'app-customer-display',
@@ -41,25 +50,31 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   organizationName = 'Unity work POS';
   branchName = '';
   organizationLogoUrl = '';
-
+viewReady = false;
   constructor(
     private readonly toast: AppToastService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
     private readonly organizationService: OrganizationService,
     private readonly branchService: BranchService,
-    private readonly runtimeConfig: RuntimeConfigService
+    private readonly runtimeConfig: RuntimeConfigService,
+     private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    this.organizationName = this.getStringValue(this.userDetails, 'OrganizationName', 'organizationName', 'OrgName', 'orgName') || 'Unity work POS';
-    this.branchName = this.getStringValue(this.userDetails, 'BranchName', 'branchName') || '';
+    this.organizationName = this.getStringValue(this.userDetails,  'OrgName') || 'Unity work POS';
+    this.branchName = this.getStringValue(this.userDetails, 'BranchName') || '';
+
+
+
+    setTimeout(() => {
+    this.viewReady = true;
     this.loadDisplayHeaderDetails();
     this.loadCustomerOrders();
-    this.refreshTimer = setInterval(() => {
-      this.currentTime = new Date();
-      this.loadCustomerOrders();
-    }, 5000);
+    this.cdr.detectChanges();
+  });
+    
+    
   }
 
   ngOnDestroy(): void {
@@ -81,7 +96,13 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
         this.customerOrders = [];
         this.rebuildStatusBuckets();
         this.toast.error('Load Failed', 'Unable to load customer display orders.');
-      }
+      },
+       complete: () => {
+  setTimeout(() => {
+    
+    this.cdr.detectChanges();
+  });
+}
     });
   }
 
@@ -126,6 +147,58 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     return order.orderNo.startsWith('#') ? order.orderNo : `#${order.orderNo}`;
   }
 
+  getOrderTypeDisplay(order: CustomerDisplayOrder): string {
+    return String(order.orderType || '').trim() || 'Order';
+  }
+
+  getOrderStatusDisplay(order: CustomerDisplayOrder): string {
+    return this.getStatusLabel(order.status);
+  }
+
+  getOrderTypeClass(order: CustomerDisplayOrder): string {
+    const orderType = this.getOrderTypeDisplay(order).toLowerCase();
+
+    if (orderType.includes('take')) {
+      return 'order-type-take-away';
+    }
+
+    if (orderType.includes('delivery')) {
+      return 'order-type-delivery';
+    }
+
+    if (this.isDineInOrderType(orderType)) {
+      return 'order-type-dine-in';
+    }
+
+    return 'order-type-default';
+  }
+
+  getStatusClass(order: CustomerDisplayOrder): string {
+    const status = this.getOrderStatusDisplay(order).toLowerCase();
+
+    if (status.includes('ready')) {
+      return 'status-ready';
+    }
+
+    if (status.includes('process') || status.includes('preparing')) {
+      return 'status-in-process';
+    }
+
+    if (status.includes('kitchen')) {
+      return 'status-in-kitchen';
+    }
+
+    if (status.includes('hold')) {
+      return 'status-hold';
+    }
+
+    if (status.includes('cancel') || status.includes('void')) {
+      return 'status-cancelled';
+    }
+
+    return 'status-default';
+  }
+
   getElapsedMinutes(order: CustomerDisplayOrder): string {
     if (!order.sentAt) {
       return '';
@@ -144,6 +217,10 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   getOrderIcon(order: CustomerDisplayOrder): string {
     const orderType = String(order.orderType || '').toLowerCase();
 
+    if (this.isDineInOrderType(orderType)) {
+      return 'pi pi-table';
+    }
+
     if (orderType.includes('take')) {
       return 'pi pi-shopping-bag';
     }
@@ -157,6 +234,10 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
 
   getOrderToneClass(order: CustomerDisplayOrder, index: number): string {
     const orderType = String(order.orderType || '').toLowerCase();
+
+    if (this.isDineInOrderType(orderType)) {
+      return 'tone-dine-in';
+    }
 
     if (orderType.includes('take')) {
       return 'tone-teal';
@@ -173,8 +254,13 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     return ['tone-teal', 'tone-orange', 'tone-green', 'tone-red', 'tone-black'][index % 5];
   }
 
+  private isDineInOrderType(orderType: string): boolean {
+    const normalizedOrderType = String(orderType || '').replace(/[\s_-]+/g, '').toLowerCase();
+    return normalizedOrderType.includes('dinein') || normalizedOrderType.includes('dinin') || normalizedOrderType.includes('table');
+  }
+
   private isReadyStatus(status: string): boolean {
-    return status.trim().toLowerCase() === 'ready';
+    return this.getStatusCode(status) === ORDER_STATUS.Ready;
   }
 
   private getResponseList(response: any): any[] {
@@ -212,11 +298,64 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   }
 
   private getOrderStatus(order: any): string {
-    return this.getStringValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus', 'Status', 'status') || 'In Progress';
+    return this.getStatusLabel(this.getRawValue(order, 'OrderStatus', 'orderStatus', 'Orderstatus', 'orderstatus', 'Status', 'status'));
+  }
+
+  private getStatusCode(status: unknown): number {
+    if (typeof status === 'number' && Number.isFinite(status)) {
+      return status;
+    }
+
+    const normalizedStatus = String(status ?? '').trim().toLowerCase().replace(/\s+/g, '');
+
+    switch (normalizedStatus) {
+      case '0':
+      case 'hold':
+        return ORDER_STATUS.Hold;
+      case '1':
+      case 'inkitchen':
+        return ORDER_STATUS.InKitchen;
+      case '2':
+      case 'inprocess':
+      case 'preparing':
+        return ORDER_STATUS.Preparing;
+      case '3':
+      case 'ready':
+      case 'readytoserve':
+        return ORDER_STATUS.Ready;
+      case '4':
+      case 'served':
+        return ORDER_STATUS.Served;
+      case '5':
+      case 'cancelled':
+      case 'canceled':
+        return ORDER_STATUS.Cancelled;
+      default:
+        return ORDER_STATUS.Preparing;
+    }
+  }
+
+  private getStatusLabel(status: unknown): string {
+    switch (this.getStatusCode(status)) {
+      case ORDER_STATUS.Hold:
+        return 'Hold';
+      case ORDER_STATUS.InKitchen:
+        return 'In Kitchen';
+      case ORDER_STATUS.Preparing:
+        return 'Preparing';
+      case ORDER_STATUS.Ready:
+        return 'Ready';
+      case ORDER_STATUS.Served:
+        return 'Served';
+      case ORDER_STATUS.Cancelled:
+        return 'Cancelled';
+      default:
+        return 'In Progress';
+    }
   }
 
   private isCustomerDisplayOrder(order: any): boolean {
-    const orderNo = this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo');
+    const orderNo = this.getStringValue(order, 'OrderNumber');
     const isDeleted = this.getBooleanValue(order, 'IsDeleted', 'isDeleted');
     const isActive = this.getBooleanValue(order, 'IsActive', 'isActive');
 
@@ -226,7 +365,7 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   private getUserOrgId(): number {
     return Number(this.userDetails.RoleId || 0) === 1
       ? 0
-      : this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
+      : this.getNumberValue(this.userDetails, 'OrgId');
   }
 
   private getUserBranchId(): number {
@@ -236,11 +375,11 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   }
 
   private getSessionOrgId(): number {
-    return this.getNumberValue(this.userDetails, 'OrgId', 'orgId', 'orgid', 'OrganizationId', 'organizationId');
+    return this.getNumberValue(this.userDetails, 'OrgId');
   }
 
   private getSessionBranchId(): number {
-    return this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
+    return this.getNumberValue(this.userDetails, 'BranchId');
   }
 
   private getResponseObject(response: any): any {
@@ -305,6 +444,10 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   private getStringValue(source: any, ...keys: string[]): string {
     const value = keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
     return value?.toString() ?? '';
+  }
+
+  private getRawValue(source: any, ...keys: string[]): unknown {
+    return keys.map((key) => source?.[key]).find((item) => item !== undefined && item !== null);
   }
 
   private getNumberValue(source: any, ...keys: string[]): number {

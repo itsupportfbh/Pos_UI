@@ -17,18 +17,26 @@ export interface OrderHold {
   tableid?: number;
   TableId?: number;
   tableId?: number;
+  FloorId?: number;
+  Floorid?: number;
+  floorId?: number;
+  floorid?: number;
   ComboMenuId?: number;
   comboMenuId?: number;
   Combomenuid?: number;
   combomenuid?: number;
   Ordertype?: string;
   ordertype?: string;
-  Orderstatus?: string;
-  orderstatus?: string;
+  Orderstatus?: number;
+  orderstatus?: number;
   CustomerName?: string;
   customerName?: string;
   ContactNumber?: string;
   contactNumber?: string;
+  Notes?: string | null;
+  notes?: string | null;
+  Remarks?: string | null;
+  remarks?: string | null;
  
   Itemcount?: number;
   itemcount?: number;
@@ -71,12 +79,19 @@ export interface OrderHold {
   OrderHoldItems?: OrderHoldItem[];
   EntityNo?: number;
   entityNo?: number;
+  ordershold?: OrderHold;
+  Ordershold?: OrderHold;
+  orderHold?: OrderHold;
 }
 
 export interface OrderHoldItem {
   Id?: number;
+  id?: number;
   itemid?: number;
+  Itemid?: number;
+  ItemId?: number;
   Orderid?: number;
+  OrderId?: number;
   orderid?: number;
   Menuitemid?: string | number;
   menuitemid?: string | number;
@@ -104,8 +119,8 @@ export interface OrderHoldItem {
   taxAmount?: number;
   Modifierdetails?: string | null;
   modifierdetails?: string | null;
-  Itemstatus?: string;
-  itemstatus?: string;
+  Itemstatus?: number;
+  itemstatus?: number;
   Notes?: string | null;
   notes?: string | null;
   OrgId?: number;
@@ -139,7 +154,6 @@ export class OrderHoldService {
   ) { }
 
   create(payload: OrderHold): Observable<any> {
-  
     return this.http.post<any>(`${this.baseUrl}/${this.controllerPath}/Create`, payload);
   }
 

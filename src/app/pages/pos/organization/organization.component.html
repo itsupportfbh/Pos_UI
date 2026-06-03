@@ -55,11 +55,13 @@
                 </div>
               </div>
             </div>
-            <div class="organization-card-menu">
-        <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
-        <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
-          (click)="openRowActions(rowMenu, $event, row)"></button>
-            </div>
+            @if (showRowActions) {
+              <div class="organization-card-menu">
+                <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu" />
+                <button pButton type="button" icon="pi pi-ellipsis-v" text="true" rounded="true" class="row-action-trigger"
+                  (click)="openRowActions(rowMenu, $event, row)"></button>
+              </div>
+            }
           </div>
 
           <div class="organization-card-body">
@@ -186,6 +188,14 @@
                 <span>Contact Email</span>
                 <strong [title]="viewOrganization.ContactEmail || '-'">{{ viewOrganization.ContactEmail || '-' }}</strong>
               </div>
+              <div class="organization-view-item">
+                <span>Language</span>
+                <strong>{{ viewOrganization.LanguageCode || '-' }}</strong>
+              </div>
+              <div class="organization-view-item">
+                <span>Currency</span>
+                <strong>{{ viewOrganization.CurrencyDisplay || '-' }}</strong>
+              </div>
             </div>
           </div>
 
@@ -276,6 +286,13 @@
     <app-select-field label="City" inputId="dialog-city" placeholder="Choose city" [options]="cityOptions"
       [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="City is required."
       [numberValue]="true" [model]="dialogCity" (modelChange)="dialogCity = $event" />
+
+    <app-select-field label="Language" inputId="dialog-language-code" placeholder="Choose language"
+      [options]="languageOptions" [required]="true" [showRequiredMark]="true" [submitted]="dialogSubmitted"
+      errorMessage="Language is required." [model]="dialogLanguageCode" (modelChange)="dialogLanguageCode = $event" />
+
+    <app-text-field label="Currency" inputId="dialog-currency" placeholder="Currency" [disabled]="true"
+      [model]="dialogCurrencyDisplay" (modelChange)="dialogCurrencyDisplay = $event" />
 
     <app-text-field label="Postal Code" inputId="dialog-postalCode" placeholder="Postal Code" [required]="true"
       [showRequiredMark]="true" [submitted]="dialogSubmitted" errorMessage="Postal Code is required."

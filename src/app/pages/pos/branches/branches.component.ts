@@ -13,10 +13,17 @@ import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../compo
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+import { AppLocaleService } from '../../../services/app-locale.service';
+
+
 import { Branch, BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type BranchRow = Branch & {
   RowNumber: number;
@@ -26,6 +33,7 @@ type BranchRow = Branch & {
 const cityOptions: any[] = [];
 const stateOptions: any[] = [];
 const countryOptions: any[] = [];
+const languageOptions: any[] = [];
 
 const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
   { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
@@ -57,12 +65,19 @@ const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
   styleUrl: './branches.component.css'
 })
 export class BranchesComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
+  private readonly appLocale = inject(AppLocaleService);
   private readonly branchService = inject(BranchService);
   private readonly commonService = inject(CommonService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -88,6 +103,8 @@ export class BranchesComponent implements OnInit {
   dialogCity: SelectFieldValue = null;
   dialogState: SelectFieldValue = null;
   dialogCountry: SelectFieldValue = null;
+  dialogLanguageCode: SelectFieldValue = null;
+  dialogCurrencyDisplay = '';
   dialogPostalCode = '';
   dialogRemarks = '';
 
@@ -99,8 +116,18 @@ export class BranchesComponent implements OnInit {
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
+  languageOptions = languageOptions;
   organizationOptions: any[] = [];
   branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  branchRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Branches';
@@ -115,15 +142,19 @@ export class BranchesComponent implements OnInit {
   readonly tableTitle = 'Branches';
   readonly tableCaption = 'Branches';
   tableColumns = BRANCH_COLUMNS;
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  showDownloadButton = true;
   showFilterButton = false;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
   async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.showFilterButton = this.userDetails.RoleId === 1;
+    await this.loadBranchRights();
 
     this.tableColumns = BRANCH_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
@@ -134,6 +165,44 @@ export class BranchesComponent implements OnInit {
     });
 
     this.loadBranches();
+  }
+
+  async loadBranchRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.branchEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? response?.result?.[0] ?? {};
+
+      this.branchRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.branchRights.Create;
+      this.showDownloadButton = this.branchRights.Download;
+      this.showRowActions = this.branchRights.Edit || this.branchRights.Delete || this.branchRights.ActiveInActive || this.branchRights.Print;
+    } catch {
+      this.branchRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load branch role rights. Please check and try again.');
+    }
   }
 
   loadBranches(): void {
@@ -157,6 +226,82 @@ export class BranchesComponent implements OnInit {
         this.toast.error('Load Failed', 'Unable to load branches. Please check API and try again.');
       }
     });
+  }
+
+  async exportBranchesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.branchService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Branches`;
+
+      if (this.filterOrganizations.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterOrganizations.includes(Number(row.OrgId || 0))
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No branches are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Branches');
+      this.toast.success('Export Ready', 'Branch Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export branches to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportBranchesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.branchService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.RowNumber = RowNumber++;
+        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Branches`;
+
+      if (this.filterOrganizations.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterOrganizations.includes(Number(row.OrgId || 0))
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No branches are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Branches', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Branch PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export branches to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   resetForm(): void {
@@ -201,7 +346,9 @@ export class BranchesComponent implements OnInit {
       await this.loadLatestBranchCode(Number(this.userDetails.OrgId || 0));
     }
 
+    await this.loadLanguages();
     await this.loadCountries();
+    this.dialogLanguageCode = null;
   }
 
   closeAddDialog(): void {
@@ -218,8 +365,12 @@ export class BranchesComponent implements OnInit {
 
       this.countryOptions = countries.map((country: any) => ({
         label: country.Name ?? '',
-        value: country.Id ?? 0
+        value: country.Id ?? 0,
+        Currency: country.Currency ?? '',
+        CurrencyName: country.CurrencyName ?? '',
+        CurrencySymbol: country.CurrencySymbol ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.countryOptions = [];
       this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
@@ -241,6 +392,23 @@ export class BranchesComponent implements OnInit {
     }
   }
 
+  async loadLanguages(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.commonService.GetLanguage());
+      const languages = response?.result ?? [];
+      this.languageOptions = languages.map((language: any) => ({
+        label: language.NativeName
+          ? `${language.Name ?? language.Code} (${language.NativeName})`
+          : (language.Name ?? language.Code ?? ''),
+        value: language.Code ?? ''
+      }));
+      this.changeDetector.detectChanges();
+    } catch {
+      this.languageOptions = [];
+      this.toast.error('Load Failed', 'Unable to load languages. Please check and try again.');
+    }
+  }
+
   async onDialogOrganizationChange(value: SelectFieldValue): Promise<void> {
     this.dialogOrganization = value;
 
@@ -258,6 +426,10 @@ export class BranchesComponent implements OnInit {
 
   onCountryChange(value: SelectFieldValue): void {
     this.dialogCountry = value;
+    const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(value || 0));
+    this.dialogCurrencyDisplay = selectedCountry
+      ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+      : [this.userDetails?.OrgCurrencyCode, this.userDetails?.OrgCurrencyName, this.userDetails?.OrgCurrencySymbol].filter(Boolean).join(' - ');
     this.dialogState = null;
     this.dialogCity = null;
     this.stateOptions = [];
@@ -277,8 +449,10 @@ export class BranchesComponent implements OnInit {
 
       this.stateOptions = states.map((state: any) => ({
         label: state.Name ?? '',
-        value: state.Id ?? 0
+        value: state.Id ?? 0,
+        Timezone: state.Timezone ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.stateOptions = [];
       this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
@@ -304,8 +478,10 @@ export class BranchesComponent implements OnInit {
 
       this.cityOptions = cities.map((city: any) => ({
         label: city.Name ?? '',
-        value: city.Id ?? 0
+        value: city.Id ?? 0,
+        Timezone: city.Timezone ?? ''
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.cityOptions = [];
       this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
@@ -335,6 +511,7 @@ export class BranchesComponent implements OnInit {
       City: Number(this.dialogCity || 0),
       State: Number(this.dialogState || 0),
       Country: Number(this.dialogCountry || 0),
+      LanguageCode: String(this.dialogLanguageCode || '').trim() || undefined,
       PostalCode: Number(this.dialogPostalCode || 0),
       Remarks: this.dialogRemarks,
       OrgId: this.userDetails.RoleId === 1
@@ -365,12 +542,14 @@ export class BranchesComponent implements OnInit {
       }
 
       if (response.ErrorInfo.Message === true && !payload.Id) {
+        this.syncCurrentBranchLocale(Number(response.result || 0), payload.LanguageCode);
         this.toast.success('Saved', `${payload.Name || this.pageTitle} saved successfully.`);
         this.closeAddDialog();
         return;
       }
 
       if (response.ErrorInfo.Message === true && payload.Id) {
+        this.syncCurrentBranchLocale(Number(payload.Id || response.result || 0), payload.LanguageCode);
         this.toast.success('Updated', `${payload.Name || this.pageTitle} updated successfully.`);
         this.closeAddDialog();
         return;
@@ -409,13 +588,19 @@ export class BranchesComponent implements OnInit {
       this.dialogAddress2 = branch.Address2 ?? '';
       this.dialogPostalCode = branch.PostalCode ? String(branch.PostalCode) : '';
       this.dialogRemarks = branch.Remarks ?? '';
+      this.dialogLanguageCode = String(branch.LanguageCode ?? '').trim() || null;
 
       if (this.userDetails.RoleId === 1) {
         await this.loadOrganizations();
       }
 
+      await this.loadLanguages();
       await this.loadCountries();
       this.dialogCountry = branch.Country ?? null;
+      const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(this.dialogCountry || 0));
+      this.dialogCurrencyDisplay = selectedCountry
+        ? [selectedCountry.Currency, selectedCountry.CurrencyName, selectedCountry.CurrencySymbol].filter(Boolean).join(' - ')
+        : [this.userDetails?.OrgCurrencyCode, this.userDetails?.OrgCurrencyName, this.userDetails?.OrgCurrencySymbol].filter(Boolean).join(' - ');
 
       if (this.dialogCountry) {
         await this.loadStates(Number(this.dialogCountry));
@@ -428,6 +613,7 @@ export class BranchesComponent implements OnInit {
       }
 
       this.dialogCity = branch.City ?? null;
+      this.changeDetector.detectChanges();
     } catch {
       this.toast.error('Load Failed', 'Unable to load branch details. Please check and try again.');
     }
@@ -479,6 +665,10 @@ export class BranchesComponent implements OnInit {
     } catch {
       this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
     }
+  }
+
+  printRow(row: BranchRow): void {
+    this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'Branch')} print will be connected later.`);
   }
 
   openRowActions(menu: any, event: Event, row: BranchRow): void {
@@ -554,6 +744,8 @@ export class BranchesComponent implements OnInit {
     this.dialogCity = null;
     this.dialogState = null;
     this.dialogCountry = null;
+    this.dialogLanguageCode = null;
+    this.dialogCurrencyDisplay = '';
     this.dialogPostalCode = '';
     this.dialogRemarks = '';
   }
@@ -587,15 +779,26 @@ export class BranchesComponent implements OnInit {
   }
 
   private getRowActionItems(row: BranchRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    if (this.branchRights.Edit && row.IsActive === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.branchRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.branchRights.ActiveInActive && row.IsActive === true) {
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
+    }
+
+    if (this.branchRights.ActiveInActive && row.IsActive !== true) {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    if (this.branchRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row) });
     }
 
     return items;
@@ -615,5 +818,35 @@ export class BranchesComponent implements OnInit {
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  private syncCurrentBranchLocale(savedBranchId: number, languageCode?: string): void {
+    const currentBranchId = Number(this.userDetails?.BranchId || 0);
+    if (!savedBranchId || savedBranchId !== currentBranchId) {
+      return;
+    }
+
+    const selectedCountry = this.countryOptions.find((country: any) => Number(country.value || 0) === Number(this.dialogCountry || 0));
+    const selectedState = this.stateOptions.find((state: any) => Number(state.value || 0) === Number(this.dialogState || 0));
+    const selectedCity = this.cityOptions.find((city: any) => Number(city.value || 0) === Number(this.dialogCity || 0));
+    const timezone = selectedCity?.Timezone || selectedState?.Timezone || this.userDetails?.BranchTimezone || '';
+
+    const updatedUserDetails = {
+      ...this.userDetails,
+      BranchLanguageCode: String(languageCode ?? '').trim(),
+      BranchCurrencyCode: selectedCountry?.Currency ?? '',
+      BranchCurrencyName: selectedCountry?.CurrencyName ?? '',
+      BranchCurrencySymbol: selectedCountry?.CurrencySymbol ?? '',
+      BranchTimezone: selectedCountry ? timezone : '',
+      LanguageCode: String(
+        String(languageCode ?? '').trim()
+        || this.userDetails?.OrgLanguageCode
+        || ''
+      ).trim()
+    };
+
+    this.userDetails = updatedUserDetails;
+    localStorage.setItem('userDetails', JSON.stringify(updatedUserDetails));
+    this.appLocale.syncFromUserDetails(updatedUserDetails);
   }
 }

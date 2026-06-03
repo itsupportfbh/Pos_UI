@@ -12,8 +12,10 @@ import { PasswordModule } from 'primeng/password';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { ShellComponent } from '../../../components/layout/shell.component';
 import { MenuChildItem, MenuGroup, MenuOfficeOption } from '../../../components/layout/menu.model';
+import { AppTranslatePipe } from '../../../pipes/app-translate.pipe';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { AppToastService } from '../../../services/app-toast.service';
+import { AppTranslationService } from '../../../services/app-translation.service';
 import { ApiMenu, MenuService } from '../../../services/menu.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
@@ -27,7 +29,7 @@ const BACK_OFFICE_SCOPE = 2;
 @Component({
   selector: 'app-pos-workspace',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, ShellComponent, ConfirmDialogModule, ButtonModule, DialogModule, InputTextModule, PasswordModule, TextFieldComponent, ActionButtonsComponent],
+  imports: [CommonModule, FormsModule, RouterOutlet, ShellComponent, ConfirmDialogModule, ButtonModule, DialogModule, InputTextModule, PasswordModule, TextFieldComponent, ActionButtonsComponent, AppTranslatePipe],
   providers: [ConfirmationService],
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.component.css'
@@ -47,8 +49,6 @@ export class WorkspaceComponent implements OnInit {
     email: this.userDetails.UserCode ?? '',
     location: this.userDetails.BranchName ?? ''
   };
-  readonly footerDescription = 'POS workspace for billing, stock tracking, and daily sales operations';
-  readonly passwordRuleMessage = 'Password must be at least 6 characters and include uppercase, lowercase, number, and one special character (@ # $ % & *).';
   sidebarMenus: MenuGroup[] = [];
   officeOptions: MenuOfficeOption[] = [];
   currentOfficeScope = BACK_OFFICE_SCOPE;
@@ -67,6 +67,14 @@ export class WorkspaceComponent implements OnInit {
       !!this.changePasswordConfirm.trim() &&
       !!this.changePasswordNew.trim() &&
       this.changePasswordNew !== this.changePasswordConfirm;
+  }
+
+  get footerDescription(): string {
+    return this.t('footer.description', 'POS workspace for billing, stock tracking, and daily sales operations');
+  }
+
+  get passwordRuleMessage(): string {
+    return this.t('workspace.password_rule_message', 'Password must be at least 6 characters and include uppercase, lowercase, number, and one special character (@ # $ % & *).');
   }
 
   sidebarOpen = true;
@@ -95,7 +103,10 @@ export class WorkspaceComponent implements OnInit {
   }
 
   loadMenus(): void {
-    this.menuService.getMenus().subscribe({
+    const orgId = Number(this.userDetails.OrganizationId ?? this.userDetails.OrgId ?? 0);
+    const roleId = Number(this.userDetails.RoleId ?? 0);
+
+    this.menuService.getMenus(orgId, roleId, true).subscribe({
       next: (response) => {
         this.sidebarMenus = this.mapMenus(response.result ?? []);
         this.routeScopeMap.clear();
@@ -124,15 +135,17 @@ export class WorkspaceComponent implements OnInit {
 
   logout(): void {
     this.confirmationService.confirm({
-      header: 'Logout Confirmation',
-      message: 'Are you sure you want to logout?',
+      header: this.t('workspace.logout_confirm_title', 'Logout Confirmation'),
+      message: this.t('workspace.logout_confirm_message', 'Are you sure you want to logout?'),
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Yes',
-      rejectLabel: 'No',
+      acceptLabel: this.t('common.yes', 'Yes'),
+      rejectLabel: this.t('common.no', 'No'),
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
+        this.menuService.clearMenuCache();
         localStorage.removeItem(LOGIN_SESSION_KEY);
         localStorage.removeItem(USER_DETAILS_KEY);
+        localStorage.removeItem('shiftAssignment');
         this.router.navigate(['/login']);
       }
     });
@@ -168,22 +181,35 @@ export class WorkspaceComponent implements OnInit {
     this.changePasswordSubmitted = true;
 
     if (!this.changePasswordCurrent || !this.changePasswordNew || !this.changePasswordConfirm) {
-      this.toast.warn('Password Required', 'Enter the current password and confirm the new password.');
+      this.toast.warn(
+        this.t('workspace.password_required_title', 'Password Required'),
+        this.t('workspace.password_required_message', 'Enter the current password and confirm the new password.')
+      );
       return;
     }
 
     if (!this.isPasswordValid(this.changePasswordNew)) {
-      this.toast.warn('Invalid Password', this.passwordRuleMessage);
+      this.toast.warn(this.t('workspace.invalid_password_title', 'Invalid Password'), this.passwordRuleMessage);
       return;
     }
 
     if (this.changePasswordNew !== this.changePasswordConfirm) {
-      this.toast.error('Password Mismatch', 'New password and confirm password should match.');
+      this.toast.error(
+        this.t('workspace.password_mismatch_title', 'Password Mismatch'),
+        this.t('workspace.password_mismatch_message', 'New password and confirm password should match.')
+      );
       return;
     }
 
-    this.toast.info('Change Password Ready', 'The profile password screen is ready. Connect the backend API to complete password updates.');
+    this.toast.info(
+      this.t('workspace.change_password_ready_title', 'Change Password Ready'),
+      this.t('workspace.change_password_ready_message', 'The profile password screen is ready. Connect the backend API to complete password updates.')
+    );
     this.closeChangePasswordDialog();
+  }
+
+  t(key: string, fallbackText: string): string {
+    return this.appTranslation.t(key, fallbackText);
   }
 
   selectMenu(item: MenuChildItem | string): void {
@@ -211,7 +237,7 @@ export class WorkspaceComponent implements OnInit {
   }
 
   async loadorganizationconfig(): Promise<void> {
-    const orgId = Number(this.userDetails.OrgId || 0);
+    const orgId = Number(this.userDetails.OrganizationId ?? this.userDetails.OrgId ?? 0);
 
     if (!orgId) {
       this.applyOrganizationTheme();
@@ -332,8 +358,20 @@ export class WorkspaceComponent implements OnInit {
       return routeScope;
     }
 
+    if (this.officeOptions.length === 1) {
+      return Number(this.officeOptions[0].value);
+    }
+
+    if (this.officeOptions.length > 1 && !this.officeOptions.some((option) => Number(option.value) === FRONT_OFFICE_SCOPE)) {
+      return Number(this.officeOptions[0].value);
+    }
+
     if (Number(this.userDetails.RoleId || 0) === 1 || this.userDetails.IsAdmin === true || this.userDetails.IsAdmin === 1) {
       return BACK_OFFICE_SCOPE;
+    }
+
+    if (this.officeOptions.length) {
+      return Number(this.officeOptions[0].value);
     }
 
     return FRONT_OFFICE_SCOPE;
@@ -536,4 +574,6 @@ export class WorkspaceComponent implements OnInit {
       /[0-9]/.test(value) &&
       /[@#$%&*]/.test(value);
   }
+
+  private readonly appTranslation = inject(AppTranslationService);
 }

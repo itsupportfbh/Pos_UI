@@ -13,19 +13,30 @@ import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../compo
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { Role, RoleService } from '../../../services/role.service';
+import { TableExportService } from '../../../services/table-export.service';
 
 type PagePermission = {
+  entityNo: number;
   pageName: string;
   groupName: string;
   view: boolean;
   add: boolean;
   edit: boolean;
   delete: boolean;
+  ActiveInActive: boolean;
   print: boolean;
+  download: boolean;
 };
+
+type PagePermissionAction = 'view' | 'add' | 'edit' | 'delete' | 'ActiveInActive' | 'print' | 'download';
 
 type RoleRow = Role & {
   RowNumber: number;
@@ -49,21 +60,6 @@ const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
   }
 ];
 
-const PERMISSION_PAGES: PagePermission[] = [
-  { groupName: 'Organization', pageName: 'Organization', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Organization', pageName: 'Branches', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Organization', pageName: 'Counters', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Organization', pageName: 'Terminal', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Organization', pageName: 'Printers', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Users & Roles', pageName: 'Users', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Users & Roles', pageName: 'Roles', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Food Menu', pageName: 'Categories', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Food Menu', pageName: 'Menus', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Reports', pageName: 'Daily Sales', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Reports', pageName: 'Monthly Sales', view: false, add: false, edit: false, delete: false, print: false },
-  { groupName: 'Reports', pageName: 'Menu Wise Sales', view: false, add: false, edit: false, delete: false, print: false }
-];
-
 @Component({
   selector: 'app-roles',
   standalone: true,
@@ -73,11 +69,17 @@ const PERMISSION_PAGES: PagePermission[] = [
   styleUrl: './roles.component.css'
 })
 export class RolesComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly roleService = inject(RoleService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -88,9 +90,13 @@ export class RolesComponent {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
+  permissionLoading = false;
+  permissionSaving = false;
   filterOrganizations: MultiSelectFieldValue = [];
   permissionRoleName = '';
   permissionSearchText = '';
+  permissionOrgId = 0;
+  permissionRoleId = 0;
 
   dialogId = 0;
   dialogOrganization: SelectFieldValue = null;
@@ -106,6 +112,15 @@ export class RolesComponent {
   organizationOptions: any[] = [];
   userDetails: any = {};
   roleEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  roleRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Roles';
@@ -120,19 +135,19 @@ export class RolesComponent {
   readonly tableTitle = 'Roles';
   readonly tableCaption = 'Roles';
   tableColumns = ROLE_COLUMNS;
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  showDownloadButton = true;
   showFilterButton = false;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
 
-  constructor() {
-    this.permissionPages = PERMISSION_PAGES.map((page) => ({ ...page }));
-  }
-
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.showFilterButton = this.userDetails.RoleId === 1;
+    await this.loadRoleRights();
 
     this.tableColumns = ROLE_COLUMNS.map((x: any) => {
       if (x.field === 'OrganizationName') {
@@ -143,6 +158,44 @@ export class RolesComponent {
     });
 
     this.loadRoles();
+  }
+
+  async loadRoleRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.roleEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.roleRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.roleRights.Create;
+      this.showDownloadButton = this.roleRights.Download;
+      this.showRowActions = this.roleRights.View || this.roleRights.Edit || this.roleRights.Delete || this.roleRights.ActiveInActive || this.roleRights.Print;
+    } catch {
+      this.roleRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = this.roleRights.View || this.roleRights.Print;
+      this.toast.error('Rights Load Failed', 'Unable to load role rights. Please check and try again.');
+    }
   }
 
   get filteredPermissionPages(): PagePermission[] {
@@ -156,6 +209,11 @@ export class RolesComponent {
       page.groupName.toLowerCase().includes(searchText) ||
       page.pageName.toLowerCase().includes(searchText)
     );
+  }
+
+  get isAllPermissionsSelected(): boolean {
+    return this.permissionPages.length > 0 &&
+      this.permissionPages.every((page) => this.isFullAccess(page));
   }
 
   resetForm(): void {
@@ -229,6 +287,82 @@ export class RolesComponent {
         this.toast.error('Load Failed', 'Unable to load roles. Please check API and try again.');
       }
     });
+  }
+
+  async exportRolesAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.roleService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
+        x.RowNumber = RowNumber++;
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Roles`;
+
+      if (this.filterOrganizations.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterOrganizations.includes(Number(row.OrgId || 0))
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No roles are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Roles');
+      this.toast.success('Export Ready', 'Role Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export roles to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportRolesAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = this.userDetails.RoleId === 1 ? 0 : Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.roleService.getAll(orgId));
+      let RowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        x.OrganizationName = x.OrganizationName ?? x.OrgName ?? this.getOrganizationName(x.OrgId);
+        x.RowNumber = RowNumber++;
+        x.Status = x.IsActive ? 'Active' : 'Inactive';
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Roles`;
+
+      if (this.filterOrganizations.length) {
+        exportRows = exportRows.filter((row: any) =>
+          this.filterOrganizations.includes(Number(row.OrgId || 0))
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No roles are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Roles', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Role PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export roles to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
   async loadOrganizations(): Promise<void> {
@@ -396,22 +530,95 @@ export class RolesComponent {
     }
   }
 
-  openPermissionsDialog(row: RoleRow): void {
+  async openPermissionsDialog(row: RoleRow): Promise<void> {
     this.permissionRoleName = row.Name || row.Code || this.pageTitle;
     this.permissionSearchText = '';
+    this.permissionOrgId = Number(row.OrgId || 0);
+    this.permissionRoleId = Number(row.Id || 0);
     this.showPermissionsDialog = true;
+
+    await this.loadPermissionPages();
   }
 
   closePermissionsDialog(): void {
     this.showPermissionsDialog = false;
+    this.permissionLoading = false;
+    this.permissionSaving = false;
+    this.permissionOrgId = 0;
+    this.permissionRoleId = 0;
+    this.permissionPages = [];
   }
 
-  savePermissionsDialog(): void {
-    this.toast.success('Permissions Saved', `${this.permissionRoleName || 'Role'} permissions saved successfully.`);
-    this.closePermissionsDialog();
+  async savePermissionsDialog(): Promise<void> {
+    if (!this.permissionPages.length) {
+      this.toast.warn('No Permissions', 'No permission rows are available to save.');
+      return;
+    }
+
+    this.permissionSaving = true;
+
+    const payload = this.permissionPages.map((page) => ({
+      OrgId: this.permissionOrgId,
+      RoleId: this.permissionRoleId,
+      EntityNo: page.entityNo,
+      Create: page.add,
+      Edit: page.edit,
+      Delete: page.delete,
+      ActiveInActive: page.ActiveInActive,
+      View: page.view,
+      Download: page.download,
+      Print: page.print,
+      CreatedBy: Number(this.userDetails.UserId || 0),
+      UpdatedBy: Number(this.userDetails.UserId || 0)
+    }));
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.SaveRolePermission(payload));
+
+      if (response?.ErrorInfo?.Message === true || response?.result === 'Success') {
+        this.toast.success('Permissions Saved', `${this.permissionRoleName || 'Role'} permissions saved successfully.`);
+        this.closePermissionsDialog();
+        return;
+      }
+
+      this.toast.error('Save Failed', response?.ErrorInfo?.Message || 'Unable to save role permissions.');
+    } catch {
+      this.toast.error('Save Failed', 'Unable to save role permissions.');
+    } finally {
+      this.permissionSaving = false;
+    }
   }
 
-  setPagePermission(page: PagePermission, permission: keyof Omit<PagePermission, 'pageName' | 'groupName'>, event: Event): void {
+  clearPermissionsDialog(): void {
+    this.permissionSearchText = '';
+    this.permissionPages = this.permissionPages.map((page) => ({
+      ...page,
+      view: false,
+      add: false,
+      edit: false,
+      delete: false,
+      ActiveInActive: false,
+      print: false,
+      download: false
+    }));
+  }
+
+  toggleAllPermissions(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+
+    this.permissionPages = this.permissionPages.map((page) => ({
+      ...page,
+      view: checked,
+      add: checked,
+      edit: checked,
+      delete: checked,
+      ActiveInActive: checked,
+      print: checked,
+      download: checked
+    }));
+  }
+
+  setPagePermission(page: PagePermission, permission: PagePermissionAction, event: Event): void {
     page[permission] = (event.target as HTMLInputElement).checked;
   }
 
@@ -421,11 +628,13 @@ export class RolesComponent {
     page.add = checked;
     page.edit = checked;
     page.delete = checked;
+    page.ActiveInActive = checked;
     page.print = checked;
+    page.download = checked;
   }
 
   isFullAccess(page: PagePermission): boolean {
-    return page.view && page.add && page.edit && page.delete && page.print;
+    return page.view && page.add && page.edit && page.delete && page.ActiveInActive && page.print && page.download;
   }
 
   openRowActions(menu: any, event: Event, row: RoleRow): void {
@@ -482,17 +691,35 @@ export class RolesComponent {
     });
   }
 
-  private getRowActionItems(row: RoleRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Permissions', icon: 'pi pi-lock', styleClass: 'row-action-permissions', command: () => this.handleRowAction('permissions') },
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+  printRow(row: RoleRow): void {
+    this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'Role')} print will be connected later.`);
+  }
 
-    if (row.IsActive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+  private getRowActionItems(row: RoleRow): MenuItem[] {
+    const items: MenuItem[] = [];
+
+    if (this.roleRights.View) {
+      items.push({ label: 'Permissions', icon: 'pi pi-lock', styleClass: 'row-action-permissions', command: () => this.handleRowAction('permissions') });
+    }
+
+    if (this.roleRights.Edit && row.IsActive === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.roleRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.roleRights.ActiveInActive && row.IsActive === true) {
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
+    }
+
+    if (this.roleRights.ActiveInActive && row.IsActive !== true) {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    if (this.roleRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row) });
     }
 
     return items;
@@ -526,6 +753,41 @@ export class RolesComponent {
   private getOrganizationName(orgId: number | string | undefined): string {
     const organization = this.organizationOptions.find((x: any) => Number(x.value || 0) === Number(orgId || 0));
     return organization?.label ?? '';
+  }
+
+  private async loadPermissionPages(): Promise<void> {
+    if (!this.permissionOrgId || !this.permissionRoleId) {
+      this.permissionPages = [];
+      return;
+    }
+
+    this.permissionLoading = true;
+    this.permissionPages = [];
+
+    try {
+      const response: any = await firstValueFrom(
+        this.entityMasterService.GetEntityMasterForRoleRights(this.permissionOrgId, this.permissionRoleId)
+      );
+      const permissionRows = response?.result ?? [];
+
+      this.permissionPages = permissionRows.map((x: any) => ({
+        entityNo: Number(x.EntityNo || 0),
+        groupName: x.MenuName ?? '',
+        pageName: x.EntityName ?? x.SubMenuName ?? '',
+        view: x.View ?? false, 
+        add: x.Create ?? false,
+        edit: x.Edit ?? false,
+        delete: x.Delete ?? false,
+        ActiveInActive: x.ActiveInActive,
+        print: x.Print ?? false,
+        download: x.Download ?? false
+      }));
+    } catch {
+      this.permissionPages = [];
+      this.toast.error('Load Failed', 'Unable to load role permissions. Please check and try again.');
+    } finally {
+      this.permissionLoading = false;
+    }
   }
 
   private async loadLatestRoleCode(orgId: number): Promise<void> {

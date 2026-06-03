@@ -14,9 +14,14 @@ import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../compo
 import { RadioFieldComponent } from '../../../components/form/radio-field.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { BranchService } from '../../../services/branch.service';
 import { CommonService } from '../../../services/common.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { RoleService } from '../../../services/role.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
@@ -59,12 +64,17 @@ const IS_ADMIN_OPTIONS = [
   styleUrl: './users.component.css'
 })
 export class UsersComponent implements OnInit {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly confirmationService = inject(ConfirmationService);
   private readonly branchService = inject(BranchService);
   private readonly roleService = inject(RoleService);
   private readonly userMasterService = inject(UserMasterService);
   private readonly commonService = inject(CommonService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly organizationService = inject(OrganizationService);
   private readonly runtimeConfig = inject(RuntimeConfigService);
   private readonly changeDetector = inject(ChangeDetectorRef);
@@ -134,15 +144,61 @@ export class UsersComponent implements OnInit {
   dialogSubtitle = 'Create a new user profile.';
   dialogPrimaryActionLabel = 'Save';
   readonly tableTitle = 'Users';
-  readonly showAddNewButton = true;
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
   showFilterButton = false;
+  showRowActions = true;
+  userRights = {
+    View: true,
+    Create: true,
+    Edit: true,
+    Delete: true,
+    ActiveInActive: true,
+    Print: true,
+    Download: true
+  };
 
-
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.showFilterButton = this.userDetails.RoleId === 1;
+    await this.loadUserRights();
     this.loadUsers();
+  }
+
+  async loadUserRights(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const roleId = Number(this.userDetails?.RoleId || 0);
+      const entityNo = Number(this.userEntityNo || 0);
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0] ?? {};
+
+      this.userRights = {
+        View: rights.View,
+        Create: rights.Create,
+        Edit: rights.Edit,
+        Delete: rights.Delete,
+        ActiveInActive: rights.ActiveInActive,
+        Print: rights.Print,
+        Download: rights.Download
+      };
+
+      this.showAddNewButton = this.userRights.Create;
+      this.showRowActions = this.userRights.Edit || this.userRights.Delete || this.userRights.ActiveInActive || this.userRights.Print;
+    } catch {
+      this.userRights = {
+        View: true,
+        Create: false,
+        Edit: false,
+        Delete: false,
+        ActiveInActive: false,
+        Print: false,
+        Download: false
+      };
+      this.showAddNewButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load user role rights. Please check and try again.');
+    }
   }
 
   resetForm(): void {
@@ -305,6 +361,7 @@ export class UsersComponent implements OnInit {
         label: country.Name ?? '',
         value: country.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.countryOptions = [];
       this.toast.error('Load Failed', 'Unable to load countries. Please check and try again.');
@@ -354,6 +411,7 @@ export class UsersComponent implements OnInit {
         label: state.Name ?? '',
         value: state.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.stateOptions = [];
       this.toast.error('Load Failed', 'Unable to load states. Please check and try again.');
@@ -381,6 +439,7 @@ export class UsersComponent implements OnInit {
         label: city.Name ?? '',
         value: city.Id ?? 0
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.cityOptions = [];
       this.toast.error('Load Failed', 'Unable to load cities. Please check and try again.');
@@ -545,6 +604,7 @@ export class UsersComponent implements OnInit {
       }
 
       this.dialogCity = user.City || null;
+      this.changeDetector.detectChanges();
     } catch {
       this.toast.error('Load Failed', 'Unable to load user details. Please check and try again.');
     }
@@ -596,6 +656,10 @@ export class UsersComponent implements OnInit {
     } catch {
       this.toast.error('Deactivation Failed', `Unable to deactivate ${String(row.Name ?? row.Code ?? 'record')}. Please try again.`);
     }
+  }
+
+  printRow(row: any): void {
+    this.toast.info('Print Pending', `${String(row.Name ?? row.Code ?? 'User')} print will be connected later.`);
   }
 
   openRowActions(menu: any, event: MouseEvent, row: any): void {
@@ -864,15 +928,26 @@ export class UsersComponent implements OnInit {
   }
 
   private getRowActionItems(row: any): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
-    if (row.IsActive === true) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    if (this.userRights.Edit && row.IsActive === true) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.userRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.userRights.ActiveInActive && row.IsActive === true) {
       items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
+    }
+
+    if (this.userRights.ActiveInActive && row.IsActive !== true) {
       items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    }
+
+    if (this.userRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.printRow(row) });
     }
 
     return items;

@@ -18,6 +18,7 @@ export interface Terminal {
     UpdatedBy?: number | null;
     UpdatedDate?: string | null;
     IsDeleted?: boolean;
+    EntityNo?: number;
 }
 
 export interface TerminalStatusRequest {

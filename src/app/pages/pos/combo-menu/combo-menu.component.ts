@@ -12,13 +12,19 @@ import { ActionButtonsComponent } from '../../../components/form/action-buttons.
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
+
+
 import { AppToastService } from '../../../services/app-toast.service';
+
+
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { ComboMenu, ComboMenuItem, ComboMenuService } from '../../../services/combo-menu.service';
 import { CategoryService } from '../../../services/Category.service';
 import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
 import { MenuService } from '../../../services/FoodMenu.service';
+import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
+import { TableExportService } from '../../../services/table-export.service';
 type ComboMenuRow = {
   id: number;
   code: string;
@@ -76,14 +82,20 @@ const COMBOMENU_COLUMNS: SharedTableColumn<ComboMenuRow>[] = [
   styleUrl: './combo-menu.component.css'
 })
 export class ComboMenuComponent {
+  
+  
   private readonly toast = inject(AppToastService);
+  
+  
   private readonly comboMenuService = inject(ComboMenuService);
   private readonly categoryService = inject(CategoryService);
   private readonly subCategoryService = inject(subCategoryService);
   private readonly menuService = inject(MenuService);
+  private readonly entityMasterService = inject(EntityMasterService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
- private readonly organizationService = inject(OrganizationService);
+  private readonly organizationService = inject(OrganizationService);
+  private readonly tableExportService = inject(TableExportService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -133,18 +145,60 @@ export class ComboMenuComponent {
   readonly tableTitle = 'Combo Menus';
   readonly tableCaption = 'Combo Menus';
   tableColumns = COMBOMENU_COLUMNS;
-  readonly showAddNewButton = true;
+  comboMenuRights = { View: true, Create: true, Edit: true, Delete: true, ActiveInActive: true, Print: true, Download: true };
+  showAddNewButton = true;
   readonly addNewButtonLabel = 'Add New';
+  showDownloadButton = true;
   readonly showFilterButton = true;
-  readonly showRowActions = true;
+  showRowActions = true;
   readonly rowActionHeader = 'Actions';
- branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  branchEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
+  downloadLoading = false;
+  downloadLoadingLabel = 'Exporting...';
   async ngOnInit(): Promise<void> {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.BranchId = Number(this.userDetails.BranchId || 0);
+    await this.loadComboMenuRights();
     this.loadRows();
     await this.loadLookupOptions();
+  }
+
+  async loadComboMenuRights(): Promise<void> {
+    const orgId = Number(this.userDetails?.OrganizationId || this.userDetails?.OrgId || 0);
+    const roleId = Number(this.userDetails?.RoleId || 0);
+    const entityNo = Number(this.branchEntityNo || 0);
+
+    if (!orgId || !roleId || !entityNo) {
+      return;
+    }
+
+    try {
+      const response: any = await firstValueFrom(this.entityMasterService.GetRoleRightsByRoleId(orgId, roleId, entityNo));
+      const rights = response?.result?.[0];
+
+      if (rights) {
+        this.comboMenuRights = {
+          View: rights.View === true,
+          Create: rights.Create === true,
+          Edit: rights.Edit === true,
+          Delete: rights.Delete === true,
+          ActiveInActive: rights.ActiveInActive === true,
+          Print: rights.Print === true,
+          Download: rights.Download === true
+        };
+      }
+
+      this.showAddNewButton = this.comboMenuRights.Create;
+      this.showDownloadButton = this.comboMenuRights.Download;
+      this.showRowActions = this.comboMenuRights.Edit || this.comboMenuRights.Delete || this.comboMenuRights.ActiveInActive || this.comboMenuRights.Print;
+    } catch {
+      this.comboMenuRights = { View: true, Create: false, Edit: false, Delete: false, ActiveInActive: false, Print: false, Download: false };
+      this.showAddNewButton = false;
+      this.showDownloadButton = false;
+      this.showRowActions = false;
+      this.toast.error('Rights Load Failed', 'Unable to load combo menu rights for this role.');
+    }
   }
 
   private async loadLatestTableCode(orgId: number): Promise<void> {
@@ -202,6 +256,122 @@ export class ComboMenuComponent {
         this.isLoading = false;
       }
     });
+  }
+
+  async exportComboMenusAsExcel(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'Excel exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.comboMenuService.getAll(orgId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        const comboMenuItems = this.mapComboMenuItems(x);
+
+        x.id = this.getNumberValue(x, 'id', 'Id');
+        x.code = this.getStringValue(x, 'code', 'Code');
+        x.name = this.getStringValue(x, 'name', 'Name');
+        x.categoryId = this.getNumberValue(x, 'categoryId', 'CategoryId');
+        x.subCategoryId = this.getNumberValue(x, 'subCategoryId', 'SubCategoryId');
+        x.price = this.getNumberValue(x, 'price', 'Price');
+        x.orgId = this.getNumberValue(x, 'orgId', 'OrgId');
+        x.isactive = this.getBooleanValue(x, 'isactive', 'IsActive', 'isActive');
+        x.RowNumber = rowNumber++;
+        x.Code = x.code;
+        x.Name = x.name;
+        x.Price = x.price;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        x.FoodMenuName = this.getComboFoodMenuNames(comboMenuItems);
+        x.ItemsCount = comboMenuItems.length;
+        x.comboMenuItems = comboMenuItems;
+
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Combo-Menu`;
+      const searchText = this.filterSearchText.trim().toLowerCase();
+
+      if (searchText) {
+        exportRows = exportRows.filter((row: any) =>
+          String(row.Code ?? '').toLowerCase().includes(searchText) ||
+          String(row.Name ?? '').toLowerCase().includes(searchText) ||
+          String(row.FoodMenuName ?? '').toLowerCase().includes(searchText) ||
+          String(row.Status ?? '').toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No combo menus are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportExcel(fileName, this.tableColumns, exportRows, 'Combo Menus');
+      this.toast.success('Export Ready', 'Combo Menu Excel export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export combo menus to Excel.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
+  }
+
+  async exportComboMenusAsPdf(): Promise<void> {
+    this.downloadLoading = true;
+    this.downloadLoadingLabel = 'PDF exporting...';
+
+    try {
+      const orgId = Number(this.userDetails.OrgId || 0);
+      const response: any = await firstValueFrom(this.comboMenuService.getAll(orgId));
+      let rowNumber = 1;
+      let exportRows = (response.result ?? []).map((x: any) => {
+        const comboMenuItems = this.mapComboMenuItems(x);
+
+        x.id = this.getNumberValue(x, 'id', 'Id');
+        x.code = this.getStringValue(x, 'code', 'Code');
+        x.name = this.getStringValue(x, 'name', 'Name');
+        x.categoryId = this.getNumberValue(x, 'categoryId', 'CategoryId');
+        x.subCategoryId = this.getNumberValue(x, 'subCategoryId', 'SubCategoryId');
+        x.price = this.getNumberValue(x, 'price', 'Price');
+        x.orgId = this.getNumberValue(x, 'orgId', 'OrgId');
+        x.isactive = this.getBooleanValue(x, 'isactive', 'IsActive', 'isActive');
+        x.RowNumber = rowNumber++;
+        x.Code = x.code;
+        x.Name = x.name;
+        x.Price = x.price;
+        x.Status = x.isactive ? 'Active' : 'Inactive';
+        x.FoodMenuName = this.getComboFoodMenuNames(comboMenuItems);
+        x.ItemsCount = comboMenuItems.length;
+        x.comboMenuItems = comboMenuItems;
+
+        return x;
+      });
+      const orgName = String(this.userDetails.OrgName || 'OrgName').trim();
+      const fileName = `${orgName.replace(/[\\/:*?"<>|]/g, '-')}-Combo-Menu`;
+      const searchText = this.filterSearchText.trim().toLowerCase();
+
+      if (searchText) {
+        exportRows = exportRows.filter((row: any) =>
+          String(row.Code ?? '').toLowerCase().includes(searchText) ||
+          String(row.Name ?? '').toLowerCase().includes(searchText) ||
+          String(row.FoodMenuName ?? '').toLowerCase().includes(searchText) ||
+          String(row.Status ?? '').toLowerCase().includes(searchText)
+        );
+      }
+
+      if (!exportRows.length) {
+        this.toast.warn('No Records', 'No combo menus are available to export.');
+        return;
+      }
+
+      await this.tableExportService.exportPdf(fileName, 'Combo Menus', this.tableColumns, exportRows);
+      this.toast.success('Export Ready', 'Combo Menu PDF export downloaded successfully.');
+    } catch {
+      this.toast.error('Export Failed', 'Unable to export combo menus to PDF.');
+    } finally {
+      this.downloadLoading = false;
+      this.downloadLoadingLabel = 'Exporting...';
+    }
   }
 
 
@@ -520,6 +690,7 @@ export class ComboMenuComponent {
         label: this.getStringValue(item, 'name', 'Name'),
         value: this.getNumberValue(item, 'id', 'Id', 'ID')
       }));
+      this.changeDetector.detectChanges();
     } catch {
       this.categoryOptions = [];
       this.toast.error('Load Failed', 'Unable to load categories.');
@@ -538,6 +709,7 @@ export class ComboMenuComponent {
         categoryId: this.getNumberValue(item, 'categoryId', 'CategoryId', 'categoryid', 'categoryID', 'CategoryID', 'Categoryid')
       }));
       this.setSubCategoryOptions(this.dialogCategoryIds, false);
+      this.changeDetector.detectChanges();
     } catch {
       this.allSubCategoryOptions = [];
       this.subCategoryOptions = [];
@@ -557,6 +729,7 @@ export class ComboMenuComponent {
         price: this.getNumberValue(item, 'price', 'Price')
       }));
       this.setFoodMenuOptions(this.dialogSubCategoryIds);
+      this.changeDetector.detectChanges();
     } catch {
       this.allFoodMenuOptions = [];
       this.foodMenuOptions = [];
@@ -780,23 +953,34 @@ export class ComboMenuComponent {
   }
 
   private getRowActionItems(row: ComboMenuRow): MenuItem[] {
-    const items: MenuItem[] = [
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
-    ];
+    const items: MenuItem[] = [];
 
     const isActive = this.getBooleanValue(row, 'isactive', 'IsActive', 'isActive');
 
-    if (isActive) {
-      items.unshift({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
-      items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
-    } else {
-      items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+    if (this.comboMenuRights.Edit && isActive) {
+      items.push({ label: 'Edit', icon: 'pi pi-pencil', styleClass: 'row-action-edit', command: () => this.handleRowAction('edit') });
+    }
+
+    if (this.comboMenuRights.Delete) {
+      items.push({ label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') });
+    }
+
+    if (this.comboMenuRights.ActiveInActive) {
+      if (isActive) {
+        items.push({ label: 'Inactive', icon: 'pi pi-ban', styleClass: 'row-action-inactive', command: () => this.handleRowAction('deactivate') });
+      } else {
+        items.push({ label: 'Active', icon: 'pi pi-check-circle', styleClass: 'row-action-active', command: () => this.handleRowAction('activate') });
+      }
+    }
+
+    if (this.comboMenuRights.Print) {
+      items.push({ label: 'Print', icon: 'pi pi-print', styleClass: 'row-action-print', command: () => this.handleRowAction('print') });
     }
 
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'print'): void {
     if (!this.selectedRow) {
       return;
     }
@@ -807,9 +991,16 @@ export class ComboMenuComponent {
       this.confirmDeleteRow(this.selectedRow);
     } else if (action === 'activate') {
       this.confirmActivateRow(this.selectedRow);
+    } else if (action === 'print') {
+      this.printRow(this.selectedRow);
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  printRow(row: ComboMenuRow): void {
+    const name = String(row.name ?? row.code ?? 'this combo menu');
+    this.toast.info('Print Pending', `Print functionality for ${name} will be added soon.`);
   }
 }
 
