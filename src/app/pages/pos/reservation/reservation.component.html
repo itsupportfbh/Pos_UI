@@ -71,11 +71,11 @@
         </ng-template>
 
         <ng-template appTableCellTemplate="Status" let-row>
-        <span class="status-badge" [class.status-active]="row.Status === 'Active'"
-          [class.status-inactive]="row.Status === 'Inactive'">
-          {{ row.Status }}
-        </span>
-      </ng-template>
+          <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+            [class.status-inactive]="row.Status === 'Inactive'">
+            {{ row.Status }}
+          </span>
+        </ng-template>
       </app-shared-table>
     </p-card>
   </section>
@@ -137,14 +137,19 @@
       errorMessage="Visit date is required." [model]="dialogVisitDate"
       (modelChange)="dialogVisitDate = $event"></app-text-field>
 
-    <app-text-field label="Visit Time" inputId="dialog-visit-time" type="time" [showRequiredMark]="true"
-      placeholder="Enter visit time" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Visit time is required." [model]="dialogVisitTime"
-      (modelChange)="dialogVisitTime = $event"></app-text-field>
+    <app-text-field label="Visit From Time" inputId="dialog-visit-from-time" type="time" [showRequiredMark]="true"
+      placeholder="Enter visit From time" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Visit time is required." [model]="dialogVisitFromTime"
+      (modelChange)="dialogVisitFromTime = $event"></app-text-field>
 
-    <app-multiselect-field label="Table" inputId="dialog-table-name" placeholder="Choose tables" [showRequiredMark]="true"
-      [options]="tablesOptions" [required]="true" [submitted]="dialogSubmitted" errorMessage="Table is required."
-       [model]="selectedTables" (modelChange)="onfiltertableChange($event)" /> 
+    <app-text-field label="Visit To Time" inputId="dialog-visit-to-time" type="time" [showRequiredMark]="true"
+      placeholder="Enter visit To time" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Visit time is required." [model]="dialogVisitToTime"
+      (modelChange)="dialogVisitToTime = $event"></app-text-field>
+
+    <app-multiselect-field label="Table" inputId="dialog-table-name" placeholder="Choose tables"
+      [showRequiredMark]="true" [options]="tablesOptions" [required]="true" [submitted]="dialogSubmitted"
+      errorMessage="Table is required." [model]="selectedTables" (modelChange)="onfiltertableChange($event)" />
 
     <app-text-field label="Guest Count" inputId="dialog-guest-count" type="number" [showRequiredMark]="true"
       placeholder="Enter guest count" [required]="true" [submitted]="dialogSubmitted"
