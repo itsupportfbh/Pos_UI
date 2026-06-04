@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -23,6 +24,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
+ 
 
 type TerminalRow = {
     id: number;
@@ -62,7 +64,7 @@ const TERMINAL_COLUMNS: SharedTableColumn<TerminalRow>[] = [
 @Component({
     selector: 'app-terminals',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, MultiSelectFieldComponent],
+    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, MultiSelectFieldComponent, ProgressSpinnerModule],
     providers: [ConfirmationService],
     templateUrl: './terminal.component.html',
     styleUrl: './terminal.component.css'
@@ -90,6 +92,7 @@ export class TerminalComponent implements OnInit {
     showAddDialog = false;
     showFilterSidebar = false;
     isEditMode = false;
+    pageLoading = false;
     selectedBranchIds: MultiSelectFieldValue = [];
     selectedCounterIds: MultiSelectFieldValue = [];
     dialogSubmitted = false;
@@ -127,6 +130,8 @@ export class TerminalComponent implements OnInit {
     readonly pageEyebrow = 'Terminal Management';
     readonly pageTitle = 'Terminals';
     readonly pageSubtitle = 'Manage your POS terminals here.';
+    readonly pageLoadingTitle = 'Unity work POS';
+    readonly pageLoadingSubtitle = 'Loading terminals workspace.';
     readonly filterTitle = `${'Terminals'} Filters`;
     readonly primaryActionLabel = `Search ${'Terminals'}`;
     readonly secondaryActionLabel = 'Clear Filters';
@@ -158,23 +163,29 @@ export class TerminalComponent implements OnInit {
     downloadLoadingLabel = 'Exporting...';
 
     async ngOnInit(): Promise<void> {
+        this.pageLoading = true;
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
         this.UserId = Number(this.userDetails.UserId || 0);
         this.OrgId = Number(this.userDetails.OrgId || 0);
         this.BranchId = Number(this.userDetails.BranchId || 0);
         this.isAdmin = this.userDetails.IsAdmin == true || this.userDetails.IsAdmin == 1;
         this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
-        await this.loadTerminalRights();
+        try {
+            await this.loadTerminalRights();
 
-        this.tableColumns = TERMINAL_COLUMNS.map((x: any) => {
-            if (x.field === 'organizationname') {
-                x.hidden = this.userDetails.RoleId !== 1;
-            }
+            this.tableColumns = TERMINAL_COLUMNS.map((x: any) => {
+                if (x.field === 'organizationname') {
+                    x.hidden = this.userDetails.RoleId !== 1;
+                }
 
-            return x;
-        });
+                return x;
+            });
 
-        void this.loadTerminals();
+            await this.loadTerminals();
+        } catch {
+            this.pageLoading = false;
+            this.changeDetector.detectChanges();
+        }
     }
 
     async loadTerminalRights(): Promise<void> {
@@ -297,8 +308,11 @@ export class TerminalComponent implements OnInit {
                 return x;
             });
             this.tableRows = [...this.allTerminals];
+            this.pageLoading = false;
             this.changeDetector.detectChanges();
         } catch {
+            this.pageLoading = false;
+            this.changeDetector.detectChanges();
             this.toast.error('Load Failed', 'Unable to load terminals. Please check API and try again.');
         }
     }

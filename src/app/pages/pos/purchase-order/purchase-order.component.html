@@ -10,6 +10,17 @@
   </header>
 
   <p-card class="feature-card">
+    @if (pageLoading) {
+      <div class="page-spinner-state">
+        <p-progressSpinner ariaLabel="Loading"></p-progressSpinner>
+        <div class="page-spinner-copy">
+          <strong>{{ pageLoadingTitle }}</strong>
+          <span>{{ pageLoadingSubtitle }}</span>
+        </div>
+      </div>
+    }
+
+    @if (!pageLoading) {
     <div class="section-heading">
       <div>
         <h2>{{ tableTitle }}</h2>
@@ -35,6 +46,7 @@
         </span>
       </ng-template>
     </app-shared-table>
+    }
   </p-card>
 </section>
 

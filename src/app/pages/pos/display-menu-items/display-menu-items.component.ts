@@ -62,6 +62,12 @@ type KitchenOrderStatus = 'Preparing' | 'Ready';
 })
 export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly handleFullscreenChange = () => {
+    if (!document.fullscreenElement && this.isTvMode) {
+      this.isTvMode = false;
+      this.cdr.detectChanges();
+    }
+  };
 
   userDetails: any = {};
   kitchenOrders: KitchenOrder[] = [];
@@ -71,7 +77,9 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   totalKitchenItems = 0;
   isLoadingOrders = false;
   private tableNameById: Record<number, string> = {};
-viewReady = false;
+  viewReady = false;
+  isTvMode = false;
+  currentTime = new Date();
   constructor(
     private readonly toast: AppToastService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
@@ -81,13 +89,18 @@ viewReady = false;
 
   ngOnInit(): void {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+    this.refreshTimer = setInterval(() => {
+      this.currentTime = new Date();
+      this.cdr.detectChanges();
+    }, 1000);
 
     setTimeout(async () => {
-    this.viewReady = true;
-    await this.loadDiningTableNames();
-    this.loadKitchenOrders();
-    this.cdr.detectChanges();
-  });
+      this.viewReady = true;
+      await this.loadDiningTableNames();
+      this.loadKitchenOrders();
+      this.cdr.detectChanges();
+    });
    
    
   }
@@ -96,6 +109,7 @@ viewReady = false;
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
     }
+    document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
   }
 
   get filteredKitchenOrders(): KitchenOrder[] {
@@ -119,6 +133,18 @@ viewReady = false;
     }
 
     return this.kitchenOrders.find((order) => order.id === this.selectedKitchenOrderId) ?? null;
+  }
+
+  get preparingOrders(): KitchenOrder[] {
+    return this.filteredKitchenOrders.filter((order) => !this.isReady(order));
+  }
+
+  get readyOrders(): KitchenOrder[] {
+    return this.filteredKitchenOrders.filter((order) => this.isReady(order));
+  }
+
+  get kitchenDisplayName(): string {
+    return String(this.userDetails?.BranchName || this.userDetails?.OrgName || 'Kitchen Display').trim() || 'Kitchen Display';
   }
 
   loadKitchenOrders(): void {
@@ -172,6 +198,17 @@ viewReady = false;
 
   clearKitchenOrders(): void {
     this.toast.info('API Required', 'Clear kitchen orders from the saved order list.');
+  }
+
+  openTvMode(): void {
+    this.selectedKitchenOrderId = null;
+    this.isTvMode = true;
+    void this.enterFullscreen();
+  }
+
+  closeTvMode(): void {
+    this.isTvMode = false;
+    void this.exitFullscreen();
   }
 
   openKitchenOrderDetails(order: KitchenOrder): void {
@@ -300,6 +337,67 @@ viewReady = false;
     }
 
     return order.orderType?.toLowerCase().includes('take') ? 'Take Out' : order.orderType || 'Take Out';
+  }
+
+  getDisplayCustomerName(order: KitchenOrder): string {
+    return String(order.customerName || '').trim() || 'Walk-in Guest';
+  }
+
+  getOrderTypeToneClass(order: KitchenOrder): string {
+    const orderType = String(order.orderType || '').replace(/[\s_-]+/g, '').toLowerCase();
+
+    if (orderType.includes('dinein') || orderType.includes('dinin') || orderType.includes('table')) {
+      return 'tv-type-dinein';
+    }
+
+    if (orderType.includes('take')) {
+      return 'tv-type-takeaway';
+    }
+
+    if (orderType.includes('delivery')) {
+      return 'tv-type-delivery';
+    }
+
+    return 'tv-type-default';
+  }
+
+  getOrderStatusToneClass(order: KitchenOrder): string {
+    if (this.isReady(order)) {
+      return 'tv-status-ready';
+    }
+
+    if (this.isPreparing(order)) {
+      return 'tv-status-preparing';
+    }
+
+    return 'tv-status-kitchen';
+  }
+
+  getVisibleTicketItems(order: KitchenOrder): KitchenOrderItem[] {
+    return order.items.filter((item) => this.isVisibleKitchenStatus(item.status));
+  }
+
+  getVisiblePreviewItems(order: KitchenOrder): KitchenOrderItem[] {
+    return this.getVisibleTicketItems(order).slice(0, 4);
+  }
+
+  getRemainingPreviewItemCount(order: KitchenOrder): number {
+    return Math.max(this.getVisibleTicketItems(order).length - 4, 0);
+  }
+
+  getElapsedMinutes(order: KitchenOrder): string {
+    if (!order.sentAt) {
+      return 'Now';
+    }
+
+    const sentAt = new Date(order.sentAt).getTime();
+
+    if (Number.isNaN(sentAt)) {
+      return 'Now';
+    }
+
+    const elapsed = Math.max(Math.floor((this.currentTime.getTime() - sentAt) / 60000), 0);
+    return `${elapsed} min`;
   }
 
   isReady(order: KitchenOrder): boolean {
@@ -770,6 +868,26 @@ viewReady = false;
     return Number(this.userDetails.IsAdmin || 0) === 1 || Number(this.userDetails.RoleId || 0) === 1
       ? 0
       : this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
+  }
+
+  private async enterFullscreen(): Promise<void> {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // Ignore fullscreen errors and keep TV mode inside the page.
+    }
+  }
+
+  private async exitFullscreen(): Promise<void> {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // Ignore fullscreen exit errors.
+    }
   }
 
 }

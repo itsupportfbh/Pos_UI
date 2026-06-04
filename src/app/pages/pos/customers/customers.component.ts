@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
@@ -66,7 +67,8 @@ const CUSTOMER_COLUMNS: SharedTableColumn<CustomerRow>[] = [
     ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
-    SharedTableCellTemplateDirective
+    SharedTableCellTemplateDirective,
+    ProgressSpinnerModule
   ],
   providers: [ConfirmationService],
   templateUrl: './customers.component.html',
@@ -92,6 +94,7 @@ export class CustomersComponent implements OnInit {
   showAddDialog = false;
   showFilterSidebar = false;
   isEditMode = false;
+  pageLoading = false;
   dialogSubmitted = false;
   dialogSaving = false;
   isLoading = false;
@@ -130,6 +133,8 @@ export class CustomersComponent implements OnInit {
   readonly pageEyebrow = 'Customers';
   readonly pageTitle = 'Customer List';
   readonly pageSubtitle = 'Manage customer master details.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading customers workspace.';
   readonly filterTitle = 'Customer Filters';
   readonly primaryActionLabel = 'Search Customers';
   readonly secondaryActionLabel = 'Clear Filters';
@@ -151,11 +156,17 @@ export class CustomersComponent implements OnInit {
   downloadLoading = false;
   downloadLoadingLabel = 'Exporting...';
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    await this.loadCustomerRights();
-    this.OrgId = Number(this.userDetails.OrgId || 0);
-    this.BranchId = Number(this.userDetails.BranchId || 0);
-    this.loadCustomers();
+    try {
+      await this.loadCustomerRights();
+      this.OrgId = Number(this.userDetails.OrgId || 0);
+      this.BranchId = Number(this.userDetails.BranchId || 0);
+      this.loadCustomers();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadCustomerRights(): Promise<void> {
@@ -244,9 +255,12 @@ private async loadLatestTableCode(orgId: number): Promise<void> {
         });
 
         this.tableRows = [...this.allRows];
+        this.pageLoading = false;
         this.changeDetector.detectChanges();
       },
       error: () => {
+        this.pageLoading = false;
+        this.changeDetector.detectChanges();
         this.toast.error('Load Failed', 'Unable to load customers. Please check API and try again.');
       },
       complete: () => {

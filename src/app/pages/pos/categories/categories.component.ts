@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, QueryList, inject, ViewChildren } from '@
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { ConfirmationService, MenuItem } from 'primeng/api';
@@ -51,7 +52,7 @@ const CATEGORY_COLUMNS: SharedTableColumn<CategoryRow>[] = [
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, ProgressSpinnerModule],
   providers: [ConfirmationService],
   templateUrl: './categories.component.html',
   styleUrl: './categories.component.css'
@@ -74,6 +75,7 @@ export class CategoriesComponent {
   showAddDialog = false;
   showFilterSidebar = false;
   isLoading = false;
+  pageLoading = false;
   isEditMode = false;
   dialogSubmitted = false;
   filterCategoryName = '';
@@ -101,6 +103,8 @@ export class CategoriesComponent {
   readonly pageEyebrow = 'Category Management';
   readonly pageTitle = 'Categories';
   readonly pageSubtitle = 'Manage your categories here.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading categories workspace.';
   readonly filterTitle = `${'Categories'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'Categories'.toLowerCase()}.`;
   readonly fields: any[] = [{ key: 'categoryName', label: 'Category Name', type: 'text', placeholder: 'Enter category name' }];
@@ -140,6 +144,7 @@ export class CategoriesComponent {
   };
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
     await this.loadCategoryRights();
@@ -208,13 +213,18 @@ export class CategoriesComponent {
         this.changeDetector.detectChanges();
       },
       error: () => {
+        this.isLoading = false;
+        this.pageLoading = false;
         this.toast.error(
           'Load Failed',
           'Unable to load categories. Please check API and try again.'
         );
+        this.changeDetector.detectChanges();
       },
       complete: () => {
         this.isLoading = false;
+        this.pageLoading = false;
+        this.changeDetector.detectChanges();
       }
     });
   }

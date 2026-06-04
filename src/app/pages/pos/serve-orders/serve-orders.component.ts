@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { catchError, forkJoin, map, of } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
@@ -31,7 +33,7 @@ const ORDER_STATUS = {
 @Component({
   selector: 'app-serve-orders',
   standalone: true,
-  imports: [CommonModule, ButtonModule],
+  imports: [CommonModule, ButtonModule, CardModule, ProgressSpinnerModule],
   templateUrl: './serve-orders.component.html',
   styleUrl: './serve-orders.component.css'
 })
@@ -39,9 +41,12 @@ export class ServeOrdersComponent implements OnInit {
   userDetails: any = {};
   readyOrders: ServeOrder[] = [];
   isLoading = false;
+  pageLoading = false;
   servingOrderId: number | null = null;
    OrgId=0;
    BranchId=0;
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading serve orders workspace.';
 
   constructor(
     private readonly toast: AppToastService,
@@ -50,6 +55,7 @@ export class ServeOrdersComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = this.getNumberValue(this.userDetails, 'OrgId'    );
     this.BranchId = this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
@@ -78,6 +84,7 @@ export class ServeOrdersComponent implements OnInit {
       },
       error: () => {
         this.isLoading = false;
+        this.pageLoading = false;
         this.readyOrders = [];
         this.toast.error('Load Failed', 'Unable to load ready orders.');
       }
@@ -88,6 +95,7 @@ export class ServeOrdersComponent implements OnInit {
     if (!orderRows.length) {
       this.readyOrders = [];
       this.isLoading = false;
+      this.pageLoading = false;
       return;
     }
 
@@ -120,6 +128,7 @@ export class ServeOrdersComponent implements OnInit {
       },
       complete: () => {
         this.isLoading = false;
+        this.pageLoading = false;
       }
     });
   }

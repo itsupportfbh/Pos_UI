@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
@@ -23,6 +24,7 @@ import { Counter, CounterService } from '../../../services/counter.service';
 import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
+ 
 type CounterRow = Counter & {
   RowNumber: number;
   Status: string;
@@ -55,7 +57,8 @@ const COUNTER_COLUMNS: SharedTableColumn<CounterRow>[] = [
     ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
-    SharedTableCellTemplateDirective
+    SharedTableCellTemplateDirective,
+    ProgressSpinnerModule
   ],
   providers: [ConfirmationService],
   templateUrl: './counters.component.html',
@@ -83,6 +86,7 @@ export class CountersComponent implements OnInit {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
+  pageLoading = false;
   OrgId = 0;
   BranchId = 0;
 
@@ -105,6 +109,8 @@ export class CountersComponent implements OnInit {
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Counters';
   readonly pageSubtitle = 'Maintain restaurant billing and service counters.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading counters workspace.';
   readonly filterTitle = 'Counters Filters';
   readonly primaryActionLabel = 'Search Counters';
   readonly secondaryActionLabel = 'Clear Filters';
@@ -135,21 +141,26 @@ export class CountersComponent implements OnInit {
   downloadLoadingLabel = 'Exporting...';
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.BranchId = Number(this.userDetails.BranchId || 0);
     this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
-    await this.loadCounterRights();
-    this.tableColumns = COUNTER_COLUMNS.map((x: any) => {
-      if (x.field === 'OrganizationName') {
-        x.hidden = this.userDetails.RoleId !== 1;
-      }
+    try {
+      await this.loadCounterRights();
+      this.tableColumns = COUNTER_COLUMNS.map((x: any) => {
+        if (x.field === 'OrganizationName') {
+          x.hidden = this.userDetails.RoleId !== 1;
+        }
 
-      return x;
-    });
+        return x;
+      });
 
-
-    this.loadCounter();
+      this.loadCounter();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadCounterRights(): Promise<void> {
@@ -374,10 +385,13 @@ export class CountersComponent implements OnInit {
         });
 
         this.hiddenTableRow = [...this.tableRows];
+        this.pageLoading = false;
         this.changeDetector.detectChanges();
       },
       error: () => {
+        this.pageLoading = false;
         this.toast.error('Load Failed', 'Unable to load counters. Please check API and try again.');
+        this.changeDetector.detectChanges();
       }
     });
   }

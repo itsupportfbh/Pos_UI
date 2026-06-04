@@ -118,10 +118,10 @@ export class ShiftAssignmentComponent implements OnInit, OnChanges {
   submitShift(): void {
     this.submitted = true;
 
-    if (!this.selectedShift || !this.terminal || !this.userId) {
-      this.toast.error('Validation Error', 'Please fill all required fields');
-      return;
-    }
+    // if (!this.selectedShift || !this.terminal || !this.userId) {
+    //   this.toast.error('Validation Error', 'Please fill all required fields');
+    //   return;
+    // }
 
     const shiftAssignment: ShiftAssignment = {
       shiftId: this.selectedShift,

@@ -6,6 +6,7 @@ import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 import { AppToastService } from '../../../services/app-toast.service';
@@ -164,6 +165,7 @@ const ORDER_HOLD_COLUMNS: SharedTableColumn<HeldOrderRow>[] = [
     ButtonModule,
     CardModule,
     MenuModule,
+    ProgressSpinnerModule,
     SharedTableComponent,
     SharedTableCellTemplateDirective
   ],
@@ -176,6 +178,7 @@ export class OrderHoldComponent implements OnInit {
   selectedRow: HeldOrderRow | null = null;
   rowActionItems: MenuItem[] = [];
   isLoading = false;
+  pageLoading = false;
   userDetails: any = {};
   orgId = 0;
   totalHeldOrdersCount = 0;
@@ -184,6 +187,8 @@ export class OrderHoldComponent implements OnInit {
 
   readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Hold Orders';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading held orders workspace.';
  // readonly pageSubtitle = 'Review held tickets, tables, and totals before sending them back to service.';
   readonly tableTitle = 'Hold Orders';
   readonly tableCaption = 'Hold Orders';
@@ -202,6 +207,7 @@ viewReady = false;
 ) {}
 
 ngOnInit(): void {
+  this.pageLoading = true;
   this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
   this.orgId = this.getUserOrgId();
 
@@ -243,6 +249,7 @@ ngOnInit(): void {
      complete: () => {
   setTimeout(() => {
     this.isLoading = false;
+    this.pageLoading = false;
     this.cdr.detectChanges();
   });
 }

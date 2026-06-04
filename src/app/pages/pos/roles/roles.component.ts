@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
@@ -22,6 +23,7 @@ import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { Role, RoleService } from '../../../services/role.service';
 import { TableExportService } from '../../../services/table-export.service';
+ 
 
 type PagePermission = {
   entityNo: number;
@@ -63,7 +65,7 @@ const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [CommonModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, MultiSelectFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent],
+  imports: [CommonModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, MultiSelectFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ProgressSpinnerModule],
   providers: [ConfirmationService],
   templateUrl: './roles.component.html',
   styleUrl: './roles.component.css'
@@ -90,6 +92,7 @@ export class RolesComponent {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
+  pageLoading = false;
   permissionLoading = false;
   permissionSaving = false;
   filterOrganizations: MultiSelectFieldValue = [];
@@ -125,6 +128,8 @@ export class RolesComponent {
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Roles';
   readonly pageSubtitle = 'Maintain role master details.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading roles workspace.';
   readonly filterTitle = 'Role Filters';
   readonly primaryActionLabel = 'Search Roles';
   readonly secondaryActionLabel = 'Clear Filters';
@@ -145,19 +150,25 @@ export class RolesComponent {
   downloadLoadingLabel = 'Exporting...';
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.showFilterButton = this.userDetails.RoleId === 1;
-    await this.loadRoleRights();
+    try {
+      await this.loadRoleRights();
 
-    this.tableColumns = ROLE_COLUMNS.map((x: any) => {
-      if (x.field === 'OrganizationName') {
-        x.hidden = this.userDetails.RoleId !== 1;
-      }
+      this.tableColumns = ROLE_COLUMNS.map((x: any) => {
+        if (x.field === 'OrganizationName') {
+          x.hidden = this.userDetails.RoleId !== 1;
+        }
 
-      return x;
-    });
+        return x;
+      });
 
-    this.loadRoles();
+      this.loadRoles();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadRoleRights(): Promise<void> {
@@ -281,10 +292,13 @@ export class RolesComponent {
         });
         this.allRows = [...this.tableRows];
 
+        this.pageLoading = false;
         this.changeDetector.detectChanges();
       },
       error: () => {
+        this.pageLoading = false;
         this.toast.error('Load Failed', 'Unable to load roles. Please check API and try again.');
+        this.changeDetector.detectChanges();
       }
     });
   }

@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
@@ -27,6 +28,7 @@ import { EntityMasterService } from '../../../services/entitymaster.service';
 import { Floor, FloorService } from '../../../services/floor.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
+ 
 
 type FloorRow = Floor & {
   RowNumber: number;
@@ -59,7 +61,8 @@ const FLOOR_COLUMNS: SharedTableColumn<FloorRow>[] = [
     ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
-    SharedTableCellTemplateDirective
+    SharedTableCellTemplateDirective,
+    ProgressSpinnerModule
   ],
   providers: [ConfirmationService],
   templateUrl: './floor.component.html',
@@ -86,6 +89,7 @@ export class FloorComponent implements OnInit {
   showAddDialog = false;
   showFilterSidebar = false;
   isEditMode = false;
+  pageLoading = false;
   dialogSubmitted = false;
   dialogSaving = false;
   isLoading = false;
@@ -110,6 +114,8 @@ export class FloorComponent implements OnInit {
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Floors';
   readonly pageSubtitle = 'Manage floor master details.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading floors workspace.';
   readonly filterTitle = 'Floor Filters';
   readonly primaryActionLabel = 'Search Floors';
   readonly secondaryActionLabel = 'Clear Filters';
@@ -132,16 +138,22 @@ export class FloorComponent implements OnInit {
   public downloadLoadingLabel = 'Exporting...';
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    await this.loadFloorRights();
-     this.tableColumns = FLOOR_COLUMNS.map((x: any) => {
-      if (x.field === 'OrganizationName') {
-        x.hidden = this.userDetails.RoleId !== 1;
-      }
+    try {
+      await this.loadFloorRights();
+       this.tableColumns = FLOOR_COLUMNS.map((x: any) => {
+        if (x.field === 'OrganizationName') {
+          x.hidden = this.userDetails.RoleId !== 1;
+        }
 
-      return x;
-    });
-    this.loadFloors();
+        return x;
+      });
+      this.loadFloors();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadFloorRights(): Promise<void> {
@@ -203,9 +215,12 @@ export class FloorComponent implements OnInit {
         }));
 
         this.tableRows = [...this.allRows];
+        this.pageLoading = false;
         this.changeDetector.detectChanges();
       },
       error: () => {
+        this.pageLoading = false;
+        this.changeDetector.detectChanges();
         this.toast.error('Load Failed', 'Unable to load floors. Please check API and try again.');
       },
       complete: () => {

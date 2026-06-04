@@ -11,6 +11,19 @@
     </div>
   </header>
 
+  @if (pageLoading) {
+    <p-card class="feature-card">
+      <div class="page-spinner-state">
+        <p-progressSpinner ariaLabel="Loading"></p-progressSpinner>
+        <div class="page-spinner-copy">
+          <strong>{{ pageLoadingTitle }}</strong>
+          <span>{{ pageLoadingSubtitle }}</span>
+        </div>
+      </div>
+    </p-card>
+  }
+
+  @if (!pageLoading) {
   <section class="billing-stats">
     <article class="summary-card">
       <span>Items</span>
@@ -381,4 +394,5 @@
       </div>
     </section>
   </p-card>
+  }
 </section>
