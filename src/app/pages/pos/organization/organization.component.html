@@ -11,6 +11,17 @@
   </header>
 
   <p-card class="feature-card">
+    @if (pageLoading) {
+      <div class="page-spinner-state">
+        <p-progressSpinner ariaLabel="Loading"></p-progressSpinner>
+        <div class="page-spinner-copy">
+          <strong>{{ pageLoadingTitle }}</strong>
+          <span>{{ pageLoadingSubtitle }}</span>
+        </div>
+      </div>
+    }
+
+    @if (!pageLoading) {
     <div class="section-heading">
       <div>
         <h2>{{ tableTitle }}</h2>
@@ -29,7 +40,7 @@
       </div>
     </div>
 
-    <section class="organization-card-grid">
+    <section class="organization-card-grid" [class.is-loading]="pageLoading">
       @for (row of tableRows; track row.Id) {
         <article class="organization-card">
           <div class="organization-card-head">
@@ -90,6 +101,7 @@
         </div>
       }
     </section>
+    }
   </p-card>
 </section>
 

@@ -1,5 +1,9 @@
 :host { display: block; }
 
+:host ::ng-deep .feature-card {
+  position: relative;
+}
+
 .organization-page-header {
   display: flex;
   align-items: center;
@@ -257,6 +261,11 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.organization-card-grid.is-loading {
+  pointer-events: none;
+  user-select: none;
 }
 
 .organization-card {

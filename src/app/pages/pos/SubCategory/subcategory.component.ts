@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, QueryList, inject, ViewChildren } from '@
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -57,7 +58,7 @@ const SUBCATEGORY_COLUMNS: SharedTableColumn<SubCategoryRow>[] = [
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, MultiSelectFieldComponent],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, MultiSelectFieldComponent, ProgressSpinnerModule],
   providers: [ConfirmationService],
   templateUrl: './subcategory.component.html',
   styleUrl: './subcategory.component.css'
@@ -83,6 +84,7 @@ export class SubCategoryComponent {
   showAddDialog = false;
   showFilterSidebar = false;
   isLoading = false;
+  pageLoading = false;
   isEditMode = false;
   dialogSubmitted = false;
   filterSubCategoryName = '';
@@ -117,6 +119,8 @@ export class SubCategoryComponent {
   readonly pageEyebrow = 'SubCategory Management';
   readonly pageTitle = 'SubCategories';
   readonly pageSubtitle = 'Manage your subcategories here.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading subcategory workspace.';
   readonly filterTitle = `${'SubCategories'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'SubCategories'.toLowerCase()}.`;
   readonly fields: any[] = [{ key: 'SubcategoryName', label: 'SubCategory Name', type: 'text', placeholder: 'Enter subcategory name' }];
@@ -150,6 +154,7 @@ export class SubCategoryComponent {
   };
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.dialogModel.CreatedBy = Number(this.userDetails.UserId || 0);
     this.OrgId = Number(this.userDetails.OrgId || 0);
@@ -247,13 +252,18 @@ export class SubCategoryComponent {
         this.changeDetector.detectChanges();
       },
       error: () => {
+        this.isLoading = false;
+        this.pageLoading = false;
         this.toast.error(
           'Load Failed',
           'Unable to load categories. Please check API and try again.'
         );
+        this.changeDetector.detectChanges();
       },
       complete: () => {
         this.isLoading = false;
+        this.pageLoading = false;
+        this.changeDetector.detectChanges();
       }
     });
   }

@@ -1,88 +1,258 @@
 <section class="feature-page">
   <p-confirmDialog />
 
-  <header class="page-header hero-panel">
-    <div>
+  <header class="page-header hero-panel dual-display-hero">
+    <div class="dual-display-hero-copy">
       <p class="eyebrow">{{ pageEyebrow }}</p>
       <h1>{{ pageTitle }}</h1>
       <p class="page-subtitle">{{ pageSubtitle }}</p>
+    </div>
+    <div class="dual-display-hero-badge">
+      <span class="hero-badge-kicker">Customer-facing setup</span>
+      <strong>Operator + Guest Screen Pairing</strong>
+      <small>Counter-linked profiles, themes, and welcome messages.</small>
     </div>
   </header>
 
   <section class="summary-grid display-summary-grid">
     <article class="summary-card">
-      <span>Screens</span>
+      <span class="summary-dot summary-dot-primary"></span>
+      <span>Profiles</span>
       <strong>{{ totalScreens }}</strong>
-      <small>Total dual display profiles</small>
+      <small>Total operator and customer display pairings</small>
     </article>
     <article class="summary-card">
-      <span>Active Screens</span>
+      <span class="summary-dot summary-dot-success"></span>
+      <span>Active</span>
       <strong>{{ activeScreens }}</strong>
-      <small>Profiles ready for checkout</small>
+      <small>Pairings ready to use on billing counters</small>
+    </article>
+    <article class="summary-card">
+      <span class="summary-dot summary-dot-warning"></span>
+      <span>Offline</span>
+      <strong>{{ inactiveScreens }}</strong>
+      <small>Profiles that need screen reconnection or relaunch</small>
+    </article>
+    <article class="summary-card">
+      <span class="summary-dot summary-dot-info"></span>
+      <span>Counters</span>
+      <strong>{{ uniqueCounters }}</strong>
+      <small>Billing points currently mapped to a secondary screen</small>
     </article>
   </section>
 
-  <section class="display-layout">
-    <p-card class="feature-card display-preview-card">
+  <section class="display-studio-layout">
+    <p-card class="feature-card display-preview-card display-preview-card-wide">
       <div class="section-heading">
         <div>
-          <h2>Live Preview</h2>
-          <p class="section-note">Preview how operator and guest panels can work together.</p>
+          <h2>Live Pairing Preview</h2>
+          <p class="section-note">Preview how the cashier screen and customer-facing display work together for the selected counter profile.</p>
         </div>
+        <span class="preview-selection-pill">{{ previewCounterName }}</span>
       </div>
 
       <section class="display-preview-surface">
-        <div class="display-preview-topline">
-          <span>{{ previewCounterName }}</span>
-          <strong>{{ previewThemeName }}</strong>
+        <div class="display-preview-ribbon">
+          <span class="preview-ribbon-dot"></span>
+          <span>{{ previewLayoutName }}</span>
         </div>
-        <div class="display-preview-copy">
-          <p class="display-preview-title">{{ previewScreenName }}</p>
-          <h3>{{ previewWelcomeText }}</h3>
-          <p>Operator and guest panels stay aligned during checkout.</p>
-        </div>
-        <div class="display-preview-total">
-          <span>Total</span>
-          <strong>Rs. 0.00</strong>
+
+        <div class="display-preview-shell">
+          <article class="preview-panel operator-panel">
+            <div class="preview-panel-topline">
+              <span>{{ previewOperatorLabel }}</span>
+              <strong>{{ previewCounterName }} Live</strong>
+            </div>
+
+            <div class="preview-panel-copy">
+              <small>Operator View</small>
+              <h3>{{ previewScreenName }}</h3>
+              <p>Cashier controls, line items, taxes, and payment flow stay here while the guest screen stays beautifully in sync.</p>
+            </div>
+
+            <div class="preview-mini-grid">
+              <div>
+                <span>Order</span>
+                <strong>#1024</strong>
+              </div>
+              <div>
+                <span>Status</span>
+                <strong>Billing</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="preview-panel guest-panel">
+            <div class="preview-panel-topline">
+              <span>{{ previewGuestLabel }}</span>
+              <strong>{{ previewThemeName }}</strong>
+            </div>
+
+            <div class="preview-panel-copy">
+              <small>Live Guest Message</small>
+              <h3>{{ previewWelcomeText }}</h3>
+              <p>Guests see totals, greetings, queue progress, and checkout prompts in the same branded style as the customer board output.</p>
+            </div>
+
+            <div class="guest-preview-flow">
+              <div class="guest-preview-chip-row">
+                <span class="guest-preview-chip">In Progress</span>
+                <span class="guest-preview-chip ready">Ready</span>
+              </div>
+
+              <div class="display-preview-meta">
+                <div>
+                  <span>Resolution</span>
+                  <strong>{{ previewResolution }}</strong>
+                </div>
+                <div>
+                  <span>Queue</span>
+                  <strong>{{ previewQueueHint }}</strong>
+                </div>
+              </div>
+
+              <div class="display-preview-total">
+                <span>Total</span>
+                <strong>Rs. 0.00</strong>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
     </p-card>
 
-    <p-card class="feature-card">
+    <div class="display-side-rail">
+      <p-card class="feature-card display-studio-card">
+        <div class="section-heading">
+          <div>
+            <h2>Pairing Studio</h2>
+            <p class="section-note">{{ pairingStudioSubtitle }}</p>
+          </div>
+        </div>
+
+        <div class="studio-action-row">
+          <button pButton type="button" icon="pi pi-plus" [label]="addNewButtonLabel" class="studio-primary-action"
+            (click)="openAddDialog()"></button>
+          <button pButton type="button" icon="pi pi-sliders-h" label="Filter Profiles" severity="secondary"
+            [outlined]="true" (click)="openFilterSidebar()"></button>
+        </div>
+
+        <div class="studio-highlights">
+          <article class="studio-highlight-card">
+            <span class="studio-highlight-kicker">Best for</span>
+            <strong>Dine-in counters</strong>
+            <p>Use mirrored checkout and queue-focused themes where guests stand in front of the cashier.</p>
+          </article>
+          <article class="studio-highlight-card">
+            <span class="studio-highlight-kicker">Guest copy</span>
+            <strong>Keep it friendly and short</strong>
+            <p>Show greetings, pickup hints, and payment confirmation messages that can be read from a distance.</p>
+          </article>
+        </div>
+      </p-card>
+
+      <p-card class="feature-card display-theme-card">
+        <div class="section-heading">
+          <div>
+            <h2>Theme Direction</h2>
+            <p class="section-note">Use these presets now as mock UI directions until live theme data arrives from API.</p>
+          </div>
+        </div>
+
+        <div class="theme-chip-grid">
+          <span class="theme-chip">Rose Glass</span>
+          <span class="theme-chip">Amber Express</span>
+          <span class="theme-chip">Evening Luxe</span>
+          <span class="theme-chip">Pastel Glow</span>
+        </div>
+      </p-card>
+    </div>
+  </section>
+
+  <section class="feature-card pairing-catalog-card">
+    <div class="pairing-catalog-head">
       <div class="section-heading">
         <div>
-          <h2>{{ tableTitle }}</h2>
-          <p class="section-note">Manage paired display names, counters, and checkout messages.</p>
+          <h2>Pairing Profiles</h2>
+          <p class="section-note">Select any profile to preview its guest-facing experience, then edit, activate, deactivate, or retire it from the same surface.</p>
         </div>
       </div>
+      <div class="pairing-catalog-search-pill">
+        <i class="pi pi-sparkles"></i>
+        <span>{{ tableRows.length }} visible profile{{ tableRows.length === 1 ? '' : 's' }}</span>
+      </div>
+    </div>
 
-      <app-shared-table
-        [showFilterButton]="showFilterButton"
-        (filterButtonClick)="openFilterSidebar()"
-        [caption]="tableCaption"
-        [emptyMessage]="'No ' + pageTitle.toLowerCase() + ' records available.'"
-        [columns]="tableColumns"
-        [value]="tableRows"
-        [showAddNewButton]="showAddNewButton"
-        [toolbarButtonLabel]="addNewButtonLabel"
-        [showRowActions]="showRowActions"
-        [rowActionHeader]="rowActionHeader"
-        (toolbarButtonClick)="openAddDialog()">
-        <ng-template #rowActions let-row>
-          <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+    <div class="pairing-card-grid">
+      @for (row of tableRows; track row.Id) {
+        <article class="pairing-profile-card" [class.pairing-profile-card-selected]="selectedPreviewId === row.Id"
+          [class.pairing-profile-card-inactive]="!row.IsActive" (click)="previewRow(row)">
+          <div class="pairing-profile-topline">
+            <span class="pairing-code-pill">{{ row.ScreenCode }}</span>
+            <span class="status-badge" [class.status-active]="row.Status === 'Active'"
+              [class.status-inactive]="row.Status === 'Inactive'">
+              {{ row.Status }}
+            </span>
+          </div>
 
-          <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
-            (click)="openRowActions(rowMenu, $event, row)"></button>
-        </ng-template>
+          <div class="pairing-profile-header">
+            <div>
+              <h3>{{ row.ScreenName }}</h3>
+              <p>{{ row.CounterName }} · {{ row.LayoutName }}</p>
+            </div>
 
-        <ng-template appTableCellTemplate="Status" let-row>
-          <span class="status-badge" [class.status-active]="row.Status === 'Active'"
-            [class.status-inactive]="row.Status === 'Inactive'">
-            {{ row.Status }}
-          </span>
-        </ng-template>
-      </app-shared-table>
-    </p-card>
+            <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
+            <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
+              (click)="openRowActions(rowMenu, $event, row); $event.stopPropagation()"></button>
+          </div>
+
+          <div class="pairing-profile-preview">
+            <div class="profile-mini-screen operator-mini">
+              <span class="mini-screen-label">{{ row.OperatorLabel }}</span>
+              <strong>Billing view</strong>
+            </div>
+            <div class="profile-link-line"></div>
+            <div class="profile-mini-screen guest-mini">
+              <span class="mini-screen-label">{{ row.GuestLabel }}</span>
+              <strong>{{ row.ThemeName }}</strong>
+            </div>
+          </div>
+
+          <div class="pairing-meta-grid">
+            <div>
+              <span>Resolution</span>
+              <strong>{{ row.Resolution }}</strong>
+            </div>
+            <div>
+              <span>Queue</span>
+              <strong>{{ row.QueueHint }}</strong>
+            </div>
+            <div>
+              <span>Sync</span>
+              <strong>{{ row.LastHeartbeat }}</strong>
+            </div>
+          </div>
+
+          <div class="pairing-message-card">
+            <span>Guest message</span>
+            <p>{{ row.WelcomeText }}</p>
+          </div>
+
+          <div class="pairing-card-actions">
+            <button pButton type="button" icon="pi pi-eye" label="Preview" severity="secondary" [outlined]="true"
+              (click)="previewRow(row); $event.stopPropagation()"></button>
+            <button pButton type="button" icon="pi pi-pencil" label="Edit"
+              (click)="editRow(row); $event.stopPropagation()"></button>
+          </div>
+        </article>
+      } @empty {
+        <div class="pairing-empty-state">
+          <div class="pairing-empty-halo"></div>
+          <strong>No pairing profiles found</strong>
+          <p>Try clearing the filter or create a new operator-to-guest display profile.</p>
+        </div>
+      }
+    </div>
   </section>
 </section>
 
@@ -119,27 +289,27 @@
   </ng-template>
 
   <section class="field-grid dialog-grid">
-    <app-text-field label="Display Code" inputId="dialog-screen-code" [showRequiredMark]="true"
+    <app-text-field label="Pairing Code" inputId="dialog-screen-code" [showRequiredMark]="true"
       placeholder="Enter screen code" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Screen code is required." [maxlength]="100" [model]="dialogScreenCode"
       (modelChange)="dialogScreenCode = $event"></app-text-field>
 
-    <app-text-field label="Display Name" inputId="dialog-screen-name" [showRequiredMark]="true"
+    <app-text-field label="Operator Screen Name" inputId="dialog-screen-name" [showRequiredMark]="true"
       placeholder="Enter screen name" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Screen name is required." [maxlength]="200" [model]="dialogScreenName"
       (modelChange)="dialogScreenName = $event"></app-text-field>
 
-    <app-text-field label="Counter" inputId="dialog-counter-name" [showRequiredMark]="true"
+    <app-text-field label="Billing Counter" inputId="dialog-counter-name" [showRequiredMark]="true"
       placeholder="Enter counter name" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Counter is required." [maxlength]="200" [model]="dialogCounterName"
       (modelChange)="dialogCounterName = $event"></app-text-field>
 
-    <app-text-field label="Theme" inputId="dialog-theme-name" [showRequiredMark]="true"
+    <app-text-field label="Customer Display Theme" inputId="dialog-theme-name" [showRequiredMark]="true"
       placeholder="Enter theme name" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Theme is required." [maxlength]="100" [model]="dialogThemeName"
       (modelChange)="dialogThemeName = $event"></app-text-field>
 
-    <app-text-field label="Display Message" inputId="dialog-welcome-text" [showRequiredMark]="true"
+    <app-text-field label="Customer Display Message" inputId="dialog-welcome-text" [showRequiredMark]="true"
       placeholder="Enter welcome text" [required]="true" [submitted]="dialogSubmitted"
       errorMessage="Display message is required." [maxlength]="250" [model]="dialogWelcomeText"
       (modelChange)="dialogWelcomeText = $event"></app-text-field>
@@ -151,4 +321,3 @@
       (primaryClick)="submitAddDialog()" (secondaryClick)="resetDialogForm()"></app-action-buttons>
   </div>
 </p-dialog>
-

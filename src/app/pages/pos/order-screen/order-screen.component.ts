@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TagModule } from 'primeng/tag';
 import { firstValueFrom } from 'rxjs';
 
@@ -49,17 +50,20 @@ const DEFAULT_CATEGORY_ICON = 'pi pi-shopping-bag';
 @Component({
   selector: 'app-order-screen',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TagModule, SelectFieldComponent],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TagModule, SelectFieldComponent, ProgressSpinnerModule],
   templateUrl: './order-screen.component.html',
   styleUrl: './order-screen.component.css'
 })
 export class OrderScreenComponent implements OnInit {
   readonly orderTypes = ['Dine In', 'Take Away', 'Delivery'];
   readonly servingTypes = ['Server Delivery', 'Self Service'];
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading order workspace.';
 
   userDetails: any = {};
   orgId = 0;
   branchId = 0;
+  pageLoading = false;
 
   organizationName = '';
   branchName = '';
@@ -134,21 +138,24 @@ export class OrderScreenComponent implements OnInit {
 
   ) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.orgId = Number(this.userDetails.OrgId || 0);
     this.branchId = this.userDetails.IsAdmin === true || Number(this.userDetails.RoleId || 0) === 1
       ? 0
       : Number(this.userDetails.BranchId || 0);
 
-    setTimeout(async () => {
+    try {
       await this.loadOrderContextNames();
       await this.loadOrderScreenData();
       await this.loadTaxPercentage();
       this.bindActiveHeldOrder();
       this.updateBillingSummary();
+    } finally {
+      this.pageLoading = false;
       this.changeDetector.detectChanges();
-    });
+    }
   }
 
   async loadOrderContextNames(): Promise<void> {

@@ -13,9 +13,6 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 
 import { AppToastService } from '../../../services/app-toast.service';
 
-
-import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
-
 type DualDisplayRow = {
   Id: number;
   ScreenCode: string;
@@ -26,16 +23,13 @@ type DualDisplayRow = {
   IsActive: boolean;
   Status: string;
   RowNumber: number;
+  OperatorLabel: string;
+  GuestLabel: string;
+  LayoutName: string;
+  Resolution: string;
+  LastHeartbeat: string;
+  QueueHint: string;
 };
-
-const DUAL_DISPLAY_COLUMNS: SharedTableColumn<DualDisplayRow>[] = [
-  { field: 'RowNumber', header: '#', sortable: true, width: '4rem' },
-  { field: 'ScreenCode', header: 'Screen Code', sortable: true, width: '10rem' },
-  { field: 'ScreenName', header: 'Screen Name', sortable: true, width: '14rem' },
-  { field: 'CounterName', header: 'Counter', sortable: true, width: '12rem' },
-  { field: 'ThemeName', header: 'Theme', sortable: true, width: '10rem' },
-  { field: 'Status', header: 'Status', sortable: true, width: '8rem' }
-];
 
 @Component({
   selector: 'app-dual-display',
@@ -48,9 +42,7 @@ const DUAL_DISPLAY_COLUMNS: SharedTableColumn<DualDisplayRow>[] = [
     DialogModule,
     TextFieldComponent,
     ActionButtonsComponent,
-    MenuModule,
-    SharedTableComponent,
-    SharedTableCellTemplateDirective
+    MenuModule
   ],
   providers: [ConfirmationService],
   templateUrl: './dual-display.component.html',
@@ -86,37 +78,110 @@ export class DualDisplayComponent {
 
   totalScreens = 0;
   activeScreens = 0;
+  inactiveScreens = 0;
+  uniqueCounters = 0;
   previewScreenName = 'Dual Display Screen';
   previewCounterName = 'Counter A';
   previewThemeName = 'Split View';
   previewWelcomeText = 'Operator and guest view are synchronized';
+  previewOperatorLabel = 'Operator Console';
+  previewGuestLabel = 'Customer Display';
+  previewLayoutName = 'Mirrored Checkout';
+  previewResolution = '1920 x 1080';
+  previewQueueHint = 'Ready to greet the next guest';
+  selectedPreviewId = 0;
 
   readonly pageEyebrow = 'Displays';
   readonly pageTitle = 'Dual Display';
-  readonly pageSubtitle = 'Configure paired operator and guest displays for smoother checkout.';
+  readonly pageSubtitle = 'Design the paired billing counter screen and customer-facing display experience used during checkout.';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
   readonly showSecondaryAction = true;
   dialogTitle = 'Create Dual Display';
-  dialogSubtitle = 'Capture the paired operator and guest display details for checkout.';
+  dialogSubtitle = 'Capture the paired operator and customer display details for checkout.';
   dialogPrimaryActionLabel = 'Save';
-  readonly tableTitle = 'Dual Display Profiles';
-  readonly tableCaption = 'Dual Display Profiles';
-  tableColumns = DUAL_DISPLAY_COLUMNS;
-  readonly showAddNewButton = true;
-  readonly addNewButtonLabel = 'Add Dual Display';
-  readonly showFilterButton = true;
-  readonly showRowActions = true;
-  readonly rowActionHeader = 'Actions';
+  readonly pairingStudioTitle = 'Pairing Studio';
+  readonly pairingStudioSubtitle = 'Mock profiles below show how each billing counter can be paired with its own guest-facing screen, theme, and greeting message.';
+  readonly addNewButtonLabel = 'Add Display Pairing';
 
   ngOnInit(): void {
     this.loadRows();
   }
 
   loadRows(): void {
-    this.allRows = [];
-    this.tableRows = [];
+    this.allRows = [
+      {
+        Id: 101,
+        ScreenCode: 'DD-CTR-01',
+        ScreenName: 'Front Counter Welcome Display',
+        CounterName: 'Counter A',
+        ThemeName: 'Rose Glass',
+        WelcomeText: 'Welcome back. Your live bill and queue updates appear here.',
+        IsActive: true,
+        Status: 'Active',
+        RowNumber: 1,
+        OperatorLabel: 'Cashier Tablet',
+        GuestLabel: '32" Guest Screen',
+        LayoutName: 'Mirrored Checkout',
+        Resolution: '1920 x 1080',
+        LastHeartbeat: 'Synced 8 sec ago',
+        QueueHint: 'Main dine-in queue'
+      },
+      {
+        Id: 102,
+        ScreenCode: 'DD-CTR-02',
+        ScreenName: 'Takeaway Pickup Display',
+        CounterName: 'Counter B',
+        ThemeName: 'Amber Express',
+        WelcomeText: 'Pickup guests can review order totals, offers, and ready-call status.',
+        IsActive: true,
+        Status: 'Active',
+        RowNumber: 2,
+        OperatorLabel: 'Billing Desktop',
+        GuestLabel: '24" Pickup Panel',
+        LayoutName: 'Split Queue View',
+        Resolution: '1920 x 1080',
+        LastHeartbeat: 'Synced 21 sec ago',
+        QueueHint: 'Takeaway and courier handoff'
+      },
+      {
+        Id: 103,
+        ScreenCode: 'DD-CTR-03',
+        ScreenName: 'Family Dining Queue Board',
+        CounterName: 'Counter C',
+        ThemeName: 'Evening Luxe',
+        WelcomeText: 'Guests see token progress, table updates, and payment confirmation here.',
+        IsActive: true,
+        Status: 'Active',
+        RowNumber: 3,
+        OperatorLabel: 'POS Touch Screen',
+        GuestLabel: '55" Queue Board',
+        LayoutName: 'Queue First Layout',
+        Resolution: '3840 x 2160',
+        LastHeartbeat: 'Synced 1 min ago',
+        QueueHint: 'Family dining queue'
+      },
+      {
+        Id: 104,
+        ScreenCode: 'DD-CTR-04',
+        ScreenName: 'Dessert Counter Preview',
+        CounterName: 'Dessert Bay',
+        ThemeName: 'Pastel Glow',
+        WelcomeText: 'Temporarily offline while the dessert counter screen is being repositioned.',
+        IsActive: false,
+        Status: 'Inactive',
+        RowNumber: 4,
+        OperatorLabel: 'Mini POS',
+        GuestLabel: '21" Counter Display',
+        LayoutName: 'Compact Counter View',
+        Resolution: '1366 x 768',
+        LastHeartbeat: 'Last seen 18 min ago',
+        QueueHint: 'Dessert handoff station'
+      }
+    ];
+
+    this.tableRows = [...this.allRows];
     this.updateSummary();
     this.updatePreview();
   }
@@ -156,7 +221,7 @@ export class DualDisplayComponent {
     this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Dual Display';
-    this.dialogSubtitle = 'Capture the paired operator and guest display details for checkout.';
+    this.dialogSubtitle = 'Create a new operator-and-guest screen pairing profile for a billing counter.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
   }
@@ -183,6 +248,11 @@ export class DualDisplayComponent {
           row.CounterName = this.dialogCounterName;
           row.ThemeName = this.dialogThemeName;
           row.WelcomeText = this.dialogWelcomeText;
+          row.OperatorLabel = this.buildOperatorLabel(this.dialogCounterName);
+          row.GuestLabel = this.buildGuestLabel(this.dialogThemeName);
+          row.LayoutName = this.buildLayoutName(this.dialogThemeName);
+          row.QueueHint = this.buildQueueHint(this.dialogCounterName);
+          row.LastHeartbeat = 'Updated just now';
         }
 
         return row;
@@ -199,7 +269,13 @@ export class DualDisplayComponent {
         WelcomeText: this.dialogWelcomeText,
         IsActive: true,
         Status: 'Active',
-        RowNumber: 0
+        RowNumber: 0,
+        OperatorLabel: this.buildOperatorLabel(this.dialogCounterName),
+        GuestLabel: this.buildGuestLabel(this.dialogThemeName),
+        LayoutName: this.buildLayoutName(this.dialogThemeName),
+        Resolution: '1920 x 1080',
+        LastHeartbeat: 'Created just now',
+        QueueHint: this.buildQueueHint(this.dialogCounterName)
       });
 
       this.toast.success('Saved', this.pageTitle + ' saved successfully.');
@@ -218,9 +294,11 @@ export class DualDisplayComponent {
     this.dialogThemeName = row.ThemeName;
     this.dialogWelcomeText = row.WelcomeText;
     this.dialogTitle = 'Edit Dual Display';
-    this.dialogSubtitle = 'Update the selected dual display setup.';
+    this.dialogSubtitle = 'Update the selected operator and customer display pairing.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
+    this.selectedPreviewId = row.Id;
+    this.updatePreview();
   }
 
   deleteRow(row: DualDisplayRow): void {
@@ -333,15 +411,26 @@ export class DualDisplayComponent {
   private updateSummary(): void {
     this.totalScreens = this.allRows.length;
     this.activeScreens = this.allRows.filter((row) => row.IsActive).length;
+    this.inactiveScreens = this.totalScreens - this.activeScreens;
+    this.uniqueCounters = new Set(this.allRows.map((row) => row.CounterName)).size;
   }
 
   private updatePreview(): void {
-    const activeRow = this.allRows.find((row) => row.IsActive) ?? null;
+    const activeRow =
+      this.allRows.find((row) => row.Id === this.selectedPreviewId) ??
+      this.allRows.find((row) => row.IsActive) ??
+      null;
 
     this.previewScreenName = activeRow?.ScreenName ?? 'Dual Display Screen';
     this.previewCounterName = activeRow?.CounterName ?? 'Counter A';
     this.previewThemeName = activeRow?.ThemeName ?? 'Split View';
     this.previewWelcomeText = activeRow?.WelcomeText ?? 'Operator and guest view are synchronized';
+    this.previewOperatorLabel = activeRow?.OperatorLabel ?? 'Operator Console';
+    this.previewGuestLabel = activeRow?.GuestLabel ?? 'Customer Display';
+    this.previewLayoutName = activeRow?.LayoutName ?? 'Mirrored Checkout';
+    this.previewResolution = activeRow?.Resolution ?? '1920 x 1080';
+    this.previewQueueHint = activeRow?.QueueHint ?? 'Ready to greet the next guest';
+    this.selectedPreviewId = activeRow?.Id ?? 0;
   }
 
   private isDialogFormValid(): boolean {
@@ -350,6 +439,7 @@ export class DualDisplayComponent {
 
   private getRowActionItems(row: DualDisplayRow): MenuItem[] {
     const items: MenuItem[] = [
+      { label: 'Preview', icon: 'pi pi-desktop', styleClass: 'row-action-preview', command: () => this.handleRowAction('preview') },
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
 
@@ -363,12 +453,19 @@ export class DualDisplayComponent {
     return items;
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate'): void {
+  previewRow(row: DualDisplayRow): void {
+    this.selectedPreviewId = row.Id;
+    this.updatePreview();
+  }
+
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'preview'): void {
     if (!this.selectedRow) {
       return;
     }
 
-    if (action === 'edit') {
+    if (action === 'preview') {
+      this.previewRow(this.selectedRow);
+    } else if (action === 'edit') {
       this.editRow(this.selectedRow);
     } else if (action === 'delete') {
       this.confirmDeleteRow(this.selectedRow);
@@ -377,6 +474,66 @@ export class DualDisplayComponent {
     } else {
       this.confirmDeactivateRow(this.selectedRow);
     }
+  }
+
+  private buildOperatorLabel(counterName: string): string {
+    const normalized = counterName.trim().toLowerCase();
+
+    if (normalized.includes('counter')) {
+      return 'Cashier Touch POS';
+    }
+
+    if (normalized.includes('dessert')) {
+      return 'Mini POS';
+    }
+
+    return 'Operator Console';
+  }
+
+  private buildGuestLabel(themeName: string): string {
+    const normalized = themeName.trim().toLowerCase();
+
+    if (normalized.includes('queue')) {
+      return '55" Queue Board';
+    }
+
+    if (normalized.includes('compact')) {
+      return '21" Counter Display';
+    }
+
+    return '32" Guest Screen';
+  }
+
+  private buildLayoutName(themeName: string): string {
+    const normalized = themeName.trim().toLowerCase();
+
+    if (normalized.includes('amber')) {
+      return 'Split Queue View';
+    }
+
+    if (normalized.includes('pastel')) {
+      return 'Compact Counter View';
+    }
+
+    return 'Mirrored Checkout';
+  }
+
+  private buildQueueHint(counterName: string): string {
+    const normalized = counterName.trim().toLowerCase();
+
+    if (normalized.includes('dessert')) {
+      return 'Dessert handoff station';
+    }
+
+    if (normalized.includes('b')) {
+      return 'Takeaway and courier handoff';
+    }
+
+    if (normalized.includes('c')) {
+      return 'Family dining queue';
+    }
+
+    return 'Main dine-in queue';
   }
 }
 

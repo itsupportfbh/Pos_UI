@@ -6,6 +6,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -43,6 +44,7 @@ const TENDER_COLUMNS: SharedTableColumn<TenderRow>[] = [
     ButtonModule,
     CardModule,
     DialogModule,
+    ProgressSpinnerModule,
     TextFieldComponent,
     ActionButtonsComponent,
     MenuModule,
@@ -71,6 +73,7 @@ export class TenderComponent {
   rowActionItems: MenuItem[] = [];
   allRows: TenderRow[] = [];
   tableRows: TenderRow[] = [];
+  pageLoading = false;
 
   filterSearchText = '';
   dialogId = 0;
@@ -81,6 +84,8 @@ export class TenderComponent {
   readonly pageEyebrow = 'Billing';
   readonly pageTitle = 'Tender';
   readonly pageSubtitle = 'Maintain tender options used at checkout and settlement counters.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading tender workspace.';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
@@ -98,7 +103,11 @@ export class TenderComponent {
   readonly rowActionHeader = 'Actions';
 
   ngOnInit(): void {
-    this.loadRows();
+    this.pageLoading = true;
+    setTimeout(() => {
+      this.loadRows();
+      this.pageLoading = false;
+    });
   }
   loadRows(): void {
     this.allRows = [];

@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { AutocompleteFieldComponent } from '../../../components/form/autocomplete-field.component';
 import { FieldOption, SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -93,6 +94,7 @@ type BillingCartItem = BillItem & {
     CommonModule,
     CardModule,
     ButtonModule,
+    ProgressSpinnerModule,
     TextFieldComponent,
     SelectFieldComponent,
     AutocompleteFieldComponent,
@@ -107,6 +109,7 @@ export class BillingComponent implements OnInit {
   private readonly displayMenuItemsService = inject(DisplayMenuItemsService);
   private readonly orderScreenService = inject(OrderScreenService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly gstPercent = 9;
   readonly serviceChargePercent = 10;
 
@@ -114,10 +117,13 @@ export class BillingComponent implements OnInit {
 
   readonly pageTitle = 'Billing';
   readonly pageSubtitle = 'Search order, verify items, collect payment, and close the bill.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading billing workspace.';
 
   userDetails: any = {};
   isLoadingOrders = false;
   isLoadingQuickItems = false;
+  pageLoading = false;
   isGeneratingBill = false;
   private quickBillEntityNo = 0;
   private readonly orderEntityNoCache = new Map<string, number>();
@@ -181,6 +187,7 @@ export class BillingComponent implements OnInit {
   BranchId = 0;
 
   ngOnInit(): void {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.applyUserScope();
 
@@ -188,12 +195,24 @@ export class BillingComponent implements OnInit {
       this.showShiftAssignment = true;
     }
 
-    void this.loadBillingOrders();
-    void this.loadQuickMenuItems(true);
+    void Promise.all([
+      this.runInitialLoadTask(this.loadBillingOrders()),
+      this.runInitialLoadTask(this.loadQuickMenuItems(true))
+    ]).finally(() => {
+      this.pageLoading = false;
+      this.cdr.detectChanges();
+    });
     this.filteredCartItems = [];
     this.updateDisplayState();
     this.updatePaymentState();
     this.updateBillingSummary();
+  }
+
+  private async runInitialLoadTask(task: Promise<void>, timeoutMs = 8000): Promise<void> {
+    await Promise.race([
+      task.catch(() => undefined),
+      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))
+    ]);
   }
 
   async loadBillingOrders(): Promise<void> {

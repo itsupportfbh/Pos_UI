@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, QueryList, inject, ViewChildren } from '@
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -62,7 +63,7 @@ const MENU_COLUMNS: SharedTableColumn<MenuRow>[] = [
 @Component({
   selector: 'app-menus',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, MultiSelectFieldComponent],
+  imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, ActionButtonsComponent, SelectFieldComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, MultiSelectFieldComponent, ProgressSpinnerModule],
   providers: [ConfirmationService],
   templateUrl: './menus.component.html',
   styleUrl: './menus.component.css'
@@ -89,6 +90,7 @@ export class MenusComponent {
   showAddDialog = false;
   showFilterSidebar = false;
   isLoading = false;
+  pageLoading = false;
   isEditMode = false;
   filterMenuName = '';
   dialogMenuCode = '';
@@ -128,6 +130,8 @@ export class MenusComponent {
   readonly pageEyebrow = 'Menu Management';
   readonly pageTitle = 'Menus';
   readonly pageSubtitle = 'Manage your menus here.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading menus workspace.';
   readonly filterTitle = `${'Menus'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'Menus'.toLowerCase()}.`;
   readonly fields: any[] = [{ key: 'MenuName', label: 'Menu Name', type: 'text', placeholder: 'Enter menu name' }];
@@ -153,6 +157,7 @@ export class MenusComponent {
   MenuEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
     await this.loadMenuRights();
@@ -284,13 +289,18 @@ export class MenusComponent {
         this.changeDetector.detectChanges();
       },
       error: () => {
+        this.isLoading = false;
+        this.pageLoading = false;
         this.toast.error(
           'Load Failed',
           'Unable to load menus. Please check API and try again.'
         );
+        this.changeDetector.detectChanges();
       },
       complete: () => {
         this.isLoading = false;
+        this.pageLoading = false;
+        this.changeDetector.detectChanges();
       }
     });
   }

@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { DateFieldComponent } from '../../../components/form/date-field.component';
@@ -26,6 +27,7 @@ import { OrganizationService } from '../../../services/organization.service';
 import { RoleService } from '../../../services/role.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
 import { UserBranchMapping, UserMaster, UserMasterService, UserRoleMapping } from '../../../services/usermaster.service';
+ 
 
 const cityOptions: any[] = [];
 const stateOptions: any[] = [];
@@ -57,7 +59,8 @@ const IS_ADMIN_OPTIONS = [
     DateFieldComponent,
     RadioFieldComponent,
     ActionButtonsComponent,
-    MenuModule
+    MenuModule,
+    ProgressSpinnerModule
   ],
   providers: [ConfirmationService],
   templateUrl: './users.component.html',
@@ -87,6 +90,7 @@ export class UsersComponent implements OnInit {
   showFilterSidebar = false;
   isEditMode = false;
   dialogSubmitted = false;
+  pageLoading = false;
   filterOrganizations: MultiSelectFieldValue = [];
   cardSearchText = '';
 
@@ -134,6 +138,8 @@ export class UsersComponent implements OnInit {
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Users';
   readonly pageSubtitle = 'Maintain user master details.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading users workspace.';
   readonly genderOptions = GENDER_OPTIONS;
   readonly isAdminOptions = IS_ADMIN_OPTIONS;
   readonly filterTitle = 'User Filters';
@@ -159,10 +165,16 @@ export class UsersComponent implements OnInit {
   };
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.showFilterButton = this.userDetails.RoleId === 1;
-    await this.loadUserRights();
-    this.loadUsers();
+    try {
+      await this.loadUserRights();
+      this.loadUsers();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadUserRights(): Promise<void> {
@@ -283,12 +295,15 @@ export class UsersComponent implements OnInit {
         this.masterRows = [...this.tableRows];
         this.allRows = [...this.masterRows];
         this.applyCardSearch();
+        this.pageLoading = false;
         this.changeDetector.detectChanges();
       },
       error: () => {
         this.allRows = [];
         this.tableRows = [];
+        this.pageLoading = false;
         this.toast.error('Load Failed', 'Unable to load users. Please check API and try again.');
+        this.changeDetector.detectChanges();
       }
     });
   }

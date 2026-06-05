@@ -1,71 +1,297 @@
 <section class="customer-display-page">
-  <header class="customer-display-topbar">
-    <div></div>
-    <div class="brand-mark">
-      @if (organizationLogoUrl) {
-        <img class="brand-logo" [src]="organizationLogoUrl" [alt]="organizationName" />
-      } @else {
-        <span class="brand-icon">{{ organizationName.charAt(0) }}{{ branchName.charAt(0) }}</span>
-      }
-      <span class="brand-text">
-        {{ organizationName }}
-        @if (branchName) {
-          <br />
-          {{ branchName }}
-        }
-      </span>
-    </div>
-    <time>{{ currentTime | date: 'hh:mm a' }}</time>
-  </header>
+  @if (!isTvMode) {
+    <header class="customer-control-bar">
+      <div class="customer-heading-block">
+        <div class="customer-heading-top">
+          <span class="customer-heading-icon">
+            <i class="pi pi-users"></i>
+          </span>
+          <span class="customer-kicker">Customer Display</span>
+        </div>
+        <h2>Live Order Board</h2>
+        <p>Show guests a clean progress board for active orders and ready-to-collect tickets.</p>
+      </div>
 
-  <section class="customer-order-board">
-    <article class="customer-order-column progress-column">
-      <header>
-        <h2>In Progress</h2>
-        <span>{{ inProgressOrderCount }}</span>
+      <div class="customer-control-metrics">
+        <article>
+          <span class="metric-dot progress-dot"></span>
+          <span>In Progress</span>
+          <strong>{{ inProgressOrderCount }}</strong>
+        </article>
+        <article>
+          <span class="metric-dot ready-dot"></span>
+          <span>Ready</span>
+          <strong>{{ readyOrderCount }}</strong>
+        </article>
+        <article>
+          <span class="metric-dot time-dot"></span>
+          <span>Now</span>
+          <strong>{{ currentTime | date: 'hh:mm a' }}</strong>
+        </article>
+      </div>
+
+      <div class="customer-control-actions">
+        <div class="tv-mode-launch">
+          <div class="tv-mode-launch-copy">
+            <span class="tv-mode-badge">Display Mode</span>
+            <small>Open the customer board in full-screen mode for TVs and large display panels.</small>
+          </div>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-desktop"
+            label="Launch TV Mode"
+            class="p-button-outlined"
+            (click)="openTvMode()"
+          ></button>
+        </div>
+      </div>
+    </header>
+
+    <section class="customer-order-board">
+      <article class="customer-order-column progress-column">
+        <header class="column-header">
+          <div>
+            <span class="column-kicker">Queue</span>
+            <h2>In Progress</h2>
+          </div>
+          <strong>{{ inProgressOrderCount }}</strong>
+        </header>
+
+        <section class="customer-order-list">
+          @for (order of inProgressOrders; track order.trackKey; let orderIndex = $index) {
+            <article class="customer-order-card">
+              <div class="customer-order-card-top">
+                <span class="order-type-icon" [ngClass]="getOrderToneClass(order, orderIndex)">
+                  <i [class]="getOrderIcon(order)"></i>
+                </span>
+                <span class="status-label" [ngClass]="getStatusClass(order)">{{ getOrderStatusDisplay(order) }}</span>
+              </div>
+
+              <div class="customer-order-title-row">
+                <h3>{{ getTableDisplay(order) }}</h3>
+                <span class="order-number">{{ getOrderNumberDisplay(order) }}</span>
+              </div>
+
+              <div class="customer-order-subline">
+                <span class="order-sub-chip">{{ getOrderTypeDisplay(order) }}</span>
+                <span class="order-sub-muted">Guest Queue</span>
+              </div>
+
+              <div class="customer-order-meta">
+                <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
+                <strong>{{ getCustomerName(order) }}</strong>
+              </div>
+
+              <div class="customer-order-footer">
+                <span>Started</span>
+                <strong>{{ getElapsedMinutes(order) || 'Now' }}</strong>
+              </div>
+            </article>
+          } @empty {
+            <div class="customer-order-empty">
+              <strong>No orders in progress</strong>
+              <span>Fresh orders from the counter will appear here as soon as they are sent.</span>
+            </div>
+          }
+        </section>
+      </article>
+
+      <article class="customer-order-column ready-column">
+        <header class="column-header ready-header">
+          <div>
+            <span class="column-kicker">Collection</span>
+            <h2>Ready for Collection</h2>
+          </div>
+          <strong>{{ readyOrderCount }}</strong>
+        </header>
+
+        <section class="customer-order-list">
+          @for (order of readyOrders; track order.trackKey; let orderIndex = $index) {
+            <article class="customer-order-card ready-card">
+              <div class="customer-order-card-top">
+                <span class="order-type-icon" [ngClass]="getOrderToneClass(order, orderIndex)">
+                  <i [class]="getOrderIcon(order)"></i>
+                </span>
+                <span class="status-label" [ngClass]="getStatusClass(order)">{{ getOrderStatusDisplay(order) }}</span>
+              </div>
+
+              <div class="customer-order-title-row">
+                <h3>{{ getTableDisplay(order) }}</h3>
+                <span class="order-number">{{ getOrderNumberDisplay(order) }}</span>
+              </div>
+
+              <div class="customer-order-subline">
+                <span class="order-sub-chip ready-chip">Ready Ticket</span>
+                <span class="order-sub-muted">Collection Queue</span>
+              </div>
+
+              <div class="customer-order-meta">
+                <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
+                <strong>{{ getCustomerName(order) }}</strong>
+              </div>
+
+              <div class="customer-order-footer">
+                <span>Collect Now</span>
+                <strong>{{ getElapsedMinutes(order) || 'Ready' }}</strong>
+              </div>
+            </article>
+          } @empty {
+            <div class="customer-order-empty">
+              <strong>No ready orders</strong>
+              <span>Completed tickets will move here when they are ready for guest collection.</span>
+            </div>
+          }
+        </section>
+      </article>
+    </section>
+  }
+
+  @if (isTvMode) {
+    <section class="customer-tv-mode">
+      <header class="customer-tv-header">
+        <div class="customer-tv-brand">
+          @if (organizationLogoUrl) {
+            <div class="brand-badge">
+              <img class="brand-logo" [src]="organizationLogoUrl" [alt]="organizationName" />
+            </div>
+          } @else {
+            <span class="brand-icon">{{ organizationName.charAt(0) }}{{ branchName.charAt(0) }}</span>
+          }
+
+          <div class="brand-copy">
+            <span class="brand-kicker">{{ branchName || 'Live order board' }}</span>
+            <h1>{{ organizationName }}</h1>
+            <p>Track your order progress in real time and watch for ready-to-collect calls.</p>
+          </div>
+        </div>
+
+        <div class="customer-display-summary tv-summary">
+          <article>
+            <span class="summary-dot progress-dot"></span>
+            <span>In Progress</span>
+            <strong>{{ inProgressOrderCount }}</strong>
+          </article>
+          <article>
+            <span class="summary-dot ready-dot"></span>
+            <span>Ready</span>
+            <strong>{{ readyOrderCount }}</strong>
+          </article>
+          <article class="time-card">
+            <span>Current Time</span>
+            <strong>{{ currentTime | date: 'hh:mm a' }}</strong>
+          </article>
+        </div>
+
+        <div class="customer-display-toolbar">
+          <button
+            pButton
+            type="button"
+            icon="pi pi-times"
+            label="Exit TV Mode"
+            class="p-button-outlined"
+            (click)="closeTvMode()"
+          ></button>
+        </div>
       </header>
 
-      <section class="customer-order-list">
-        @for (order of inProgressOrders; track order.trackKey; let orderIndex = $index) {
-          <div class="customer-order-row">
-            <span class="order-type-icon" [ngClass]="getOrderToneClass(order, orderIndex)">
-              <i [class]="getOrderIcon(order)"></i>
-            </span>
-            <strong>{{ getCustomerName(order) }}</strong>
-            <span class="table-label">{{ getTableDisplay(order) }}</span>
-            <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
-            <span class="status-label" [ngClass]="getStatusClass(order)">{{ getOrderStatusDisplay(order) }}</span>
-            <small>{{ getOrderNumberDisplay(order) }}</small>
-           
-          </div>
-        } @empty {
-          <div class="customer-order-empty">No orders in progress</div>
-        }
-      </section>
-    </article>
+      <section class="customer-order-board tv-board">
+        <article class="customer-order-column progress-column">
+          <header class="column-header">
+            <div>
+              <span class="column-kicker">Queue</span>
+              <h2>In Progress</h2>
+            </div>
+            <strong>{{ inProgressOrderCount }}</strong>
+          </header>
 
-    <article class="customer-order-column ready-column">
-      <header>
-        <h2>Ready for Collection!</h2>
-        <span>{{ readyOrderCount }}</span>
-      </header>
+          <section class="customer-order-list">
+            @for (order of inProgressOrders; track order.trackKey; let orderIndex = $index) {
+              <article class="customer-order-card">
+                <div class="customer-order-card-top">
+                  <span class="order-type-icon" [ngClass]="getOrderToneClass(order, orderIndex)">
+                    <i [class]="getOrderIcon(order)"></i>
+                  </span>
+                  <span class="status-label" [ngClass]="getStatusClass(order)">{{ getOrderStatusDisplay(order) }}</span>
+                </div>
 
-      <section class="customer-order-list">
-        @for (order of readyOrders; track order.trackKey; let orderIndex = $index) {
-          <div class="customer-order-row ready-row">
-            <span class="order-type-icon" [ngClass]="getOrderToneClass(order, orderIndex)">
-              <i [class]="getOrderIcon(order)"></i>
-            </span>
-            <strong>{{ getCustomerName(order) }}</strong>
-            <span class="table-label">{{ getTableDisplay(order) }}</span>
-            <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
-            <span class="status-label" [ngClass]="getStatusClass(order)">{{ getOrderStatusDisplay(order) }}</span>
-            <small>{{ getOrderNumberDisplay(order) }}</small>
-          </div>
-        } @empty {
-          <div class="customer-order-empty">No ready orders</div>
-        }
+                <div class="customer-order-title-row">
+                  <h3>{{ getTableDisplay(order) }}</h3>
+                  <span class="order-number">{{ getOrderNumberDisplay(order) }}</span>
+                </div>
+
+                <div class="customer-order-subline">
+                  <span class="order-sub-chip">{{ getOrderTypeDisplay(order) }}</span>
+                  <span class="order-sub-muted">Guest Queue</span>
+                </div>
+
+                <div class="customer-order-meta">
+                  <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
+                  <strong>{{ getCustomerName(order) }}</strong>
+                </div>
+
+                <div class="customer-order-footer">
+                  <span>Started</span>
+                  <strong>{{ getElapsedMinutes(order) || 'Now' }}</strong>
+                </div>
+              </article>
+            } @empty {
+              <div class="customer-order-empty">
+                <strong>No orders in progress</strong>
+                <span>New counter orders will appear here for guests to follow in real time.</span>
+              </div>
+            }
+          </section>
+        </article>
+
+        <article class="customer-order-column ready-column">
+          <header class="column-header ready-header">
+            <div>
+              <span class="column-kicker">Collection</span>
+              <h2>Ready for Collection</h2>
+            </div>
+            <strong>{{ readyOrderCount }}</strong>
+          </header>
+
+          <section class="customer-order-list">
+            @for (order of readyOrders; track order.trackKey; let orderIndex = $index) {
+              <article class="customer-order-card ready-card">
+                <div class="customer-order-card-top">
+                  <span class="order-type-icon" [ngClass]="getOrderToneClass(order, orderIndex)">
+                    <i [class]="getOrderIcon(order)"></i>
+                  </span>
+                  <span class="status-label" [ngClass]="getStatusClass(order)">{{ getOrderStatusDisplay(order) }}</span>
+                </div>
+
+                <div class="customer-order-title-row">
+                  <h3>{{ getTableDisplay(order) }}</h3>
+                  <span class="order-number">{{ getOrderNumberDisplay(order) }}</span>
+                </div>
+
+                <div class="customer-order-subline">
+                  <span class="order-sub-chip ready-chip">Ready Ticket</span>
+                  <span class="order-sub-muted">Collection Queue</span>
+                </div>
+
+                <div class="customer-order-meta">
+                  <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
+                  <strong>{{ getCustomerName(order) }}</strong>
+                </div>
+
+                <div class="customer-order-footer">
+                  <span>Collect Now</span>
+                  <strong>{{ getElapsedMinutes(order) || 'Ready' }}</strong>
+                </div>
+              </article>
+            } @empty {
+              <div class="customer-order-empty">
+                <strong>No ready orders</strong>
+                <span>Ready-to-collect tickets will appear here as soon as they are completed.</span>
+              </div>
+            }
+          </section>
+        </article>
       </section>
-    </article>
-  </section>
+    </section>
+  }
 </section>

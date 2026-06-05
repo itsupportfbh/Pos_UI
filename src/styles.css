@@ -1,6 +1,36 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap');
 @import 'primeicons/primeicons.css';
 
+.page-spinner-state {
+  display: grid;
+  place-items: center;
+  gap: 0.9rem;
+  min-height: 18rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.page-spinner-state .p-progress-spinner {
+  width: 3rem;
+  height: 3rem;
+}
+
+.page-spinner-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.page-spinner-copy strong {
+  color: #2f221b;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.page-spinner-copy span {
+  color: #8b654f;
+  font-size: 0.94rem;
+}
+
 :root {
   --app-shell-max-width: 1840px;
   --app-shell-top-offset: 5.9rem;

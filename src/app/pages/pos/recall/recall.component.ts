@@ -6,6 +6,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -50,6 +51,7 @@ const RECALL_COLUMNS: SharedTableColumn<RecallRow>[] = [
     ButtonModule,
     CardModule,
     DialogModule,
+    ProgressSpinnerModule,
     TextFieldComponent,
     ActionButtonsComponent,
     MenuModule,
@@ -78,6 +80,7 @@ export class RecallComponent {
   rowActionItems: MenuItem[] = [];
   allRows: RecallRow[] = [];
   tableRows: RecallRow[] = [];
+  pageLoading = false;
 
   filterSearchText = '';
 
@@ -100,6 +103,8 @@ export class RecallComponent {
   readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Recall Orders';
   readonly pageSubtitle = 'Bring recent tickets back on screen for follow-up, review, or repeat service.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading recall workspace.';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
@@ -117,7 +122,11 @@ export class RecallComponent {
   readonly rowActionHeader = 'Actions';
 
   ngOnInit(): void {
-    this.loadRows();
+    this.pageLoading = true;
+    setTimeout(() => {
+      this.loadRows();
+      this.pageLoading = false;
+    });
   }
 
   loadRows(): void {

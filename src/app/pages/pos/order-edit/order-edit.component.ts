@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -65,6 +66,7 @@ const ORDER_EDIT_COLUMNS: SharedTableColumn<OrderEditRow>[] = [
     ButtonModule,
     CardModule,
     DialogModule,
+    ProgressSpinnerModule,
     TextFieldComponent,
     ActionButtonsComponent,
     MenuModule,
@@ -97,6 +99,7 @@ export class OrderEditComponent {
   tableRows: OrderEditRow[] = [];
   userDetails: any = {};
   isLoading = false;
+  pageLoading = false;
 
   filterSearchText = '';
 
@@ -120,6 +123,8 @@ export class OrderEditComponent {
   readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Edit Orders';
   readonly pageSubtitle = 'Reopen active tickets and update items, guests, or notes without slowing service.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading edit orders workspace.';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
@@ -137,6 +142,7 @@ export class OrderEditComponent {
   readonly rowActionHeader = 'Actions';
   viewReady = false;
   ngOnInit(): void {
+    this.pageLoading = true;
 
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     setTimeout(() => {
@@ -170,6 +176,7 @@ export class OrderEditComponent {
       complete: () => {
          setTimeout(() => {
     this.isLoading = false;
+    this.pageLoading = false;
     this.cdr.detectChanges();
   });
       }

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ButtonModule } from 'primeng/button';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
@@ -31,13 +32,21 @@ const ORDER_STATUS = {
   selector: 'app-customer-display',
   standalone: true,
   imports: [
-    CommonModule
+    CommonModule,
+    ButtonModule
   ],
   templateUrl: './customer-display.component.html',
   styleUrl: './customer-display.component.css'
 })
 export class CustomerDisplayComponent implements OnInit, OnDestroy {
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly handleFullscreenChange = () => {
+    this.isFullscreenActive = Boolean(document.fullscreenElement);
+    if (!document.fullscreenElement && this.isTvMode) {
+      this.isTvMode = false;
+    }
+    this.cdr.detectChanges();
+  };
 
   userDetails: any = {};
   customerOrders: CustomerDisplayOrder[] = [];
@@ -52,7 +61,9 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   OrgId=0;
   BranchId=0;
   organizationLogoUrl = '';
-viewReady = false;
+  viewReady = false;
+  isTvMode = false;
+  isFullscreenActive = false;
   constructor(
     private readonly toast: AppToastService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
@@ -66,16 +77,21 @@ viewReady = false;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.organizationName = this.getStringValue(this.userDetails,  'OrgName') || 'Unity work POS';
     this.branchName = this.getStringValue(this.userDetails, 'BranchName') || '';
+    document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+    this.refreshTimer = setInterval(() => {
+      this.currentTime = new Date();
+      this.cdr.detectChanges();
+    }, 1000);
 
      this.OrgId = Number(this.userDetails.OrgId || 0);
      this.BranchId = Number(this.userDetails.BranchId || 0);
 
     setTimeout(() => {
-    this.viewReady = true;
-    this.loadDisplayHeaderDetails();
-    this.loadCustomerOrders();
-    this.cdr.detectChanges();
-  });
+      this.viewReady = true;
+      this.loadDisplayHeaderDetails();
+      this.loadCustomerOrders();
+      this.cdr.detectChanges();
+    });
     
     
   }
@@ -84,6 +100,17 @@ viewReady = false;
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
     }
+    document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+  }
+
+  async openTvMode(): Promise<void> {
+    this.isTvMode = true;
+    await this.enterFullscreen();
+  }
+
+  async closeTvMode(): Promise<void> {
+    this.isTvMode = false;
+    await this.exitFullscreen();
   }
 
   loadCustomerOrders(): void {
@@ -255,6 +282,28 @@ viewReady = false;
     }
 
     return ['tone-teal', 'tone-orange', 'tone-green', 'tone-red', 'tone-black'][index % 5];
+  }
+
+  private async enterFullscreen(): Promise<void> {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      this.isFullscreenActive = Boolean(document.fullscreenElement);
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async exitFullscreen(): Promise<void> {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch {
+      this.isFullscreenActive = Boolean(document.fullscreenElement);
+      this.cdr.detectChanges();
+    }
   }
 
   private isDineInOrderType(orderType: string): boolean {

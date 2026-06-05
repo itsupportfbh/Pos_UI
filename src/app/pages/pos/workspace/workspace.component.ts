@@ -81,7 +81,7 @@ export class WorkspaceComponent implements OnInit {
   activeMenuKey = 'dashboard';
 
   get isDisplayChromeHidden(): boolean {
-    return this.activeMenuKey === 'customer-display';
+    return false;
   }
 
   constructor(

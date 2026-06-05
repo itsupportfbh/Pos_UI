@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
@@ -29,6 +30,7 @@ import { Printer, PrinterService } from '../../../services/printer.service';
 import { TerminalService } from '../../../services/terminal.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
+ 
 type SelectOption = { label: string | number; value: string | number };
 
 type PrinterRow = Printer & {
@@ -67,7 +69,8 @@ const PRINTER_COLUMNS: SharedTableColumn<PrinterRow>[] = [
     ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
-    SharedTableCellTemplateDirective
+    SharedTableCellTemplateDirective,
+    ProgressSpinnerModule
   ],
   providers: [ConfirmationService],
   templateUrl: './printers.component.html',
@@ -95,6 +98,7 @@ export class PrintersComponent implements OnInit {
   showAddDialog = false;
   showFilterSidebar = false;
   isEditMode = false;
+  pageLoading = false;
   dialogSubmitted = false;
   dialogSaving = false;
   filterPrinterName = '';
@@ -130,6 +134,8 @@ export class PrintersComponent implements OnInit {
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Printers';
   readonly pageSubtitle = 'Maintain billing and kitchen printer mappings.';
+  readonly pageLoadingTitle = 'Unity work POS';
+  readonly pageLoadingSubtitle = 'Loading printers workspace.';
   readonly filterTitle = 'Printers Filters';
   readonly primaryActionLabel = 'Search Printers';
   readonly secondaryActionLabel = 'Clear Filters';
@@ -160,24 +166,29 @@ export class PrintersComponent implements OnInit {
   downloadLoadingLabel = 'Exporting...';
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.UserId = Number(this.userDetails.UserId || 0);
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.BranchId = Number(this.userDetails.BranchId || 0);
     this.isAdmin = this.userDetails.IsAdmin == true || this.userDetails.IsAdmin == 1;
     this.isBranchSelectionLocked = this.userDetails.RoleId !== 1 && this.userDetails.IsAdmin !== true && this.userDetails.IsAdmin !== 1;
-    await this.loadPrinterRights();
+    try {
+      await this.loadPrinterRights();
 
-    this.tableColumns = PRINTER_COLUMNS.map((x: any) => {
-      if (x.field === 'OrganizationName') {
-        x.hidden = this.userDetails.RoleId !== 1;
-      }
+      this.tableColumns = PRINTER_COLUMNS.map((x: any) => {
+        if (x.field === 'OrganizationName') {
+          x.hidden = this.userDetails.RoleId !== 1;
+        }
 
-      return x;
-    });
+        return x;
+      });
 
-
-    this.loadPrinters();
+      this.loadPrinters();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadPrinterRights(): Promise<void> {
@@ -416,16 +427,19 @@ private async loadLatestTableCode(orgId: number): Promise<void> {
             this.allRows = [...this.tableRows];
             void this.loadFilterCounters(this.toNumberArray(this.filterBranch));
             this.syncFilterTerminalOptions();
-          this.applyPrinterFilters();
-          this.changeDetector.detectChanges();
-        },
-        error: () => {
-          this.toast.error(
-            'Load Failed',
-            'Unable to load printers. Please check API and try again.'
-          );
-        }
-      });
+            this.applyPrinterFilters();
+            this.pageLoading = false;
+            this.changeDetector.detectChanges();
+          },
+          error: () => {
+            this.pageLoading = false;
+            this.changeDetector.detectChanges();
+            this.toast.error(
+              'Load Failed',
+              'Unable to load printers. Please check API and try again.'
+            );
+          }
+        });
   }
 
   async exportPrintersAsExcel(): Promise<void> {
