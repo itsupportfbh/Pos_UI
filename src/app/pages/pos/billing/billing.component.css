@@ -23,6 +23,8 @@
 .product-card p,
 .cart-item p,
 .bill-context span,
+.bill-flow-context span,
+.bill-flow-context p,
 .payment-balance span {
   color: var(--app-text-muted);
 }
@@ -173,7 +175,8 @@
 .product-card,
 .cart-item,
 .checkout-panel,
-.bill-context {
+.bill-context,
+.bill-flow-context {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
   background: var(--app-surface);
@@ -289,6 +292,51 @@
 .bill-context div {
   display: grid;
   gap: 0.12rem;
+}
+
+.bill-flow-context {
+  display: grid;
+  gap: 0.42rem;
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.85rem;
+  box-shadow: none;
+}
+
+.bill-flow-context p {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.flow-heading,
+.flow-grid {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.flow-heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.flow-heading strong {
+  color: rgb(var(--app-primary-rgb));
+}
+
+.flow-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.flow-grid div {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.flow-grid strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cart-section-title {

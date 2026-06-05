@@ -164,6 +164,31 @@
         </div>
       </div>
 
+      <div class="bill-flow-context">
+        <div class="flow-heading">
+          <span>Table Flow</span>
+          <strong>{{ currentOrder?.tableFlow?.mode || 'No Table Flow' }}</strong>
+        </div>
+
+        @if (currentOrder?.tableFlow?.mode === 'Move Table') {
+          <div class="flow-grid">
+            <div><span>Move No</span><strong>{{ currentOrder?.tableFlow?.reference }}</strong></div>
+            <div><span>From</span><strong>{{ currentOrder?.tableFlow?.fromTable }}</strong></div>
+            <div><span>To</span><strong>{{ currentOrder?.tableFlow?.toTable }}</strong></div>
+            <div><span>Reason</span><strong>{{ currentOrder?.tableFlow?.reason }}</strong></div>
+          </div>
+        } @else if (currentOrder?.tableFlow?.mode === 'Join Table') {
+          <div class="flow-grid">
+            <div><span>Join No</span><strong>{{ currentOrder?.tableFlow?.reference }}</strong></div>
+            <div><span>Primary</span><strong>{{ currentOrder?.tableFlow?.primaryTable }}</strong></div>
+            <div><span>Joined</span><strong>{{ currentOrder?.tableFlow?.joinedTables }}</strong></div>
+            <div><span>Notes</span><strong>{{ currentOrder?.tableFlow?.reason }}</strong></div>
+          </div>
+        } @else {
+          <p>No move table or join table flow linked to this bill.</p>
+        }
+      </div>
+
       <div class="cart-section-title compact">
         <span>Selected Items</span>
       </div>
@@ -222,6 +247,7 @@
         <div><span>Discount</span><strong>- {{ discountAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div><span>Service Charge</span><strong>{{ serviceChargeAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div><span>Tax</span><strong>{{ taxAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Tip</span><strong>{{ tipAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div class="grand-total"><span>Total</span><strong>{{ grandTotal | currency:'INR':'symbol':'1.2-2' }}</strong></div>
       </section>
     </p-card>
@@ -251,7 +277,7 @@
 
     <section class="checkout-grid">
       <div class="checkout-panel">
-        <h3>Customer & Discount</h3>
+        <h3>Customer, Discount & Tip</h3>
 
         <app-autocomplete-field
           label="Select Customer"
@@ -274,6 +300,13 @@
             [model]="discountInput"
             (modelChange)="onDiscountChange($event)" />
         </div>
+
+        <app-text-field
+          label="Tip"
+          inputId="tipAmount"
+          placeholder="Enter tip amount"
+          [model]="tipInput"
+          (modelChange)="onTipChange($event)" />
 
       </div>
 

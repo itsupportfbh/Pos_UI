@@ -30,6 +30,7 @@ type BillOrder = {
   id: number;
   orderNo: string;
   table: string;
+  tableFlow: BillTableFlow;
   customer: string;
   phone: string;
   serviceMode: ServiceMode;
@@ -42,8 +43,19 @@ type BillOrder = {
   discountAmount: number;
   serviceChargeAmount: number;
   taxAmount: number;
+  tipAmount: number;
   totalAmount: number;
   rawOrder?: any;
+};
+
+type BillTableFlow = {
+  mode: 'Move Table' | 'Join Table' | 'No Table Flow';
+  reference: string;
+  fromTable: string;
+  toTable: string;
+  primaryTable: string;
+  joinedTables: string;
+  reason: string;
 };
 
 type BillItem = {
@@ -134,6 +146,7 @@ export class BillingComponent implements OnInit {
   selectedPaymentMode: string | null = 'Cash';
   discountType: 'Amount' | 'Percent' = 'Amount';
   discountInput = '0';
+  tipInput = '0';
   receivedAmountInput = '0';
   paymentReference = '';
   approvalCode = '';
@@ -161,6 +174,7 @@ export class BillingComponent implements OnInit {
   discountAmount = 0;
   serviceChargeAmount = 0;
   taxAmount = 0;
+  tipAmount = 0;
   grandTotal = 0;
   balanceAmount = 0;
   OrgId = 0;
@@ -187,9 +201,7 @@ export class BillingComponent implements OnInit {
     this.applyUserScope();
 
     try {
-      const response: any = await firstValueFrom(this.displayMenuItemsService.getAll(this.OrgId, this.BranchId));
-      const orderRows = this.getResponseList(response)
-        .filter((order: any) => this.isBillingOrder(order));
+      const orderRows = await this.loadBillingOrderRows();
       const orderDetails = await Promise.all(orderRows.map((order: any) => this.loadBillingOrderDetail(order)));
       const orders = orderDetails
         .filter((order: any) => this.isBillingOrder(order))
@@ -209,6 +221,20 @@ export class BillingComponent implements OnInit {
     } finally {
       this.isLoadingOrders = false;
     }
+  }
+
+  private async loadBillingOrderRows(): Promise<any[]> {
+    const scopedResponse: any = await firstValueFrom(this.displayMenuItemsService.getAll(this.OrgId, this.BranchId));
+    const scopedOrders = this.getResponseList(scopedResponse)
+      .filter((order: any) => this.isBillingOrder(order));
+
+    if (scopedOrders.length || !this.BranchId) {
+      return scopedOrders;
+    }
+
+    const orgResponse: any = await firstValueFrom(this.displayMenuItemsService.getAll(this.OrgId, 0));
+    return this.getResponseList(orgResponse)
+      .filter((order: any) => this.isBillingOrder(order));
   }
 
   async loadQuickMenuItems(loadTopSix = false): Promise<void> {
@@ -393,6 +419,11 @@ export class BillingComponent implements OnInit {
     this.updateBillingSummary();
   }
 
+  onTipChange(value: string): void {
+    this.tipInput = value;
+    this.updateBillingSummary();
+  }
+
   onReceivedAmountChange(value: string): void {
     this.receivedAmountInput = value;
     this.updateBillingSummary();
@@ -422,6 +453,7 @@ export class BillingComponent implements OnInit {
     this.selectedPaymentMode = 'Cash';
     this.discountType = 'Amount';
     this.discountInput = '0';
+    this.tipInput = '0';
     this.receivedAmountInput = '0';
     this.paymentReference = '';
     this.approvalCode = '';
@@ -543,6 +575,7 @@ export class BillingComponent implements OnInit {
     this.subtotal = this.currentOrder?.subtotalAmount || cartSubtotal;
 
     const discountValue = Number(this.discountInput || 0);
+    const tipValue = Number(this.tipInput || 0);
 
     if (!Number.isFinite(discountValue) || discountValue <= 0) {
       this.discountAmount = 0;
@@ -567,7 +600,8 @@ export class BillingComponent implements OnInit {
       return sum + (((itemTaxable + itemServiceCharge) * this.gstPercent) / 100);
     }, 0);
 
-    this.grandTotal = taxableAmount + this.taxAmount;
+    this.tipAmount = Number.isFinite(tipValue) && tipValue > 0 ? tipValue : 0;
+    this.grandTotal = taxableAmount + this.taxAmount + this.tipAmount;
 
     this.updatePaymentBalance();
 
@@ -633,6 +667,7 @@ export class BillingComponent implements OnInit {
     this.notes = order.notes;
     this.discountType = 'Amount';
     this.discountInput = String(order.discountAmount || 0);
+    this.tipInput = String(order.tipAmount || 0);
     this.cartItems = order.items.map((item) => ({
       ...item,
       sourceType: 'order'
@@ -710,6 +745,10 @@ export class BillingComponent implements OnInit {
       serviceChargeAmount: this.serviceChargeAmount,
       TaxAmount: this.taxAmount,
       taxAmount: this.taxAmount,
+      TipAmount: this.tipAmount,
+      tipAmount: this.tipAmount,
+      GratuityAmount: this.tipAmount,
+      gratuityAmount: this.tipAmount,
       TotalAmount: this.grandTotal,
       totalAmount: this.grandTotal,
       CustomerName: this.selectedCustomer || order.customer || 'Walk-in Customer',
@@ -826,6 +865,10 @@ export class BillingComponent implements OnInit {
       taxAmount: this.taxAmount,
       DiscountAmount: this.discountAmount,
       discountAmount: this.discountAmount,
+      TipAmount: this.tipAmount,
+      tipAmount: this.tipAmount,
+      GratuityAmount: this.tipAmount,
+      gratuityAmount: this.tipAmount,
       TotalAmount: this.grandTotal,
       totalAmount: this.grandTotal,
       CustomerName: this.selectedCustomer || 'Walk-in Customer',
@@ -932,14 +975,16 @@ export class BillingComponent implements OnInit {
     const discountAmount = this.getNumberValue(order, 'DiscountAmount', 'discountAmount', 'Discount', 'discount');
     const serviceChargeAmount = this.getNumberValue(order, 'ServiceChargeAmount', 'serviceChargeAmount', 'ServiceCharge', 'serviceCharge');
     const taxAmount = this.getNumberValue(order, 'TaxAmount', 'taxAmount', 'Tax', 'tax');
+    const tipAmount = this.getNumberValue(order, 'TipAmount', 'tipAmount', 'GratuityAmount', 'gratuityAmount', 'Tip', 'tip');
     const totalAmount = this.getNumberValue(order, 'TotalAmount', 'totalAmount', 'GrandTotal', 'grandTotal', 'Total', 'total')
-      || Math.max(subtotalAmount - discountAmount + serviceChargeAmount + taxAmount, 0);
+      || Math.max(subtotalAmount - discountAmount + serviceChargeAmount + taxAmount + tipAmount, 0);
 
     return {
       id: this.getNumberValue(order, 'OrderId', 'Orderid', 'orderId', 'orderid', 'Id', 'id'),
       orderNo: this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo') || '-',
       table: this.getStringValue(order, 'TableName', 'tableName', 'TableCode', 'tableCode', 'TableNo', 'tableNo', 'Table', 'table')
         || this.getTableFallback(tableId),
+      tableFlow: this.mapTableFlow(order),
       customer: this.getStringValue(order, 'CustomerName', 'customerName', 'GuestName', 'guestName') || 'Walk-in Customer',
       phone: this.getStringValue(order, 'ContactNumber', 'contactNumber', 'CustomerPhone', 'customerPhone', 'Phone', 'phone'),
       serviceMode,
@@ -952,8 +997,53 @@ export class BillingComponent implements OnInit {
       discountAmount,
       serviceChargeAmount,
       taxAmount,
+      tipAmount,
       totalAmount,
       rawOrder: order
+    };
+  }
+
+  private mapTableFlow(order: any): BillTableFlow {
+    const moveNo = this.getStringValue(order, 'MoveNo', 'moveno', 'MoveNumber', 'moveNumber');
+    const joinNo = this.getStringValue(order, 'JoinNo', 'joinno', 'JoinNumber', 'joinNumber');
+    const fromTable = this.getTableNameValue(order, 'FromTableName', 'fromTableName', 'FromTable', 'fromTable', 'SourceTableName', 'sourceTableName');
+    const toTable = this.getTableNameValue(order, 'ToTableName', 'toTableName', 'ToTable', 'toTable', 'TargetTableName', 'targetTableName');
+    const primaryTable = this.getTableNameValue(order, 'PrimaryTableName', 'primaryTableName', 'PrimaryTable', 'primaryTable');
+    const joinedTables = this.getJoinedTablesLabel(order);
+    const reason = this.getStringValue(order, 'MoveReason', 'movereason', 'Reason', 'reason');
+
+    if (moveNo || fromTable || toTable || reason) {
+      return {
+        mode: 'Move Table',
+        reference: moveNo || '-',
+        fromTable: fromTable || '-',
+        toTable: toTable || this.getStringValue(order, 'TableName', 'tableName') || '-',
+        primaryTable: '-',
+        joinedTables: '-',
+        reason: reason || '-'
+      };
+    }
+
+    if (joinNo || primaryTable || joinedTables) {
+      return {
+        mode: 'Join Table',
+        reference: joinNo || '-',
+        fromTable: '-',
+        toTable: '-',
+        primaryTable: primaryTable || this.getStringValue(order, 'TableName', 'tableName') || '-',
+        joinedTables: joinedTables || '-',
+        reason: this.getStringValue(order, 'Notes', 'notes') || '-'
+      };
+    }
+
+    return {
+      mode: 'No Table Flow',
+      reference: '-',
+      fromTable: '-',
+      toTable: '-',
+      primaryTable: '-',
+      joinedTables: '-',
+      reason: '-'
     };
   }
 
@@ -1017,8 +1107,12 @@ export class BillingComponent implements OnInit {
       return order;
     }
 
-    const response: any = await firstValueFrom(this.displayMenuItemsService.getById(orderId));
-    return this.mergeOrderWithDetails(order, response);
+    try {
+      const response: any = await firstValueFrom(this.displayMenuItemsService.getById(orderId));
+      return this.mergeOrderWithDetails(order, response);
+    } catch {
+      return order;
+    }
   }
 
   private mergeOrderWithDetails(listOrder: any, response: any): any {
@@ -1278,6 +1372,36 @@ export class BillingComponent implements OnInit {
 
   private getTableFallback(tableId: number): string {
     return tableId > 0 ? `Table ${tableId}` : 'Counter';
+  }
+
+  private getTableNameValue(source: any, ...keys: string[]): string {
+    const value = this.getRawValue(source, ...keys);
+
+    if (value === undefined || value === null || value === '') {
+      return '';
+    }
+
+    if (typeof value === 'number' || /^\d+$/.test(String(value).trim())) {
+      return this.getTableFallback(Number(value));
+    }
+
+    return String(value).trim();
+  }
+
+  private getJoinedTablesLabel(order: any): string {
+    const rawTables = this.getRawValue(order, 'JoinedTables', 'joinedTables', 'TableIds', 'tableIds', 'MergedTables', 'mergedTables');
+
+    if (!Array.isArray(rawTables)) {
+      return this.getStringValue(order, 'JoinedTableNames', 'joinedTableNames', 'SecondaryTables', 'secondaryTables');
+    }
+
+    return rawTables
+      .map((table: any) =>
+        this.getStringValue(table, 'TableName', 'tableName', 'Name', 'name')
+        || this.getTableNameValue(table, 'TableId', 'tableId', 'Id', 'id')
+      )
+      .filter(Boolean)
+      .join(', ');
   }
 
   private getStatusCode(status: unknown): number {
