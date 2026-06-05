@@ -506,8 +506,8 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
       items: this.getOrderItems(rawOrder).map((item: any) => ({
         ...item,
        
-        Itemstatus: this.isLockedKitchenStatus(this.getRawValue(item, 'Itemstatus', 'itemstatus', 'ItemStatus', 'itemStatus'))
-          ? this.getStatusCode(this.getRawValue(item, 'Itemstatus', 'itemstatus', 'ItemStatus', 'itemStatus'))
+        Itemstatus: this.isLockedKitchenStatus(this.getRawValue(item, 'Itemstatus'))
+          ? this.getStatusCode(this.getRawValue(item, 'Itemstatus', ))
           : statusCode,
         
         UpdatedBy: userId || this.getNumberValue(item,  'UpdatedBy') || 0,
