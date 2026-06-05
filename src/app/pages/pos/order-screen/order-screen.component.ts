@@ -548,7 +548,7 @@ export class OrderScreenComponent implements OnInit {
 
   isCartItemEditable(item: any): boolean {
     const itemStatus = this.getItemStatusCode(item);
-    return itemStatus === null || itemStatus === ORDER_STATUS.InKitchen;
+    return itemStatus === null || itemStatus === ORDER_STATUS.Hold || itemStatus === ORDER_STATUS.InKitchen;
   }
 
   applyMenuSelection(): void {
@@ -963,9 +963,10 @@ export class OrderScreenComponent implements OnInit {
   private buildKitchenOrderItem(item: any, orderId: number, userId: number, timestamp: string, status: OrderStatusCode): any {
     const quantity = Number(item.quantity || 0);
     const unitPrice = Number(item.price || 0);
-    const itemStatus = this.canMergeCartItemQuantity(item)
-      ? status
-      : this.getItemStatusCode(item) ?? status;
+    const currentItemStatus = this.getItemStatusCode(item);
+    const itemStatus = currentItemStatus === ORDER_STATUS.Served || currentItemStatus === ORDER_STATUS.Cancelled
+      ? currentItemStatus
+      : status;
     const isCombo = item.itemType === 'Combo';
     const comboMenuItemId = isCombo
       ? this.getNumberValue(item, 'ComboMenuItemId', 'comboMenuItemId', 'Combomenuitemid', 'combomenuitemid', 'ComboMenuId', 'comboMenuId', 'id', 'Id')
