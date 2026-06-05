@@ -90,6 +90,7 @@ export class DualDisplayComponent {
   previewResolution = '1920 x 1080';
   previewQueueHint = 'Ready to greet the next guest';
   selectedPreviewId = 0;
+  isPreviewSpotlightActive = false;
 
   readonly pageEyebrow = 'Displays';
   readonly pageTitle = 'Dual Display';
@@ -456,6 +457,19 @@ export class DualDisplayComponent {
   previewRow(row: DualDisplayRow): void {
     this.selectedPreviewId = row.Id;
     this.updatePreview();
+    this.isPreviewSpotlightActive = true;
+    this.toast.info('Preview Updated', `${row.ScreenName} is now shown in the live preview.`);
+
+    setTimeout(() => {
+      document.querySelector('.display-preview-card')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    });
+
+    setTimeout(() => {
+      this.isPreviewSpotlightActive = false;
+    }, 1400);
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'preview'): void {

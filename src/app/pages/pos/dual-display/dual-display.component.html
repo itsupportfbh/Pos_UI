@@ -3,11 +3,17 @@
 
   <header class="page-header hero-panel dual-display-hero">
     <div class="dual-display-hero-copy">
-      <p class="eyebrow">{{ pageEyebrow }}</p>
+      <div class="dual-display-hero-top">
+        <span class="dual-display-hero-icon">
+          <i class="pi pi-desktop"></i>
+        </span>
+        <p class="eyebrow">{{ pageEyebrow }}</p>
+      </div>
       <h1>{{ pageTitle }}</h1>
       <p class="page-subtitle">{{ pageSubtitle }}</p>
     </div>
     <div class="dual-display-hero-badge">
+      <span class="dual-display-badge-dot"></span>
       <span class="hero-badge-kicker">Customer-facing setup</span>
       <strong>Operator + Guest Screen Pairing</strong>
       <small>Counter-linked profiles, themes, and welcome messages.</small>
@@ -42,7 +48,8 @@
   </section>
 
   <section class="display-studio-layout">
-    <p-card class="feature-card display-preview-card display-preview-card-wide">
+    <p-card class="feature-card display-preview-card display-preview-card-wide"
+      [class.display-preview-card-spotlight]="isPreviewSpotlightActive">
       <div class="section-heading">
         <div>
           <h2>Live Pairing Preview</h2>
@@ -70,14 +77,26 @@
               <p>Cashier controls, line items, taxes, and payment flow stay here while the guest screen stays beautifully in sync.</p>
             </div>
 
-            <div class="preview-mini-grid">
-              <div>
-                <span>Order</span>
-                <strong>#1024</strong>
+            <div class="preview-operator-workspace">
+              <div class="preview-operator-strip">
+                <span class="preview-operator-chip">Billing</span>
+                <span class="preview-operator-chip muted">Counter Sync Live</span>
               </div>
-              <div>
-                <span>Status</span>
-                <strong>Billing</strong>
+
+              <div class="preview-mini-grid">
+                <div>
+                  <span>Order</span>
+                  <strong>#1024</strong>
+                </div>
+                <div>
+                  <span>Status</span>
+                  <strong>Billing</strong>
+                </div>
+              </div>
+
+              <div class="preview-operator-lineitem">
+                <span>Guest bill</span>
+                <strong>Table 04 · 3 Items</strong>
               </div>
             </div>
           </article>
@@ -94,26 +113,54 @@
               <p>Guests see totals, greetings, queue progress, and checkout prompts in the same branded style as the customer board output.</p>
             </div>
 
-            <div class="guest-preview-flow">
-              <div class="guest-preview-chip-row">
-                <span class="guest-preview-chip">In Progress</span>
-                <span class="guest-preview-chip ready">Ready</span>
-              </div>
-
-              <div class="display-preview-meta">
-                <div>
-                  <span>Resolution</span>
-                  <strong>{{ previewResolution }}</strong>
+            <div class="preview-guest-board">
+              <div class="preview-guest-summary">
+                <div class="preview-guest-summary-card">
+                  <span>In Progress</span>
+                  <strong>02</strong>
                 </div>
-                <div>
-                  <span>Queue</span>
-                  <strong>{{ previewQueueHint }}</strong>
+                <div class="preview-guest-summary-card ready">
+                  <span>Ready</span>
+                  <strong>01</strong>
                 </div>
               </div>
 
-              <div class="display-preview-total">
-                <span>Total</span>
-                <strong>Rs. 0.00</strong>
+              <div class="preview-guest-ticket-row">
+                <article class="preview-guest-ticket">
+                  <div class="preview-ticket-topline">
+                    <span class="preview-ticket-chip">In Progress</span>
+                    <span class="preview-ticket-number">ORD1024</span>
+                  </div>
+                  <strong>Table 04</strong>
+                  <small>{{ previewQueueHint }}</small>
+                </article>
+
+                <article class="preview-guest-ticket ready-ticket">
+                  <div class="preview-ticket-topline">
+                    <span class="preview-ticket-chip ready">Ready</span>
+                    <span class="preview-ticket-number">ORD1018</span>
+                  </div>
+                  <strong>Pickup Token 18</strong>
+                  <small>Ready for collection</small>
+                </article>
+              </div>
+
+              <div class="guest-preview-flow">
+                <div class="display-preview-meta">
+                  <div>
+                    <span>Resolution</span>
+                    <strong>{{ previewResolution }}</strong>
+                  </div>
+                  <div>
+                    <span>Queue</span>
+                    <strong>{{ previewQueueHint }}</strong>
+                  </div>
+                </div>
+
+                <div class="display-preview-total">
+                  <span>Total</span>
+                  <strong>Rs. 0.00</strong>
+                </div>
               </div>
             </div>
           </article>
@@ -198,7 +245,7 @@
           <div class="pairing-profile-header">
             <div>
               <h3>{{ row.ScreenName }}</h3>
-              <p>{{ row.CounterName }} · {{ row.LayoutName }}</p>
+              <p>{{ row.CounterName }} &middot; {{ row.LayoutName }}</p>
             </div>
 
             <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
@@ -279,8 +326,8 @@
   </p-card>
 </p-dialog>
 
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '56rem', maxWidth: '96vw' }" [draggable]="false"
-  [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
+<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '62rem', maxWidth: '96vw' }" [draggable]="false"
+  [resizable]="false" [closable]="true" (onHide)="closeAddDialog()" styleClass="dual-display-dialog">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
       <h3>{{ dialogTitle }}</h3>
@@ -288,31 +335,71 @@
     </div>
   </ng-template>
 
-  <section class="field-grid dialog-grid">
-    <app-text-field label="Pairing Code" inputId="dialog-screen-code" [showRequiredMark]="true"
-      placeholder="Enter screen code" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Screen code is required." [maxlength]="100" [model]="dialogScreenCode"
-      (modelChange)="dialogScreenCode = $event"></app-text-field>
+  <section class="dialog-shell">
+    <section class="field-grid dialog-grid">
+      <app-text-field label="Pairing Code" inputId="dialog-screen-code" [showRequiredMark]="true"
+        placeholder="Enter screen code" [required]="true" [submitted]="dialogSubmitted"
+        errorMessage="Screen code is required." [maxlength]="100" [model]="dialogScreenCode"
+        (modelChange)="dialogScreenCode = $event"></app-text-field>
 
-    <app-text-field label="Operator Screen Name" inputId="dialog-screen-name" [showRequiredMark]="true"
-      placeholder="Enter screen name" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Screen name is required." [maxlength]="200" [model]="dialogScreenName"
-      (modelChange)="dialogScreenName = $event"></app-text-field>
+      <app-text-field label="Operator Screen Name" inputId="dialog-screen-name" [showRequiredMark]="true"
+        placeholder="Enter screen name" [required]="true" [submitted]="dialogSubmitted"
+        errorMessage="Screen name is required." [maxlength]="200" [model]="dialogScreenName"
+        (modelChange)="dialogScreenName = $event"></app-text-field>
 
-    <app-text-field label="Billing Counter" inputId="dialog-counter-name" [showRequiredMark]="true"
-      placeholder="Enter counter name" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Counter is required." [maxlength]="200" [model]="dialogCounterName"
-      (modelChange)="dialogCounterName = $event"></app-text-field>
+      <app-text-field label="Billing Counter" inputId="dialog-counter-name" [showRequiredMark]="true"
+        placeholder="Enter counter name" [required]="true" [submitted]="dialogSubmitted"
+        errorMessage="Counter is required." [maxlength]="200" [model]="dialogCounterName"
+        (modelChange)="dialogCounterName = $event"></app-text-field>
 
-    <app-text-field label="Customer Display Theme" inputId="dialog-theme-name" [showRequiredMark]="true"
-      placeholder="Enter theme name" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Theme is required." [maxlength]="100" [model]="dialogThemeName"
-      (modelChange)="dialogThemeName = $event"></app-text-field>
+      <app-text-field label="Customer Display Theme" inputId="dialog-theme-name" [showRequiredMark]="true"
+        placeholder="Enter theme name" [required]="true" [submitted]="dialogSubmitted"
+        errorMessage="Theme is required." [maxlength]="100" [model]="dialogThemeName"
+        (modelChange)="dialogThemeName = $event"></app-text-field>
 
-    <app-text-field label="Customer Display Message" inputId="dialog-welcome-text" [showRequiredMark]="true"
-      placeholder="Enter welcome text" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Display message is required." [maxlength]="250" [model]="dialogWelcomeText"
-      (modelChange)="dialogWelcomeText = $event"></app-text-field>
+      <app-text-field label="Customer Display Message" inputId="dialog-welcome-text" [showRequiredMark]="true"
+        placeholder="Enter welcome text" [required]="true" [submitted]="dialogSubmitted"
+        errorMessage="Display message is required." [maxlength]="250" [model]="dialogWelcomeText"
+        (modelChange)="dialogWelcomeText = $event"></app-text-field>
+    </section>
+
+    <aside class="dialog-preview-pane">
+      <div class="dialog-preview-card">
+        <div class="dialog-preview-kicker">
+          <span class="preview-ribbon-dot"></span>
+          <span>Mock Output Preview</span>
+        </div>
+
+        <div class="dialog-preview-screens">
+          <article class="dialog-mini-screen dialog-mini-operator">
+            <span>Operator</span>
+            <strong>{{ dialogScreenName || 'Operator screen name' }}</strong>
+            <small>{{ dialogCounterName || 'Billing counter' }}</small>
+          </article>
+
+          <article class="dialog-mini-screen dialog-mini-guest">
+            <span>Guest Display</span>
+            <strong>{{ dialogThemeName || 'Theme style' }}</strong>
+            <small>{{ dialogWelcomeText || 'Friendly welcome copy appears here.' }}</small>
+          </article>
+        </div>
+
+        <div class="dialog-guidance-list">
+          <div>
+            <strong>Short code</strong>
+            <p>Use a clear code that matches the counter or screen asset tag.</p>
+          </div>
+          <div>
+            <strong>Theme naming</strong>
+            <p>Keep theme names simple so the team can identify the display mood fast.</p>
+          </div>
+          <div>
+            <strong>Guest message</strong>
+            <p>Write copy that can be read quickly from a standing distance.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
   </section>
 
   <div class="dialog-actions">
