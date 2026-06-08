@@ -72,6 +72,17 @@
   --app-table-page-active-text: var(--app-primary-strong);
   --app-dialog-bg: #ffffff;
   --app-dialog-header-bg: #ffffff;
+  --app-control-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--app-surface-strong));
+  --app-control-bg-soft: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.05), rgba(255, 255, 255, 0.94));
+  --app-control-bg-panel: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(var(--app-primary-rgb), 0.025));
+  --app-control-bg-active: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.1), rgba(255, 255, 255, 0.95));
+  --app-dialog-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.99), var(--app-dialog-bg));
+  --app-dialog-header-surface: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.06), rgba(255, 255, 255, 0.96));
+  --app-shell-widget-bg: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.06), rgba(255, 255, 255, 0.92));
+  --app-shell-widget-bg-soft: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.04), rgba(255, 255, 255, 0.92));
+  --app-shell-widget-bg-panel: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(var(--app-primary-rgb), 0.02));
+  --app-shell-widget-bg-mobile: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(var(--app-primary-rgb), 0.04));
+  --app-elevated-shadow: 0 12px 28px rgba(var(--app-primary-rgb), 0.06);
 }
 
 html[data-theme='dark'] {
@@ -98,6 +109,17 @@ html[data-theme='dark'] {
   --app-table-page-active-text: #edf4ef;
   --app-dialog-bg: #17211d;
   --app-dialog-header-bg: #17211d;
+  --app-control-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
+  --app-control-bg-soft: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.18), rgba(255, 255, 255, 0.03));
+  --app-control-bg-panel: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(var(--app-primary-rgb), 0.08));
+  --app-control-bg-active: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.24), rgba(255, 255, 255, 0.045));
+  --app-dialog-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.03), var(--app-dialog-bg));
+  --app-dialog-header-surface: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.16), rgba(255, 255, 255, 0.03));
+  --app-shell-widget-bg: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.16), rgba(255, 255, 255, 0.03));
+  --app-shell-widget-bg-soft: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.12), rgba(255, 255, 255, 0.025));
+  --app-shell-widget-bg-panel: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(var(--app-primary-rgb), 0.06));
+  --app-shell-widget-bg-mobile: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(var(--app-primary-rgb), 0.08));
+  --app-elevated-shadow: 0 16px 34px rgba(0, 0, 0, 0.26);
 }
 
 html,
@@ -225,7 +247,7 @@ a {
 .p-inputnumber-input {
   border-radius: var(--app-radius-sm);
   border: 1px solid var(--app-border-strong);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--app-surface-strong));
+  background: var(--app-control-bg);
   color: var(--app-text);
   box-shadow: 0 6px 14px rgba(var(--app-primary-rgb), 0.04);
 }
@@ -252,7 +274,7 @@ a {
 .p-textarea {
   border-radius: var(--app-radius-sm) !important;
   border: 1px solid var(--app-border-strong) !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--app-surface-strong)) !important;
+  background: var(--app-control-bg) !important;
   color: var(--app-text) !important;
   box-shadow: 0 6px 14px rgba(var(--app-primary-rgb), 0.04);
 }
@@ -273,7 +295,7 @@ a {
 .p-dialog {
   border: 1px solid rgba(var(--app-primary-rgb), 0.12) !important;
   border-radius: 1.15rem !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), var(--app-dialog-bg)) !important;
+  background: var(--app-dialog-surface) !important;
   box-shadow: 0 24px 54px rgba(65, 35, 20, 0.18) !important;
   overflow: hidden !important;
 }
@@ -281,7 +303,7 @@ a {
 .p-dialog .p-dialog-header {
   padding: 0.8rem 0.95rem 0.65rem !important;
   border-bottom: 1px solid rgba(var(--app-primary-rgb), 0.08) !important;
-  background: linear-gradient(135deg, rgba(var(--app-primary-rgb), 0.06), rgba(255, 255, 255, 0.96)) !important;
+  background: var(--app-dialog-header-surface) !important;
 }
 
 .p-dialog .p-dialog-content {
@@ -308,7 +330,7 @@ a {
 .p-menu {
   border: 1px solid rgba(var(--app-primary-rgb), 0.12) !important;
   border-radius: 0.95rem !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), var(--app-surface-strong)) !important;
+  background: var(--app-control-bg) !important;
   box-shadow: 0 18px 36px rgba(65, 35, 20, 0.14) !important;
   padding: 0.3rem !important;
 }
@@ -318,7 +340,7 @@ a {
 }
 
 .p-menu .p-menu-item-link:hover {
-  background: var(--app-primary-soft) !important;
+  background: var(--app-control-bg-active) !important;
 }
 
 .p-inputtext,
@@ -485,12 +507,12 @@ label {
   padding: 0.75rem 0.9rem;
   border: 1px solid var(--app-border);
   border-radius: 0.8rem;
-  background: linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.05), rgba(255, 255, 255, 0.94));
+  background: var(--app-control-bg-panel);
   box-shadow: 0 6px 14px rgba(24, 55, 37, 0.045);
 }
 
 html[data-theme='dark'] .ops-context-card {
-  background: linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.12), rgba(23, 33, 29, 0.96));
+  background: var(--app-control-bg-panel);
 }
 
 .ops-context-card span {
@@ -540,7 +562,7 @@ html[data-theme='dark'] .ops-context-card {
   padding: 0.75rem 0.85rem;
   border: 1px solid var(--app-border);
   border-radius: 0.8rem;
-  background: linear-gradient(180deg, var(--app-surface), var(--app-surface-strong));
+  background: var(--app-control-bg);
 }
 
 .filter-panel-header {
@@ -803,8 +825,24 @@ html[data-theme='dark'] .ops-context-card {
 }
 
 .p-select-overlay .p-select-option.p-select-option-selected {
-  background: var(--app-primary-soft) !important;
+  background: var(--app-control-bg-active) !important;
   color: var(--app-primary-strong) !important;
+}
+
+.p-select-overlay .p-select-option:hover,
+.p-multiselect-overlay .p-multiselect-option:hover {
+  background: var(--app-control-bg-soft) !important;
+}
+
+.p-select-label,
+.p-multiselect-label,
+.p-select-dropdown,
+.p-multiselect-dropdown,
+.p-datepicker-input,
+.p-inputtext::placeholder,
+.p-password-input::placeholder,
+.p-inputnumber-input::placeholder {
+  color: var(--app-text-muted);
 }
 
 .row-action-menu {
@@ -859,7 +897,7 @@ html[data-theme='dark'] .ops-context-card {
   padding-right: max(0.75rem, calc((100vw - var(--app-shell-max-width)) / 2)) !important;
   padding-bottom: var(--app-shell-bottom-offset) !important;
   padding-left: max(0.75rem, calc((100vw - var(--app-shell-max-width)) / 2)) !important;
-  background: rgba(16, 32, 24, 0.18) !important;
+  background: rgba(16, 32, 24, 0.22) !important;
 }
 
 .filter-drawer-dialog.p-dialog {

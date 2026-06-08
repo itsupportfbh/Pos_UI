@@ -4,6 +4,7 @@ import { ButtonModule } from 'primeng/button';
 import { catchError, firstValueFrom, forkJoin, map, of } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
+import { AppShellService } from '../../../services/app-shell.service';
 import { DiningTableService } from '../../../services/diningtable.service';
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
 
@@ -65,6 +66,7 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   private readonly handleFullscreenChange = () => {
     if (!document.fullscreenElement && this.isTvMode) {
       this.isTvMode = false;
+      this.appShellService.setChromeHidden(false);
       this.cdr.detectChanges();
     }
   };
@@ -82,12 +84,14 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   currentTime = new Date();
   constructor(
     private readonly toast: AppToastService,
+    private readonly appShellService: AppShellService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
     private readonly diningTableService: DiningTableService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
+    this.appShellService.setChromeHidden(false);
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     document.addEventListener('fullscreenchange', this.handleFullscreenChange);
     this.refreshTimer = setInterval(() => {
@@ -106,6 +110,7 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.appShellService.setChromeHidden(false);
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
     }
@@ -203,11 +208,13 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   openTvMode(): void {
     this.selectedKitchenOrderId = null;
     this.isTvMode = true;
+    this.appShellService.setChromeHidden(true);
     void this.enterFullscreen();
   }
 
   closeTvMode(): void {
     this.isTvMode = false;
+    this.appShellService.setChromeHidden(false);
     void this.exitFullscreen();
   }
 

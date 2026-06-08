@@ -7,7 +7,7 @@
 .field-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #333;
+  color: var(--app-text);
 }
 
 .required-mark {
@@ -20,9 +20,9 @@
   align-items: center;
   justify-content: center;
   min-height: 150px;
-  border: 2px dashed #ddd;
+  border: 2px dashed var(--app-border);
   border-radius: 0.5rem;
-  background-color: #f9f9f9;
+  background-color: var(--app-empty-bg);
   transition: all 0.3s ease;
 }
 
@@ -46,14 +46,14 @@
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
-  color: #666;
+  color: var(--app-text-muted);
   text-align: center;
   padding: 1rem;
 }
 
 .upload-label i {
   font-size: 2rem;
-  color: #999;
+  color: var(--app-text-muted);
 }
 
 .upload-label span {
@@ -98,12 +98,12 @@
 }
 
 :host ::ng-deep .p-button.clear-btn {
-  background-color: #fff;
-  border: 1px solid #ddd;
+  background-color: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
   color: #e74c3c;
   padding: 0.25rem;
 }
 
 :host ::ng-deep .p-button.clear-btn:hover {
-  background-color: #ffe6e6;
+  background-color: rgba(231, 76, 60, 0.12);
 }

@@ -11,7 +11,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
-import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
+import { FieldOption, SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
@@ -71,7 +71,7 @@ const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
   templateUrl: './roles.component.html',
   styleUrl: './roles.component.css'
 })
-export class RolesComponent {
+export class RolesComponent implements OnInit {
   
   
   private readonly toast = inject(AppToastService);
@@ -115,7 +115,7 @@ export class RolesComponent {
   tableRows: RoleRow[] = [];
   permissionPages: PagePermission[] = [];
   organizationOptions: any[] = [];
-  permissionScopeOptions = [
+  permissionScopeOptions: FieldOption[] = [
     { label: 'Front Office', value: 1 },
     { label: 'Back Office', value: 2 },
     { label: 'Both', value: 3 }

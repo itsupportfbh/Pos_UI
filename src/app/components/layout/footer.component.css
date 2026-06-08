@@ -6,14 +6,14 @@
   padding: 0.62rem 0.85rem;
   border: 1px solid rgba(var(--app-primary-rgb), 0.1);
   border-radius: 1.1rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(var(--app-primary-rgb), 0.03));
+  background: var(--app-shell-widget-bg-soft);
   backdrop-filter: blur(14px);
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   color: var(--app-text-muted);
   font-size: 0.8rem;
-  box-shadow: 0 12px 30px rgba(var(--app-primary-rgb), 0.06);
+  box-shadow: var(--app-elevated-shadow);
 }
 
 .footer-brand {
