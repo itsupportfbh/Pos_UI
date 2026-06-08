@@ -112,10 +112,16 @@
   width: min(20rem, 100%);
 }
 
+.permissions-scope {
+  width: min(14rem, 100%);
+}
+
+:host ::ng-deep .permissions-scope .field-block,
 :host ::ng-deep .permissions-search .field-block {
   gap: 0;
 }
 
+:host ::ng-deep .permissions-scope .field-label,
 :host ::ng-deep .permissions-search .field-label {
   position: absolute;
   width: 1px;
@@ -300,13 +306,18 @@
     order: 1;
   }
 
-  .permissions-search {
+  .permissions-scope {
     order: 2;
     width: 100%;
   }
 
-  :host ::ng-deep .permissions-header-actions app-action-buttons {
+  .permissions-search {
     order: 3;
+    width: 100%;
+  }
+
+  :host ::ng-deep .permissions-header-actions app-action-buttons {
+    order: 4;
     width: 100%;
   }
 
@@ -368,7 +379,6 @@
   }
 
   .permission-module {
-    grid-column: 1 / -1;
     font-size: 0.98rem;
   }
 
