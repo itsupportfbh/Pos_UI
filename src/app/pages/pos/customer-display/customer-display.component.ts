@@ -7,6 +7,7 @@ import { AppToastService } from '../../../services/app-toast.service';
 import { AppShellService } from '../../../services/app-shell.service';
 import { BranchService } from '../../../services/branch.service';
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
+import { DualDisplayService } from '../../../services/dual-display.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
@@ -62,7 +63,13 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   branchName = '';
   OrgId=0;
   BranchId=0;
+  CounterId = 0;
   organizationLogoUrl = '';
+  profileTitle = 'Customer Order Board';
+  profileWelcomeMessage = '';
+  profileIdleMessage = '';
+  profileCode = '';
+  counterName = '';
   viewReady = false;
   isTvMode = false;
   isFullscreenActive = false;
@@ -70,6 +77,7 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     private readonly toast: AppToastService,
     private readonly appShellService: AppShellService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
+    private readonly dualDisplayService: DualDisplayService,
     private readonly organizationService: OrganizationService,
     private readonly branchService: BranchService,
     private readonly runtimeConfig: RuntimeConfigService,
@@ -89,10 +97,12 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
 
      this.OrgId = Number(this.userDetails.OrgId || 0);
      this.BranchId = Number(this.userDetails.BranchId || 0);
+     this.CounterId = this.getSessionCounterId();
 
     setTimeout(() => {
       this.viewReady = true;
       this.loadDisplayHeaderDetails();
+      this.loadActiveProfile();
       this.loadCustomerOrders();
       this.cdr.detectChanges();
     });
@@ -186,6 +196,31 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
 
   getOrderTypeDisplay(order: CustomerDisplayOrder): string {
     return String(order.orderType || '').trim() || 'Order';
+  }
+
+  getCustomerDisplayMessage(): string {
+    if (String(this.profileWelcomeMessage || '').trim()) {
+      return this.profileWelcomeMessage;
+    }
+
+    const organizationName = String(this.organizationName || '').trim() || 'Unity work POS';
+    return `${organizationName} live progress screen for active orders and ready-to-collect calls.`;
+  }
+
+  getQueueEmptyMessage(): string {
+    if (String(this.profileIdleMessage || '').trim()) {
+      return this.profileIdleMessage;
+    }
+
+    return 'Fresh orders from the counter will appear here as soon as they are sent.';
+  }
+
+  getReadyEmptyMessage(): string {
+    if (String(this.profileIdleMessage || '').trim()) {
+      return this.profileIdleMessage;
+    }
+
+    return 'Completed tickets will move here when they are ready for guest collection.';
   }
 
   getOrderStatusDisplay(order: CustomerDisplayOrder): string {
@@ -353,6 +388,36 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
         this.getStringValue(configRow, 'Image', 'image') ||
         this.getStringValue(organizationRow, 'Image', 'image', 'Logo', 'logo')
       );
+      this.cdr.detectChanges();
+    });
+  }
+
+  private loadActiveProfile(): void {
+    if (!this.OrgId) {
+      return;
+    }
+
+    this.dualDisplayService.getActiveProfile(this.OrgId, this.BranchId, this.CounterId).subscribe({
+      next: (response: any) => {
+        const profile = this.getResponseObject(response);
+
+        if (!profile || !Object.keys(profile).length) {
+          return;
+        }
+
+        this.profileCode = this.getStringValue(profile, 'ProfileCode');
+        this.profileTitle = this.getStringValue(profile, 'HeaderTitle', 'ProfileName') || 'Customer Order Board';
+        this.profileWelcomeMessage = this.getStringValue(profile, 'WelcomeMessage');
+        this.profileIdleMessage = this.getStringValue(profile, 'IdleMessage');
+        this.counterName = this.getStringValue(profile, 'CounterName');
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.profileTitle = 'Customer Order Board';
+        this.profileWelcomeMessage = '';
+        this.profileIdleMessage = '';
+        this.counterName = '';
+      }
     });
   }
 
@@ -436,6 +501,21 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
 
   private getSessionBranchId(): number {
     return this.getNumberValue(this.userDetails, 'BranchId');
+  }
+
+  private getSessionCounterId(): number {
+    const userCounterId = this.getNumberValue(this.userDetails, 'CounterId', 'counterId', 'counterid');
+
+    if (userCounterId > 0) {
+      return userCounterId;
+    }
+
+    try {
+      const shiftAssignment = JSON.parse(localStorage.getItem('currentShiftAssignment') ?? '{}');
+      return this.getNumberValue(shiftAssignment, 'CounterId', 'counterId', 'counterid');
+    } catch {
+      return 0;
+    }
   }
 
   private getResponseObject(response: any): any {

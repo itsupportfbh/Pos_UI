@@ -243,10 +243,10 @@
           </div>
 
           <div class="pairing-profile-header">
-            <div>
-              <h3>{{ row.ScreenName }}</h3>
-              <p>{{ row.CounterName }} &middot; {{ row.LayoutName }}</p>
-            </div>
+          <div>
+            <h3>{{ row.ScreenName }}</h3>
+            <p>{{ row.BranchName }} &middot; {{ row.CounterName }} &middot; {{ row.LayoutName }}</p>
+          </div>
 
             <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
             <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
@@ -347,10 +347,15 @@
         errorMessage="Screen name is required." [maxlength]="200" [model]="dialogScreenName"
         (modelChange)="dialogScreenName = $event"></app-text-field>
 
-      <app-text-field label="Billing Counter" inputId="dialog-counter-name" [showRequiredMark]="true"
-        placeholder="Enter counter name" [required]="true" [submitted]="dialogSubmitted"
-        errorMessage="Counter is required." [maxlength]="200" [model]="dialogCounterName"
-        (modelChange)="dialogCounterName = $event"></app-text-field>
+      <app-select-field label="Branch" inputId="dialog-branch-id" placeholder="Choose branch"
+        [options]="branchOptions" [required]="true" [submitted]="dialogSubmitted"
+        errorMessage="Branch is required." [showRequiredMark]="true" [model]="dialogBranchId"
+        (modelChange)="onDialogBranchChange($event)"></app-select-field>
+
+      <app-select-field label="Billing Counter" inputId="dialog-counter-id" placeholder="Choose counter"
+        [options]="counterOptions" [required]="true" [submitted]="dialogSubmitted"
+        errorMessage="Counter is required." [showRequiredMark]="true" [model]="dialogCounterId"
+        (modelChange)="dialogCounterId = $event"></app-select-field>
 
       <app-text-field label="Customer Display Theme" inputId="dialog-theme-name" [showRequiredMark]="true"
         placeholder="Enter theme name" [required]="true" [submitted]="dialogSubmitted"
@@ -374,7 +379,7 @@
           <article class="dialog-mini-screen dialog-mini-operator">
             <span>Operator</span>
             <strong>{{ dialogScreenName || 'Operator screen name' }}</strong>
-            <small>{{ dialogCounterName || 'Billing counter' }}</small>
+            <small>{{ getSelectedBranchLabel() }} / {{ getSelectedCounterLabel() }}</small>
           </article>
 
           <article class="dialog-mini-screen dialog-mini-guest">

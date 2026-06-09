@@ -8,8 +8,8 @@
           </span>
           <span class="customer-kicker">Customer Display</span>
         </div>
-        <h2>Live Order Board</h2>
-        <p>Show guests a clean progress board for active orders and ready-to-collect tickets.</p>
+        <h2>{{ profileTitle }}</h2>
+        <p>{{ getCustomerDisplayMessage() }}</p>
       </div>
 
       <div class="customer-control-metrics">
@@ -93,7 +93,7 @@
           } @empty {
             <div class="customer-order-empty">
               <strong>No orders in progress</strong>
-              <span>Fresh orders from the counter will appear here as soon as they are sent.</span>
+              <span>{{ getQueueEmptyMessage() }}</span>
             </div>
           }
         </section>
@@ -146,7 +146,7 @@
           } @empty {
             <div class="customer-order-empty">
               <strong>No ready orders</strong>
-              <span>Completed tickets will move here when they are ready for guest collection.</span>
+              <span>{{ getReadyEmptyMessage() }}</span>
             </div>
           }
         </section>
@@ -159,9 +159,11 @@
       <header class="customer-tv-header">
         <div class="customer-tv-brand">
           <div class="brand-copy">
-            <span class="brand-kicker">{{ branchName || 'Customer display' }}</span>
-            <h1>Customer Order Board</h1>
-            <p>{{ organizationName }} live progress screen for active orders and ready-to-collect calls.</p>
+            <span class="brand-kicker">
+              {{ branchName || 'Customer display' }}@if (counterName) { &middot; {{ counterName }} }
+            </span>
+            <h1>{{ profileTitle }}</h1>
+            <p>{{ getCustomerDisplayMessage() }}</p>
           </div>
         </div>
 
@@ -239,7 +241,7 @@
             } @empty {
               <div class="customer-order-empty">
                 <strong>No orders in progress</strong>
-                <span>New counter orders will appear here for guests to follow in real time.</span>
+                <span>{{ getQueueEmptyMessage() }}</span>
               </div>
             }
           </section>
@@ -292,7 +294,7 @@
             } @empty {
               <div class="customer-order-empty">
                 <strong>No ready orders</strong>
-                <span>Ready-to-collect tickets will appear here as soon as they are completed.</span>
+                <span>{{ getReadyEmptyMessage() }}</span>
               </div>
             }
           </section>

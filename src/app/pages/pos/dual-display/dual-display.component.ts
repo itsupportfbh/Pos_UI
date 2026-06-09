@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -8,15 +9,20 @@ import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
+import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
-
-
 import { AppToastService } from '../../../services/app-toast.service';
+import { CommonService } from '../../../services/common.service';
+import { CounterService } from '../../../services/counter.service';
+import { DualDisplay, DualDisplayService } from '../../../services/dual-display.service';
 
 type DualDisplayRow = {
   Id: number;
   ScreenCode: string;
   ScreenName: string;
+  BranchId: number;
+  BranchName: string;
+  CounterId: number;
   CounterName: string;
   ThemeName: string;
   WelcomeText: string;
@@ -41,6 +47,7 @@ type DualDisplayRow = {
     CardModule,
     DialogModule,
     TextFieldComponent,
+    SelectFieldComponent,
     ActionButtonsComponent,
     MenuModule
   ],
@@ -49,32 +56,40 @@ type DualDisplayRow = {
   styleUrl: './dual-display.component.css'
 })
 export class DualDisplayComponent {
-  
-  
   private readonly toast = inject(AppToastService);
-  
-  
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly dualDisplayService = inject(DualDisplayService);
+  private readonly commonService = inject(CommonService);
+  private readonly counterService = inject(CounterService);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
+  @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
 
   showAddDialog = false;
   showFilterSidebar = false;
   isEditMode = false;
   dialogSubmitted = false;
+  dialogSaving = false;
+  pageLoading = false;
   selectedRow: DualDisplayRow | null = null;
   rowActionItems: MenuItem[] = [];
   allRows: DualDisplayRow[] = [];
   tableRows: DualDisplayRow[] = [];
+  userDetails: any = {};
 
   filterSearchText = '';
 
   dialogId = 0;
   dialogScreenCode = '';
   dialogScreenName = '';
-  dialogCounterName = '';
+  dialogBranchId: SelectFieldValue = null;
+  dialogCounterId: SelectFieldValue = null;
   dialogThemeName = '';
   dialogWelcomeText = '';
+
+  branchOptions: any[] = [];
+  counterOptions: any[] = [];
 
   totalScreens = 0;
   activeScreens = 0;
@@ -103,88 +118,40 @@ export class DualDisplayComponent {
   dialogSubtitle = 'Capture the paired operator and customer display details for checkout.';
   dialogPrimaryActionLabel = 'Save';
   readonly pairingStudioTitle = 'Pairing Studio';
-  readonly pairingStudioSubtitle = 'Mock profiles below show how each billing counter can be paired with its own guest-facing screen, theme, and greeting message.';
+  readonly pairingStudioSubtitle = 'Use live branch and counter mapping now, then we can connect the customer-facing runtime behavior on top of it.';
   readonly addNewButtonLabel = 'Add Display Pairing';
 
-  ngOnInit(): void {
-    this.loadRows();
+  async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
+    this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+
+    try {
+      await this.loadBranchOptions();
+      await this.loadRows();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
-  loadRows(): void {
-    this.allRows = [
-      {
-        Id: 101,
-        ScreenCode: 'DD-CTR-01',
-        ScreenName: 'Front Counter Welcome Display',
-        CounterName: 'Counter A',
-        ThemeName: 'Rose Glass',
-        WelcomeText: 'Welcome back. Your live bill and queue updates appear here.',
-        IsActive: true,
-        Status: 'Active',
-        RowNumber: 1,
-        OperatorLabel: 'Cashier Tablet',
-        GuestLabel: '32" Guest Screen',
-        LayoutName: 'Mirrored Checkout',
-        Resolution: '1920 x 1080',
-        LastHeartbeat: 'Synced 8 sec ago',
-        QueueHint: 'Main dine-in queue'
-      },
-      {
-        Id: 102,
-        ScreenCode: 'DD-CTR-02',
-        ScreenName: 'Takeaway Pickup Display',
-        CounterName: 'Counter B',
-        ThemeName: 'Amber Express',
-        WelcomeText: 'Pickup guests can review order totals, offers, and ready-call status.',
-        IsActive: true,
-        Status: 'Active',
-        RowNumber: 2,
-        OperatorLabel: 'Billing Desktop',
-        GuestLabel: '24" Pickup Panel',
-        LayoutName: 'Split Queue View',
-        Resolution: '1920 x 1080',
-        LastHeartbeat: 'Synced 21 sec ago',
-        QueueHint: 'Takeaway and courier handoff'
-      },
-      {
-        Id: 103,
-        ScreenCode: 'DD-CTR-03',
-        ScreenName: 'Family Dining Queue Board',
-        CounterName: 'Counter C',
-        ThemeName: 'Evening Luxe',
-        WelcomeText: 'Guests see token progress, table updates, and payment confirmation here.',
-        IsActive: true,
-        Status: 'Active',
-        RowNumber: 3,
-        OperatorLabel: 'POS Touch Screen',
-        GuestLabel: '55" Queue Board',
-        LayoutName: 'Queue First Layout',
-        Resolution: '3840 x 2160',
-        LastHeartbeat: 'Synced 1 min ago',
-        QueueHint: 'Family dining queue'
-      },
-      {
-        Id: 104,
-        ScreenCode: 'DD-CTR-04',
-        ScreenName: 'Dessert Counter Preview',
-        CounterName: 'Dessert Bay',
-        ThemeName: 'Pastel Glow',
-        WelcomeText: 'Temporarily offline while the dessert counter screen is being repositioned.',
-        IsActive: false,
-        Status: 'Inactive',
-        RowNumber: 4,
-        OperatorLabel: 'Mini POS',
-        GuestLabel: '21" Counter Display',
-        LayoutName: 'Compact Counter View',
-        Resolution: '1366 x 768',
-        LastHeartbeat: 'Last seen 18 min ago',
-        QueueHint: 'Dessert handoff station'
-      }
-    ];
+  async loadRows(): Promise<void> {
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const response: any = await firstValueFrom(this.dualDisplayService.getAll(orgId));
+      let rowNumber = 1;
 
-    this.tableRows = [...this.allRows];
-    this.updateSummary();
-    this.updatePreview();
+      this.allRows = (response?.result ?? []).map((item: any) => this.mapRow(item, rowNumber++));
+      this.tableRows = [...this.allRows];
+      this.updateSummary();
+      this.updatePreview();
+    } catch {
+      this.allRows = [];
+      this.tableRows = [];
+      this.toast.error('Load Failed', 'Unable to load dual display profiles. Please check and try again.');
+    } finally {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   searchRows(): void {
@@ -198,6 +165,7 @@ export class DualDisplayComponent {
     this.tableRows = this.allRows.filter((row) =>
       row.ScreenCode.toLowerCase().includes(searchText) ||
       row.ScreenName.toLowerCase().includes(searchText) ||
+      row.BranchName.toLowerCase().includes(searchText) ||
       row.CounterName.toLowerCase().includes(searchText) ||
       row.ThemeName.toLowerCase().includes(searchText) ||
       row.WelcomeText.toLowerCase().includes(searchText)
@@ -218,13 +186,18 @@ export class DualDisplayComponent {
     this.showFilterSidebar = false;
   }
 
-  openAddDialog(): void {
+  async openAddDialog(): Promise<void> {
     this.resetDialogForm();
     this.isEditMode = false;
     this.dialogTitle = 'Create Dual Display';
     this.dialogSubtitle = 'Create a new operator-and-guest screen pairing profile for a billing counter.';
     this.dialogPrimaryActionLabel = 'Save';
     this.showAddDialog = true;
+
+    if (this.branchOptions.length === 1) {
+      this.dialogBranchId = this.branchOptions[0].value;
+      await this.onDialogBranchChange(this.dialogBranchId);
+    }
   }
 
   closeAddDialog(): void {
@@ -234,106 +207,137 @@ export class DualDisplayComponent {
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
       return;
     }
 
-    if (this.isEditMode && this.dialogId) {
-      this.allRows = this.allRows.map((row) => {
-        if (row.Id === this.dialogId) {
-          row.ScreenCode = this.dialogScreenCode;
-          row.ScreenName = this.dialogScreenName;
-          row.CounterName = this.dialogCounterName;
-          row.ThemeName = this.dialogThemeName;
-          row.WelcomeText = this.dialogWelcomeText;
-          row.OperatorLabel = this.buildOperatorLabel(this.dialogCounterName);
-          row.GuestLabel = this.buildGuestLabel(this.dialogThemeName);
-          row.LayoutName = this.buildLayoutName(this.dialogThemeName);
-          row.QueueHint = this.buildQueueHint(this.dialogCounterName);
-          row.LastHeartbeat = 'Updated just now';
-        }
+    this.dialogSaving = true;
 
-        return row;
-      });
+    const payload: DualDisplay = {
+      Id: this.dialogId,
+      ProfileCode: this.dialogScreenCode.trim(),
+      ProfileName: this.dialogScreenName.trim(),
+      OrgId: Number(this.userDetails?.OrgId || 0),
+      BranchId: Number(this.dialogBranchId || 0),
+      CounterId: Number(this.dialogCounterId || 0),
+      ThemeName: this.dialogThemeName.trim(),
+      HeaderTitle: this.dialogScreenName.trim(),
+      WelcomeMessage: this.dialogWelcomeText.trim(),
+      IdleMessage: this.dialogWelcomeText.trim(),
+      IsActive: true,
+      IsDeleted: false,
+      CreatedBy: Number(this.userDetails?.UserId || 0),
+      UpdatedBy: Number(this.userDetails?.UserId || 0)
+    };
 
-      this.toast.success('Updated', this.pageTitle + ' updated successfully.');
-    } else {
-      this.allRows.unshift({
-        Id: Date.now(),
-        ScreenCode: this.dialogScreenCode,
-        ScreenName: this.dialogScreenName,
-        CounterName: this.dialogCounterName,
-        ThemeName: this.dialogThemeName,
-        WelcomeText: this.dialogWelcomeText,
-        IsActive: true,
-        Status: 'Active',
-        RowNumber: 0,
-        OperatorLabel: this.buildOperatorLabel(this.dialogCounterName),
-        GuestLabel: this.buildGuestLabel(this.dialogThemeName),
-        LayoutName: this.buildLayoutName(this.dialogThemeName),
-        Resolution: '1920 x 1080',
-        LastHeartbeat: 'Created just now',
-        QueueHint: this.buildQueueHint(this.dialogCounterName)
-      });
+    try {
+      const response: any = !payload.Id
+        ? await firstValueFrom(this.dualDisplayService.create(payload))
+        : await firstValueFrom(this.dualDisplayService.update(payload));
 
-      this.toast.success('Saved', this.pageTitle + ' saved successfully.');
+      if (response?.ErrorInfo?.Message === true && response?.result === 'AlreadyExists') {
+        this.toast.warn('Already Exists', 'Pairing code already exists. Please use a different code.');
+        return;
+      }
+
+      if (response?.ErrorInfo?.Message === true && response?.result === 'CounterAlreadyMapped') {
+        this.toast.warn('Counter Already Mapped', 'This branch and counter already has a dual display profile.');
+        return;
+      }
+
+      if (response?.ErrorInfo?.Message === true) {
+        this.toast.success(payload.Id ? 'Updated' : 'Saved', `Dual Display ${payload.Id ? 'updated' : 'saved'} successfully.`);
+        await this.loadRows();
+        this.closeAddDialog();
+        return;
+      }
+
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save dual display profile.');
+    } catch {
+      this.toast.error(payload.Id ? 'Update Failed' : 'Save Failed', 'Unable to save dual display profile.');
+    } finally {
+      this.dialogSaving = false;
+      this.changeDetector.detectChanges();
     }
-
-    this.refreshRows();
-    this.closeAddDialog();
   }
 
-  editRow(row: DualDisplayRow): void {
+  async editRow(row: DualDisplayRow): Promise<void> {
+    this.resetDialogForm();
     this.isEditMode = true;
-    this.dialogId = row.Id;
-    this.dialogScreenCode = row.ScreenCode;
-    this.dialogScreenName = row.ScreenName;
-    this.dialogCounterName = row.CounterName;
-    this.dialogThemeName = row.ThemeName;
-    this.dialogWelcomeText = row.WelcomeText;
     this.dialogTitle = 'Edit Dual Display';
     this.dialogSubtitle = 'Update the selected operator and customer display pairing.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
-    this.selectedPreviewId = row.Id;
-    this.updatePreview();
+
+    try {
+      const response: any = await firstValueFrom(this.dualDisplayService.getById(row.Id ?? 0));
+      const profile = response?.result ?? {};
+
+      this.dialogId = Number(profile.Id || 0);
+      this.dialogScreenCode = profile.ProfileCode ?? '';
+      this.dialogScreenName = profile.ProfileName ?? '';
+      this.dialogBranchId = Number(profile.BranchId || 0) || null;
+      await this.onDialogBranchChange(this.dialogBranchId);
+      this.dialogCounterId = Number(profile.CounterId || 0) || null;
+      this.dialogThemeName = profile.ThemeName ?? '';
+      this.dialogWelcomeText = profile.WelcomeMessage ?? '';
+      this.selectedPreviewId = this.dialogId;
+      this.updatePreview();
+      this.changeDetector.detectChanges();
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load dual display profile details. Please check and try again.');
+    }
   }
 
-  deleteRow(row: DualDisplayRow): void {
-    this.allRows = this.allRows.filter((item) => item.Id !== row.Id);
-    this.refreshRows();
-    this.toast.success('Deleted', row.ScreenName + ' deleted successfully.');
-  }
+  async deleteRow(row: DualDisplayRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.dualDisplayService.delete(row.Id ?? 0));
 
-  activateRow(row: DualDisplayRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = true;
-        item.Status = 'Active';
+      if (response?.ErrorInfo?.Message === true) {
+        this.toast.success('Deleted', `${row.ScreenName} deleted successfully.`);
+        await this.loadRows();
+        return;
       }
 
-      return item;
-    });
-
-    this.refreshRows();
-    this.toast.success('Activated', row.ScreenName + ' activated successfully.');
+      this.toast.error('Delete Failed', `Unable to delete ${row.ScreenName}. Please try again.`);
+    } catch {
+      this.toast.error('Delete Failed', `Unable to delete ${row.ScreenName}. Please try again.`);
+    }
   }
 
-  deactivateRow(row: DualDisplayRow): void {
-    this.allRows = this.allRows.map((item) => {
-      if (item.Id === row.Id) {
-        item.IsActive = false;
-        item.Status = 'Inactive';
+  async activateRow(row: DualDisplayRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.dualDisplayService.activeInActive(row.Id ?? 0, true));
+
+      if (response?.ErrorInfo?.Message === true) {
+        this.toast.success('Activated', `${row.ScreenName} activated successfully.`);
+        await this.loadRows();
+        return;
       }
 
-      return item;
-    });
+      this.toast.error('Activation Failed', `Unable to activate ${row.ScreenName}. Please try again.`);
+    } catch {
+      this.toast.error('Activation Failed', `Unable to activate ${row.ScreenName}. Please try again.`);
+    }
+  }
 
-    this.refreshRows();
-    this.toast.success('Deactivated', row.ScreenName + ' deactivated successfully.');
+  async deactivateRow(row: DualDisplayRow): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.dualDisplayService.activeInActive(row.Id ?? 0, false));
+
+      if (response?.ErrorInfo?.Message === true) {
+        this.toast.success('Deactivated', `${row.ScreenName} deactivated successfully.`);
+        await this.loadRows();
+        return;
+      }
+
+      this.toast.error('Deactivation Failed', `Unable to deactivate ${row.ScreenName}. Please try again.`);
+    } catch {
+      this.toast.error('Deactivation Failed', `Unable to deactivate ${row.ScreenName}. Please try again.`);
+    }
   }
 
   openRowActions(menu: any, event: Event, row: DualDisplayRow): void {
@@ -387,39 +391,108 @@ export class DualDisplayComponent {
     });
   }
 
+  async onDialogBranchChange(value: SelectFieldValue): Promise<void> {
+    this.dialogBranchId = value;
+    this.dialogCounterId = null;
+    this.counterOptions = [];
+
+    if (!value || Number(value) === 0) {
+      this.changeDetector.detectChanges();
+      return;
+    }
+
+    await this.loadCounterOptions(Number(value));
+  }
+
   resetDialogForm(): void {
     this.dialogSubmitted = false;
+    this.dialogSaving = false;
     this.dialogId = 0;
     this.dialogScreenCode = '';
     this.dialogScreenName = '';
-    this.dialogCounterName = '';
+    this.dialogBranchId = null;
+    this.dialogCounterId = null;
     this.dialogThemeName = '';
     this.dialogWelcomeText = '';
+    this.counterOptions = [];
   }
 
-  private refreshRows(): void {
-    this.allRows = this.allRows.map((row, index) => {
-      row.RowNumber = index + 1;
-      row.Status = row.IsActive ? 'Active' : 'Inactive';
-      return row;
-    });
+  private async loadBranchOptions(): Promise<void> {
+    try {
+      const userId = Number(this.userDetails?.UserId || 0);
+      const response: any = await firstValueFrom(this.commonService.GetBranchByUserId(userId));
+      const rows = response?.result ?? [];
 
-    this.searchRows();
-    this.updateSummary();
-    this.updatePreview();
+      this.branchOptions = rows
+        .filter((item: any) => item.IsActive !== false)
+        .map((item: any) => ({
+          label: item.BranchName ?? item.Name ?? '',
+          value: item.BranchId ?? item.Id ?? 0
+        }));
+    } catch {
+      this.branchOptions = [];
+      this.toast.error('Load Failed', 'Unable to load branches. Please check and try again.');
+    }
+  }
+
+  private async loadCounterOptions(branchId: number): Promise<void> {
+    debugger;
+    try {
+      const orgId = Number(this.userDetails?.OrgId || 0);
+      const response: any = await firstValueFrom(this.counterService.getAll(orgId, branchId));
+      const rows = response?.result ?? [];
+
+      this.counterOptions = rows
+        // .filter((item: any) => item.IsActive !== false)
+        .map((item: any) => ({
+          label: item.Name ?? '',
+          value: item.Id ?? 0
+        }));
+      this.changeDetector.detectChanges();
+    } catch {
+      this.counterOptions = [];
+      this.toast.error('Load Failed', 'Unable to load counters. Please check and try again.');
+    }
+  }
+
+  private mapRow(item: any, rowNumber: number): DualDisplayRow {
+    const counterName = String(item.CounterName ?? '');
+    const themeName = String(item.ThemeName ?? '');
+
+    return {
+      Id: Number(item.Id || 0),
+      ScreenCode: String(item.ProfileCode ?? ''),
+      ScreenName: String(item.ProfileName ?? ''),
+      BranchId: Number(item.BranchId || 0),
+      BranchName: String(item.BranchName ?? ''),
+      CounterId: Number(item.CounterId || 0),
+      CounterName: counterName,
+      ThemeName: themeName,
+      WelcomeText: String(item.WelcomeMessage ?? ''),
+      IsActive: item.IsActive === true,
+      Status: item.IsActive === true ? 'Active' : 'Inactive',
+      RowNumber: rowNumber,
+      OperatorLabel: this.buildOperatorLabel(counterName),
+      GuestLabel: this.buildGuestLabel(themeName),
+      LayoutName: this.buildLayoutName(themeName),
+      Resolution: '1920 x 1080',
+      LastHeartbeat: item.IsActive === true ? 'Live profile' : 'Inactive profile',
+      QueueHint: this.buildQueueHint(counterName)
+    };
   }
 
   private updateSummary(): void {
     this.totalScreens = this.allRows.length;
     this.activeScreens = this.allRows.filter((row) => row.IsActive).length;
     this.inactiveScreens = this.totalScreens - this.activeScreens;
-    this.uniqueCounters = new Set(this.allRows.map((row) => row.CounterName)).size;
+    this.uniqueCounters = new Set(this.allRows.map((row) => `${row.BranchId}-${row.CounterId}`)).size;
   }
 
   private updatePreview(): void {
     const activeRow =
       this.allRows.find((row) => row.Id === this.selectedPreviewId) ??
       this.allRows.find((row) => row.IsActive) ??
+      this.allRows[0] ??
       null;
 
     this.previewScreenName = activeRow?.ScreenName ?? 'Dual Display Screen';
@@ -435,7 +508,10 @@ export class DualDisplayComponent {
   }
 
   private isDialogFormValid(): boolean {
-    return this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areTextFieldsValid = this.textFields?.toArray().every((field) => field.isValid) ?? true;
+    const areSelectFieldsValid = this.selectFields?.toArray().every((field) => field.isValid) ?? true;
+
+    return areTextFieldsValid && areSelectFieldsValid;
   }
 
   private getRowActionItems(row: DualDisplayRow): MenuItem[] {
@@ -470,6 +546,14 @@ export class DualDisplayComponent {
     setTimeout(() => {
       this.isPreviewSpotlightActive = false;
     }, 1400);
+  }
+
+  getSelectedBranchLabel(): string {
+    return String(this.branchOptions.find((item: any) => item.value === this.dialogBranchId)?.label ?? 'Branch');
+  }
+
+  getSelectedCounterLabel(): string {
+    return String(this.counterOptions.find((item: any) => item.value === this.dialogCounterId)?.label ?? 'Billing counter');
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'preview'): void {
@@ -550,4 +634,3 @@ export class DualDisplayComponent {
     return 'Main dine-in queue';
   }
 }
-
