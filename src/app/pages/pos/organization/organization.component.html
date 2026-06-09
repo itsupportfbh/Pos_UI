@@ -105,7 +105,7 @@
   </p-card>
 </section>
 
-<p-dialog [(visible)]="showViewSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+<p-dialog appendTo="body" [(visible)]="showViewSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
   [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
   [style]="{ width: '34rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeViewSidebar()">
   <p-card class="feature-card filter-drawer-card">
@@ -224,7 +224,7 @@
     </section>
   </p-card>
 </p-dialog>
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '70rem', maxWidth: '100vw' }" [draggable]="false"
+<p-dialog appendTo="body" [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '70rem', maxWidth: '100vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
@@ -323,7 +323,7 @@
   </div>
 </p-dialog>
 
-<p-dialog [(visible)]="showConfigDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }"
+<p-dialog appendTo="body" [(visible)]="showConfigDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }"
   [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeConfigDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
@@ -367,7 +367,7 @@
   </div>
 </p-dialog>
 
-<p-dialog [(visible)]="showCodeTemplateDialog" [modal]="true"
+<p-dialog appendTo="body" [(visible)]="showCodeTemplateDialog" [modal]="true"
   [style]="{ width: '96rem', maxWidth: '99vw', height: '92vh' }" styleClass="code-template-dialog"
   [draggable]="false" [resizable]="false" [closable]="false" (onHide)="closeCodeTemplateDialog()">
   <ng-template pTemplate="header">

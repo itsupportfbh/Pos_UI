@@ -4,12 +4,13 @@
 
 .field-block {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.5rem;
 }
 
 .field-label {
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   color: var(--app-text);
 }
 
@@ -19,6 +20,7 @@
 
 .field-input.field-invalid {
   border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
 }
 
 .required-mark {
@@ -29,10 +31,12 @@
 .field-help {
   color: var(--app-text-muted);
   font-size: 0.78rem;
+  line-height: 1.35;
 }
 
 .field-error {
   color: #dc2626;
   font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.35;
 }

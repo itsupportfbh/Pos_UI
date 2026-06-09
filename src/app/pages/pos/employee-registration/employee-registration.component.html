@@ -40,7 +40,7 @@
     </p-card>
   </section>
 
-  <p-dialog
+  <p-dialog appendTo="body"
     [(visible)]="showFilterSidebar"
     [modal]="true"
     position="right"
@@ -94,7 +94,7 @@
   </p-dialog> 
 
   @if (showAddNewButton) {
-  <p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+  <p-dialog appendTo="body" [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
     [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
     <ng-template pTemplate="header">
       <div class="dialog-copy">

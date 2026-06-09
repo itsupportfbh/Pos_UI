@@ -240,7 +240,7 @@
     </aside>
   </section>
 
-  <p-dialog [(visible)]="showOrderValidationDialog" [modal]="true" [draggable]="false" [resizable]="false"
+  <p-dialog appendTo="body" [(visible)]="showOrderValidationDialog" [modal]="true" [draggable]="false" [resizable]="false"
     [closable]="true" [dismissableMask]="true" styleClass="order-validation-dialog"
     [style]="{ width: '28rem', maxWidth: '94vw' }" (onHide)="closeOrderValidationDialog()">
     <ng-template pTemplate="header">

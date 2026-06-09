@@ -44,7 +44,7 @@
   </p-card>
 </section>
 
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+<p-dialog appendTo="body" [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
   [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
   [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
   <p-card class="feature-card filter-drawer-card">
@@ -66,7 +66,7 @@
   </p-card>
 </p-dialog>
 
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+<p-dialog appendTo="body" [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
@@ -103,7 +103,7 @@
   </div>
 </p-dialog>
 
-<p-dialog [(visible)]="showPermissionsDialog" [modal]="true" [style]="{ width: '100rem', maxWidth: '98vw', height: '90vh' }"
+<p-dialog appendTo="body" [(visible)]="showPermissionsDialog" [modal]="true" [style]="{ width: '100rem', maxWidth: '98vw', height: '90vh' }"
   styleClass="permissions-dialog" [draggable]="false" [resizable]="false" [closable]="true"
   (onHide)="closePermissionsDialog()">
   <ng-template pTemplate="header">
@@ -118,6 +118,12 @@
           <input type="checkbox" [checked]="isAllPermissionsSelected" (change)="toggleAllPermissions($event)" />
           <span>Select All</span>
         </label>
+
+        <div class="permissions-scope">
+          <app-select-field label="Scope" inputId="permissions-scope" placeholder="Choose scope"
+            [options]="permissionScopeOptions" [numberValue]="true" [filter]="false" [showClear]="false"
+            [model]="permissionScope" (modelChange)="permissionScope = $event" />
+        </div>
 
         <div class="permissions-search">
           <app-text-field label="Search Permissions" inputId="permissions-search" placeholder="Search module or page"

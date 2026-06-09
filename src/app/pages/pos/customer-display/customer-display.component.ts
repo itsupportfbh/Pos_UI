@@ -4,6 +4,7 @@ import { ButtonModule } from 'primeng/button';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
+import { AppShellService } from '../../../services/app-shell.service';
 import { BranchService } from '../../../services/branch.service';
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
 import { OrganizationService } from '../../../services/organization.service';
@@ -44,6 +45,7 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     this.isFullscreenActive = Boolean(document.fullscreenElement);
     if (!document.fullscreenElement && this.isTvMode) {
       this.isTvMode = false;
+      this.appShellService.setChromeHidden(false);
     }
     this.cdr.detectChanges();
   };
@@ -66,6 +68,7 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   isFullscreenActive = false;
   constructor(
     private readonly toast: AppToastService,
+    private readonly appShellService: AppShellService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
     private readonly organizationService: OrganizationService,
     private readonly branchService: BranchService,
@@ -74,6 +77,7 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.appShellService.setChromeHidden(false);
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.organizationName = this.getStringValue(this.userDetails,  'OrgName') || 'Unity work POS';
     this.branchName = this.getStringValue(this.userDetails, 'BranchName') || '';
@@ -97,6 +101,7 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.appShellService.setChromeHidden(false);
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
     }
@@ -105,11 +110,13 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
 
   async openTvMode(): Promise<void> {
     this.isTvMode = true;
+    this.appShellService.setChromeHidden(true);
     await this.enterFullscreen();
   }
 
   async closeTvMode(): Promise<void> {
     this.isTvMode = false;
+    this.appShellService.setChromeHidden(false);
     await this.exitFullscreen();
   }
 

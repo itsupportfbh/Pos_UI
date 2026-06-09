@@ -11,7 +11,7 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
-import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
+import { FieldOption, SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
 
@@ -27,6 +27,7 @@ import { TableExportService } from '../../../services/table-export.service';
 
 type PagePermission = {
   entityNo: number;
+  menuScope: number;
   pageName: string;
   groupName: string;
   view: boolean;
@@ -70,7 +71,7 @@ const ROLE_COLUMNS: SharedTableColumn<RoleRow>[] = [
   templateUrl: './roles.component.html',
   styleUrl: './roles.component.css'
 })
-export class RolesComponent {
+export class RolesComponent implements OnInit {
   
   
   private readonly toast = inject(AppToastService);
@@ -100,6 +101,7 @@ export class RolesComponent {
   permissionSearchText = '';
   permissionOrgId = 0;
   permissionRoleId = 0;
+  permissionScope: SelectFieldValue = 3;
 
   dialogId = 0;
   dialogOrganization: SelectFieldValue = null;
@@ -113,6 +115,11 @@ export class RolesComponent {
   tableRows: RoleRow[] = [];
   permissionPages: PagePermission[] = [];
   organizationOptions: any[] = [];
+  permissionScopeOptions: FieldOption[] = [
+    { label: 'Front Office', value: 1 },
+    { label: 'Back Office', value: 2 },
+    { label: 'Both', value: 3 }
+  ];
   userDetails: any = {};
   roleEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
   roleRights = {
@@ -211,20 +218,27 @@ export class RolesComponent {
 
   get filteredPermissionPages(): PagePermission[] {
     const searchText = this.permissionSearchText.trim().toLowerCase();
+    const scope = Number(this.permissionScope || 3);
 
-    if (!searchText) {
-      return this.permissionPages;
-    }
+    return this.permissionPages.filter((page) => {
+      const matchesScope = scope === 3 || Number(page.menuScope || 0) === scope;
 
-    return this.permissionPages.filter((page) =>
-      page.groupName.toLowerCase().includes(searchText) ||
-      page.pageName.toLowerCase().includes(searchText)
-    );
+      if (!matchesScope) {
+        return false;
+      }
+
+      if (!searchText) {
+        return true;
+      }
+
+      return page.groupName.toLowerCase().includes(searchText) ||
+        page.pageName.toLowerCase().includes(searchText);
+    });
   }
 
   get isAllPermissionsSelected(): boolean {
-    return this.permissionPages.length > 0 &&
-      this.permissionPages.every((page) => this.isFullAccess(page));
+    return this.filteredPermissionPages.length > 0 &&
+      this.filteredPermissionPages.every((page) => this.isFullAccess(page));
   }
 
   resetForm(): void {
@@ -549,6 +563,7 @@ export class RolesComponent {
     this.permissionSearchText = '';
     this.permissionOrgId = Number(row.OrgId || 0);
     this.permissionRoleId = Number(row.Id || 0);
+    this.permissionScope = 3;
     this.showPermissionsDialog = true;
 
     await this.loadPermissionPages();
@@ -560,6 +575,7 @@ export class RolesComponent {
     this.permissionSaving = false;
     this.permissionOrgId = 0;
     this.permissionRoleId = 0;
+    this.permissionScope = 3;
     this.permissionPages = [];
   }
 
@@ -619,17 +635,24 @@ export class RolesComponent {
 
   toggleAllPermissions(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
+    const visibleEntityNos = new Set(this.filteredPermissionPages.map((page) => page.entityNo));
 
-    this.permissionPages = this.permissionPages.map((page) => ({
-      ...page,
-      view: checked,
-      add: checked,
-      edit: checked,
-      delete: checked,
-      ActiveInActive: checked,
-      print: checked,
-      download: checked
-    }));
+    this.permissionPages = this.permissionPages.map((page) => {
+      if (!visibleEntityNos.has(page.entityNo)) {
+        return page;
+      }
+
+      return {
+        ...page,
+        view: checked,
+        add: checked,
+        edit: checked,
+        delete: checked,
+        ActiveInActive: checked,
+        print: checked,
+        download: checked
+      };
+    });
   }
 
   setPagePermission(page: PagePermission, permission: PagePermissionAction, event: Event): void {
@@ -786,6 +809,7 @@ export class RolesComponent {
 
       this.permissionPages = permissionRows.map((x: any) => ({
         entityNo: Number(x.EntityNo || 0),
+        menuScope: Number(x.MenuScope || x.Menuscope || 0),
         groupName: x.MenuName ?? '',
         pageName: x.EntityName ?? x.SubMenuName ?? '',
         view: x.View ?? false, 

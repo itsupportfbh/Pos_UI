@@ -201,10 +201,10 @@
     <section class="kitchen-tv-mode">
       <header class="kitchen-tv-header">
         <div class="kitchen-tv-brand">
-          <span class="kitchen-tv-logo">KW</span>
-          <div>
-            <span class="tv-kicker">{{ kitchenDisplayName }}</span>
+          <div class="kitchen-tv-brand-copy">
+            <span class="tv-kicker">{{ kitchenDisplayName || 'Kitchen display' }}</span>
             <h2>Kitchen Wall Board</h2>
+            <p>Track active kitchen tickets, preparing items, and ready calls from one large-screen board.</p>
           </div>
         </div>
 
@@ -236,9 +236,19 @@
         </div>
       </header>
 
-      <section class="kitchen-tv-board">
+      <section
+        class="kitchen-tv-board"
+        [ngClass]="{
+          'tv-board-dense': filteredKitchenOrders.length >= 7,
+          'tv-board-compact': filteredKitchenOrders.length >= 10
+        }"
+      >
         @for (order of filteredKitchenOrders; track order.id) {
-          <article class="kitchen-tv-ticket" [class.ready-ticket]="isReady(order)">
+          <article
+            class="kitchen-tv-ticket"
+            [class.ready-ticket]="isReady(order)"
+            [class.tv-ticket-compact]="filteredKitchenOrders.length >= 10"
+          >
             <header class="kitchen-tv-ticket-header">
               <span class="tv-order-no">{{ order.orderNo }}</span>
               <span class="tv-order-time">{{ getElapsedMinutes(order) }}</span>
