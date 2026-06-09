@@ -79,13 +79,18 @@
 
         <section class="order-list">
           @for (order of filteredOrders; track order.orderNo) {
-            <article class="order-card" [class.selected]="currentOrder?.orderNo === order.orderNo" (click)="selectOrder(order)">
+            <article class="order-card" [class.selected]="isOrderSelected(order)" (click)="toggleOrderInBill(order, $event)">
               <div class="order-top">
                 <div>
                   <span class="order-no">{{ order.orderNo }}</span>
                   <h3>{{ order.customer }}</h3>
                 </div>
-                <span class="service-badge">{{ order.serviceMode }}</span>
+                <div class="order-badges">
+                  @if (isOrderInActiveJoin(order)) {
+                    <span class="join-badge">Joined</span>
+                  }
+                  <span class="service-badge">{{ order.serviceMode }}</span>
+                </div>
               </div>
 
               <div class="order-meta">
@@ -97,6 +102,9 @@
                 <span>{{ order.items.length }} items</span>
                 <strong>{{ order.status }}</strong>
               </div>
+              <button type="button" class="add-order-button" (click)="toggleOrderInBill(order, $event)">
+                {{ isOrderSelected(order) ? 'Remove from Bill' : 'Add to Bill' }}
+              </button>
             </article>
           } @empty {
             <div class="empty-state">No open orders match this search.</div>
@@ -165,7 +173,7 @@
         </div>
         <div>
           <span>Table</span>
-          <strong>{{ currentOrder?.table || '-' }}</strong>
+          <strong>{{ currentTableLabel }}</strong>
         </div>
         <div>
           <span>Branch</span>
@@ -173,33 +181,8 @@
         </div>
         <div>
           <span>Status</span>
-          <strong>{{ currentOrder?.status || 'Draft Bill' }}</strong>
+          <strong>{{ currentStatusLabel }}</strong>
         </div>
-      </div>
-
-      <div class="bill-flow-context">
-        <div class="flow-heading">
-          <span>Table Flow</span>
-          <strong>{{ currentOrder?.tableFlow?.mode || 'No Table Flow' }}</strong>
-        </div>
-
-        @if (currentOrder?.tableFlow?.mode === 'Move Table') {
-          <div class="flow-grid">
-            <div><span>Move No</span><strong>{{ currentOrder?.tableFlow?.reference }}</strong></div>
-            <div><span>From</span><strong>{{ currentOrder?.tableFlow?.fromTable }}</strong></div>
-            <div><span>To</span><strong>{{ currentOrder?.tableFlow?.toTable }}</strong></div>
-            <div><span>Reason</span><strong>{{ currentOrder?.tableFlow?.reason }}</strong></div>
-          </div>
-        } @else if (currentOrder?.tableFlow?.mode === 'Join Table') {
-          <div class="flow-grid">
-            <div><span>Join No</span><strong>{{ currentOrder?.tableFlow?.reference }}</strong></div>
-            <div><span>Primary</span><strong>{{ currentOrder?.tableFlow?.primaryTable }}</strong></div>
-            <div><span>Joined</span><strong>{{ currentOrder?.tableFlow?.joinedTables }}</strong></div>
-            <div><span>Notes</span><strong>{{ currentOrder?.tableFlow?.reason }}</strong></div>
-          </div>
-        } @else {
-          <p>No move table or join table flow linked to this bill.</p>
-        }
       </div>
 
       <div class="cart-section-title compact">
@@ -210,29 +193,33 @@
           label=""
           inputId="cartSearch"
           placeholder="Search selected items"
+          [disabled]="isSelectedOrderReadonly"
           [model]="cartSearch"
           (modelChange)="onCartSearchChange($event)" />
       </div>
       <section class="cart-list">
         @if (cartItems.length) {
-          @for (item of filteredCartItems; track item.id) {
-            <article class="cart-item">
+          @for (item of filteredCartItems; track item.sourceType + '-' + item.id) {
+            <article class="cart-item" [class.readonly]="isCartItemReadonly(item)">
               <div class="cart-item-main">
                 <strong>{{ item.name }}</strong>
-                <p>{{ item.qty }} x {{ item.rate | currency:'INR':'symbol':'1.2-2' }} • GST {{ gstPercent }}%</p>
+                <p>{{ item.qty }} x {{ item.rate | currency:'INR':'symbol':'1.2-2' }} <!--• GST {{ gstPercent }}%--></p>
                 @if (item.kotNo) {
                   <span class="kot-tag">{{ item.kotNo }}</span>
+                }
+                @if (item.sourceOrderNo) {
+                  <span class="kot-tag">{{ item.sourceOrderNo }} / {{ item.sourceTable }}</span>
                 }
               </div>
 
               <div class="qty-actions">
-                <button type="button" (click)="decreaseQuantity(item.id)">-</button>
+                <button type="button" [disabled]="isCartItemReadonly(item)" (click)="decreaseQuantity(item)">-</button>
                 <span>{{ item.qty }}</span>
-                <button type="button" (click)="increaseQuantity(item.id)">+</button>
+                <button type="button" [disabled]="isCartItemReadonly(item)" (click)="increaseQuantity(item)">+</button>
               </div>
 
               <strong>{{ item.qty * item.rate | currency:'INR':'symbol':'1.2-2' }}</strong>
-              <button type="button" class="remove-link" (click)="removeCartItem(item.id)">Remove</button>
+              <button type="button" class="remove-link" [disabled]="isCartItemReadonly(item)" (click)="removeCartItem(item)">Remove</button>
             </article>
           } @empty {
             <div class="empty-state compact-empty">No selected items match this search.</div>
@@ -250,6 +237,7 @@
         rows="3"
         placeholder="Add bill remarks, parcel notes, or delivery handover note"
         [value]="notes"
+        [disabled]="isSelectedOrderReadonly"
         (input)="notes = $any($event.target).value"></textarea>
 
       <div class="cart-section-title compact">
@@ -276,11 +264,11 @@
     <section class="payment-overview">
       <article class="payment-overview-card">
         <span>Bill Mode</span>
-        <strong>{{ billingMode === 'search-order' ? 'Order Billing' : 'Quick Bill' }}</strong>
+        <strong>{{ billModeLabel }}</strong>
       </article>
       <article class="payment-overview-card">
         <span>Payment Mode</span>
-        <strong>{{ selectedPaymentMode || 'Choose Mode' }}</strong>
+        <strong>{{ paymentSplits.length > 1 ? 'Multi Payment' : (paymentSplits[0]?.paymentMode || 'Choose Mode') }}</strong>
       </article>
       <article class="payment-overview-card total-card">
         <span>Amount To Collect</span>
@@ -326,76 +314,76 @@
       <div class="checkout-panel">
         <h3>Payment Collection</h3>
 
-        <app-select-field
-          label="Payment Mode"
-          inputId="paymentMode"
-          placeholder="Choose payment mode"
-          [options]="paymentModes"
-          [model]="selectedPaymentMode"
-          (modelChange)="setPaymentMode('' + $event)" />
+        <section class="split-payment-list">
+          @for (split of paymentSplits; track split.id; let index = $index) {
+            <article class="split-payment-row">
+              <div class="split-payment-main">
+                <app-select-field
+                  label="Payment Mode"
+                  [inputId]="'paymentMode' + split.id"
+                  placeholder="Choose payment mode"
+                  [options]="paymentModes"
+                  [model]="split.paymentMode"
+                  (modelChange)="updatePaymentSplit(split.id, 'paymentMode', '' + $event)" />
+
+                <app-text-field
+                  label="Amount"
+                  [inputId]="'paymentAmount' + split.id"
+                  placeholder="Enter amount"
+                  [model]="split.amountInput"
+                  (modelChange)="updatePaymentSplit(split.id, 'amountInput', '' + $event)" />
+
+                <button
+                  type="button"
+                  class="remove-payment-button"
+                  [disabled]="paymentSplits.length === 1"
+                  (click)="removePaymentSplit(split.id)">
+                  Remove
+                </button>
+              </div>
+
+              @if (isDigitalPaymentMode(split.paymentMode)) {
+                <app-text-field
+                  [label]="split.paymentMode + ' Reference'"
+                  [inputId]="'paymentReference' + split.id"
+                  placeholder="Enter transaction reference"
+                  [model]="split.referenceNo"
+                  (modelChange)="updatePaymentSplit(split.id, 'referenceNo', '' + $event)" />
+              }
+
+              @if (isCardPaymentMode(split.paymentMode)) {
+                <div class="payment-reference-grid two-columns">
+                  <app-text-field
+                    label="Approval Code"
+                    [inputId]="'approvalCode' + split.id"
+                    placeholder="Enter approval code"
+                    [model]="split.approvalCode"
+                    (modelChange)="updatePaymentSplit(split.id, 'approvalCode', '' + $event)" />
+
+                  <app-text-field
+                    label="Card Last 4 Digits"
+                    [inputId]="'cardLastFour' + split.id"
+                    placeholder="Last 4 digits"
+                    [model]="split.cardLastFour"
+                    (modelChange)="updatePaymentSplit(split.id, 'cardLastFour', '' + $event)" />
+                </div>
+              }
+            </article>
+          }
+        </section>
 
         <div class="payment-mode-grid">
           @for (mode of paymentModes; track mode.value) {
-            <button
-              type="button"
-              class="payment-tile"
-              [class.active]="selectedPaymentMode === mode.value"
-              (click)="setPaymentMode('' + mode.value)">
-              {{ mode.label }}
+            <button type="button" class="payment-tile" (click)="addPaymentSplit('' + mode.value)">
+              + {{ mode.label }}
             </button>
           }
         </div>
 
-        @if (isCashPayment) {
-          <app-text-field
-            label="Received Amount"
-            inputId="receivedAmount"
-            placeholder="Enter received amount"
-            [model]="receivedAmountInput"
-            (modelChange)="onReceivedAmountChange($event)" />
-
-          <div class="payment-balance" [class.change-positive]="balanceAmount >= 0">
-            <span>{{ balanceAmount >= 0 ? 'Change / Balance' : 'Pending Amount' }}</span>
-            <strong>{{ balanceAmount | currency:'INR':'symbol':'1.2-2' }}</strong>
-          </div>
-        }
-
-        @if (isDigitalPayment) {
-          <div class="payment-reference-grid">
-            <app-text-field
-              [label]="paymentReferenceLabel"
-              inputId="paymentReference"
-              placeholder="Enter transaction reference"
-              [model]="paymentReference"
-              (modelChange)="onPaymentReferenceChange($event)" />
-          </div>
-
-          <div class="payment-note">
-            <span>Digital payment is marked against the bill after reference confirmation.</span>
-          </div>
-        }
-
-        @if (isCardPayment) {
-          <div class="payment-reference-grid two-columns">
-            <app-text-field
-              label="Approval Code"
-              inputId="approvalCode"
-              placeholder="Enter approval code"
-              [model]="approvalCode"
-              (modelChange)="onApprovalCodeChange($event)" />
-
-            <app-text-field
-              label="Card Last 4 Digits"
-              inputId="cardLastFour"
-              placeholder="Last 4 digits"
-              [model]="cardLastFour"
-              (modelChange)="onCardLastFourChange($event)" />
-          </div>
-
-          <div class="payment-note">
-            <span>Use terminal approval code and last 4 digits for settlement tracking.</span>
-          </div>
-        }
+        <div class="payment-balance" [class.change-positive]="balanceAmount >= 0">
+          <span>{{ balanceAmount >= 0 ? 'Change / Balance' : 'Pending Amount' }}</span>
+          <strong>{{ (balanceAmount >= 0 ? changeAmount : -balanceAmount) | currency:'INR':'symbol':'1.2-2' }}</strong>
+        </div>
       </div>
     </section>
 
@@ -407,15 +395,11 @@
         </div>
         <div>
           <span>{{ settlementSummaryLabel }}</span>
-          @if (isCashPayment) {
-            <strong>{{ +(settlementSummaryValue || 0) | currency:'INR':'symbol':'1.2-2' }}</strong>
-          } @else {
-            <strong>{{ settlementSummaryValue }}</strong>
-          }
+          <strong>{{ receivedAmount | currency:'INR':'symbol':'1.2-2' }}</strong>
         </div>
         <div>
-          <span>{{ isCashPayment ? (balanceAmount >= 0 ? 'Balance' : 'Pending') : 'Amount To Collect' }}</span>
-          <strong>{{ (isCashPayment ? balanceAmount : grandTotal) | currency:'INR':'symbol':'1.2-2' }}</strong>
+          <span>{{ balanceAmount >= 0 ? 'Change' : 'Pending' }}</span>
+          <strong>{{ (balanceAmount >= 0 ? changeAmount : -balanceAmount) | currency:'INR':'symbol':'1.2-2' }}</strong>
         </div>
       </div>
 
