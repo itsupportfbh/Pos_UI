@@ -443,7 +443,7 @@ export class DualDisplayComponent {
       const rows = response?.result ?? [];
 
       this.counterOptions = rows
-        // .filter((item: any) => item.IsActive !== false)
+        .filter((item: any) => item.IsActive == true)
         .map((item: any) => ({
           label: item.Name ?? '',
           value: item.Id ?? 0
