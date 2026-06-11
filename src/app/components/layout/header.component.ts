@@ -8,6 +8,9 @@ import { AppLocaleService } from '../../services/app-locale.service';
 import { AppTranslationService } from '../../services/app-translation.service';
 import { AppTranslatePipe } from '../../pipes/app-translate.pipe';
 import { CommonService } from '../../services/common.service';
+import { AppLocaleService } from '../../services/app-locale.service';
+import { AppTranslationService } from '../../services/app-translation.service';
+import { AppTranslatePipe } from '../../pipes/app-translate.pipe';
 
 type HeaderUser = {
   name: string;
@@ -48,6 +51,7 @@ export class HeaderComponent implements OnInit, OnChanges {
   isBranchLoading = false;
   isBranchChanging = false;
   branchOptions: HeaderBranchOption[] = [];
+  isLanguageChanging = false;
   readonly languageOptions = [
     { label: 'English (India)', value: 'en-IN' },
     { label: 'English (Singapore)', value: 'en-SG' },

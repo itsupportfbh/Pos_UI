@@ -28,6 +28,48 @@
       <div class="connection-badge" [class.offline]="!isOnline">
         <i class="pi pi-circle-fill"></i>
         <span>{{ isOnline ? ('header.online' | appTranslate:'Online') : ('header.offline' | appTranslate:'Offline') }}</span>
+    <div class="connection-badge" [class.offline]="!isOnline">
+      <i class="pi pi-circle-fill"></i>
+      <span>{{ isOnline ? ('header.online' | appTranslate:'Online') : ('header.offline' | appTranslate:'Offline') }}</span>
+    </div>
+    <label class="language-switcher" for="header-language">
+      <span>{{ 'header.language' | appTranslate:'Language' }}</span>
+      <select
+        id="header-language"
+        [ngModel]="selectedLanguageCode"
+        [disabled]="isLanguageChanging"
+        (ngModelChange)="onLanguageChange($event)"
+      >
+        @for (option of languageOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+    @if (isLanguageChanging) {
+      <div class="language-status" aria-live="polite">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>{{ 'header.language_changing' | appTranslate:'Changing language...' }}</span>
+      </div>
+    }
+    <button
+      pButton
+      type="button"
+      class="theme-toggle"
+      severity="secondary"
+      [icon]="themeButtonIcon"
+      [label]="isDarkMode ? ('header.light' | appTranslate:'Light') : ('header.dark' | appTranslate:'Dark')"
+      text="true"
+      (click)="onThemeToggle()"
+    ></button>
+    @if (user.imageUrl) {
+      <img class="header-user-image" [src]="user.imageUrl" [alt]="user.name || 'User'" />
+    } @else {
+      <p-avatar [label]="initials" shape="circle" size="large"></p-avatar>
+    }
+    <button type="button" class="header-user-profile" (click)="onProfileToggle($event)">
+      <div class="header-user-details">
+        <strong>{{ user.name }}</strong>
+        <span>{{ user.role }}</span>
       </div>
       <label class="language-switcher" for="header-branch">
         <span>{{ 'header.branch' | appTranslate:'Branch' }}</span>
