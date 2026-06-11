@@ -103,8 +103,8 @@ export class CategoriesComponent {
   readonly pageEyebrow = 'Category Management';
   readonly pageTitle = 'Categories';
   readonly pageSubtitle = 'Manage your categories here.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading categories workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = `${'Categories'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'Categories'.toLowerCase()}.`;
   readonly fields: any[] = [{ key: 'categoryName', label: 'Category Name', type: 'text', placeholder: 'Enter category name' }];

@@ -202,7 +202,9 @@
       <header class="kitchen-tv-header">
         <div class="kitchen-tv-brand">
           <div class="kitchen-tv-brand-copy">
-            <span class="tv-kicker">{{ kitchenDisplayName || 'Kitchen display' }}</span>
+            <span class="tv-kicker">
+              {{ kitchenDisplayName || 'Kitchen display' }}@if (counterName) { &middot; {{ counterName }} }
+            </span>
             <h2>Kitchen Wall Board</h2>
             <p>Track active kitchen tickets, preparing items, and ready calls from one large-screen board.</p>
           </div>

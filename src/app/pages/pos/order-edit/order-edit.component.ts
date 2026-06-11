@@ -123,8 +123,8 @@ export class OrderEditComponent {
   readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Edit Orders';
   readonly pageSubtitle = 'Reopen active tickets and update items, guests, or notes without slowing service.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading edit orders workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';

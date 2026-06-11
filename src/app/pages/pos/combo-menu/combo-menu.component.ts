@@ -138,8 +138,8 @@ export class ComboMenuComponent {
   readonly pageEyebrow = 'Food Menu';
   readonly pageTitle = 'Combo Menu';
   readonly pageSubtitle = 'Create bundled menu combinations for promotions, meals, and service speed.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading combo menu workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';

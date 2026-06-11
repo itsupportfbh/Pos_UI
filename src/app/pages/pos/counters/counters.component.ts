@@ -109,8 +109,8 @@ export class CountersComponent implements OnInit {
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Counters';
   readonly pageSubtitle = 'Maintain restaurant billing and service counters.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading counters workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = 'Counters Filters';
   readonly primaryActionLabel = 'Search Counters';
   readonly secondaryActionLabel = 'Clear Filters';

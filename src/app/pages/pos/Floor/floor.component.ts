@@ -114,8 +114,8 @@ export class FloorComponent implements OnInit {
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Floors';
   readonly pageSubtitle = 'Manage floor master details.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading floors workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = 'Floor Filters';
   readonly primaryActionLabel = 'Search Floors';
   readonly secondaryActionLabel = 'Clear Filters';

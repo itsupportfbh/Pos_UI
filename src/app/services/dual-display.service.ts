@@ -6,12 +6,19 @@ import { RuntimeConfigService } from './runtime-config.service';
 
 export interface DualDisplay {
   Id?: number;
-  RowNumber?: number;
-  Code?: string;
-  Name?: string;
-  Remarks?: string;
+  ProfileCode?: string;
+  ProfileName?: string;
+  OrgId?: number;
+  OrgName?: string;
+  BranchId?: number;
+  BranchName?: string;
+  CounterId?: number;
+  CounterName?: string;
+  ThemeName?: string;
+  HeaderTitle?: string;
+  WelcomeMessage?: string;
+  IdleMessage?: string;
   IsActive?: boolean;
-  Status?: string;
   CreatedBy?: number | null;
   CreatedDate?: string;
   UpdatedBy?: number | null;
@@ -38,20 +45,26 @@ export class DualDisplayService {
     return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/Update`, payload);
   }
 
-  getAll(): Observable<ApiListResponse<DualDisplay>> {
-    return this.http.get<ApiListResponse<DualDisplay>>(`${this.baseUrl}/${this.controllerPath}/GetAll`);
+  getAll(orgId: number): Observable<ApiListResponse<DualDisplay>> {
+    return this.http.get<ApiListResponse<DualDisplay>>(`${this.baseUrl}/${this.controllerPath}/GetAll?orgId=${orgId}`);
+  }
+
+  getActiveProfile(orgId: number, branchId: number, counterId = 0): Observable<any> {
+    return this.http.get<any>(
+      `${this.baseUrl}/${this.controllerPath}/GetActiveProfile?orgId=${orgId}&branchId=${branchId}&counterId=${counterId}`
+    );
   }
 
   getById(id: number | string): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetById?Id=${id}`);
+    return this.http.get<any>(`${this.baseUrl}/${this.controllerPath}/GetById?id=${id}`);
   }
 
   delete(id: number | string): Observable<any> {
-    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/Delete?Id=${id}`);
+    return this.http.delete<any>(`${this.baseUrl}/${this.controllerPath}/Delete?id=${id}`);
   }
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {
-    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?Id=${id}&IsActive=${isActive}`, {});
+    return this.http.put<any>(`${this.baseUrl}/${this.controllerPath}/ActiveInActive?id=${id}&isActive=${isActive}`, {});
   }
 
   private get baseUrl(): string {

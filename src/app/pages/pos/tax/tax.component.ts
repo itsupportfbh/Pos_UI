@@ -83,8 +83,8 @@ export class TaxComponent implements OnInit {
     readonly pageEyebrow = 'Tax Management';
     readonly pageTitle = 'Taxes';
     readonly pageSubtitle = 'Manage your tax rates here.';
-    readonly pageLoadingTitle = 'Unity work POS';
-    readonly pageLoadingSubtitle = 'Loading taxes workspace.';
+    readonly pageLoadingTitle = 'Please wait';
+    readonly pageLoadingSubtitle = 'Loading records...';
     dialogTitle = 'Create Tax';
     dialogSubtitle = 'Create a new tax rate.';
     dialogPrimaryActionLabel = 'Save';

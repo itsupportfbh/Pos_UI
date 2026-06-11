@@ -130,8 +130,8 @@ export class MenusComponent {
   readonly pageEyebrow = 'Menu Management';
   readonly pageTitle = 'Menus';
   readonly pageSubtitle = 'Manage your menus here.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading menus workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = `${'Menus'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'Menus'.toLowerCase()}.`;
   readonly fields: any[] = [{ key: 'MenuName', label: 'Menu Name', type: 'text', placeholder: 'Enter menu name' }];

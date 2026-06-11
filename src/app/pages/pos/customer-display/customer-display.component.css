@@ -18,6 +18,27 @@
   box-shadow: var(--app-shadow);
 }
 
+.customer-display-page.customer-theme-amber {
+  background:
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(245, 158, 11, 0.06), rgba(251, 191, 36, 0.02)),
+    var(--app-bg);
+}
+
+.customer-display-page.customer-theme-luxe {
+  background:
+    radial-gradient(circle at top right, rgba(168, 85, 247, 0.1), transparent 32%),
+    linear-gradient(180deg, rgba(88, 28, 135, 0.08), rgba(196, 181, 253, 0.03)),
+    var(--app-bg);
+}
+
+.customer-display-page.customer-theme-pastel {
+  background:
+    radial-gradient(circle at top right, rgba(45, 212, 191, 0.1), transparent 32%),
+    linear-gradient(180deg, rgba(125, 211, 252, 0.06), rgba(186, 230, 253, 0.02)),
+    var(--app-bg);
+}
+
 .customer-control-bar {
   display: grid;
   grid-template-columns: minmax(15rem, 1fr) minmax(18rem, 1.24fr) minmax(14rem, 0.9fr);
@@ -640,6 +661,27 @@
       color-mix(in srgb, var(--app-surface) 72%, #111827) 100%
     );
   color: var(--app-surface-strong);
+}
+
+.customer-tv-mode.customer-theme-amber {
+  background:
+    radial-gradient(circle at top left, rgba(251, 191, 36, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.18), transparent 28%),
+    linear-gradient(180deg, #5b2d0f 0%, #8a4218 48%, #3b1d0a 100%);
+}
+
+.customer-tv-mode.customer-theme-luxe {
+  background:
+    radial-gradient(circle at top left, rgba(216, 180, 254, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.18), transparent 28%),
+    linear-gradient(180deg, #27113e 0%, #4c1d95 44%, #160a2a 100%);
+}
+
+.customer-tv-mode.customer-theme-pastel {
+  background:
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(45, 212, 191, 0.18), transparent 28%),
+    linear-gradient(180deg, #0f3d53 0%, #155e75 42%, #0b2434 100%);
 }
 
 .customer-tv-header {

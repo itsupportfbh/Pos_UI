@@ -119,8 +119,8 @@ export class SubCategoryComponent {
   readonly pageEyebrow = 'SubCategory Management';
   readonly pageTitle = 'SubCategories';
   readonly pageSubtitle = 'Manage your subcategories here.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading subcategory workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = `${'SubCategories'} Filters`;
   readonly filterDescription = `API data will be loaded for ${'SubCategories'.toLowerCase()}.`;
   readonly fields: any[] = [{ key: 'SubcategoryName', label: 'SubCategory Name', type: 'text', placeholder: 'Enter subcategory name' }];

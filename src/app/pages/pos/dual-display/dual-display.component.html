@@ -55,7 +55,25 @@
           <h2>Live Pairing Preview</h2>
           <p class="section-note">Preview how the cashier screen and customer-facing display work together for the selected counter profile.</p>
         </div>
-        <span class="preview-selection-pill">{{ previewCounterName }}</span>
+        <div class="preview-head-actions">
+          <span class="preview-selection-pill">{{ previewCounterName }}</span>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-external-link"
+            label="Open Customer Screen"
+            severity="secondary"
+            [outlined]="true"
+            (click)="openCustomerDisplay()"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-desktop"
+            label="Open TV Mode"
+            (click)="openCustomerDisplay(undefined, true)"
+          ></button>
+        </div>
       </div>
 
       <section class="display-preview-surface">
@@ -243,10 +261,10 @@
           </div>
 
           <div class="pairing-profile-header">
-            <div>
-              <h3>{{ row.ScreenName }}</h3>
-              <p>{{ row.CounterName }} &middot; {{ row.LayoutName }}</p>
-            </div>
+          <div>
+            <h3>{{ row.ScreenName }}</h3>
+            <p>{{ row.BranchName }} &middot; {{ row.CounterName }} &middot; {{ row.LayoutName }}</p>
+          </div>
 
             <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
             <button pButton type="button" icon="pi pi-ellipsis-v" [text]="true" [rounded]="true" class="row-action-trigger"
@@ -288,6 +306,8 @@
           <div class="pairing-card-actions">
             <button pButton type="button" icon="pi pi-eye" label="Preview" severity="secondary" [outlined]="true"
               (click)="previewRow(row); $event.stopPropagation()"></button>
+            <button pButton type="button" icon="pi pi-external-link" label="Open"
+              severity="secondary" [outlined]="true" (click)="openCustomerDisplay(row); $event.stopPropagation()"></button>
             <button pButton type="button" icon="pi pi-pencil" label="Edit"
               (click)="editRow(row); $event.stopPropagation()"></button>
           </div>
@@ -347,10 +367,15 @@
         errorMessage="Screen name is required." [maxlength]="200" [model]="dialogScreenName"
         (modelChange)="dialogScreenName = $event"></app-text-field>
 
-      <app-text-field label="Billing Counter" inputId="dialog-counter-name" [showRequiredMark]="true"
-        placeholder="Enter counter name" [required]="true" [submitted]="dialogSubmitted"
-        errorMessage="Counter is required." [maxlength]="200" [model]="dialogCounterName"
-        (modelChange)="dialogCounterName = $event"></app-text-field>
+      <app-select-field label="Branch" inputId="dialog-branch-id" placeholder="Choose branch"
+        [options]="branchOptions" [required]="true" [submitted]="dialogSubmitted"
+        errorMessage="Branch is required." [showRequiredMark]="true" [model]="dialogBranchId"
+        (modelChange)="onDialogBranchChange($event)"></app-select-field>
+
+      <app-select-field label="Billing Counter" inputId="dialog-counter-id" placeholder="Choose counter"
+        [options]="counterOptions" [required]="true" [submitted]="dialogSubmitted"
+        errorMessage="Counter is required." [showRequiredMark]="true" [model]="dialogCounterId"
+        (modelChange)="dialogCounterId = $event"></app-select-field>
 
       <app-text-field label="Customer Display Theme" inputId="dialog-theme-name" [showRequiredMark]="true"
         placeholder="Enter theme name" [required]="true" [submitted]="dialogSubmitted"
@@ -374,7 +399,7 @@
           <article class="dialog-mini-screen dialog-mini-operator">
             <span>Operator</span>
             <strong>{{ dialogScreenName || 'Operator screen name' }}</strong>
-            <small>{{ dialogCounterName || 'Billing counter' }}</small>
+            <small>{{ getSelectedBranchLabel() }} / {{ getSelectedCounterLabel() }}</small>
           </article>
 
           <article class="dialog-mini-screen dialog-mini-guest">

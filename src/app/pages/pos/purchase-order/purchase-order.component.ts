@@ -93,8 +93,8 @@ export class PurchaseOrderComponent {
   readonly pageEyebrow = 'POS';
   readonly pageTitle = 'Purchase Order';
   readonly pageSubtitle = 'Manage purchase order records here.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading purchase order workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = 'Purchase Order Filters';
   readonly primaryActionLabel = 'Search Purchase Order';
   readonly secondaryActionLabel = 'Clear Filters';
