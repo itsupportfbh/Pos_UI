@@ -10,7 +10,9 @@ export interface Menu {
     name?: string;
     categoryId?: number;
     subCategoryId?: number;
-    price: number;
+    price: number;    
+    preparationTime?: number;
+    serviceCharge: number;
     OrgId?: number;
     IsActive?: boolean;
     CreatedBy?: number | null;

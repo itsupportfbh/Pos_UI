@@ -11,14 +11,14 @@
 
   <p-card class="feature-card">
     @if (pageLoading) {
-      <div class="page-spinner-state">
-        <p-progressSpinner ariaLabel="Loading"></p-progressSpinner>
-        <div class="page-spinner-copy">
-          <small class="page-spinner-kicker">Please wait</small>
-          <strong>{{ pageLoadingTitle }}</strong>
-          <span>{{ pageLoadingSubtitle }}</span>
-        </div>
+    <div class="page-spinner-state">
+      <p-progressSpinner ariaLabel="Loading"></p-progressSpinner>
+      <div class="page-spinner-copy">
+        <small class="page-spinner-kicker">Please wait</small>
+        <strong>{{ pageLoadingTitle }}</strong>
+        <span>{{ pageLoadingSubtitle }}</span>
       </div>
+    </div>
     }
 
     @if (!pageLoading) {
@@ -31,10 +31,9 @@
     <app-shared-table [showFilterButton]="showFilterButton" (filterButtonClick)="openFilterSidebar()"
       [showDownloadButton]="showDownloadButton" (excelDownloadClick)="exportMenusAsExcel()"
       (pdfDownloadClick)="exportMenusAsPdf()" [downloadLoading]="downloadLoading"
-      [downloadLoadingLabel]="downloadLoadingLabel"
-      [caption]="tableCaption" [columns]="tableColumns" [value]="tableRows" [showAddNewButton]="showAddNewButton"
-      [toolbarButtonLabel]="addNewButtonLabel" [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader"
-      (toolbarButtonClick)="openAddDialog()">
+      [downloadLoadingLabel]="downloadLoadingLabel" [caption]="tableCaption" [columns]="tableColumns"
+      [value]="tableRows" [showAddNewButton]="showAddNewButton" [toolbarButtonLabel]="addNewButtonLabel"
+      [showRowActions]="showRowActions" [rowActionHeader]="rowActionHeader" (toolbarButtonClick)="openAddDialog()">
       <ng-template #rowActions let-row>
         <p-menu #rowMenu [model]="rowActionItems" [popup]="true" appendTo="body" styleClass="row-action-menu"></p-menu>
 
@@ -52,8 +51,8 @@
   </p-card>
 </section>
 
-<p-dialog appendTo="body" [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
-  [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
+<p-dialog appendTo="body" [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false"
+  [resizable]="false" [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
   [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
   <p-card class="feature-card filter-drawer-card">
     <section class="filter-panel filter-panel-compact">
@@ -75,8 +74,8 @@
   </p-card>
 </p-dialog>
 @if (showAddNewButton) {
-<p-dialog appendTo="body" [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
-  [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
+<p-dialog appendTo="body" [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }"
+  [draggable]="false" [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
       <h3>{{ dialogTitle }}</h3>
@@ -86,8 +85,8 @@
 
   <section class="field-grid dialog-grid">
     <app-text-field label="Code" [showRequiredMark]="true" inputId="dialog-menuCode" placeholder="Enter menu code"
-      [required]="true" [maxlength]="50" [submitted]="dialogSubmitted" errorMessage="Code is required." [disabled]="true"
-      [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
+      [required]="true" [maxlength]="50" [submitted]="dialogSubmitted" errorMessage="Code is required."
+      [disabled]="true" [model]="dialogModel.code ?? ''" (modelChange)="dialogModel.code = $event" />
 
     <app-text-field label="Name" [showRequiredMark]="true" inputId="dialog-menuName" placeholder="Enter menu name"
       [required]="true" [maxlength]="100" [submitted]="dialogSubmitted" errorMessage="Name is required."
@@ -98,15 +97,25 @@
       errorMessage="Category is required." [model]="dialogModel.categoryId ?? 0"
       (modelChange)="onDialogCategoryChange($event)" />
 
-      <app-select-field label="Sub Category" [showRequiredMark]="true" inputId="dialog-subcategory" placeholder="Choose sub category"
-      [options]="subCategoryOptions" [numberValue]="true" [required]="true" [submitted]="dialogSubmitted"
-      errorMessage="Sub category is required." [model]="dialogModel.subCategoryId ?? 0"
+    <app-select-field label="Sub Category" [showRequiredMark]="true" inputId="dialog-subcategory"
+      placeholder="Choose sub category" [options]="subCategoryOptions" [numberValue]="true" [required]="true"
+      [submitted]="dialogSubmitted" errorMessage="Sub category is required." [model]="dialogModel.subCategoryId ?? 0"
       (modelChange)="dialogModel.subCategoryId = $event" />
 
-    <app-text-field label="Price" inputId="dialog-price" [showRequiredMark]="true"
-      placeholder="Enter price" type="number" [required]="true" [submitted]="dialogSubmitted"
-      [min]="0" [step]="0.01" errorMessage="Price is required and must be a positive number."
-      [model]="dialogModel.price" (modelChange)="dialogModel.price = $event" />
+    <app-text-field label="Price" inputId="dialog-price" [showRequiredMark]="true" placeholder="Enter price"
+      type="number" [required]="true" [submitted]="dialogSubmitted" [min]="0" [step]="0.01"
+      errorMessage="Price is required and must be a positive number." [model]="dialogModel.price ?? 0"
+      (modelChange)="dialogModel.price = $event" />
+
+    <app-text-field label="Preparation Time (mins)" inputId="dialog-preparationTime" [showRequiredMark]="true"
+      placeholder="Enter preparation time" type="number" [required]="true" [submitted]="dialogSubmitted" [min]="1"
+      errorMessage="Preparation time is required and must be greater than 0." [model]="dialogModel.preparationTime ?? 0"
+      (modelChange)="dialogModel.preparationTime = $event" />
+
+      <app-text-field label="Service Charge" inputId="dialog-serviceCharge" [showRequiredMark]="true" placeholder="Enter service charge"
+      type="number" [required]="true" [submitted]="dialogSubmitted" [min]="0" [step]="0.01"
+      errorMessage="Service charge is required and must be a positive number." [model]="dialogModel.serviceCharge ?? 0"
+      (modelChange)="dialogModel.serviceCharge = $event" />
 
   </section>
 

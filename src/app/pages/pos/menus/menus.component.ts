@@ -10,11 +10,7 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { ConfirmationService, MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { SharedTableCellTemplateDirective, SharedTableColumn, SharedTableComponent } from '../../../components/table/shared-table.component';
-
-
 import { AppToastService } from '../../../services/app-toast.service';
-
-
 import { Menu, MenuService } from '../../../services/FoodMenu.service';
 import { CategoryService } from '../../../services/Category.service';
 import { subCategory, subCategoryService } from '../../../services/SubCategory.service';
@@ -32,6 +28,8 @@ type MenuRow = {
   categoryId: number;
   subCategoryId: number;
   price: number;
+  preparationTime: number | null;
+  serviceCharge: number | null;
   orgId: number;
   isActive: boolean;
   createdBy?: number | null;
@@ -120,6 +118,8 @@ export class MenusComponent {
     categoryId: 0,
     subCategoryId: 0,
     price: 0,
+    preparationTime: 0,
+    serviceCharge: 0,
     OrgId: this.OrgId,
     IsActive: true,
     CreatedBy: 1,
@@ -463,6 +463,8 @@ export class MenusComponent {
     const payload: Menu = {
       ...this.dialogModel,
       subCategoryId: Number(this.dialogModel.subCategoryId ?? 0),
+      preparationTime: Number(this.dialogModel.preparationTime ?? 0),
+      serviceCharge: Number(this.dialogModel.serviceCharge ?? 0),
       OrgId: this.OrgId,
       IsActive: this.dialogModel.IsActive ?? true,
       IsDeleted: false,
@@ -530,6 +532,8 @@ export class MenusComponent {
           categoryId: menu?.categoryId ?? menu?.CategoryId ?? row.categoryId,
           subCategoryId: menu?.subCategoryId ?? menu?.SubCategoryId ?? row.subCategoryId,
           price: menu?.price ?? menu?.Price ?? row.price,
+          preparationTime: menu?.preparationTime ?? menu?.PreparationTime ?? row.preparationTime,
+          serviceCharge: menu?.serviceCharge ?? menu?.ServiceCharge ?? row.serviceCharge,
           OrgId: menu?.orgId ?? menu?.OrgId ?? row.orgId,
           IsActive: menu?.isActive ?? menu?.IsActive ?? row.isActive,
           CreatedBy: menu?.createdBy ?? menu?.CreatedBy ?? 1,
@@ -705,6 +709,8 @@ export class MenusComponent {
       categoryId: 0,
       subCategoryId: 0,
       price: 0,
+      serviceCharge: 0,
+      preparationTime: 0,
       OrgId: this.OrgId,
       IsActive: true,
       CreatedBy: 1,
