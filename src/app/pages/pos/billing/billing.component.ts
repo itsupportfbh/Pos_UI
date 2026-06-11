@@ -15,13 +15,16 @@ import { DisplayMenuItemsService } from '../../../services/display-menu-items.se
 import { JoinTableService } from '../../../services/join-table.service';
 import { OrderScreenService } from '../../../services/order-screen.service';
 import { OrganizationService } from '../../../services/organization.service';
+import { PaymodeService } from '../../../services/paymode.service';
+import { TaxService } from '../../../services/tax.service';
 
 type BillingMode = 'search-order' | 'quick-bill';
 type BillingGroupMode = 'single' | 'joined' | 'manual';
 type ServiceMode = 'Dine In' | 'Take Away' | 'Delivery';
 
-const DEFAULT_BILLING_ENTITY_NO = 12;
+const BILLING_TEMPLATE_NAME = 'Billing';
 const ORDER_SCREEN_TEMPLATE_NAME = 'Order Screen';
+const DEFAULT_BILLING_NOTE = 'Please consume the food within 2 hours of purchase.';
 const ORDER_STATUS = {
   Hold: 0,
   InKitchen: 1,
@@ -61,6 +64,7 @@ type BillOrder = {
   serviceChargeAmount: number;
   taxAmount: number;
   tipAmount: number;
+  roundOffAmount: number;
   totalAmount: number;
   rawOrder?: any;
 };
@@ -147,10 +151,13 @@ export class BillingComponent implements OnInit {
   private readonly joinTableService = inject(JoinTableService);
   private readonly orderScreenService = inject(OrderScreenService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly paymodeService = inject(PaymodeService);
+  private readonly taxService = inject(TaxService);
   private readonly cdr = inject(ChangeDetectorRef);
-  readonly gstPercent = 9;
+  gstPercent = 9;
+  taxName = 'GST';
   readonly serviceChargePercent = 10;
-
+  private currentBillingEntityNo = Number(sessionStorage.getItem("currentMenuEntityNo") || 0);
   showShiftAssignment = false;
 
   readonly pageTitle = 'Billing';
@@ -163,20 +170,13 @@ export class BillingComponent implements OnInit {
   isLoadingQuickItems = false;
   pageLoading = false;
   isGeneratingBill = false;
+  private currentOrderEntityNo = 0;
   private quickBillEntityNo = 0;
-  private readonly billingEntityNo = DEFAULT_BILLING_ENTITY_NO;
   private readonly orderEntityNoCache = new Map<string, number>();
 
   customers: string[] = ['Walk-in Customer'];
 
-  readonly paymentModes: FieldOption[] = [
-    { label: 'Cash', value: 'Cash' },
-    { label: 'UPI', value: 'UPI' },
-    { label: 'Debit Card', value: 'Debit Card' },
-    { label: 'Credit Card', value: 'Credit Card' },
-    { label: 'QR Scan', value: 'QR Scan' },
-    { label: 'PayNow', value: 'PayNow' }
-  ];
+  paymentModes: FieldOption[] = [];
 
   quickMenuItems: QuickMenuItem[] = [];
   openOrders: BillOrder[] = [];
@@ -193,11 +193,11 @@ export class BillingComponent implements OnInit {
   selectedPaymentMode: string | null = 'Cash';
   discountType: 'Amount' | 'Percent' = 'Amount';
   discountInput = '0';
+  serviceChargeInput = '0';
   tipInput = '0';
-  receivedAmountInput = '0';
-  paymentReference = '';
-  approvalCode = '';
-  cardLastFour = '';
+  roundOffInput = '0';
+  private isServiceChargeManual = false;
+  private isRoundOffManual = false;
   private paymentSplitSequence = 1;
   paymentSplits: PaymentSplit[] = [this.createPaymentSplit('Cash')];
   notes = '';
@@ -212,30 +212,45 @@ export class BillingComponent implements OnInit {
   orderCount = 0;
   currentCustomerLabel = 'Walk-in Customer';
   currentOrderNumber = 'Direct Billing';
-  currentBranchLabel = 'Trichy';
+  currentBranchLabel = '----';
+  currentCounterLabel = '---';
+  currentTerminalLabel = '---';
+  currentCashierLabel = '---';
   isDineInBill = false;
-  isCashPayment = true;
-  isCardPayment = false;
-  isDigitalPayment = false;
-  paymentReferenceLabel = 'Reference';
   settlementSummaryLabel = 'Received';
-  settlementSummaryValue = '0';
   totalItems = 0;
   subtotal = 0;
   discountAmount = 0;
   serviceChargeAmount = 0;
   taxAmount = 0;
   tipAmount = 0;
+  roundOffAmount = 0;
   grandTotal = 0;
   balanceAmount = 0;
   receivedAmount = 0;
   changeAmount = 0;
   OrgId = 0;
   BranchId = 0;
+  BranchName='';
+  CounterName = '';
+  TerminalName = '';
+  CashierName = '';
 
   ngOnInit(): void {
     this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    this.OrgId = Number(this.userDetails.OrgId || 0);
+    this.BranchId = this.userDetails.IsAdmin === true || Number(this.userDetails.RoleId || 0) === 1
+      ? 0
+      : Number(this.userDetails.BranchId || 0);
+    this.BranchName = this.getStringValue(this.userDetails, 'BranchName', 'branchName', 'Branch', 'branch');
+    this.CounterName = this.getStringValue(this.userDetails, 'CounterName', 'counterName', 'Counter', 'counter');
+    this.TerminalName = this.getStringValue(this.userDetails, 'TerminalName', 'terminalName', 'Terminal', 'terminal', 'DeviceName', 'deviceName');
+    this.CashierName = this.getStringValue(this.userDetails, 'UserName', 'userName', 'Username', 'username', 'CashierName', 'cashierName', 'EmpName', 'empName', 'Name', 'name');
+    this.currentBranchLabel = this.BranchName || '---';
+    this.currentCounterLabel = this.CounterName || '---';
+    this.currentTerminalLabel = this.TerminalName || '---';
+    this.currentCashierLabel = this.CashierName || '---';
     this.applyUserScope();
 
     if (!this.shiftService.isShiftAssigned()) {
@@ -243,9 +258,12 @@ export class BillingComponent implements OnInit {
     }
 
     void Promise.all([
+      this.runInitialLoadTask(this.loadTaxPercentage()),
+      this.runInitialLoadTask(this.loadPaymentModes()),
       this.runInitialLoadTask(this.loadBillingOrders()),
       this.runInitialLoadTask(this.loadQuickMenuItems(true))
     ]).finally(() => {
+      this.updateBillingSummary();
       this.pageLoading = false;
       this.cdr.detectChanges();
     });
@@ -405,7 +423,7 @@ export class BillingComponent implements OnInit {
     if (!hasSelectedOrder) {
       this.currentOrder = null;
       this.orderSearch = '';
-      this.notes = '';
+      this.notes = this.getDefaultBillingNoteForMode(mode === 'quick-bill' ? 'Take Away' : this.serviceFilter);
     }
 
     this.updateOrderMatches();
@@ -512,6 +530,7 @@ export class BillingComponent implements OnInit {
   addQuickItem(item: QuickMenuItem): void {
     if (!this.selectedOrders.length) {
       this.billingMode = 'quick-bill';
+      this.notes = this.notes || this.getDefaultBillingNoteForMode('Take Away');
     }
 
     this.selectedCustomer = this.selectedCustomer || 'Walk-in Customer';
@@ -581,35 +600,12 @@ export class BillingComponent implements OnInit {
     this.updateBillingSummary();
   }
 
-  setPaymentMode(mode: string): void {
-    this.selectedPaymentMode = mode;
-    this.updatePaymentSplit(this.paymentSplits[0]?.id ?? 0, 'paymentMode', mode);
+  addPaymentSplit(mode = ''): void {
+    const defaultMode = mode || String(this.paymentModes[0]?.value || this.selectedPaymentMode || 'Cash');
 
-    if (this.isCashPayment) {
-      this.paymentReference = '';
-      this.approvalCode = '';
-      this.cardLastFour = '';
-    } else {
-      this.receivedAmountInput = '0';
-    }
-
-    if (!this.isCardPayment) {
-      this.approvalCode = '';
-      this.cardLastFour = '';
-    }
-
-    if (!this.isDigitalPayment) {
-      this.paymentReference = '';
-    }
-
-    this.updatePaymentState();
-    this.updateBillingSummary();
-  }
-
-  addPaymentSplit(mode = 'Cash'): void {
     this.paymentSplits = [
       ...this.paymentSplits,
-      this.createPaymentSplit(mode)
+      this.createPaymentSplit(defaultMode)
     ];
     this.updatePaymentState();
     this.updateBillingSummary();
@@ -662,29 +658,72 @@ export class BillingComponent implements OnInit {
     this.updateBillingSummary();
   }
 
+  async loadTaxPercentage(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.taxService.getAll(this.OrgId));
+      const taxes = this.getResponseList(response);
+      const activeTax = taxes.find((tax: any) =>
+        this.getOptionalBooleanValue(tax, 'IsDeleted', 'isDeleted') !== true
+        && this.getOptionalBooleanValue(tax, 'IsActive', 'isActive', 'isactive') !== false
+      );
+      const percentage = this.getNumberValue(activeTax, 'Percentage', 'percentage');
+      const name = this.getStringValue(activeTax, 'Name', 'name');
+
+      if (percentage > 0) {
+        this.gstPercent = percentage;
+      }
+
+      this.taxName = name || 'GST';
+      this.quickMenuItems = this.quickMenuItems.map((item) => ({ ...item, taxPercent: this.gstPercent }));
+      this.cartItems = this.cartItems.map((item) => ({ ...item, taxPercent: item.taxPercent || this.gstPercent }));
+      this.updateQuickItemMatches();
+      this.updateCartMatches();
+      this.updateBillingSummary();
+    } catch {
+      this.taxName = 'GST';
+      this.toast.warn('Tax Not Loaded', 'Using default tax percentage for this bill.');
+    }
+  }
+
+  async loadPaymentModes(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.paymodeService.getAll(this.getCodeTemplateOrgId()));
+      const paymodes: FieldOption[] = this.getResponseList(response)
+        .filter((paymode: any) =>
+          this.getOptionalBooleanValue(paymode, 'IsDeleted', 'isDeleted') !== true
+          && this.getOptionalBooleanValue(paymode, 'IsActive', 'isActive', 'isactive') !== false
+        )
+        .reduce((options: FieldOption[], paymode: any) => {
+          const type = this.getStringValue(paymode, 'Type', 'type', 'Name', 'name');
+          return type ? [...options, { label: type, value: type }] : options;
+        }, []);
+
+      this.paymentModes = paymodes.length
+        ? this.getDistinctPaymentModes(paymodes)
+        : this.getFallbackPaymentModes();
+      this.syncSelectedPaymentMode();
+    } catch {
+      this.paymentModes = this.getFallbackPaymentModes();
+      this.syncSelectedPaymentMode();
+      this.toast.warn('Paymodes Not Loaded', 'Using default cash payment mode for this bill.');
+    }
+  }
+
+  onServiceChargeChange(value: string): void {
+    this.serviceChargeInput = this.normalizeAmountInput(value);
+    this.isServiceChargeManual = true;
+    this.updateBillingSummary();
+  }
+
   onTipChange(value: string): void {
     this.tipInput = value;
     this.updateBillingSummary();
   }
 
-  onReceivedAmountChange(value: string): void {
-    this.receivedAmountInput = value;
-    this.updatePaymentSplit(this.paymentSplits[0]?.id ?? 0, 'amountInput', value);
+  onRoundOffChange(value: string): void {
+    this.roundOffInput = this.normalizeSignedAmountInput(value);
+    this.isRoundOffManual = true;
     this.updateBillingSummary();
-  }
-
-  onPaymentReferenceChange(value: string): void {
-    this.paymentReference = value;
-    this.updatePaymentState();
-  }
-
-  onApprovalCodeChange(value: string): void {
-    this.approvalCode = value;
-    this.updatePaymentState();
-  }
-
-  onCardLastFourChange(value: string): void {
-    this.cardLastFour = value.replace(/\D/g, '').slice(0, 4);
   }
 
   clearBill(): void {
@@ -700,13 +739,13 @@ export class BillingComponent implements OnInit {
     this.selectedPaymentMode = 'Cash';
     this.discountType = 'Amount';
     this.discountInput = '0';
+    this.serviceChargeInput = '0';
     this.tipInput = '0';
-    this.receivedAmountInput = '0';
-    this.paymentReference = '';
-    this.approvalCode = '';
-    this.cardLastFour = '';
+    this.roundOffInput = '0';
+    this.isServiceChargeManual = false;
+    this.isRoundOffManual = false;
     this.paymentSplits = [this.createPaymentSplit('Cash')];
-    this.notes = '';
+    this.notes = this.getDefaultBillingNoteForMode(this.billingMode === 'quick-bill' ? 'Take Away' : this.serviceFilter);
     this.cartItems = [];
     this.updateOrderMatches();
     this.updateQuickItemMatches();
@@ -717,7 +756,201 @@ export class BillingComponent implements OnInit {
   }
 
   printBill(): void {
-    window.print();
+    if (!this.cartItems.length) {
+      this.toast.warn('No Items', 'Add at least one item before printing the bill.');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=420,height=800');
+
+    if (!printWindow) {
+      this.toast.error('Print Failed', 'Unable to open the print window.');
+      return;
+    }
+
+    printWindow.document.write(this.buildThermalBillHtml());
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  }
+
+  private buildThermalBillHtml(): string {
+    const now = new Date();
+    const organizationName = this.getStringValue(this.userDetails, 'OrgName', 'orgName', 'OrganizationName', 'organizationName', 'CompanyName', 'companyName')
+      || this.BranchName
+      || 'Restaurant';
+    const phone = this.getStringValue(this.userDetails, 'Phone', 'phone', 'Mobile', 'mobile', 'ContactNumber', 'contactNumber');
+    const gstNo = this.getStringValue(this.userDetails, 'GSTNo', 'gstNo', 'GstNo', 'gstno', 'GSTNumber', 'gstNumber');
+    const fssaiNo = this.getStringValue(this.userDetails, 'FSSAINo', 'fssaiNo', 'FssaiNo', 'FSSAI', 'fssai');
+    const cashierName = this.getStringValue(this.userDetails, 'UserName', 'userName', 'Username', 'username', 'Name', 'name')
+      || 'Cashier';
+    const tokenNo = this.getReceiptTokenNo();
+    const customerName = this.currentCustomerLabel === 'Walk-in Customer' ? '' : this.currentCustomerLabel;
+    const paymentLabel = this.paymentSplits.length > 1
+      ? 'Paid via Multi Payment'
+      : `Paid via ${this.paymentSplits[0]?.paymentMode || this.selectedPaymentMode || 'Cash'}`;
+    const cgstAmount = this.taxAmount / 2;
+    const sgstAmount = this.taxAmount / 2;
+    const cgstPercent = this.gstPercent / 2;
+    const sgstPercent = this.gstPercent / 2;
+    const itemRows = this.cartItems.map((item) => `
+      <tr>
+        <td class="item-name">${this.escapeHtml(item.name)}</td>
+        <td class="num">${item.qty}</td>
+        <td class="num">${this.formatReceiptAmount(item.rate)}</td>
+        <td class="num">${this.formatReceiptAmount(item.qty * item.rate)}</td>
+      </tr>
+    `).join('');
+
+    return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Bill ${this.escapeHtml(this.currentOrderNumber)}</title>
+  <style>
+    @page { size: 80mm auto; margin: 3mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #111;
+      background: #fff;
+      font-family: "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.22;
+    }
+    .receipt {
+      width: 72mm;
+      margin: 0 auto;
+    }
+    .center { text-align: center; }
+    .bold { font-weight: 700; }
+    .brand {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+    .divider {
+      border: 0;
+      border-top: 1px dashed #111;
+      margin: 7px 0;
+    }
+    .line {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .line span:last-child {
+      text-align: right;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      padding: 2px 0 4px;
+      border-bottom: 1px dashed #111;
+      font-weight: 700;
+      text-align: left;
+    }
+    td {
+      padding: 4px 0;
+      vertical-align: top;
+    }
+    .item-name {
+      width: 45%;
+      word-break: break-word;
+      padding-right: 4px;
+    }
+    .num {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .totals {
+      margin-top: 3px;
+    }
+    .grand {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed #111;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .small {
+      font-size: 11px;
+    }
+    .footer {
+      margin-top: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt">
+    <div class="center">
+      <div class="brand">${this.escapeHtml(organizationName)}</div>
+      <div>${this.escapeHtml(this.BranchName || this.currentBranchLabel)}</div>
+      ${phone ? `<div>Phone: ${this.escapeHtml(phone)}</div>` : ''}
+      ${gstNo ? `<div>GST No: ${this.escapeHtml(gstNo)}</div>` : ''}
+    </div>
+
+    <hr class="divider">
+
+    <div class="line"><span>Name:</span><span>${this.escapeHtml(customerName)}</span></div>
+    <div class="line"><span>Date: ${this.formatReceiptDate(now)}</span><span class="bold">${this.escapeHtml(this.activeServiceModeLabel)}</span></div>
+    <div class="line"><span>${this.formatReceiptTime(now)}</span><span>Bill No.: ${this.escapeHtml(this.currentOrderNumber)}</span></div>
+    <div class="line"><span>Cashier: ${this.escapeHtml(cashierName)}</span><span>Table: ${this.escapeHtml(this.currentTableLabel)}</span></div>
+    <div class="line"><span>Counter: ${this.escapeHtml(this.currentCounterLabel)}</span><span>Terminal: ${this.escapeHtml(this.currentTerminalLabel)}</span></div>
+    <div class="bold">Token No.: ${this.escapeHtml(tokenNo)}</div>
+
+    <hr class="divider">
+
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th class="num">Qty.</th>
+          <th class="num">Price</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+
+    <hr class="divider">
+
+    <div class="totals">
+      <div class="line"><span>Total Qty: ${this.totalItems}</span><span>Sub Total ${this.formatReceiptAmount(this.subtotal)}</span></div>
+      ${this.discountAmount ? `<div class="line"><span>Discount</span><span>-${this.formatReceiptAmount(this.discountAmount)}</span></div>` : ''}
+      ${this.serviceChargeAmount ? `<div class="line"><span>Service Charge</span><span>${this.formatReceiptAmount(this.serviceChargeAmount)}</span></div>` : ''}
+      <div class="line"><span>CGST ${this.formatReceiptPercent(cgstPercent)}%</span><span>${this.formatReceiptAmount(cgstAmount)}</span></div>
+      <div class="line"><span>SGST ${this.formatReceiptPercent(sgstPercent)}%</span><span>${this.formatReceiptAmount(sgstAmount)}</span></div>
+      ${this.tipAmount ? `<div class="line"><span>Tip</span><span>${this.formatReceiptAmount(this.tipAmount)}</span></div>` : ''}
+      ${this.roundOffAmount ? `<div class="line"><span>Round Off</span><span>${this.formatReceiptAmount(this.roundOffAmount)}</span></div>` : ''}
+      <div class="line grand"><span>Grand Total</span><span>${this.formatReceiptCurrency(this.grandTotal)}</span></div>
+    </div>
+
+    <div class="small">${this.escapeHtml(paymentLabel)}</div>
+
+    <hr class="divider">
+
+    <div class="footer">
+      ${fssaiNo ? `<div>FSSAI Lic No ${this.escapeHtml(fssaiNo)}</div>` : ''}
+      <div>No MSG, No Food Color</div>
+      <div>Daily Fresh Oil</div>
+      <div>Thank You For Dining With Us.</div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="center small">Please consume the food within 2 hours of purchase.</div>
+  </div>
+</body>
+</html>`;
   }
 
   async generateBill(): Promise<void> {
@@ -746,7 +979,7 @@ export class BillingComponent implements OnInit {
             item.sourceType === 'order' && item.sourceOrderId === selectedOrders[0].id
             || item.sourceType === 'quick'
           );
-          const payload = this.buildCompletedOrderPayload(selectedOrders[0], primaryOrderItems);
+          const payload = await this.buildCompletedOrderPayload(selectedOrders[0], primaryOrderItems);
           await firstValueFrom(this.displayMenuItemsService.update(payload));
         }
 
@@ -850,6 +1083,8 @@ export class BillingComponent implements OnInit {
 
     const discountValue = Number(this.discountInput || 0);
     const tipValue = Number(this.tipInput || 0);
+    const serviceChargeValue = Number(this.serviceChargeInput || 0);
+    const roundOffValue = Number(this.roundOffInput || 0);
 
     if (!Number.isFinite(discountValue) || discountValue <= 0) {
       this.discountAmount = 0;
@@ -860,9 +1095,16 @@ export class BillingComponent implements OnInit {
     }
 
     const discountedSubtotal = Math.max(this.subtotal - this.discountAmount, 0);
-    this.serviceChargeAmount = this.isDineInBill
+    const calculatedServiceCharge = this.isDineInBill
       ? (discountedSubtotal * this.serviceChargePercent) / 100
       : 0;
+
+    if (this.isServiceChargeManual) {
+      this.serviceChargeAmount = Number.isFinite(serviceChargeValue) && serviceChargeValue > 0 ? serviceChargeValue : 0;
+    } else {
+      this.serviceChargeAmount = this.roundAmount(calculatedServiceCharge);
+      this.serviceChargeInput = this.formatAmountInput(this.serviceChargeAmount);
+    }
 
     const taxableAmount = discountedSubtotal + this.serviceChargeAmount;
     this.taxAmount = this.cartItems.reduce((sum, item) => {
@@ -870,12 +1112,23 @@ export class BillingComponent implements OnInit {
       const share = this.subtotal > 0 ? itemBase / this.subtotal : 0;
       const itemDiscount = this.discountAmount * share;
       const itemTaxable = Math.max(itemBase - itemDiscount, 0);
-      const itemServiceCharge = this.isDineInBill ? (itemTaxable * this.serviceChargePercent) / 100 : 0;
+      const serviceChargeShare = discountedSubtotal > 0 ? itemTaxable / discountedSubtotal : 0;
+      const itemServiceCharge = this.serviceChargeAmount * serviceChargeShare;
       return sum + (((itemTaxable + itemServiceCharge) * this.gstPercent) / 100);
     }, 0);
 
     this.tipAmount = Number.isFinite(tipValue) && tipValue > 0 ? tipValue : 0;
-    this.grandTotal = taxableAmount + this.taxAmount + this.tipAmount;
+    const totalBeforeRoundOff = taxableAmount + this.taxAmount + this.tipAmount;
+    const calculatedRoundOff = this.roundAmount(Math.round(totalBeforeRoundOff) - totalBeforeRoundOff);
+
+    if (this.isRoundOffManual) {
+      this.roundOffAmount = Number.isFinite(roundOffValue) ? roundOffValue : 0;
+    } else {
+      this.roundOffAmount = calculatedRoundOff;
+      this.roundOffInput = this.formatAmountInput(this.roundOffAmount);
+    }
+
+    this.grandTotal = Math.max(totalBeforeRoundOff + this.roundOffAmount, 0);
 
     this.updatePaymentBalance();
 
@@ -904,7 +1157,10 @@ export class BillingComponent implements OnInit {
       : 'Direct Billing';
     this.currentBranchLabel = selectedBranches.length > 1
       ? 'Multiple Branches'
-      : this.currentOrder?.branch || 'Trichy';
+      : this.currentOrder?.branch || this.BranchName || '---';
+    this.currentCounterLabel = this.CounterName || '---';
+    this.currentTerminalLabel = this.TerminalName || '---';
+    this.currentCashierLabel = this.CashierName || '---';
     this.isDineInBill = this.activeServiceModeLabel === 'Dine In';
   }
 
@@ -921,28 +1177,7 @@ export class BillingComponent implements OnInit {
   }
 
   private updatePaymentState(): void {
-    this.isCashPayment = this.selectedPaymentMode === 'Cash';
-    this.isCardPayment = this.selectedPaymentMode === 'Debit Card' || this.selectedPaymentMode === 'Credit Card';
-    this.isDigitalPayment = this.selectedPaymentMode === 'UPI'
-      || this.selectedPaymentMode === 'QR Scan'
-      || this.selectedPaymentMode === 'PayNow';
-
-    this.paymentReferenceLabel = 'Reference';
-
-    if (this.selectedPaymentMode === 'UPI') {
-      this.paymentReferenceLabel = 'UPI Reference';
-    }
-
-    if (this.selectedPaymentMode === 'QR Scan') {
-      this.paymentReferenceLabel = 'QR Reference';
-    }
-
-    if (this.selectedPaymentMode === 'PayNow') {
-      this.paymentReferenceLabel = 'PayNow Reference';
-    }
-
     this.settlementSummaryLabel = this.paymentSplits.length > 1 ? 'Split Paid' : 'Received';
-    this.settlementSummaryValue = String(this.getReceivedAmount());
   }
 
   get isSelectedOrderReadonly(): boolean {
@@ -975,41 +1210,6 @@ export class BillingComponent implements OnInit {
     return this.currentOrder?.status || 'Draft Bill';
   }
 
-  get currentTableFlowMode(): BillTableFlow['mode'] {
-    if (this.billingGroupMode === 'joined') {
-      return 'Join Table';
-    }
-
-    return this.currentOrder?.tableFlow?.mode || 'No Table Flow';
-  }
-
-  get currentJoinPrimaryTableLabel(): string {
-    if (!this.selectedJoinGroup) {
-      return this.currentOrder?.tableFlow?.primaryTable || '-';
-    }
-
-    return this.getTableLabelById(this.selectedJoinGroup.primaryTableId);
-  }
-
-  get currentJoinTablesLabel(): string {
-    if (!this.selectedJoinGroup) {
-      return this.currentOrder?.tableFlow?.joinedTables || '-';
-    }
-
-    return this.selectedJoinGroup.tableIds
-      .filter((tableId) => tableId !== this.selectedJoinGroup?.primaryTableId)
-      .map((tableId) => this.getTableLabelById(tableId))
-      .join(', ') || '-';
-  }
-
-  get currentTableFlowReference(): string {
-    return this.selectedJoinGroup?.joinNo || this.currentOrder?.tableFlow?.reference || '-';
-  }
-
-  get currentTableFlowReason(): string {
-    return this.selectedJoinGroup?.notes || this.currentOrder?.tableFlow?.reason || '-';
-  }
-
   isCartItemReadonly(item: BillingCartItem): boolean {
     return this.isSelectedOrderReadonly && item.sourceType === 'order';
   }
@@ -1039,10 +1239,15 @@ export class BillingComponent implements OnInit {
     this.selectedJoinGroup = joinGroup;
     this.billingGroupMode = distinctOrders.length > 1 ? mode : 'single';
     this.selectedCustomer = this.getSelectedOrdersCustomerLabel(distinctOrders);
-    this.notes = distinctOrders.map((order) => order.notes).filter(Boolean).join(' | ');
+    this.notes = distinctOrders.map((order) => order.notes).filter(Boolean).join(' | ')
+      || this.getDefaultBillingNoteForMode(this.getSelectedOrdersServiceMode(distinctOrders));
     this.discountType = 'Amount';
     this.discountInput = String(distinctOrders.reduce((sum, order) => sum + (order.discountAmount || 0), 0));
+    this.serviceChargeInput = String(distinctOrders.reduce((sum, order) => sum + (order.serviceChargeAmount || 0), 0));
     this.tipInput = String(distinctOrders.reduce((sum, order) => sum + (order.tipAmount || 0), 0));
+    this.roundOffInput = String(distinctOrders.reduce((sum, order) => sum + (order.roundOffAmount || 0), 0));
+    this.isServiceChargeManual = distinctOrders.length > 0;
+    this.isRoundOffManual = distinctOrders.some((order) => Boolean(order.roundOffAmount));
     this.cartItems = distinctOrders.flatMap((order) => order.items.map((item) => ({
       ...item,
       sourceType: 'order' as const,
@@ -1080,10 +1285,6 @@ export class BillingComponent implements OnInit {
     return this.activeJoinGroups.find((group) => group.tableIds.includes(order.tableId)) ?? null;
   }
 
-  private getTableLabelById(tableId: number): string {
-    return this.openOrders.find((order) => order.tableId === tableId)?.table || this.getTableFallback(tableId);
-  }
-
   private getSelectedOrdersCustomerLabel(orders: BillOrder[]): string {
     if (!orders.length) {
       return 'Walk-in Customer';
@@ -1091,6 +1292,20 @@ export class BillingComponent implements OnInit {
 
     const customers = Array.from(new Set(orders.map((order) => order.customer).filter(Boolean)));
     return customers.length === 1 ? customers[0] : 'Multiple Customers';
+  }
+
+  private getSelectedOrdersServiceMode(orders: BillOrder[]): ServiceMode | 'All' | 'Mixed' {
+    const serviceModes = Array.from(new Set(orders.map((order) => order.serviceMode)));
+
+    if (!serviceModes.length) {
+      return 'All';
+    }
+
+    return serviceModes.length === 1 ? serviceModes[0] : 'Mixed';
+  }
+
+  private getDefaultBillingNoteForMode(mode: ServiceMode | 'All' | 'Mixed'): string {
+    return mode === 'Take Away' || mode === 'Delivery' ? DEFAULT_BILLING_NOTE : '';
   }
 
   private applyUserScope(): void {
@@ -1136,14 +1351,14 @@ export class BillingComponent implements OnInit {
     return true;
   }
 
-  private buildCompletedOrderPayload(order: BillOrder, scopedItems: BillingCartItem[] = this.cartItems): any {
+  private async buildCompletedOrderPayload(order: BillOrder, scopedItems: BillingCartItem[] = this.cartItems): Promise<any> {
     const rawOrder = order.rawOrder ?? {};
     const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
     const now = new Date().toISOString();
     const orderId = this.getNumberValue(rawOrder, 'OrderId', 'Orderid', 'orderId', 'orderid', 'Id', 'id') || order.id;
     const tableId = this.getNumberValue(rawOrder, 'TableId', 'Tableid', 'tableId', 'tableid');
     const floorId = this.getNumberValue(rawOrder, 'FloorId', 'Floorid', 'floorId', 'floorid');
-    const items = scopedItems.map((item) => this.buildCompletedOrderItem(item, orderId, userId, now));
+    let items = scopedItems.map((item) => this.buildCompletedOrderItem(item, orderId, userId, now));
     const paymentNote = this.getPaymentNote();
     const notes = [this.notes.trim(), paymentNote].filter(Boolean).join(' | ');
     const scopedSubtotal = scopedItems.reduce((sum, item) => sum + (item.qty * item.rate), 0) || order.subtotalAmount;
@@ -1160,7 +1375,18 @@ export class BillingComponent implements OnInit {
       return sum + (((itemTaxable + itemServiceCharge) * this.gstPercent) / 100);
     }, 0) || order.taxAmount;
     const scopedTip = order.tipAmount || 0;
-    const scopedTotal = Math.max(scopedSubtotal - scopedDiscount + scopedServiceCharge + scopedTax + scopedTip, 0);
+    const scopedRoundOff = order.roundOffAmount || 0;
+    const scopedTotal = Math.max(scopedSubtotal - scopedDiscount + scopedServiceCharge + scopedTax + scopedTip + scopedRoundOff, 0);
+    this.currentOrderEntityNo = await this.resolveOrderEntityNo(
+      ORDER_SCREEN_TEMPLATE_NAME,
+      Number(this.userDetails.OrgId || this.OrgId || this.getPayloadOrgId(rawOrder) || 0)
+    );
+    const orderEntityNo = Number(this.currentOrderEntityNo || 0);
+    items = items.map((item) => ({
+      ...item,
+      EntityNo: orderEntityNo,
+      entityNo: orderEntityNo
+    }));
 
     return {
       ...rawOrder,
@@ -1196,6 +1422,8 @@ export class BillingComponent implements OnInit {
       tipAmount: scopedTip,
       GratuityAmount: scopedTip,
       gratuityAmount: scopedTip,
+      RoundOff: scopedRoundOff,
+      roundOff: scopedRoundOff,
       TotalAmount: scopedTotal,
       totalAmount: scopedTotal,
       CustomerName: order.customer || this.selectedCustomer || 'Walk-in Customer',
@@ -1220,6 +1448,8 @@ export class BillingComponent implements OnInit {
       updatedDate: now,
       IsDeleted: false,
       isDeleted: false,
+      EntityNo: orderEntityNo,
+      entityNo: orderEntityNo,
       Items: items,
       items
     };
@@ -1230,11 +1460,16 @@ export class BillingComponent implements OnInit {
     const now = new Date().toISOString();
     const rawOrder = order?.rawOrder ?? {};
     let orderId = orderIdOverride
-      || this.getNumberValue(rawOrder, 'OrderId', 'Orderid', 'orderId', 'orderid', 'Id', 'id')
+      || this.getNumberValue(rawOrder, 'OrderId', 'Orderid', 'orderId', 'orderid')
       || order?.id
       || 0;
     const orgId = order ? this.getPayloadOrgId(rawOrder) : this.getCodeTemplateOrgId();
     const branchId = order ? this.getPayloadBranchId(rawOrder) : this.getCodeTemplateBranchId();
+    this.currentBillingEntityNo = await this.resolveOrderEntityNo(
+      BILLING_TEMPLATE_NAME,
+      Number(this.userDetails.OrgId || this.OrgId || orgId || 0)
+    );
+    const billingEntityNo = Number(this.currentBillingEntityNo || 0);
     const billNo = billNoOverride;
     const paymentSplits = this.getValidPaymentSplits();
     const paymentMode = paymentSplits.length > 1 ? 'Multi Payment' : paymentSplits[0]?.paymentMode || 'Cash';
@@ -1248,7 +1483,7 @@ export class BillingComponent implements OnInit {
     const sgstAmount = this.taxAmount / 2;
     const cgstPercentage = taxPercentage / 2;
     const cgstAmount = this.taxAmount / 2;
-    const billingOrders = this.buildBillingOrderDetails();
+    const billingOrders = this.buildBillingOrderDetails(billingEntityNo);
     const orderIds = billingOrders.map((billingOrder) => Number(billingOrder.OrderId || 0)).filter((id) => id > 0);
     orderId = orderId || orderIds[0] || 0;
     const orderIdsCsv = orderIds.join(',');
@@ -1277,7 +1512,7 @@ export class BillingComponent implements OnInit {
       TaxAmount: this.roundAmount(this.taxAmount),
       TaxPercentage: this.roundAmount(taxPercentage),
       TipAmount: this.roundAmount(this.tipAmount),
-      RoundOff: this.roundAmount(Math.round(this.grandTotal) - this.grandTotal),
+      RoundOff: this.roundAmount(this.roundOffAmount),
       TotalAmount: this.roundAmount(this.grandTotal),
       ReceivedAmount: this.roundAmount(receivedAmount),
       BalanceAmount: this.roundAmount(balanceAmount),
@@ -1307,13 +1542,15 @@ export class BillingComponent implements OnInit {
         remarks,
         paymentStatus,
         orgId,
-        branchId
+        branchId,
+        billingEntityNo
       )),
-      EntityNo: this.billingEntityNo
+      EntityNo: billingEntityNo,
+      entityNo: billingEntityNo
     };
   }
 
-  private buildBillingOrderDetails(): any[] {
+  private buildBillingOrderDetails(entityNo: number): any[] {
     const sourceOrders = this.selectedOrders.length
       ? this.selectedOrders
       : this.currentOrder
@@ -1334,8 +1571,7 @@ export class BillingComponent implements OnInit {
       const subtotal = items.reduce((sum, item) => sum + (item.qty * item.rate), 0) || order.subtotalAmount;
       const discount = Math.min(order.discountAmount || 0, subtotal);
       const serviceCharge = order.serviceMode === 'Dine In'
-        ? Math.max(subtotal - discount, 0) * this.serviceChargePercent / 100
-        : 0;
+        ? Math.max(subtotal - discount, 0) * this.serviceChargePercent / 100 : 0;
       const tax = items.reduce((sum, item) => {
         const itemBase = item.qty * item.rate;
         const share = subtotal > 0 ? itemBase / subtotal : 0;
@@ -1345,7 +1581,8 @@ export class BillingComponent implements OnInit {
         return sum + (((itemTaxable + itemServiceCharge) * this.gstPercent) / 100);
       }, 0) || order.taxAmount;
       const tip = order.tipAmount || 0;
-      const total = Math.max(subtotal - discount + serviceCharge + tax + tip, 0);
+      const roundOff = order.roundOffAmount || 0;
+      const total = Math.max(subtotal - discount + serviceCharge + tax + tip + roundOff, 0);
 
       return {
         OrderId: order.id,
@@ -1360,7 +1597,10 @@ export class BillingComponent implements OnInit {
         ServiceChargeAmount: this.roundAmount(serviceCharge),
         TaxAmount: this.roundAmount(tax),
         TipAmount: this.roundAmount(tip),
+        RoundOff: this.roundAmount(roundOff),
         TotalAmount: this.roundAmount(total),
+        EntityNo: entityNo,
+        entityNo: entityNo,
         Items: items.map((item) => ({
           ItemId: item.id,
           ItemName: item.name,
@@ -1370,7 +1610,8 @@ export class BillingComponent implements OnInit {
           TaxPercent: item.taxPercent,
           KotNo: item.kotNo || '',
           ItemType: item.itemType || 'Menu',
-          ComboMenuId: item.comboMenuId || 0
+          ComboMenuId: item.comboMenuId || 0,
+         
         }))
       };
     });
@@ -1405,7 +1646,8 @@ export class BillingComponent implements OnInit {
     remarks: string,
     paymentStatus: number,
     orgId: number,
-    branchId: number
+    branchId: number,
+    entityNo: number
   ): any {
     const amount = this.getPaymentSplitAmount(split);
     const referenceNo = this.getPaymentSplitReference(split);
@@ -1437,7 +1679,9 @@ export class BillingComponent implements OnInit {
       CreatedBy: userId || 0,
       CreatedDate: timestamp,
       UpdatedBy: userId || 0,
-      UpdatedDate: timestamp
+      UpdatedDate: timestamp,
+      EntityNo: entityNo,
+      entityNo: entityNo
     };
   }
 
@@ -1505,13 +1749,10 @@ export class BillingComponent implements OnInit {
   }
 
   private getPaymentReferenceValue(): string {
-    if (this.isCardPayment) {
-      return [this.approvalCode.trim(), this.cardLastFour.trim() ? `****${this.cardLastFour.trim()}` : '']
-        .filter(Boolean)
-        .join(' / ');
-    }
-
-    return this.paymentReference.trim();
+    return this.getValidPaymentSplits()
+      .map((split) => this.getPaymentSplitReference(split))
+      .filter(Boolean)
+      .join(', ');
   }
 
   private createPaymentSplit(mode: string): PaymentSplit {
@@ -1523,6 +1764,43 @@ export class BillingComponent implements OnInit {
       approvalCode: '',
       cardLastFour: ''
     };
+  }
+
+  private getDistinctPaymentModes(paymodes: FieldOption[]): FieldOption[] {
+    const seen = new Set<string>();
+
+    return paymodes.filter((paymode) => {
+      const key = this.normalizePaymentMode(paymode.value);
+
+      if (!key || seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  }
+
+  private getFallbackPaymentModes(): FieldOption[] {
+    return [{ label: 'Cash', value: 'Cash' }];
+  }
+
+  private syncSelectedPaymentMode(): void {
+    const defaultMode = String(this.paymentModes[0]?.value || 'Cash');
+    const selectedMode = String(this.selectedPaymentMode || '');
+    const selectedModeExists = this.paymentModes.some((mode) => String(mode.value) === selectedMode);
+
+    this.selectedPaymentMode = selectedModeExists ? selectedMode : defaultMode;
+    this.paymentSplits = this.paymentSplits.map((split, index) => {
+      const splitModeExists = this.paymentModes.some((mode) => String(mode.value) === split.paymentMode);
+
+      return {
+        ...split,
+        paymentMode: splitModeExists ? split.paymentMode : (index === 0 ? this.selectedPaymentMode || defaultMode : defaultMode)
+      };
+    });
+
+    this.updatePaymentState();
   }
 
   private getValidPaymentSplits(): PaymentSplit[] {
@@ -1545,11 +1823,21 @@ export class BillingComponent implements OnInit {
   }
 
   isCardPaymentMode(mode: string): boolean {
-    return mode === 'Debit Card' || mode === 'Credit Card';
+    return this.normalizePaymentMode(mode).includes('card');
   }
 
   isDigitalPaymentMode(mode: string): boolean {
-    return mode === 'UPI' || mode === 'QR Scan' || mode === 'PayNow';
+    const normalizedMode = this.normalizePaymentMode(mode);
+    return normalizedMode.includes('upi')
+      || normalizedMode.includes('qr')
+      || normalizedMode.includes('paynow')
+      || normalizedMode.includes('online')
+      || normalizedMode.includes('wallet')
+      || normalizedMode.includes('bank');
+  }
+
+  private normalizePaymentMode(mode: unknown): string {
+    return String(mode ?? '').trim().toLowerCase().replace(/[\s_-]+/g, '');
   }
 
   private normalizeAmountInput(value: string): string {
@@ -1559,52 +1847,74 @@ export class BillingComponent implements OnInit {
     return decimalParts.length ? `${whole}.${decimal}` : whole;
   }
 
+  private normalizeSignedAmountInput(value: string): string {
+    const rawValue = String(value ?? '');
+    const sign = rawValue.trim().startsWith('-') ? '-' : '';
+    const normalizedValue = rawValue.replace(/[^\d.]/g, '');
+    const [whole, ...decimalParts] = normalizedValue.split('.');
+    const decimal = decimalParts.join('').slice(0, 2);
+    const amount = decimalParts.length ? `${whole}.${decimal}` : whole;
+    return amount ? `${sign}${amount}` : sign;
+  }
+
+  private formatAmountInput(value: number): string {
+    const roundedValue = this.roundAmount(value);
+    return Object.is(roundedValue, -0) ? '0' : String(roundedValue);
+  }
+
   private async buildQuickBillOrderPayload(): Promise<any> {
-    this.quickBillEntityNo = await this.resolveOrderEntityNo(ORDER_SCREEN_TEMPLATE_NAME, this.getCodeTemplateOrgId());
+    this.quickBillEntityNo = await this.resolveOrderEntityNo(
+      ORDER_SCREEN_TEMPLATE_NAME,
+      Number(this.userDetails.OrgId || this.OrgId || this.getCodeTemplateOrgId() || 0)
+    );
 
     const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
     const now = new Date().toISOString();
     const orderNumber = '';
-    const items = this.cartItems.map((item) => this.buildQuickBillOrderItem(item, userId, now));
-
+    const entityNo = Number(this.quickBillEntityNo || 0);
+    const items = this.cartItems.map((item) => ({
+      ...this.buildQuickBillOrderItem(item, userId, now),
+      EntityNo: entityNo,
+      entityNo: entityNo
+    }));
     return {
       OrderId: 0,
-      Orderid: 0,
+     
       orderid: 0,
       OrderNumber: orderNumber,
       Ordernumber: orderNumber,
       orderNumber,
-      TableId: 0,
-      Tableid: 0,
+      
       tableId: 0,
-      FloorId: 0,
-      Floorid: 0,
+      
       floorId: 0,
-      TableName: '',
+      
       tableName: '',
-      OrderType: 'Take Away',
-      Ordertype: 'Take Away',
-      orderType: 'Take Away',
+      
+      orderType: 'Take Aways',
       servingType: 'Self Service',
-      OrderStatus: ORDER_STATUS.Completed,
-      Orderstatus: ORDER_STATUS.Completed,
+      
       orderStatus: ORDER_STATUS.Completed,
-      ItemCount: this.totalItems,
-      Itemcount: this.totalItems,
+      
+      
       itemCount: this.totalItems,
-      SubtotalAmount: this.subtotal,
+      
       subtotalAmount: this.subtotal,
-      TaxAmount: this.taxAmount,
+      
       taxAmount: this.taxAmount,
-      DiscountAmount: this.discountAmount,
+      
       discountAmount: this.discountAmount,
-      TipAmount: this.tipAmount,
+      
+      serviceChargeAmount: this.serviceChargeAmount,
+      
       tipAmount: this.tipAmount,
-      GratuityAmount: this.tipAmount,
+      
       gratuityAmount: this.tipAmount,
-      TotalAmount: this.grandTotal,
+      
+      roundOff: this.roundOffAmount,
+      
       totalAmount: this.grandTotal,
-      CustomerName: this.selectedCustomer || 'Walk-in Customer',
+      
       customerName: this.selectedCustomer || 'Walk-in Customer',
       ContactNumber: '',
       contactNumber: '',
@@ -1614,8 +1924,8 @@ export class BillingComponent implements OnInit {
       paymentMode: this.selectedPaymentMode,
       PaymentReference: this.getPaymentReferenceValue(),
       paymentReference: this.getPaymentReferenceValue(),
-      ReceivedAmount: this.isCashPayment ? Number(this.receivedAmountInput || 0) : this.grandTotal,
-      receivedAmount: this.isCashPayment ? Number(this.receivedAmountInput || 0) : this.grandTotal,
+      ReceivedAmount: this.getReceivedAmount(),
+      receivedAmount: this.getReceivedAmount(),
       BalanceAmount: this.balanceAmount,
       balanceAmount: this.balanceAmount,
       ShiftId: this.getCurrentShiftId(),
@@ -1637,8 +1947,8 @@ export class BillingComponent implements OnInit {
       branchId: this.getCodeTemplateBranchId(),
       Items: items,
       items,
-      EntityNo: this.quickBillEntityNo,
-      entityNo: this.quickBillEntityNo
+      EntityNo: entityNo,
+      entityNo: entityNo
     };
   }
 
@@ -1709,8 +2019,9 @@ export class BillingComponent implements OnInit {
     const serviceChargeAmount = this.getNumberValue(order, 'ServiceChargeAmount', 'serviceChargeAmount', 'ServiceCharge', 'serviceCharge');
     const taxAmount = this.getNumberValue(order, 'TaxAmount', 'taxAmount', 'Tax', 'tax');
     const tipAmount = this.getNumberValue(order, 'TipAmount', 'tipAmount', 'GratuityAmount', 'gratuityAmount', 'Tip', 'tip');
+    const roundOffAmount = this.getNumberValue(order, 'RoundOff', 'roundOff', 'RoundOffAmount', 'roundOffAmount');
     const totalAmount = this.getNumberValue(order, 'TotalAmount', 'totalAmount', 'GrandTotal', 'grandTotal', 'Total', 'total')
-      || Math.max(subtotalAmount - discountAmount + serviceChargeAmount + taxAmount + tipAmount, 0);
+      || Math.max(subtotalAmount - discountAmount + serviceChargeAmount + taxAmount + tipAmount + roundOffAmount, 0);
 
     return {
       id: this.getNumberValue(order, 'OrderId', 'Orderid', 'orderId', 'orderid', 'Id', 'id'),
@@ -1732,6 +2043,7 @@ export class BillingComponent implements OnInit {
       serviceChargeAmount,
       taxAmount,
       tipAmount,
+      roundOffAmount,
       totalAmount,
       rawOrder: order
     };
@@ -1957,27 +2269,6 @@ export class BillingComponent implements OnInit {
     return (this.itemSearch || this.barcodeSearch || '').trim();
   }
 
-  private async loadLatestOrderNumber(templateName: string, orgId: number): Promise<{ orderNumber: string; entityNo: number }> {
-    const entityNo = await this.resolveOrderEntityNo(templateName, orgId);
-
-    if (!entityNo || !orgId) {
-      throw new Error('Code template context is missing.');
-    }
-
-    try {
-      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(entityNo, orgId, this.getCodeTemplateBranchId()));
-      const orderNumber = String(response?.result ?? '').trim();
-
-      if (!orderNumber) {
-        throw new Error('Code template did not return an order number.');
-      }
-
-      return { orderNumber, entityNo };
-    } catch {
-      throw new Error('Unable to load order number. Please check code template setup.');
-    }
-  }
-
   private async resolveOrderEntityNo(templateName: string, orgId: number): Promise<number> {
     const branchId = this.getCodeTemplateBranchId();
     const cacheKey = `${orgId}:${branchId}:${this.normalizeTemplateName(templateName)}`;
@@ -2055,6 +2346,50 @@ export class BillingComponent implements OnInit {
 
   private getReceivedAmount(): number {
     return this.paymentSplits.reduce((sum, split) => sum + this.getPaymentSplitAmount(split), 0);
+  }
+
+  private getReceiptTokenNo(): string {
+    const source = this.currentOrder?.rawOrder ?? this.selectedOrders[0]?.rawOrder ?? {};
+    const tokenNo = this.getStringValue(source, 'TokenNo', 'tokenNo', 'TokenNumber', 'tokenNumber');
+    return tokenNo || '-';
+  }
+
+  private formatReceiptDate(value: Date): string {
+    return value.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit'
+    });
+  }
+
+  private formatReceiptTime(value: Date): string {
+    return value.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  }
+
+  private formatReceiptAmount(value: number): string {
+    return this.roundAmount(value).toFixed(2);
+  }
+
+  private formatReceiptCurrency(value: number): string {
+    return `₹${this.formatReceiptAmount(value)}`;
+  }
+
+  private formatReceiptPercent(value: number): string {
+    const roundedValue = this.roundAmount(value);
+    return Number.isInteger(roundedValue) ? String(roundedValue) : roundedValue.toFixed(2);
+  }
+
+  private escapeHtml(value: unknown): string {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   private roundAmount(value: number): number {

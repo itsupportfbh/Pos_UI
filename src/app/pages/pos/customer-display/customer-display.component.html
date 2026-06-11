@@ -52,7 +52,7 @@
       <article class="customer-order-column progress-column">
         <header class="column-header">
           <div>
-            <span class="column-kicker">Queue</span>
+           
             <h2>In Progress</h2>
           </div>
           <strong>{{ inProgressOrderCount }}</strong>
@@ -81,11 +81,11 @@
               <div class="customer-order-footline">
                 <div class="customer-order-tags">
                   <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
-                  <span class="order-sub-chip">Guest Queue</span>
+                  
                 </div>
 
                 <div class="customer-order-time">
-                  <span>Started</span>
+                 
                   <strong>{{ getElapsedMinutes(order) || 'Now' }}</strong>
                 </div>
               </div>
@@ -105,7 +105,7 @@
       >
         <header class="column-header ready-header">
           <div>
-            <span class="column-kicker">Collection</span>
+          
             <h2>Ready for Collection</h2>
           </div>
           <strong>{{ readyOrderCount }}</strong>
@@ -134,11 +134,11 @@
               <div class="customer-order-footline">
                 <div class="customer-order-tags">
                   <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
-                  <span class="order-sub-chip ready-chip">Collection Queue</span>
+                  
                 </div>
 
                 <div class="customer-order-time">
-                  <span>Collect Now</span>
+                 
                   <strong>{{ getElapsedMinutes(order) || 'Ready' }}</strong>
                 </div>
               </div>
@@ -200,7 +200,7 @@
         <article class="customer-order-column progress-column">
           <header class="column-header">
             <div>
-              <span class="column-kicker">Queue</span>
+              
               <h2>In Progress</h2>
             </div>
             <strong>{{ inProgressOrderCount }}</strong>
@@ -229,11 +229,11 @@
                 <div class="customer-order-footline">
                   <div class="customer-order-tags">
                     <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
-                    <span class="order-sub-chip">Guest Queue</span>
+                    
                   </div>
 
                   <div class="customer-order-time">
-                    <span>Started</span>
+               
                     <strong>{{ getElapsedMinutes(order) || 'Now' }}</strong>
                   </div>
                 </div>
@@ -253,7 +253,7 @@
         >
           <header class="column-header ready-header">
             <div>
-              <span class="column-kicker">Collection</span>
+              
               <h2>Ready for Collection</h2>
             </div>
             <strong>{{ readyOrderCount }}</strong>
@@ -282,11 +282,11 @@
                 <div class="customer-order-footline">
                   <div class="customer-order-tags">
                     <span class="order-type-label" [ngClass]="getOrderTypeClass(order)">{{ getOrderTypeDisplay(order) }}</span>
-                    <span class="order-sub-chip ready-chip">Collection Queue</span>
+                    
                   </div>
 
                   <div class="customer-order-time">
-                    <span>Collect Now</span>
+                    
                     <strong>{{ getElapsedMinutes(order) || 'Ready' }}</strong>
                   </div>
                 </div>
