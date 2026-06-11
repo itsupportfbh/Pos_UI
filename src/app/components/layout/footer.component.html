@@ -5,7 +5,10 @@
     } @else {
       <span class="footer-icon">{{ (appName || 'A').charAt(0).toUpperCase() }}</span>
     }
-    <span>{{ appName }}</span>
+    <div class="footer-brand-copy">
+      <strong>{{ appName }}</strong>
+      <small>Workspace shell</small>
+    </div>
   </div>
-  <span>{{ description }}</span>
+  <span class="footer-description">{{ description }}</span>
 </footer>

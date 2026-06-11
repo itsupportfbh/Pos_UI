@@ -1,58 +1,294 @@
-<section class="overview-page">
-  <section class="hero-strip">
-    <div>
-      <p class="eyebrow">POS Dashboard</p>
-      <h1>Today's overview</h1>
-      <p class="hero-copy">Start with the numbers and alerts that matter most, then jump straight into billing, menus, or return refunds.</p>
+<section class="restaurant-dashboard">
+  <section class="dashboard-hero">
+    <div class="hero-copy">
+      <p class="eyebrow">Restaurant POS</p>
+      <h1>{{ pageTitle }}</h1>
+      <p>{{ pageSubtitle }}</p>
     </div>
+
     <div class="hero-actions">
-      <p-button label="Open Billing" icon="pi pi-shopping-cart" routerLink="/pos/billing" />
-      <p-button label="Return Refund" icon="pi pi-receipt" severity="secondary" [outlined]="true" routerLink="/pos/return-refund" />
+      @for (action of primaryActions; track action.title) {
+        <a class="hero-action-link" [routerLink]="action.route">
+          <span class="hero-action-icon">
+            <i [class]="action.icon"></i>
+          </span>
+          <span class="hero-action-copy">
+            <strong>{{ action.title }}</strong>
+            <small>{{ action.subtitle }}</small>
+          </span>
+        </a>
+      }
     </div>
   </section>
 
-  <section class="stats-grid">
-    @for (card of counterCards; track card.label) {
-      <article class="stats-card"><span>{{ card.label }}</span><strong>{{ card.value }}</strong><p>{{ card.caption }}</p></article>
+  <section class="headline-grid">
+    @for (stat of headlineStats; track stat.label) {
+      <article class="headline-card" [class.is-good]="stat.tone === 'good'" [class.is-warn]="stat.tone === 'warn'">
+        <div class="headline-top">
+          <span class="headline-label">{{ stat.label }}</span>
+          <span class="headline-icon">
+            <i [class]="stat.icon"></i>
+          </span>
+        </div>
+        <strong>{{ stat.value }}</strong>
+        <p>{{ stat.caption }}</p>
+        @if (stat.trend) {
+          <small>{{ stat.trend }}</small>
+        }
+      </article>
     }
   </section>
 
-  <section class="overview-grid">
-    <p-card class="overview-card">
-      <div class="section-heading"><div><p class="eyebrow">Sales Graph</p><h2>Hourly billing</h2></div></div>
-      <section class="sales-graph">
-        @for (point of salesGraph; track point.hour) {
-          <article class="graph-column"><span class="graph-value">{{ point.amount | currency: 'USD' : 'symbol' : '1.0-0' }}</span><div class="graph-bar-wrap"><div class="graph-bar" [style.height.%]="point.height"></div></div><strong>{{ point.hour }}</strong></article>
-        }
-      </section>
-    </p-card>
-    <p-card class="overview-card">
-      <div class="section-heading"><div><p class="eyebrow">Top Selling Products</p><h2>Fast movers</h2></div></div>
-      <section class="top-products">
-        @for (product of topProducts; track product.name) {
-          <article class="top-product-card"><div><strong>{{ product.name }}</strong><p>{{ product.sold }}</p></div><span>{{ product.trend }}</span></article>
-        }
-      </section>
-    </p-card>
-  </section>
+  <section class="content-grid">
+    <div class="content-main">
+      <p-card class="dashboard-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Sales By Service Mode</p>
+            <h2>Where orders are coming from</h2>
+          </div>
+        </div>
 
-  <section class="overview-grid">
-    <p-card class="overview-card">
-      <div class="section-heading"><div><p class="eyebrow">Quick Actions</p><h2>Go To</h2></div></div>
-      <section class="quick-grid">
-        @for (action of quickActions; track action.title) {
-          <a class="quick-card" [routerLink]="action.route"><i [class]="action.icon"></i><strong>{{ action.title }}</strong></a>
-        }
-      </section>
-    </p-card>
-    <p-card class="overview-card">
-      <div class="section-heading"><div><p class="eyebrow">Important Alerts</p><h2>What needs attention</h2></div></div>
-      <ul class="note-list">@for (note of dashboardNotes; track note) { <li>{{ note }}</li> }</ul>
-    </p-card>
-  </section>
+        <section class="service-mode-grid">
+          @for (mode of serviceModes; track mode.label) {
+            <article class="service-mode-card">
+              <div class="service-mode-top">
+                <strong>{{ mode.label }}</strong>
+                <span>{{ mode.badge }}</span>
+              </div>
+              <div class="service-mode-value">{{ mode.orders }} orders</div>
+              <p>{{ mode.sales }}</p>
+            </article>
+          }
+        </section>
 
-  <p-card class="overview-card">
-    <div class="section-heading"><div><p class="eyebrow">Recent Bills</p><h2>Latest invoices</h2></div></div>
-    <app-shared-table caption="Recent Invoices" [columns]="invoiceColumns" [value]="recentInvoices" />
-  </p-card>
+        <section class="service-highlight-grid">
+          @for (item of serviceHighlights; track item.label) {
+            <article class="service-highlight-card">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+              <p>{{ item.detail }}</p>
+            </article>
+          }
+        </section>
+
+        <section class="category-pulse-strip">
+          <div class="category-pulse-copy">
+            <span class="eyebrow">Top Categories</span>
+            <strong>Best movers this shift</strong>
+            <p>Quick read on what is driving orders right now.</p>
+          </div>
+
+          <div class="category-pulse-list">
+            @for (item of categoryPulse; track item.name) {
+              <article class="category-pulse-item">
+                <div class="category-pulse-top">
+                  <strong>{{ item.name }}</strong>
+                  <span>{{ item.share }}</span>
+                </div>
+                <div class="category-pulse-bottom">
+                  <small>{{ item.orders }}</small>
+                  <em>{{ item.amount }}</em>
+                </div>
+              </article>
+            }
+          </div>
+        </section>
+      </p-card>
+
+      <section class="split-grid">
+        <p-card class="dashboard-card">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Dining Floor</p>
+              <h2>Live tables</h2>
+            </div>
+            <span class="header-tag">30 tables total</span>
+          </div>
+
+          <section class="table-list">
+            @for (table of liveTables; track table.table) {
+              <article class="table-item"
+                [class.is-billing]="table.status === 'Ready To Bill'"
+                [class.is-reserved]="table.status === 'Reserved'"
+                [class.is-cleaning]="table.status === 'Cleaning'">
+                <div class="table-copy">
+                  <strong>{{ table.table }}</strong>
+                  <small>{{ table.area }} - {{ table.server }}</small>
+                  <p>{{ table.guests }}</p>
+                </div>
+                <div class="table-meta">
+                  <span>Timer</span>
+                  <small>{{ table.elapsed }}</small>
+                </div>
+                <em class="status-chip"
+                  [class.warn]="table.status === 'Ready To Bill'"
+                  [class.info]="table.status === 'Reserved'"
+                  [class.neutral]="table.status === 'Cleaning'"
+                  [class.good]="table.status === 'Occupied'">{{ table.status }}</em>
+              </article>
+            }
+          </section>
+        </p-card>
+
+        <p-card class="dashboard-card">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">Kitchen Pass</p>
+              <h2>KOT queue</h2>
+            </div>
+            <span class="header-tag warn">14 live tickets</span>
+          </div>
+
+          <section class="ticket-list">
+            @for (ticket of kitchenTickets; track ticket.kotNo) {
+              <article class="ticket-item"
+                [class.is-ready]="ticket.stage === 'Ready'"
+                [class.is-rush]="ticket.priority === 'Rush'">
+                <div class="ticket-top">
+                  <strong>{{ ticket.kotNo }}</strong>
+                  <div class="ticket-top-meta">
+                    <span>{{ ticket.table }}</span>
+                    <em class="priority-chip"
+                      [class.rush]="ticket.priority === 'Rush'"
+                      [class.ready]="ticket.priority === 'Ready'">{{ ticket.priority }}</em>
+                  </div>
+                </div>
+                <p>{{ ticket.items }}</p>
+                <div class="ticket-footer">
+                  <em class="status-chip"
+                    [class.warn]="ticket.stage === 'Queued'"
+                    [class.accent]="ticket.stage === 'Cooking' || ticket.stage === 'Plating'"
+                    [class.good]="ticket.stage === 'Ready'">{{ ticket.stage }}</em>
+                  <small>{{ ticket.age }}</small>
+                </div>
+              </article>
+            }
+          </section>
+        </p-card>
+      </section>
+
+      <p-card class="dashboard-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Payment Collection</p>
+            <h2>Shift payment mix</h2>
+          </div>
+        </div>
+
+        <section class="payment-grid">
+          @for (payment of paymentMix; track payment.label) {
+            <article class="payment-item">
+              <div class="payment-copy">
+                <strong>{{ payment.label }}</strong>
+                <span>{{ payment.value }}</span>
+              </div>
+              <div class="payment-progress">
+                <div class="payment-progress-bar" [style.width.%]="payment.width"></div>
+              </div>
+              <small>{{ payment.share }} of total sales</small>
+            </article>
+          }
+        </section>
+      </p-card>
+    </div>
+
+    <aside class="content-side">
+      <p-card class="dashboard-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Counter Snapshot</p>
+            <h2>Cashier performance</h2>
+          </div>
+        </div>
+
+        <section class="counter-list">
+          @for (counter of counters; track counter.counter) {
+            <article class="counter-item">
+              <div class="counter-copy">
+                <div class="counter-top">
+                  <strong>{{ counter.counter }}</strong>
+                  <span class="mini-chip">{{ counter.mode }}</span>
+                </div>
+                <p>{{ counter.cashier }}</p>
+              </div>
+              <div class="counter-stats">
+                <span>{{ counter.bills }}</span>
+                <strong>{{ counter.sales }}</strong>
+                <small class="counter-status">{{ counter.status }}</small>
+              </div>
+            </article>
+          }
+        </section>
+      </p-card>
+
+      <p-card class="dashboard-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Alerts</p>
+            <h2>What needs attention</h2>
+          </div>
+        </div>
+
+        <section class="alert-list">
+          @for (alert of alerts; track alert.title) {
+            <article class="alert-item" [class.is-warn]="alert.tone === 'warn'" [class.is-good]="alert.tone === 'good'">
+              <div class="alert-top">
+                <strong>{{ alert.title }}</strong>
+                <span class="alert-tag" [class.warn]="alert.tone === 'warn'" [class.good]="alert.tone === 'good'">{{ alert.tag }}</span>
+              </div>
+              <p>{{ alert.detail }}</p>
+            </article>
+          }
+        </section>
+      </p-card>
+
+      <p-card class="dashboard-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Shift Flow</p>
+            <h2>Today checklist</h2>
+          </div>
+        </div>
+
+        <section class="timeline-list">
+          @for (task of shiftChecklist; track task.time) {
+            <article class="timeline-item" [class.is-done]="task.status === 'Done'" [class.is-progress]="task.status === 'In Progress'">
+              <div class="timeline-time">{{ task.time }}</div>
+              <div class="timeline-copy">
+                <div class="timeline-top">
+                  <strong>{{ task.title }}</strong>
+                  <span class="timeline-status"
+                    [class.done]="task.status === 'Done'"
+                    [class.progress]="task.status === 'In Progress'">{{ task.status }}</span>
+                </div>
+                <p>{{ task.detail }}</p>
+              </div>
+            </article>
+          }
+        </section>
+      </p-card>
+
+      <p-card class="dashboard-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Quick Actions</p>
+            <h2>Jump into work</h2>
+          </div>
+        </div>
+
+        <section class="quick-list">
+          @for (action of quickActions; track action.title) {
+            <a class="quick-item" [routerLink]="action.route">
+              <i [class]="action.icon"></i>
+              <div>
+                <strong>{{ action.title }}</strong>
+                <p>{{ action.subtitle }}</p>
+              </div>
+            </a>
+          }
+        </section>
+      </p-card>
+    </aside>
+  </section>
 </section>

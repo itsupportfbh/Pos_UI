@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { ImageUploadFieldComponent } from '../../../components/form/image-upload-field.component';
@@ -51,7 +52,8 @@ const DINING_TABLE_COLUMNS: SharedTableColumn<any>[] = [
     ActionButtonsComponent,
     ImageUploadFieldComponent,
     MenuModule,
-    ConfirmDialogModule
+    ConfirmDialogModule,
+    ProgressSpinnerModule
   ],
   providers: [ConfirmationService],
   templateUrl: './dining-table.component.html',
@@ -76,6 +78,7 @@ export class DiningTableComponent implements OnInit {
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
 
   showAddDialog = false;
+  pageLoading = false;
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
@@ -107,6 +110,8 @@ export class DiningTableComponent implements OnInit {
   readonly pageEyebrow = 'Dining';
   readonly pageTitle = 'Dining Tables';
   readonly pageSubtitle = 'Maintain dining table details and seating capacity.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly tableTitle = 'Dining Tables';
   readonly tableCaption = 'Dining tables';
   dialogTitle = 'Create Dining Table';
@@ -125,20 +130,26 @@ export class DiningTableComponent implements OnInit {
   downloadLoadingLabel = 'Exporting...';
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.BranchId = this.userDetails.IsAdmin === true ? 0 : Number(this.userDetails.BranchId || 0);
-    await this.loadDiningTableRights();
+    try {
+      await this.loadDiningTableRights();
 
-    this.tableColumns = DINING_TABLE_COLUMNS.map((x: any) => {
-      if (x.field === 'organizationname') {
-        x.hidden = this.userDetails.RoleId !== 1;
-      }
+      this.tableColumns = DINING_TABLE_COLUMNS.map((x: any) => {
+        if (x.field === 'organizationname') {
+          x.hidden = this.userDetails.RoleId !== 1;
+        }
 
-      return x;
-    });
+        return x;
+      });
 
-    this.loadDiningTables();
+      this.loadDiningTables();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadDiningTableRights(): Promise<void> {
@@ -254,8 +265,11 @@ export class DiningTableComponent implements OnInit {
       });
 
       this.allRows = [...this.tableRows];
+      this.pageLoading = false;
       this.changeDetector.detectChanges();
     } catch (error: any) {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
       console.error('Error loading dining tables:', error);
       this.toast.error('Load Failed', 'Unable to load dining tables. Please check API and try again.');
     }

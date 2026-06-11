@@ -58,7 +58,7 @@
 
 .permission-summary-card {
   align-items: center;
-  background: linear-gradient(180deg, rgba(var(--app-primary-rgb), 0.05), rgba(var(--app-primary-rgb), 0.02));
+  background: var(--app-control-bg-panel);
   border: 1px solid rgba(var(--app-primary-rgb), 0.1);
   border-radius: 1rem;
   display: flex;
@@ -79,7 +79,7 @@
 }
 
 .permission-summary-pill {
-  background: #fff;
+  background: var(--app-surface-strong);
   border: 1px solid rgba(var(--app-primary-rgb), 0.12);
   border-radius: 999px;
   color: var(--app-primary);
