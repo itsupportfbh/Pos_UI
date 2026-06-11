@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
+import { SyncEngineService } from './services/sync-engine.service';
 
 @Component({
   selector: 'app-root',
@@ -8,4 +9,14 @@ import { ToastModule } from 'primeng/toast';
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
-export class App {}
+export class App {
+  constructor(
+    private syncEngine:
+      SyncEngineService
+  ) {
+  }
+
+  ngOnInit() {
+    this.syncEngine.startSync();
+  }
+}

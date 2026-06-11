@@ -106,8 +106,156 @@ export class OrganizationService {
     return this.http.get<any>(`${this.baseUrl}/CodeTemplate/GetLatestCode?EntityNo=${EntityNo}&OrgId=${OrgId}&BranchId=${BranchId}`);
   }
 
+  async getLatestCodeOffline(
+    entityNo: number,
+    orgId: number,
+    branchId: number
+  ): Promise<string> {
+
+    let sql = '';
+    let params: any[] = [];
+
+    if (entityNo === 2) {
+      sql = `
+      SELECT *
+      FROM CodeTemplate
+      WHERE
+        IsDeleted = 0
+        AND IsActive = 1
+        AND EntityNo = ?
+      ORDER BY Id DESC
+      LIMIT 1
+    `;
+
+      params = [entityNo];
+    } else {
+      sql = `
+      SELECT *
+      FROM CodeTemplate
+      WHERE
+        IsDeleted = 0
+        AND IsActive = 1
+        AND EntityNo = ?
+        AND OrgId = ?
+        AND (
+          IsMaster = 1
+          OR BranchId = ?
+        )
+      ORDER BY Id DESC
+      LIMIT 1
+    `;
+
+      params = [entityNo, orgId, branchId];
+    }
+
+    let result = await this.query(sql, params);
+
+    let template = result.values?.[0];
+
+    if (!template && entityNo !== 2) {
+
+      result = await this.query(
+        `
+      SELECT *
+      FROM CodeTemplate
+      WHERE
+        IsDeleted = 0
+        AND IsActive = 1
+        AND EntityNo = ?
+        AND OrgId = 0
+        AND (
+          IsMaster = 1
+          OR BranchId = ?
+        )
+      ORDER BY Id DESC
+      LIMIT 1
+      `,
+        [entityNo, branchId]
+      );
+
+      template = result.values?.[0];
+    }
+
+    if (!template) {
+      return '';
+    }
+
+    return this.buildLatestCode(template);
+  }
+
+  private buildLatestCode(codeTemplate: any): string {
+
+    const prefix =
+      (codeTemplate.Prefix ?? '').toUpperCase();
+
+    const suffix =
+      (codeTemplate.Suffix ?? '').toUpperCase();
+
+    const startValue =
+      String(codeTemplate.StartValue ?? '');
+
+    const nextValue =
+      Number(codeTemplate.CurrentValue ?? 0) + 1;
+
+    const balanceDigits =
+      Number(codeTemplate.NoOfDigit ?? 0) -
+      startValue.length;
+
+    const numericPart =
+      balanceDigits > 0
+        ? startValue +
+        nextValue.toString().padStart(balanceDigits, '0')
+        : startValue + nextValue.toString();
+
+    if (codeTemplate.IsDateMonthYearWise) {
+
+      const now = new Date();
+
+      const dd =
+        now.getDate().toString().padStart(2, '0');
+
+      const mm =
+        (now.getMonth() + 1)
+          .toString()
+          .padStart(2, '0');
+
+      const yyyy =
+        now.getFullYear();
+
+      return `${dd}${mm}${yyyy}-${prefix}${numericPart}${suffix}`;
+    }
+
+    return `${prefix}${numericPart}${suffix}`;
+  }
+
+  async updateCodeTemplateCounter(
+    entityNo: number,
+    orgId: number,
+    branchId: number
+  ): Promise<void> {
+
+    await this.query(
+      `
+    UPDATE CodeTemplate
+    SET CurrentValue = CurrentValue + 1
+    WHERE Id = (
+      SELECT Id
+      FROM CodeTemplate
+      WHERE
+        EntityNo = ?
+        AND OrgId = ?
+      LIMIT 1
+    )
+    `,
+      [entityNo, orgId]
+    );
+  }
 
   private get baseUrl(): string {
     return this.runtimeConfig.apiBaseUrl;
+  }
+
+  async query(sql: string, params: any[] = []): Promise<any> {
+    return await window.electronAPI.executeQuery(sql, params);
   }
 }

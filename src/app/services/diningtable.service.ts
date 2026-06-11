@@ -14,7 +14,7 @@ export interface DiningTable {
     floorId: number;
     image?: string;
     imageFile?: File | null;
-    remarks: string;     
+    remarks: string;
     displayOrder: number;
     orgId: number;
     isActive?: boolean;
@@ -61,7 +61,7 @@ export class DiningTableService {
         formData.append('UpdatedBy', (payload.updatedBy ?? 0).toString());
         formData.append('UpdatedDate', payload.updatedDate ?? new Date().toISOString());
         formData.append('IsDeleted', (payload.isDeleted ?? false).toString());
-        
+
         if (payload.imageFile) {
             formData.append('ImageFile', payload.imageFile);
         }
@@ -92,7 +92,7 @@ export class DiningTableService {
         formData.append('UpdatedBy', (payload.updatedBy ?? 0).toString());
         formData.append('UpdatedDate', payload.updatedDate ?? new Date().toISOString());
         formData.append('IsDeleted', (payload.isDeleted ?? false).toString());
-        
+
         if (payload.imageFile) {
             formData.append('ImageFile', payload.imageFile);
         }
@@ -118,6 +118,52 @@ export class DiningTableService {
         );
     }
 
+    async getAllOffline(
+        orgId: number,
+        branchId?: number
+    ): Promise<any[]> {
+         
+        let sql = `
+    SELECT
+      d.Id,
+      o.Name AS organizationname,
+      d.Name AS name,
+      d.Code AS code,
+      d.BranchId AS branchid,
+      d.FloorId AS floorid,
+      d.DisplayOrder AS displayorder,
+      b.Name AS branchname,
+      f.Name AS floorname,
+      d.SeatingSize AS seatingsize,
+      d.IsOccupied AS occupied,
+      d.Remarks AS remarks,
+      d.IsActive AS isactive,
+      d.Image AS image
+    FROM DiningTableMaster d
+    INNER JOIN Organization o
+      ON d.OrgId = o.Id
+    INNER JOIN Branch b
+      ON d.BranchId = b.Id
+    INNER JOIN FloorMaster f
+      ON d.FloorId = f.Id
+    WHERE d.IsDeleted = 0
+      AND (? = 0 OR d.OrgId = ?)
+  `;
+debugger;
+        const params: any[] = [orgId, orgId];
+
+        if (branchId && branchId > 0) {
+            sql += ` AND d.BranchId = ? `;
+            params.push(branchId);
+        }
+
+        sql += ` ORDER BY d.DisplayOrder ASC `;
+        console.log(sql);
+        const result = await this.query(sql, params);
+        console.log(result);
+        return result.values ?? [];
+    }
+
     getById(id: number | string): Observable<DiningTable> {
         const params = new HttpParams().set('Id', id.toString());
 
@@ -138,5 +184,9 @@ export class DiningTableService {
 
     private get baseUrl(): string {
         return this.runtimeConfig.apiBaseUrl;
+    }
+
+    async query(sql: string, params: any[] = []): Promise<any> {
+        return await window.electronAPI.executeQuery(sql, params);
     }
 }

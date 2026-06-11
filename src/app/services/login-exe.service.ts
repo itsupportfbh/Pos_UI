@@ -74,7 +74,8 @@ export class LoginService {
           AND um.IsDeleted = 0
       LIMIT 1
     `;
-debugger;
+    debugger;
+    console.log(sql);
     const result = await this.query(sql, [pin]);
     console.log(result);
     if (!result?.values?.length) {

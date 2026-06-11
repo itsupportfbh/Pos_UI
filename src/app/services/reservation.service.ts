@@ -48,8 +48,25 @@ export class ReservationService {
     reservation: Reservation
   ): Promise<any> {
 
-    const sql = `
-    INSERT INTO Reservation
+    const duplicate = await this.query(
+      `SELECT Id
+     FROM Reservations
+     WHERE lower(trim(ReservationNo)) = lower(trim(?))
+       AND OrgId = ?
+       AND IsDeleted = 0`,
+      [
+        reservation.ReservationNo,
+        reservation.OrgId
+      ]
+    );
+
+    if (duplicate.values?.length) {
+      return { message: 'AlreadyExists' };
+    }
+
+    await this.query(
+      `
+    INSERT INTO Reservations
     (
       ReservationNo,
       CustomerName,
@@ -66,17 +83,16 @@ export class ReservationService {
       BranchId,
       IsActive,
       IsDeleted,
+      CreatedBy,
       CreatedDate
     )
     VALUES
     (
       ?,?,?,?,?,?,?,?,?,?,
-      ?,?,?,1,0,datetime('now')
+      ?,?,?,1,0,?,datetime('now')
     )
-  `;
-
-    const stmtResult =
-      await this.query(sql, [
+    `,
+      [
         reservation.ReservationNo,
         reservation.CustomerName,
         reservation.CustomerMobile,
@@ -89,10 +105,62 @@ export class ReservationService {
         reservation.Specialrequests,
         reservation.Bookingsource,
         reservation.OrgId,
-        reservation.BranchId
-      ]);
+        reservation.BranchId,
+        reservation.CreatedBy ?? 1
+      ]
+    );
 
-    return stmtResult;
+    const inserted = await this.query(
+      `SELECT last_insert_rowid() as Id`
+    );
+
+    const reservationId = inserted.values[0].Id;
+
+    if (reservation.TableIds?.length) {
+
+      for (const tbl of reservation.TableIds) {
+
+        await this.query(
+          `
+        INSERT INTO ReservationTablesMapping
+        (
+          ReservationId,
+          TableId,
+          IsReserved,
+          OrgId,
+          BranchId,
+          IsDeleted,
+          CreatedBy,
+          CreatedDate
+        )
+        VALUES
+        (
+          ?, ?, 1, ?, ?, 0, ?, datetime('now')
+        )
+        `,
+          [
+            reservationId,
+            tbl.TableId,
+            reservation.OrgId,
+            reservation.BranchId,
+            reservation.CreatedBy ?? 1
+          ]
+        );
+
+        await this.query(
+          `
+        UPDATE DiningTableMaster
+        SET IsOccupied = 1
+        WHERE Id = ?
+        `,
+          [tbl.TableId]
+        );
+      }
+    }
+
+    return {
+      result: reservationId
+    };
   }
 
   update(payload: Reservation): Observable<any> {
@@ -103,8 +171,9 @@ export class ReservationService {
     reservation: Reservation
   ): Promise<any> {
 
-    const sql = `
-    UPDATE Reservation
+    await this.query(
+      `
+    UPDATE Reservations
     SET
       CustomerName=?,
       CustomerMobile=?,
@@ -116,23 +185,102 @@ export class ReservationService {
       Guestcount=?,
       Specialrequests=?,
       Bookingsource=?,
+      UpdatedBy=?,
       UpdatedDate=datetime('now')
     WHERE Id=?
-  `;
+    `,
+      [
+        reservation.CustomerName,
+        reservation.CustomerMobile,
+        reservation.ReservationDate,
+        reservation.ReservationFromtime,
+        reservation.ReservationTotime,
+        reservation.TableName,
+        reservation.CustomerEmail,
+        reservation.Guestcount,
+        reservation.Specialrequests,
+        reservation.Bookingsource,
+        reservation.UpdatedBy ?? 1,
+        reservation.Id
+      ]
+    );
 
-    return await this.query(sql, [
-      reservation.CustomerName,
-      reservation.CustomerMobile,
-      reservation.ReservationDate,
-      reservation.ReservationFromtime,
-      reservation.ReservationTotime,
-      reservation.TableName,
-      reservation.CustomerEmail,
-      reservation.Guestcount,
-      reservation.Specialrequests,
-      reservation.Bookingsource,
-      reservation.Id
-    ]);
+    const oldMappings = await this.query(
+      `
+    SELECT TableId
+    FROM ReservationTablesMapping
+    WHERE ReservationId = ?
+      AND IsDeleted = 0
+    `,
+      [reservation.Id]
+    );
+
+    for (const row of oldMappings.values ?? []) {
+
+      await this.query(
+        `
+      UPDATE DiningTableMaster
+      SET IsOccupied = 0
+      WHERE Id = ?
+      `,
+        [row.TableId]
+      );
+    }
+
+    await this.query(
+      `
+    UPDATE ReservationTablesMapping
+    SET IsDeleted = 1
+    WHERE ReservationId = ?
+    `,
+      [reservation.Id]
+    );
+
+    if (reservation.TableIds?.length) {
+
+      for (const tbl of reservation.TableIds) {
+
+        await this.query(
+          `
+        INSERT INTO ReservationTablesMapping
+        (
+          ReservationId,
+          TableId,
+          IsReserved,
+          OrgId,
+          BranchId,
+          IsDeleted,
+          CreatedBy,
+          CreatedDate
+        )
+        VALUES
+        (
+          ?, ?, 1, ?, ?, 0, ?, datetime('now')
+        )
+        `,
+          [
+            reservation.Id,
+            tbl.TableId,
+            reservation.OrgId,
+            reservation.BranchId,
+            reservation.UpdatedBy ?? 1
+          ]
+        );
+
+        await this.query(
+          `
+        UPDATE DiningTableMaster
+        SET IsOccupied = 1
+        WHERE Id = ?
+        `,
+          [tbl.TableId]
+        );
+      }
+    }
+
+    return {
+      result: reservation.Id
+    };
   }
 
   getAll(orgid: number): Observable<ApiListResponse<Reservation>> {
@@ -179,16 +327,34 @@ export class ReservationService {
 
   async getByIdOffline(id: number): Promise<any> {
 
-    const sql = `
+    const reservation = await this.query(
+      `
     SELECT *
-    FROM Reservation
+    FROM Reservations
     WHERE Id = ?
-    LIMIT 1
-  `;
+    `,
+      [id]
+    );
 
-    const result = await this.query(sql, [id]);
+    if (!reservation.values?.length) {
+      return null;
+    }
 
-    return result.values?.[0] ?? null;
+    const tables = await this.query(
+      `
+    SELECT TableId
+    FROM ReservationTablesMapping
+    WHERE ReservationId = ?
+      AND IsDeleted = 0
+    `,
+      [id]
+    );
+
+    const data = reservation.values[0];
+
+    data.TableIds = tables.values ?? [];
+
+    return data;
   }
 
   delete(id: number | string): Observable<any> {
@@ -197,15 +363,50 @@ export class ReservationService {
 
   async deleteOffline(id: number): Promise<any> {
 
-    const sql = `
-    UPDATE Reservation
-    SET
-      IsDeleted = 1,
-      UpdatedDate = datetime('now')
-    WHERE Id = ?
-  `;
+    const mappings = await this.query(
+      `
+    SELECT TableId
+    FROM ReservationTablesMapping
+    WHERE ReservationId = ?
+      AND IsDeleted = 0
+    `,
+      [id]
+    );
 
-    return await this.query(sql, [id]);
+    for (const row of mappings.values ?? []) {
+
+      await this.query(
+        `
+      UPDATE DiningTableMaster
+      SET IsOccupied = 0
+      WHERE Id = ?
+      `,
+        [row.TableId]
+      );
+    }
+
+    await this.query(
+      `
+    UPDATE ReservationTablesMapping
+    SET IsDeleted = 1
+    WHERE ReservationId = ?
+    `,
+      [id]
+    );
+
+    await this.query(
+      `
+    UPDATE Reservations
+    SET IsDeleted = 1,
+        UpdatedDate = datetime('now')
+    WHERE Id = ?
+    `,
+      [id]
+    );
+
+    return {
+      success: true
+    };
   }
 
   activeInActive(id: number | string, isActive: boolean): Observable<any> {

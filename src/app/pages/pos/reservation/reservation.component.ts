@@ -256,13 +256,24 @@ export class ReservationComponent {
     }
   }
 
-  loadDiningTables() {
-    this.diningTableService.getAll(this.OrgId).subscribe((res: any) => {
-      this.tablesOptions = (res.result || []).map((item: any) => ({
+  async loadDiningTables() {
+    if (navigator.onLine) {
+      this.diningTableService.getAll(this.OrgId).subscribe((res: any) => {
+        this.tablesOptions = (res.result || []).map((item: any) => ({
+          label: item.name,
+          value: item.id
+        }));
+      });
+    }
+    else {
+      const data =
+        await this.diningTableService.getAllOffline(this.OrgId);
+
+      this.tablesOptions = (data || []).map((item: any) => ({
         label: item.name,
         value: item.id
       }));
-    });
+    }
   }
 
   onfiltertableChange(value: MultiSelectFieldValue): void {
@@ -277,7 +288,19 @@ export class ReservationComponent {
     }
 
     try {
-      const response: any = await firstValueFrom(this.organizationService.GetLatestCode(this.reservationEntityNo, orgId, this.BranchId));
+      let response: any;
+
+      if (navigator.onLine) {
+        response = await firstValueFrom(this.organizationService.GetLatestCode(this.reservationEntityNo, orgId, this.BranchId));
+      } else {
+        response =
+          await this.organizationService
+            .getLatestCodeOffline(
+              this.reservationEntityNo,
+              orgId,
+              this.BranchId
+            );
+      }
 
       this.dialogReservationNo = response?.result ?? '';
     } catch {

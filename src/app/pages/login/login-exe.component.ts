@@ -10,6 +10,7 @@ import { LoginService } from '../../services/login-exe.service';
 import { ShiftAssignmentComponent } from '../pos/components/shift-assignment/shift-assignment.component';
 import { ChangeDetectorRef } from '@angular/core';
 import { MenuService } from '../../services/menu.service';
+import { SyncService } from '../../services/sync.service';
 
 @Component({
   selector: 'app-login-exe',
@@ -36,6 +37,7 @@ export class LoginExeComponent {
     private readonly toast: AppToastService,
     private readonly loginService: LoginService,
     private readonly menuService: MenuService,
+    private readonly syncService: SyncService,
     private readonly cdr: ChangeDetectorRef
   ) { }
 
@@ -124,6 +126,7 @@ export class LoginExeComponent {
 
           try {
             this.menuService.clearMenuCache();
+            //await this.syncService.syncUsers();
             this.accessibleRoutes = await firstValueFrom(this.menuService.getAccessibleRoutes(orgId, roleId, true));
 
             if (!this.accessibleRoutes.length) {

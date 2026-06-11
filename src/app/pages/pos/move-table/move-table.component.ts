@@ -153,74 +153,134 @@ export class MoveTableComponent {
     this.loadRows();
   }
 
-  loadRows(): void {
-    this.loadMoveTables();
+  async loadRows(): Promise<void> {
+    await this.loadMoveTables();
     this.loadDiningTables();
     this.loadEmployees();
     this.updateSummary();
     this.updatePreview();
   }
 
-  loadMoveTables(): void {
+  async loadMoveTables(): Promise<void> {
     this.isLoading = true;
 
     this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
     this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
 
-    this.moveService.getAll(this.OrgId).subscribe({
-      next: (response: any) => {
-        let RowNumber = 1;
-        this.allmoveTables = (response.result ?? []).map((x: any) => {
-          const rawStatus = x.Status ?? x.status ?? x.Status;
-          const status = typeof rawStatus === 'string' ? rawStatus : rawStatus ? String(rawStatus) : '';
-          const isActive = /^joined$/i.test(status) || /^active$/i.test(status) || x.isactive === true || x.IsActive === true;
+    if (navigator.onLine) {
+      this.moveService.getAll(this.OrgId).subscribe({
+        next: (response: any) => {
+          let RowNumber = 1;
+          this.allmoveTables = (response.result ?? []).map((x: any) => {
+            const rawStatus = x.Status ?? x.status ?? x.Status;
+            const status = typeof rawStatus === 'string' ? rawStatus : rawStatus ? String(rawStatus) : '';
+            const isActive = /^joined$/i.test(status) || /^active$/i.test(status) || x.isactive === true || x.IsActive === true;
 
-          return {
-            ...x,
-            RowNumber: RowNumber++,
-            Status: status || (isActive ? 'Joined' : 'Released'),
-            IsActive: isActive,
-            GuestCount: Number(x.GuestCount ?? x.guestcount ?? 0)
-          } as MoveTableRow;
-        });
+            return {
+              ...x,
+              RowNumber: RowNumber++,
+              Status: status || (isActive ? 'Joined' : 'Released'),
+              IsActive: isActive,
+              GuestCount: Number(x.GuestCount ?? x.guestcount ?? 0)
+            } as MoveTableRow;
+          });
+          this.tableRows = [...this.allmoveTables];
+          this.updateSummary();
+          this.updatePreview();
+          this.changeDetector.detectChanges();
+        },
+        error: () => {
+          this.toast.error(
+            'Load Failed',
+            'Unable to load move tables. Please check API and try again.'
+          );
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
+    }
+    else {
+      try {
+
+        const data =
+          await this.moveService.getAllOffline(this.OrgId);
+
+        let RowNumber = 1;
+
+        this.allmoveTables = (data ?? []).map((x: any) => ({
+          ...x,
+          RowNumber: RowNumber++
+        }));
+
         this.tableRows = [...this.allmoveTables];
+
         this.updateSummary();
         this.updatePreview();
+
         this.changeDetector.detectChanges();
-      },
-      error: () => {
+
+      } catch (error) {
+        console.error(error);
         this.toast.error(
           'Load Failed',
-          'Unable to load move tables. Please check API and try again.'
+          'Unable to load move tables from local database.'
         );
-      },
-      complete: () => {
+      } finally {
         this.isLoading = false;
       }
-    });
-  }
+    }
+  }  
 
-  loadDiningTables() {
-    this.diningTableService.getAll(this.OrgId).subscribe((res: any) => {
-      this.fromTableOptions = (res.result || []).map((item: any) => ({
+  async loadDiningTables() {
+    if (navigator.onLine) {
+      this.diningTableService.getAll(this.OrgId).subscribe((res: any) => {
+        this.fromTableOptions = (res.result || []).map((item: any) => ({
+          label: item.name,
+          value: item.id
+        }));
+
+        this.toTableOptions = (res.result || []).map((item: any) => ({
+          label: item.name,
+          value: item.id
+        }));
+      });
+    }
+    else {
+      const data =
+        await this.diningTableService.getAllOffline(this.OrgId);
+
+      this.fromTableOptions = (data || []).map((item: any) => ({
         label: item.name,
         value: item.id
       }));
 
-      this.toTableOptions = (res.result || []).map((item: any) => ({
+      this.toTableOptions = (data || []).map((item: any) => ({
         label: item.name,
         value: item.id
       }));
-    });
+    }
   }
+  
+  async loadEmployees() {
+    debugger;
+    if (navigator.onLine) {
+      this.employeeService.getAll(this.OrgId, this.BranchId).subscribe((res: any) => {
+        this.stewardOptions = (res.result || []).map((item: any) => ({
+          label: item.Name,
+          value: item.Id
+        }));
+      });
+    }
+    else {
+      const data =
+        await this.employeeService.getAllOffline(this.OrgId, this.BranchId);
 
-  loadEmployees() {
-    this.employeeService.getAll(this.OrgId, this.BranchId).subscribe((res: any) => {
-      this.stewardOptions = (res.result || []).map((item: any) => ({
+      this.stewardOptions = (data || []).map((item: any) => ({
         label: item.Name,
         value: item.Id
       }));
-    });
+    }
   }
 
   searchRows(): void {
@@ -288,7 +348,7 @@ export class MoveTableComponent {
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
@@ -342,46 +402,103 @@ export class MoveTableComponent {
     if (this.isEditMode && this.editingMoveTable) {
       payload.Id = this.editingMoveTable;
       payload.UpdatedBy = 1;
+      if (navigator.onLine) {
+        this.moveService.update(payload).subscribe({
+          next: (response: any) => {
+            if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
+              this.toast.warn('Duplicate', 'Move table already exists.');
+              return;
+            }
 
-      this.moveService.update(payload).subscribe({
+            this.toast.success('Updated', 'Move table updated successfully.');
+            this.closeAddDialog();
+            this.loadMoveTables();
+          },
+          error: () => {
+            this.toast.error('Update Failed', 'Unable to update move table.');
+          }
+        });
+      } else {
+        try {
+          const response = await this.moveService.updateOffline(payload);
+          if (
+            response === 'AlreadyExists' ||
+            response?.message === 'AlreadyExists'
+          ) {
+            this.toast.warn(
+              'Duplicate',
+              'Move table already exists.'
+            );
+            return;
+          }
+
+          this.toast.success(
+            'Updated',
+            'Move table updated successfully.'
+          );
+
+          this.closeAddDialog();
+          await this.loadMoveTables();
+        } catch {
+          this.toast.error(
+            'Update Failed',
+            'Unable to update move table.'
+          );
+        }
+      }
+
+      return;
+    }
+
+    payload.CreatedBy = 1;
+    if (navigator.onLine) {
+      this.moveService.create(payload).subscribe({
         next: (response: any) => {
           if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
             this.toast.warn('Duplicate', 'Move table already exists.');
             return;
           }
 
-          this.toast.success('Updated', 'Move table updated successfully.');
+          this.toast.success('Saved', 'Move table saved successfully.');
           this.closeAddDialog();
           this.loadMoveTables();
         },
         error: () => {
-          this.toast.error('Update Failed', 'Unable to update move table.');
+          this.toast.error('Save Failed', 'Unable to save move table.');
         }
       });
-
-      return;
     }
-
-    payload.CreatedBy = 1;
-
-    this.moveService.create(payload).subscribe({
-      next: (response: any) => {
-        if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-          this.toast.warn('Duplicate', 'Move table already exists.');
+    else {
+      try {
+        const response = await this.moveService.createOffline(payload);
+        if (
+          response === 'AlreadyExists' ||
+          response?.message === 'AlreadyExists'
+        ) {
+          this.toast.warn(
+            'Duplicate',
+            'Move table already exists.'
+          );
           return;
         }
 
-        this.toast.success('Saved', 'Move table saved successfully.');
+        this.toast.success(
+          'Saved',
+          'Move table saved successfully.'
+        );
+
         this.closeAddDialog();
-        this.loadMoveTables();
-      },
-      error: () => {
-        this.toast.error('Save Failed', 'Unable to save move table.');
+        await this.loadMoveTables();
+      } catch {
+        this.toast.error(
+          'Save Failed',
+          'Unable to save move table.'
+        );
       }
-    });
+    }
   }
 
-  editRow(row: MoveTableRow): void {
+  async editRow(row: MoveTableRow): Promise<void> {
     this.isEditMode = true;
     this.dialogTitle = 'Edit Move Table';
     this.dialogSubtitle = 'update the details of the table move and save to apply changes.';
@@ -389,43 +506,61 @@ export class MoveTableComponent {
     this.showAddDialog = true;
     this.editingMoveTable = row.id;
 
-    this.moveService.getById(row.id).subscribe({
-      next: (response: any) => {
-        const jointable = response?.result?.[0] ?? response?.result ?? response;
-        const tableDetails = jointable?.tableIds ?? jointable?.TableIds ?? [];
-        debugger;
+    try {
+      let response: any;
 
-        this.dialogMoveNo = jointable?.moveno ?? jointable?.moveno ?? row.moveno;
-        this.dialogFromTables = Array.from(
-          new Set<number>(
-            tableDetails
-              .map((x: any) => Number(x.fromTable ?? x.FromTable))
-              .filter((x: number) => !Number.isNaN(x))
-          )
+      if (navigator.onLine) {
+        response = await firstValueFrom(
+          this.moveService.getById(row.id)
         );
-        this.dialogToTables = Array.from(
-          new Set<number>(
-            tableDetails
-              .map((x: any) => Number(x.toTable ?? x.ToTable))
-              .filter((x: number) => !Number.isNaN(x))
-          )
-        );
-        this.dialogGuestCount = Number(jointable?.guestcount ?? jointable?.guestcount ?? row.GuestCount);
-        this.dialogSteward = Number(jointable?.stewardid ?? jointable?.stewardid ?? row.StewardId);
-        this.dialogMoveReason = jointable?.movereason ?? jointable?.movereason ?? row.MoveReason;
-        this.OrgId = Number(jointable?.orgId ?? jointable?.OrgId ?? row.OrgId);
-        this.dialogCreatedBy = Number(jointable?.createdBy ?? jointable?.CreatedBy ?? 1);
-        this.dialogCreatedDate = jointable?.createdDate ?? jointable?.CreatedDate;
-        this.dialogUpdatedBy = Number(jointable?.updatedBy ?? jointable?.UpdatedBy ?? 1);
-        this.dialogUpdatedDate = jointable?.updatedDate ?? jointable?.UpdatedDate;
-        this.dialogIsDeleted = Boolean(jointable?.isDeleted ?? jointable?.IsDeleted ?? false);
-
-        this.showAddDialog = true;
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load move table details.');
       }
-    });
+      else {
+        response = await this.moveService.getByIdOffline(
+          row.id
+        );
+      }
+
+      const jointable =
+        response?.result?.[0] ??
+        response?.result ??
+        response;
+
+      const tableDetails = jointable?.tableIds ?? jointable?.TableIds ?? [];
+
+      this.dialogMoveNo = jointable?.moveno ?? jointable?.moveno ?? row.moveno;
+      this.dialogFromTables = Array.from(
+        new Set<number>(
+          tableDetails
+            .map((x: any) => Number(x.fromTable ?? x.FromTable))
+            .filter((x: number) => !Number.isNaN(x))
+        )
+      );
+      this.dialogToTables = Array.from(
+        new Set<number>(
+          tableDetails
+            .map((x: any) => Number(x.toTable ?? x.ToTable))
+            .filter((x: number) => !Number.isNaN(x))
+        )
+      );
+      this.dialogGuestCount = Number(jointable?.guestcount ?? jointable?.guestcount ?? row.GuestCount);
+      this.dialogSteward = Number(jointable?.stewardid ?? jointable?.stewardid ?? row.StewardId);
+      this.dialogMoveReason = jointable?.movereason ?? jointable?.movereason ?? row.MoveReason;
+      this.OrgId = Number(jointable?.orgId ?? jointable?.OrgId ?? row.OrgId);
+      this.dialogCreatedBy = Number(jointable?.createdBy ?? jointable?.CreatedBy ?? 1);
+      this.dialogCreatedDate = jointable?.createdDate ?? jointable?.CreatedDate;
+      this.dialogUpdatedBy = Number(jointable?.updatedBy ?? jointable?.UpdatedBy ?? 1);
+      this.dialogUpdatedDate = jointable?.updatedDate ?? jointable?.UpdatedDate;
+      this.dialogIsDeleted = Boolean(jointable?.isDeleted ?? jointable?.IsDeleted ?? false);
+
+      this.showAddDialog = true;
+
+    }
+    catch {
+      this.toast.error(
+        'Load Failed',
+        'Unable to load move table details.'
+      );
+    }
   }
 
   onfiltertableChange(value: MultiSelectFieldValue): void {
@@ -438,16 +573,30 @@ export class MoveTableComponent {
     this.dialogToTables = arr.map(v => Number(v));
   }
 
-  deleteRow(row: MoveTableRow): void {
-    this.moveService.delete(row.id).subscribe({
-      next: () => {
-        this.toast.warn('Deleted', `${row.moveno} removed successfully.`);
-        this.loadMoveTables();
-      },
-      error: () => {
-        this.toast.error('Delete Failed', 'Unable to delete move table.');
+  async deleteRow(row: MoveTableRow): Promise<void> {
+    try {
+      if (navigator.onLine) {
+        await firstValueFrom(
+          this.moveService.delete(row.id)
+        );
+      } else {
+        await this.moveService.deleteOffline(
+          row.id
+        );
       }
-    });
+
+      this.toast.warn(
+        'Deleted',
+        `${row.moveno} removed successfully.`
+      );
+
+      await this.loadMoveTables();
+    } catch {
+      this.toast.error(
+        'Delete Failed',
+        'Unable to delete move table.'
+      );
+    }
   }
 
   activateRow(row: MoveTableRow): void {

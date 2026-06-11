@@ -77,7 +77,6 @@ export class MenuService {
 
       });
     }
-
   }
 
   getAccessibleRoutes(OrgId: number, RoleId: number, forceRefresh: boolean = false): Observable<string[]> {

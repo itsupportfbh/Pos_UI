@@ -160,66 +160,124 @@ export class JoinTableComponent {
     this.updatePreview();
   }
 
-  loadJoinTables(): void {
+  async loadJoinTables(): Promise<void> {
     this.isLoading = true;
 
     this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
     this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
+    if (navigator.onLine) {
+      this.jointableService.getAll(this.OrgId).subscribe({
+        next: (response: any) => {
+          let RowNumber = 1;
+          this.alljoinTables = (response.result ?? []).map((x: any) => {
+            const rawStatus = x.Status ?? x.status ?? x.Status;
+            const status = typeof rawStatus === 'string' ? rawStatus : rawStatus ? String(rawStatus) : '';
+            const isActive = /^joined$/i.test(status) || /^active$/i.test(status) || x.isactive === true || x.IsActive === true;
 
-    this.jointableService.getAll(this.OrgId).subscribe({
-      next: (response: any) => {
+            return {
+              ...x,
+              RowNumber: RowNumber++,
+              Status: status || (isActive ? 'Joined' : 'Released'),
+              IsActive: isActive,
+              GuestCount: Number(x.GuestCount ?? x.guestcount ?? 0)
+            } as JoinTableRow;
+          });
+          this.tableRows = [...this.alljoinTables];
+          this.updateSummary();
+          this.updatePreview();
+          this.changeDetector.detectChanges();
+        },
+        error: () => {
+          this.toast.error(
+            'Load Failed',
+            'Unable to load join tables. Please check API and try again.'
+          );
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
+    }
+    else {
+      try {
+
+        const data =
+          await this.jointableService.getAllOffline(this.OrgId);
+
         let RowNumber = 1;
-        this.alljoinTables = (response.result ?? []).map((x: any) => {
-          const rawStatus = x.Status ?? x.status ?? x.Status;
-          const status = typeof rawStatus === 'string' ? rawStatus : rawStatus ? String(rawStatus) : '';
-          const isActive = /^joined$/i.test(status) || /^active$/i.test(status) || x.isactive === true || x.IsActive === true;
 
-          return {
-            ...x,
-            RowNumber: RowNumber++,
-            Status: status || (isActive ? 'Joined' : 'Released'),
-            IsActive: isActive,
-            GuestCount: Number(x.GuestCount ?? x.guestcount ?? 0)
-          } as JoinTableRow;
-        });
+        this.alljoinTables = (data ?? []).map((x: any) => ({
+          ...x,
+          RowNumber: RowNumber++
+        }));
+
         this.tableRows = [...this.alljoinTables];
+
         this.updateSummary();
         this.updatePreview();
+
         this.changeDetector.detectChanges();
-      },
-      error: () => {
+
+      } catch (error) {
+        console.error(error);
         this.toast.error(
           'Load Failed',
-          'Unable to load join tables. Please check API and try again.'
+          'Unable to load join table from local database.'
         );
-      },
-      complete: () => {
+      } finally {
         this.isLoading = false;
       }
-    });
+    }
   }
 
-  loadDiningTables() {
-    this.diningTableService.getAll(this.OrgId).subscribe((res: any) => {
-      this.primaryTablesOptions = (res.result || []).map((item: any) => ({
+  async loadDiningTables() {
+    if (navigator.onLine) {
+      this.diningTableService.getAll(this.OrgId).subscribe((res: any) => {
+        this.primaryTablesOptions = (res.result || []).map((item: any) => ({
+          label: item.name,
+          value: item.id
+        }));
+
+        this.secondaryTablesOptions = (res.result || []).map((item: any) => ({
+          label: item.name,
+          value: item.id
+        }));
+      });
+    }
+    else {
+      const data =
+        await this.diningTableService.getAllOffline(this.OrgId);
+
+      this.primaryTablesOptions = (data || []).map((item: any) => ({
         label: item.name,
         value: item.id
       }));
 
-      this.secondaryTablesOptions = (res.result || []).map((item: any) => ({
+      this.secondaryTablesOptions = (data || []).map((item: any) => ({
         label: item.name,
         value: item.id
       }));
-    });
+    }
   }
 
-  loadEmployees() {
-    this.employeeService.getAll(this.OrgId, this.BranchId).subscribe((res: any) => {
-      this.stewardOptions = (res.result || []).map((item: any) => ({
+  async loadEmployees() {
+    if (navigator.onLine) {
+      this.employeeService.getAll(this.OrgId, this.BranchId).subscribe((res: any) => {
+        this.stewardOptions = (res.result || []).map((item: any) => ({
+          label: item.Name,
+          value: item.Id
+        }));
+      });
+    }
+    else {
+      const data =
+        await this.employeeService.getAllOffline(this.OrgId, this.BranchId);
+
+      this.stewardOptions = (data || []).map((item: any) => ({
         label: item.Name,
         value: item.Id
       }));
-    });
+    }
   }
 
   searchRows(): void {
@@ -292,7 +350,7 @@ export class JoinTableComponent {
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
@@ -330,94 +388,179 @@ export class JoinTableComponent {
     if (this.isEditMode && this.editingJoinTable) {
       payload.Id = this.editingJoinTable;
       payload.UpdatedBy = 1;
+      if (navigator.onLine) {
+        this.jointableService.update(payload).subscribe({
+          next: (response: any) => {
+            if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
+              this.toast.warn('Duplicate', 'Join table already exists.');
+              return;
+            }
 
-      this.jointableService.update(payload).subscribe({
+            this.toast.success('Updated', 'Join table updated successfully.');
+            this.closeAddDialog();
+            this.loadJoinTables();
+          },
+          error: () => {
+            this.toast.error('Update Failed', 'Unable to update join table.');
+          }
+        });
+      }
+      else {
+        try {
+          const response = await this.jointableService.updateOffline(payload);
+          if (
+            response === 'AlreadyExists' ||
+            response?.message === 'AlreadyExists'
+          ) {
+            this.toast.warn(
+              'Duplicate',
+              'Join table already exists.'
+            );
+            return;
+          }
+
+          this.toast.success(
+            'Updated',
+            'Join table updated successfully.'
+          );
+
+          this.closeAddDialog();
+          await this.loadJoinTables();
+        } catch {
+          this.toast.error(
+            'Update Failed',
+            'Unable to update join table.'
+          );
+        }
+      }
+
+      return;
+    }
+
+    payload.CreatedBy = 1;
+    if (navigator.onLine) {
+      this.jointableService.create(payload).subscribe({
         next: (response: any) => {
           if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
             this.toast.warn('Duplicate', 'Join table already exists.');
             return;
           }
 
-          this.toast.success('Updated', 'Join table updated successfully.');
+          this.toast.success('Saved', 'Join table saved successfully.');
           this.closeAddDialog();
           this.loadJoinTables();
         },
         error: () => {
-          this.toast.error('Update Failed', 'Unable to update join table.');
+          this.toast.error('Save Failed', 'Unable to save join table.');
         }
       });
-
-      return;
     }
-
-    payload.CreatedBy = 1;
-
-    this.jointableService.create(payload).subscribe({
-      next: (response: any) => {
-        if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-          this.toast.warn('Duplicate', 'Join table already exists.');
+    else {
+      try {
+        const response = await this.jointableService.createOffline(payload);
+        if (
+          response === 'AlreadyExists' ||
+          response?.message === 'AlreadyExists'
+        ) {
+          this.toast.warn(
+            'Duplicate',
+            'Join table already exists.'
+          );
           return;
         }
 
-        this.toast.success('Saved', 'Join table saved successfully.');
+        this.toast.success(
+          'Saved',
+          'Join table saved successfully.'
+        );
+
         this.closeAddDialog();
-        this.loadJoinTables();
-      },
-      error: () => {
-        this.toast.error('Save Failed', 'Unable to save join table.');
+        await this.loadJoinTables();
+      } catch {
+        this.toast.error(
+          'Save Failed',
+          'Unable to save join table.'
+        );
       }
-    });
+    }
   }
 
-  editRow(row: JoinTableRow): void {
+  async editRow(row: JoinTableRow): Promise<void> {
     this.isEditMode = true;
     this.dialogTitle = 'Edit Join Table';
     this.dialogSubtitle = 'update the details of the table join and save to apply changes.';
     this.dialogPrimaryActionLabel = 'Update';
     this.showAddDialog = true;
     this.editingJoinTable = row.id;
-    debugger;
-    this.jointableService.getById(row.id).subscribe({
-      next: (response: any) => {
-        const jointable = response?.result?.[0] ?? response?.result ?? response;
-        const rawTableIds = jointable?.tableIds ?? jointable?.TableIds ?? [];
-        debugger;
+    try {
 
-        this.dialogJoinNo = jointable?.joinno ?? jointable?.joinno ?? row.joinno;
-        this.dialogPrimaryTable = Number(jointable?.primarytable ?? jointable?.primarytable ?? row.PrimaryTable);
-        this.dialogSecondaryTables = (Array.isArray(rawTableIds) ? rawTableIds : []).map((t: any) => {
-          if (t == null) return t;
-          if (typeof t === 'number' || typeof t === 'string') return Number(t);
-          return Number(t.TableId ?? t.tableId ?? t.id ?? t.Id ?? NaN);
-        }).filter((x: number) => !Number.isNaN(x));
-        this.dialogGuestCount = Number(jointable?.guestcount ?? jointable?.guestcount ?? row.GuestCount);
-        this.dialogSteward = Number(jointable?.stewardid ?? jointable?.stewardid ?? row.StewardId);
-        this.dialogNotes = jointable?.notes ?? jointable?.notes ?? row.Notes;
-        this.OrgId = Number(jointable?.orgId ?? jointable?.OrgId ?? row.OrgId);
-        this.dialogCreatedBy = Number(jointable?.createdBy ?? jointable?.CreatedBy ?? 1);
-        this.dialogCreatedDate = jointable?.createdDate ?? jointable?.CreatedDate;
-        this.dialogUpdatedBy = Number(jointable?.updatedBy ?? jointable?.UpdatedBy ?? 1);
-        this.dialogUpdatedDate = jointable?.updatedDate ?? jointable?.UpdatedDate;
-        this.dialogIsDeleted = Boolean(jointable?.isDeleted ?? jointable?.IsDeleted ?? false);
+      let response: any;
 
-        this.showAddDialog = true;
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load join table details.');
+      if (navigator.onLine) {
+        response = await firstValueFrom(
+          this.jointableService.getById(row.id)
+        );
+      } else {
+        response = await this.jointableService.getByIdOffline(
+          row.id
+        );
       }
-    });
+
+      const jointable = response?.result?.[0] ?? response?.result ?? response;
+      const rawTableIds = jointable?.tableIds ?? jointable?.TableIds ?? [];
+
+      this.dialogJoinNo = jointable?.joinno ?? jointable?.joinno ?? row.joinno;
+      this.dialogPrimaryTable = Number(jointable?.primarytable ?? jointable?.primarytable ?? row.PrimaryTable);
+      this.dialogSecondaryTables = (Array.isArray(rawTableIds) ? rawTableIds : []).map((t: any) => {
+        if (t == null) return t;
+        if (typeof t === 'number' || typeof t === 'string') return Number(t);
+        return Number(t.TableId ?? t.tableId ?? t.id ?? t.Id ?? NaN);
+      }).filter((x: number) => !Number.isNaN(x));
+      this.dialogGuestCount = Number(jointable?.guestcount ?? jointable?.guestcount ?? row.GuestCount);
+      this.dialogSteward = Number(jointable?.stewardid ?? jointable?.stewardid ?? row.StewardId);
+      this.dialogNotes = jointable?.notes ?? jointable?.notes ?? row.Notes;
+      this.OrgId = Number(jointable?.orgId ?? jointable?.OrgId ?? row.OrgId);
+      this.dialogCreatedBy = Number(jointable?.createdBy ?? jointable?.CreatedBy ?? 1);
+      this.dialogCreatedDate = jointable?.createdDate ?? jointable?.CreatedDate;
+      this.dialogUpdatedBy = Number(jointable?.updatedBy ?? jointable?.UpdatedBy ?? 1);
+      this.dialogUpdatedDate = jointable?.updatedDate ?? jointable?.UpdatedDate;
+      this.dialogIsDeleted = Boolean(jointable?.isDeleted ?? jointable?.IsDeleted ?? false);
+
+      this.showAddDialog = true;
+
+    }
+    catch {
+      this.toast.error(
+        'Load Failed',
+        'Unable to load reservation details.'
+      );
+    }
   }
 
-  deleteRow(row: JoinTableRow): void {
-    this.jointableService.delete(row.id).subscribe({
-      next: () => {
-        this.toast.warn('Deleted', `${row.joinno} removed successfully.`);
-        this.loadJoinTables();
-      },
-      error: () => {
-        this.toast.error('Delete Failed', 'Unable to delete join table.');
+  async deleteRow(row: JoinTableRow): Promise<void> {
+    try {
+      if (navigator.onLine) {
+        await firstValueFrom(
+          this.jointableService.delete(row.id)
+        );
+      } else {
+        await this.jointableService.deleteOffline(
+          row.id
+        );
       }
-    });
+
+      this.toast.warn(
+        'Deleted',
+        `${row.joinno} removed successfully.`
+      );
+
+      await this.loadJoinTables();
+    } catch {
+      this.toast.error(
+        'Delete Failed',
+        'Unable to delete join table.'
+      );
+    }
   }
 
   activateRow(row: JoinTableRow): void {
@@ -521,7 +664,7 @@ export class JoinTableComponent {
     this.totalJoins = this.alljoinTables.length;
     this.activeJoins = this.alljoinTables.filter((row) => row.IsActive || row.Status === 'Joined' || row.Status === 'Active').length;
     this.totalGuests = this.alljoinTables.reduce((total, row) => total + Number(row.GuestCount ?? 0), 0);
-  } 
+  }
 
   private updatePreview(): void {
     const activeRow = this.alljoinTables.find((row) => row.IsActive) ?? null;
