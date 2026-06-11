@@ -261,6 +261,7 @@ export class BillingComponent implements OnInit {
       new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))
     ]);
   }
+  
 
   async loadBillingOrders(): Promise<void> {
     this.isLoadingOrders = true;
