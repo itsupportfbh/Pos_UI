@@ -136,8 +136,8 @@ export class BranchesComponent implements OnInit {
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Branches';
   readonly pageSubtitle = 'Maintain restaurant branch details.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading branches workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = 'Branch Filters';
   readonly primaryActionLabel = 'Search Branches';
   readonly secondaryActionLabel = 'Clear Filters';

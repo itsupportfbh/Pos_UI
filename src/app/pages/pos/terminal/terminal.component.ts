@@ -130,8 +130,8 @@ export class TerminalComponent implements OnInit {
     readonly pageEyebrow = 'Terminal Management';
     readonly pageTitle = 'Terminals';
     readonly pageSubtitle = 'Manage your POS terminals here.';
-    readonly pageLoadingTitle = 'Unity work POS';
-    readonly pageLoadingSubtitle = 'Loading terminals workspace.';
+    readonly pageLoadingTitle = 'Please wait';
+    readonly pageLoadingSubtitle = 'Loading records...';
     readonly filterTitle = `${'Terminals'} Filters`;
     readonly primaryActionLabel = `Search ${'Terminals'}`;
     readonly secondaryActionLabel = 'Clear Filters';

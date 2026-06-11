@@ -45,8 +45,8 @@ export class ServeOrdersComponent implements OnInit {
   servingOrderId: number | null = null;
    OrgId=0;
    BranchId=0;
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading serve orders workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
 
   constructor(
     private readonly toast: AppToastService,

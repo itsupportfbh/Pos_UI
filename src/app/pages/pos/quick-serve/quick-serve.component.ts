@@ -101,8 +101,8 @@ export class QuickServeComponent {
   readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Quick Serve';
   readonly pageSubtitle = 'Handle high-speed counter tickets with short queues and fast pickup handoff.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading quick serve workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';

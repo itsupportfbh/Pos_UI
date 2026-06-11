@@ -57,8 +57,8 @@ const DEFAULT_CATEGORY_ICON = 'pi pi-shopping-bag';
 export class OrderScreenComponent implements OnInit {
   readonly orderTypes = ['Dine In', 'Take Away', 'Delivery'];
   readonly servingTypes = ['Server Delivery', 'Self Service'];
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading order workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
 
   userDetails: any = {};
   orgId = 0;

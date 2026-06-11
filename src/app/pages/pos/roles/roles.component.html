@@ -14,6 +14,7 @@
       <div class="page-spinner-state">
         <p-progressSpinner ariaLabel="Loading"></p-progressSpinner>
         <div class="page-spinner-copy">
+          <small class="page-spinner-kicker">Please wait</small>
           <strong>{{ pageLoadingTitle }}</strong>
           <span>{{ pageLoadingSubtitle }}</span>
         </div>
@@ -140,7 +141,7 @@
   <section class="permissions-panel">
     @if (permissionLoading) {
       <div class="permissions-loading">
-        <i class="pi pi-spinner pi-spin"></i>
+        <p-progressSpinner ariaLabel="Loading permissions"></p-progressSpinner>
         <span>Loading permissions...</span>
       </div>
     } @else {

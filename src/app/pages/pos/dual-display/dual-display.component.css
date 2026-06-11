@@ -292,6 +292,14 @@
   text-transform: uppercase;
 }
 
+.preview-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
 .display-preview-surface {
   display: grid;
   gap: 0.95rem;
@@ -1194,6 +1202,10 @@
   color: #2563eb;
 }
 
+:host ::ng-deep .row-action-menu .row-action-open .p-menu-item-icon {
+  color: #0f766e;
+}
+
 :host ::ng-deep .row-action-menu .row-action-delete .p-menu-item-icon {
   color: #dc2626;
 }
@@ -1308,5 +1320,9 @@
 
   .dialog-grid > *:last-child {
     grid-column: auto;
+  }
+
+  .preview-head-actions {
+    justify-content: flex-start;
   }
 }

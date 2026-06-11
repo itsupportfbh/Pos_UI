@@ -110,8 +110,8 @@ export class DiningTableComponent implements OnInit {
   readonly pageEyebrow = 'Dining';
   readonly pageTitle = 'Dining Tables';
   readonly pageSubtitle = 'Maintain dining table details and seating capacity.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading dining tables workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly tableTitle = 'Dining Tables';
   readonly tableCaption = 'Dining tables';
   dialogTitle = 'Create Dining Table';

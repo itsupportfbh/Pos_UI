@@ -135,8 +135,8 @@ export class RolesComponent implements OnInit {
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Roles';
   readonly pageSubtitle = 'Maintain role master details.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading roles workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = 'Role Filters';
   readonly primaryActionLabel = 'Search Roles';
   readonly secondaryActionLabel = 'Clear Filters';

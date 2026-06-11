@@ -103,8 +103,8 @@ export class RecallComponent {
   readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Recall Orders';
   readonly pageSubtitle = 'Bring recent tickets back on screen for follow-up, review, or repeat service.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading recall workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';

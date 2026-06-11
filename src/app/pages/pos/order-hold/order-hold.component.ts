@@ -187,8 +187,8 @@ export class OrderHoldComponent implements OnInit {
 
   readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Hold Orders';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading held orders workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
  // readonly pageSubtitle = 'Review held tickets, tables, and totals before sending them back to service.';
   readonly tableTitle = 'Hold Orders';
   readonly tableCaption = 'Hold Orders';

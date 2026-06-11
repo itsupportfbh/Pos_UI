@@ -133,8 +133,8 @@ export class CustomersComponent implements OnInit {
   readonly pageEyebrow = 'Customers';
   readonly pageTitle = 'Customer List';
   readonly pageSubtitle = 'Manage customer master details.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading customers workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = 'Customer Filters';
   readonly primaryActionLabel = 'Search Customers';
   readonly secondaryActionLabel = 'Clear Filters';

@@ -1,4 +1,4 @@
-<section class="customer-display-page">
+<section class="customer-display-page" [ngClass]="getCustomerThemeClass()">
   @if (!isTvMode) {
     <header class="customer-control-bar">
       <div class="customer-heading-block">
@@ -155,7 +155,7 @@
   }
 
   @if (isTvMode) {
-    <section class="customer-tv-mode">
+    <section class="customer-tv-mode" [ngClass]="getCustomerThemeClass()">
       <header class="customer-tv-header">
         <div class="customer-tv-brand">
           <div class="brand-copy">

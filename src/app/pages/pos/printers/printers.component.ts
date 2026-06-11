@@ -134,8 +134,8 @@ export class PrintersComponent implements OnInit {
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Printers';
   readonly pageSubtitle = 'Maintain billing and kitchen printer mappings.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading printers workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = 'Printers Filters';
   readonly primaryActionLabel = 'Search Printers';
   readonly secondaryActionLabel = 'Clear Filters';

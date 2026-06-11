@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import {ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { catchError, firstValueFrom, forkJoin, map, of } from 'rxjs';
 
@@ -82,7 +83,9 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   viewReady = false;
   isTvMode = false;
   currentTime = new Date();
+  counterName = '';
   constructor(
+    private readonly route: ActivatedRoute,
     private readonly toast: AppToastService,
     private readonly appShellService: AppShellService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
@@ -101,8 +104,12 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
 
     setTimeout(async () => {
       this.viewReady = true;
+      this.counterName = this.getRuntimeCounterName();
       await this.loadDiningTableNames();
       this.loadKitchenOrders();
+      if (this.shouldLaunchTvModeFromRoute()) {
+        this.openTvMode();
+      }
       this.cdr.detectChanges();
     });
    
@@ -149,7 +156,7 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   }
 
   get kitchenDisplayName(): string {
-    return String(this.userDetails?.BranchName || this.userDetails?.OrgName || 'Kitchen Display').trim() || 'Kitchen Display';
+    return String(this.route.snapshot.queryParamMap.get('branchName') || this.userDetails?.BranchName || this.userDetails?.OrgName || 'Kitchen Display').trim() || 'Kitchen Display';
   }
 
   loadKitchenOrders(): void {
@@ -875,6 +882,31 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
     return Number(this.userDetails.IsAdmin || 0) === 1 || Number(this.userDetails.RoleId || 0) === 1
       ? 0
       : this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid');
+  }
+
+  private shouldLaunchTvModeFromRoute(): boolean {
+    return this.route.snapshot.queryParamMap.get('tv') === '1';
+  }
+
+  private getRuntimeCounterName(): string {
+    const routeCounterName = String(this.route.snapshot.queryParamMap.get('counterName') || '').trim();
+
+    if (routeCounterName) {
+      return routeCounterName;
+    }
+
+    const userCounterName = this.getStringValue(this.userDetails, 'CounterName', 'counterName');
+
+    if (userCounterName) {
+      return userCounterName;
+    }
+
+    try {
+      const shiftAssignment = JSON.parse(localStorage.getItem('currentShiftAssignment') ?? '{}');
+      return this.getStringValue(shiftAssignment, 'CounterName', 'counterName');
+    } catch {
+      return '';
+    }
   }
 
   private async enterFullscreen(): Promise<void> {

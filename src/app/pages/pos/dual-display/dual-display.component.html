@@ -55,7 +55,25 @@
           <h2>Live Pairing Preview</h2>
           <p class="section-note">Preview how the cashier screen and customer-facing display work together for the selected counter profile.</p>
         </div>
-        <span class="preview-selection-pill">{{ previewCounterName }}</span>
+        <div class="preview-head-actions">
+          <span class="preview-selection-pill">{{ previewCounterName }}</span>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-external-link"
+            label="Open Customer Screen"
+            severity="secondary"
+            [outlined]="true"
+            (click)="openCustomerDisplay()"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-desktop"
+            label="Open TV Mode"
+            (click)="openCustomerDisplay(undefined, true)"
+          ></button>
+        </div>
       </div>
 
       <section class="display-preview-surface">
@@ -288,6 +306,8 @@
           <div class="pairing-card-actions">
             <button pButton type="button" icon="pi pi-eye" label="Preview" severity="secondary" [outlined]="true"
               (click)="previewRow(row); $event.stopPropagation()"></button>
+            <button pButton type="button" icon="pi pi-external-link" label="Open"
+              severity="secondary" [outlined]="true" (click)="openCustomerDisplay(row); $event.stopPropagation()"></button>
             <button pButton type="button" icon="pi pi-pencil" label="Edit"
               (click)="editRow(row); $event.stopPropagation()"></button>
           </div>

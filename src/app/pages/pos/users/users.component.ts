@@ -138,8 +138,8 @@ export class UsersComponent implements OnInit {
   readonly pageEyebrow = 'Users & Roles';
   readonly pageTitle = 'Users';
   readonly pageSubtitle = 'Maintain user master details.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading users workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly genderOptions = GENDER_OPTIONS;
   readonly isAdminOptions = IS_ADMIN_OPTIONS;
   readonly filterTitle = 'User Filters';

@@ -2,33 +2,95 @@
 @import 'primeicons/primeicons.css';
 
 .page-spinner-state {
-  display: grid;
-  place-items: center;
-  gap: 0.9rem;
-  min-height: 18rem;
-  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 10rem;
+  padding: 1.35rem 1rem;
   text-align: center;
+  width: 100%;
+  position: relative;
 }
 
 .page-spinner-state .p-progress-spinner {
-  width: 3rem;
-  height: 3rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  flex: 0 0 auto;
+  opacity: 0.95;
+  filter: drop-shadow(0 4px 10px rgba(var(--app-primary-rgb), 0.12));
 }
 
 .page-spinner-copy {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.1rem;
+  justify-items: center;
+  max-width: 14rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.page-spinner-copy::after {
+  content: '';
+  width: 3.5rem;
+  height: 2px;
+  margin-top: 0.45rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(var(--app-primary-rgb), 0.08), rgba(255, 10, 122, 0.85), rgba(var(--app-primary-rgb), 0.08));
+  animation: page-loader-line-pulse 1.6s ease-in-out infinite;
+}
+
+.page-spinner-kicker {
+  display: none;
 }
 
 .page-spinner-copy strong {
-  color: #2f221b;
-  font-size: 1.05rem;
+  color: #ff0a7a;
+  font-size: 0.84rem;
   font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .page-spinner-copy span {
-  color: #8b654f;
-  font-size: 0.94rem;
+  color: var(--app-text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+@keyframes page-loader-line-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scaleX(0.88);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+html[data-theme='dark'] .page-spinner-state .p-progress-spinner {
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28));
+}
+
+html[data-theme='dark'] .page-spinner-copy strong {
+  color: #ff5fa8;
+}
+
+html[data-theme='dark'] .page-spinner-copy span {
+  color: #c7d4cc;
+}
+
+html[data-theme='dark'] .page-spinner-copy::after {
+  background: linear-gradient(90deg, rgba(255, 95, 168, 0.08), rgba(255, 95, 168, 0.92), rgba(255, 95, 168, 0.08));
+  box-shadow: 0 0 14px rgba(255, 95, 168, 0.18);
 }
 
 :root {

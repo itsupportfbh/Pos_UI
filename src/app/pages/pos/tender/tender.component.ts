@@ -84,8 +84,8 @@ export class TenderComponent {
   readonly pageEyebrow = 'Billing';
   readonly pageTitle = 'Tender';
   readonly pageSubtitle = 'Maintain tender options used at checkout and settlement counters.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading tender workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';

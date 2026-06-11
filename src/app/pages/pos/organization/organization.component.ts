@@ -131,8 +131,8 @@ export class OrganizationComponent implements OnInit {
   selectedRow: any = null;
   readonly pageTitle = 'Organization';
   readonly pageSubtitle = 'Maintain restaurant organization identity details.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading organization workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;

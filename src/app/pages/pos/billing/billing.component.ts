@@ -155,8 +155,8 @@ export class BillingComponent implements OnInit {
 
   readonly pageTitle = 'Billing';
   readonly pageSubtitle = 'Search order, verify items, collect payment, and close the bill.';
-  readonly pageLoadingTitle = 'Unity work POS';
-  readonly pageLoadingSubtitle = 'Loading billing workspace.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
 
   userDetails: any = {};
   isLoadingOrders = false;

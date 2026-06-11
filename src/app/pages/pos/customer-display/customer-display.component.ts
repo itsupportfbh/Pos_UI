@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import {ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { catchError, forkJoin, of } from 'rxjs';
 
@@ -69,11 +70,14 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   profileWelcomeMessage = '';
   profileIdleMessage = '';
   profileCode = '';
+  profileThemeName = '';
   counterName = '';
   viewReady = false;
   isTvMode = false;
   isFullscreenActive = false;
+  runtimeProfileId = 0;
   constructor(
+    private readonly route: ActivatedRoute,
     private readonly toast: AppToastService,
     private readonly appShellService: AppShellService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
@@ -95,15 +99,16 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
       this.cdr.detectChanges();
     }, 1000);
 
-     this.OrgId = Number(this.userDetails.OrgId || 0);
-     this.BranchId = Number(this.userDetails.BranchId || 0);
-     this.CounterId = this.getSessionCounterId();
+    this.resolveRuntimeContext();
 
     setTimeout(() => {
       this.viewReady = true;
       this.loadDisplayHeaderDetails();
-      this.loadActiveProfile();
+      this.loadRuntimeProfile();
       this.loadCustomerOrders();
+      if (this.shouldLaunchTvModeFromRoute()) {
+        void this.openTvMode();
+      }
       this.cdr.detectChanges();
     });
     
@@ -326,6 +331,24 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     return ['tone-teal', 'tone-orange', 'tone-green', 'tone-red', 'tone-black'][index % 5];
   }
 
+  getCustomerThemeClass(): string {
+    const themeName = String(this.profileThemeName || '').trim().toLowerCase();
+
+    if (themeName.includes('amber')) {
+      return 'customer-theme-amber';
+    }
+
+    if (themeName.includes('evening') || themeName.includes('luxe')) {
+      return 'customer-theme-luxe';
+    }
+
+    if (themeName.includes('pastel') || themeName.includes('glow')) {
+      return 'customer-theme-pastel';
+    }
+
+    return 'customer-theme-default';
+  }
+
   private async enterFullscreen(): Promise<void> {
     try {
       if (!document.fullscreenElement) {
@@ -368,13 +391,10 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   }
 
   private loadDisplayHeaderDetails(): void {
-    const orgId = this.getSessionOrgId();
-    const branchId = this.getSessionBranchId();
-
     forkJoin({
-      organization: orgId ? this.organizationService.getById(orgId).pipe(catchError(() => of(null))) : of(null),
-      branch: branchId ? this.branchService.getById(branchId).pipe(catchError(() => of(null))) : of(null),
-      config: orgId ? this.organizationService.GetOrganizationConfigByOrgId(orgId).pipe(catchError(() => of(null))) : of(null)
+      organization: this.OrgId ? this.organizationService.getById(this.OrgId).pipe(catchError(() => of(null))) : of(null),
+      branch: this.BranchId ? this.branchService.getById(this.BranchId).pipe(catchError(() => of(null))) : of(null),
+      config: this.OrgId ? this.organizationService.GetOrganizationConfigByOrgId(this.OrgId).pipe(catchError(() => of(null))) : of(null)
     }).subscribe(({ organization, branch, config }) => {
       const organizationRow = this.getResponseObject(organization);
       const branchRow = this.getResponseObject(branch);
@@ -392,6 +412,15 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadRuntimeProfile(): void {
+    if (this.runtimeProfileId > 0) {
+      this.loadProfileById(this.runtimeProfileId);
+      return;
+    }
+
+    this.loadActiveProfile();
+  }
+
   private loadActiveProfile(): void {
     if (!this.OrgId) {
       return;
@@ -405,18 +434,30 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
           return;
         }
 
-        this.profileCode = this.getStringValue(profile, 'ProfileCode');
-        this.profileTitle = this.getStringValue(profile, 'HeaderTitle', 'ProfileName') || 'Customer Order Board';
-        this.profileWelcomeMessage = this.getStringValue(profile, 'WelcomeMessage');
-        this.profileIdleMessage = this.getStringValue(profile, 'IdleMessage');
-        this.counterName = this.getStringValue(profile, 'CounterName');
+        this.applyProfile(profile);
         this.cdr.detectChanges();
       },
       error: () => {
-        this.profileTitle = 'Customer Order Board';
-        this.profileWelcomeMessage = '';
-        this.profileIdleMessage = '';
-        this.counterName = '';
+        this.resetProfileToDefaults();
+      }
+    });
+  }
+
+  private loadProfileById(profileId: number): void {
+    this.dualDisplayService.getById(profileId).subscribe({
+      next: (response: any) => {
+        const profile = this.getResponseObject(response);
+
+        if (!profile || !Object.keys(profile).length) {
+          this.loadActiveProfile();
+          return;
+        }
+
+        this.applyProfile(profile);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadActiveProfile();
       }
     });
   }
@@ -516,6 +557,52 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     } catch {
       return 0;
     }
+  }
+
+  private resolveRuntimeContext(): void {
+    const queryParams = this.route.snapshot.queryParamMap;
+
+    this.OrgId = Number(queryParams.get('orgId') || this.userDetails.OrgId || 0);
+    this.BranchId = Number(queryParams.get('branchId') || this.userDetails.BranchId || 0);
+    this.CounterId = Number(queryParams.get('counterId') || this.getSessionCounterId() || 0);
+    this.runtimeProfileId = Number(queryParams.get('profileId') || 0);
+
+    const routeBranchName = queryParams.get('branchName');
+    const routeCounterName = queryParams.get('counterName');
+    const routeTitle = queryParams.get('headerTitle');
+
+    if (routeBranchName) {
+      this.branchName = routeBranchName;
+    }
+
+    if (routeCounterName) {
+      this.counterName = routeCounterName;
+    }
+
+    if (routeTitle) {
+      this.profileTitle = routeTitle;
+    }
+  }
+
+  private shouldLaunchTvModeFromRoute(): boolean {
+    return this.route.snapshot.queryParamMap.get('tv') === '1';
+  }
+
+  private applyProfile(profile: any): void {
+    this.profileCode = this.getStringValue(profile, 'ProfileCode');
+    this.profileTitle = this.getStringValue(profile, 'HeaderTitle', 'ProfileName') || this.profileTitle || 'Customer Order Board';
+    this.profileWelcomeMessage = this.getStringValue(profile, 'WelcomeMessage');
+    this.profileIdleMessage = this.getStringValue(profile, 'IdleMessage');
+    this.profileThemeName = this.getStringValue(profile, 'ThemeName');
+    this.counterName = this.getStringValue(profile, 'CounterName') || this.counterName;
+  }
+
+  private resetProfileToDefaults(): void {
+    this.profileTitle = 'Customer Order Board';
+    this.profileWelcomeMessage = '';
+    this.profileIdleMessage = '';
+    this.profileThemeName = '';
+    this.counterName = '';
   }
 
   private getResponseObject(response: any): any {

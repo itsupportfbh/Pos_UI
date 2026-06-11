@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, QueryList, ViewChildren, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -62,6 +63,7 @@ export class DualDisplayComponent {
   private readonly dualDisplayService = inject(DualDisplayService);
   private readonly commonService = inject(CommonService);
   private readonly counterService = inject(CounterService);
+  private readonly router = inject(Router);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -109,7 +111,7 @@ export class DualDisplayComponent {
 
   readonly pageEyebrow = 'Displays';
   readonly pageTitle = 'Dual Display';
-  readonly pageSubtitle = 'Design the paired billing counter screen and customer-facing display experience used during checkout.';
+  readonly pageSubtitle = 'Create one pairing profile per billing counter so the live customer-facing screen automatically follows the correct branch, counter, message, and theme.';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
@@ -118,7 +120,7 @@ export class DualDisplayComponent {
   dialogSubtitle = 'Capture the paired operator and customer display details for checkout.';
   dialogPrimaryActionLabel = 'Save';
   readonly pairingStudioTitle = 'Pairing Studio';
-  readonly pairingStudioSubtitle = 'Use live branch and counter mapping now, then we can connect the customer-facing runtime behavior on top of it.';
+  readonly pairingStudioSubtitle = 'Each active profile is selected at runtime by Org, Branch, and Billing Counter. Open any saved profile below to test the real customer display output.';
   readonly addNewButtonLabel = 'Add Display Pairing';
 
   async ngOnInit(): Promise<void> {
@@ -436,7 +438,6 @@ export class DualDisplayComponent {
   }
 
   private async loadCounterOptions(branchId: number): Promise<void> {
-    debugger;
     try {
       const orgId = Number(this.userDetails?.OrgId || 0);
       const response: any = await firstValueFrom(this.counterService.getAll(orgId, branchId));
@@ -517,6 +518,7 @@ export class DualDisplayComponent {
   private getRowActionItems(row: DualDisplayRow): MenuItem[] {
     const items: MenuItem[] = [
       { label: 'Preview', icon: 'pi pi-desktop', styleClass: 'row-action-preview', command: () => this.handleRowAction('preview') },
+      { label: 'Open Customer Screen', icon: 'pi pi-external-link', styleClass: 'row-action-open', command: () => this.handleRowAction('open') },
       { label: 'Delete', icon: 'pi pi-trash', styleClass: 'row-action-delete', command: () => this.handleRowAction('delete') }
     ];
 
@@ -556,13 +558,45 @@ export class DualDisplayComponent {
     return String(this.counterOptions.find((item: any) => item.value === this.dialogCounterId)?.label ?? 'Billing counter');
   }
 
-  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'preview'): void {
+  openCustomerDisplay(row?: DualDisplayRow, openTvMode = false): void {
+    const selectedRow =
+      row ??
+      this.allRows.find((item) => item.Id === this.selectedPreviewId) ??
+      this.allRows.find((item) => item.IsActive) ??
+      null;
+
+    if (!selectedRow) {
+      this.toast.warn('Profile Required', 'Choose a dual display profile first.');
+      return;
+    }
+
+    const orgId = Number(this.userDetails?.OrgId || 0);
+    const urlTree = this.router.createUrlTree(['/pos/customer-display'], {
+      queryParams: {
+        orgId,
+        branchId: selectedRow.BranchId,
+        counterId: selectedRow.CounterId,
+        profileId: selectedRow.Id,
+        branchName: selectedRow.BranchName,
+        counterName: selectedRow.CounterName,
+        headerTitle: selectedRow.ScreenName,
+        tv: openTvMode ? 1 : 0
+      }
+    });
+
+    const runtimeUrl = `${window.location.origin}${this.router.serializeUrl(urlTree)}`;
+    window.open(runtimeUrl, '_blank', 'noopener');
+  }
+
+  private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'preview' | 'open'): void {
     if (!this.selectedRow) {
       return;
     }
 
     if (action === 'preview') {
       this.previewRow(this.selectedRow);
+    } else if (action === 'open') {
+      this.openCustomerDisplay(this.selectedRow, false);
     } else if (action === 'edit') {
       this.editRow(this.selectedRow);
     } else if (action === 'delete') {
