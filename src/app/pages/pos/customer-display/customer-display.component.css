@@ -72,7 +72,7 @@
 .customer-control-metrics,
 .customer-control-actions,
 .customer-order-column,
-.customer-display-brand,
+.customer-tv-brand,
 .customer-display-summary article,
 .customer-order-card {
   border: 1px solid rgba(var(--app-primary-rgb), 0.14);
@@ -691,7 +691,7 @@
   align-items: center;
 }
 
-.customer-display-brand {
+.customer-tv-brand {
   display: grid;
   align-items: center;
   padding: 0.95rem 1.1rem;
@@ -1158,7 +1158,7 @@
     padding: 0.8rem;
   }
 
-  .customer-display-brand {
+  .customer-tv-brand {
     align-items: flex-start;
     flex-direction: column;
   }

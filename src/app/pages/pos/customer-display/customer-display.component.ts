@@ -93,6 +93,13 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.organizationName = this.getStringValue(this.userDetails,  'OrgName') || 'Unity work POS';
     this.branchName = this.getStringValue(this.userDetails, 'BranchName') || '';
+    const autoLaunchTvMode = this.shouldLaunchTvModeFromRoute();
+
+    if (autoLaunchTvMode) {
+      this.isTvMode = true;
+      this.appShellService.setChromeHidden(true);
+    }
+
     document.addEventListener('fullscreenchange', this.handleFullscreenChange);
     this.refreshTimer = setInterval(() => {
       this.currentTime = new Date();
@@ -106,8 +113,8 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
       this.loadDisplayHeaderDetails();
       this.loadRuntimeProfile();
       this.loadCustomerOrders();
-      if (this.shouldLaunchTvModeFromRoute()) {
-        void this.openTvMode();
+      if (autoLaunchTvMode) {
+        void this.enterFullscreen();
       }
       this.cdr.detectChanges();
     });
@@ -127,12 +134,14 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     this.isTvMode = true;
     this.appShellService.setChromeHidden(true);
     await this.enterFullscreen();
+    this.cdr.detectChanges();
   }
 
   async closeTvMode(): Promise<void> {
     this.isTvMode = false;
     this.appShellService.setChromeHidden(false);
     await this.exitFullscreen();
+    this.cdr.detectChanges();
   }
 
   loadCustomerOrders(): void {
@@ -213,16 +222,20 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   }
 
   getQueueEmptyMessage(): string {
-    if (String(this.profileIdleMessage || '').trim()) {
-      return this.profileIdleMessage;
+    const idleMessage = this.getEffectiveIdleMessage();
+
+    if (idleMessage) {
+      return idleMessage;
     }
 
     return 'Fresh orders from the counter will appear here as soon as they are sent.';
   }
 
   getReadyEmptyMessage(): string {
-    if (String(this.profileIdleMessage || '').trim()) {
-      return this.profileIdleMessage;
+    const idleMessage = this.getEffectiveIdleMessage();
+
+    if (idleMessage) {
+      return idleMessage;
     }
 
     return 'Completed tickets will move here when they are ready for guest collection.';
@@ -552,7 +565,7 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const shiftAssignment = JSON.parse(localStorage.getItem('currentShiftAssignment') ?? '{}');
+      const shiftAssignment = JSON.parse(localStorage.getItem('shiftAssignment') ?? '{}');
       return this.getNumberValue(shiftAssignment, 'CounterId', 'counterId', 'counterid');
     } catch {
       return 0;
@@ -586,6 +599,25 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
 
   private shouldLaunchTvModeFromRoute(): boolean {
     return this.route.snapshot.queryParamMap.get('tv') === '1';
+  }
+
+  private getEffectiveIdleMessage(): string {
+    const idleMessage = String(this.profileIdleMessage || '').trim();
+    const welcomeMessage = String(this.profileWelcomeMessage || '').trim();
+
+    if (!idleMessage) {
+      return '';
+    }
+
+    if (welcomeMessage && idleMessage.toLowerCase() === welcomeMessage.toLowerCase()) {
+      return '';
+    }
+
+    if (idleMessage.toLowerCase().startsWith('welcome ')) {
+      return '';
+    }
+
+    return idleMessage;
   }
 
   private applyProfile(profile: any): void {

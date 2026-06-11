@@ -226,7 +226,6 @@ export class LoginComponent {
       this.toast.success(
         this.t('login.success_title', 'Login Successful'),
         successMessage
-        `${this.t('login.welcome_back_prefix', 'Welcome back,')} ${this.selectedUserDetails?.UserName || this.t('common.user', 'User')}.`
       );
 
       await this.router.navigate(['/pos', accessibleRoutes[0]]);

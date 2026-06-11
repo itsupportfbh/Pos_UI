@@ -100,6 +100,8 @@ const isShiftAssigned = (): boolean => {
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
+  { path: 'customer-display', redirectTo: 'pos/customer-display', pathMatch: 'full' },
+  { path: 'kitchen-display', redirectTo: 'pos/kitchen-display', pathMatch: 'full' },
   {
     path: 'login',
     loadComponent: () => import('./pages/login/login.component').then((module) => module.LoginComponent),

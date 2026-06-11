@@ -96,6 +96,13 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.appShellService.setChromeHidden(false);
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
+    const autoLaunchTvMode = this.shouldLaunchTvModeFromRoute();
+
+    if (autoLaunchTvMode) {
+      this.isTvMode = true;
+      this.appShellService.setChromeHidden(true);
+    }
+
     document.addEventListener('fullscreenchange', this.handleFullscreenChange);
     this.refreshTimer = setInterval(() => {
       this.currentTime = new Date();
@@ -107,8 +114,8 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
       this.counterName = this.getRuntimeCounterName();
       await this.loadDiningTableNames();
       this.loadKitchenOrders();
-      if (this.shouldLaunchTvModeFromRoute()) {
-        this.openTvMode();
+      if (autoLaunchTvMode) {
+        void this.enterFullscreen();
       }
       this.cdr.detectChanges();
     });
@@ -217,12 +224,14 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
     this.isTvMode = true;
     this.appShellService.setChromeHidden(true);
     void this.enterFullscreen();
+    this.cdr.detectChanges();
   }
 
   closeTvMode(): void {
     this.isTvMode = false;
     this.appShellService.setChromeHidden(false);
     void this.exitFullscreen();
+    this.cdr.detectChanges();
   }
 
   openKitchenOrderDetails(order: KitchenOrder): void {
@@ -902,7 +911,7 @@ export class DisplayMenuItemsComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const shiftAssignment = JSON.parse(localStorage.getItem('currentShiftAssignment') ?? '{}');
+      const shiftAssignment = JSON.parse(localStorage.getItem('shiftAssignment') ?? '{}');
       return this.getStringValue(shiftAssignment, 'CounterName', 'counterName');
     } catch {
       return '';

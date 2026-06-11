@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, QueryList, ViewChildren, inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -63,7 +62,6 @@ export class DualDisplayComponent {
   private readonly dualDisplayService = inject(DualDisplayService);
   private readonly commonService = inject(CommonService);
   private readonly counterService = inject(CounterService);
-  private readonly router = inject(Router);
 
   @ViewChildren(TextFieldComponent) private readonly textFields?: QueryList<TextFieldComponent>;
   @ViewChildren(SelectFieldComponent) private readonly selectFields?: QueryList<SelectFieldComponent>;
@@ -228,7 +226,7 @@ export class DualDisplayComponent {
       ThemeName: this.dialogThemeName.trim(),
       HeaderTitle: this.dialogScreenName.trim(),
       WelcomeMessage: this.dialogWelcomeText.trim(),
-      IdleMessage: this.dialogWelcomeText.trim(),
+      IdleMessage: '',
       IsActive: true,
       IsDeleted: false,
       CreatedBy: Number(this.userDetails?.UserId || 0),
@@ -490,11 +488,7 @@ export class DualDisplayComponent {
   }
 
   private updatePreview(): void {
-    const activeRow =
-      this.allRows.find((row) => row.Id === this.selectedPreviewId) ??
-      this.allRows.find((row) => row.IsActive) ??
-      this.allRows[0] ??
-      null;
+    const activeRow = this.getPreferredPreviewRow();
 
     this.previewScreenName = activeRow?.ScreenName ?? 'Dual Display Screen';
     this.previewCounterName = activeRow?.CounterName ?? 'Counter A';
@@ -506,6 +500,37 @@ export class DualDisplayComponent {
     this.previewResolution = activeRow?.Resolution ?? '1920 x 1080';
     this.previewQueueHint = activeRow?.QueueHint ?? 'Ready to greet the next guest';
     this.selectedPreviewId = activeRow?.Id ?? 0;
+  }
+
+  private getPreferredPreviewRow(): DualDisplayRow | null {
+    const selectedRow = this.allRows.find((row) => row.Id === this.selectedPreviewId);
+
+    if (selectedRow) {
+      return selectedRow;
+    }
+
+    const currentBranchId = this.getCurrentBranchId();
+    const currentCounterId = this.getCurrentCounterId();
+
+    const currentCounterProfile = this.allRows.find((row) =>
+      row.BranchId === currentBranchId &&
+      row.CounterId === currentCounterId
+    );
+
+    if (currentCounterProfile) {
+      return currentCounterProfile;
+    }
+
+    const currentBranchProfile = this.allRows.find((row) =>
+      row.BranchId === currentBranchId &&
+      row.IsActive
+    );
+
+    if (currentBranchProfile) {
+      return currentBranchProfile;
+    }
+
+    return this.allRows.find((row) => row.IsActive) ?? this.allRows[0] ?? null;
   }
 
   private isDialogFormValid(): boolean {
@@ -561,8 +586,7 @@ export class DualDisplayComponent {
   openCustomerDisplay(row?: DualDisplayRow, openTvMode = false): void {
     const selectedRow =
       row ??
-      this.allRows.find((item) => item.Id === this.selectedPreviewId) ??
-      this.allRows.find((item) => item.IsActive) ??
+      this.getPreferredPreviewRow() ??
       null;
 
     if (!selectedRow) {
@@ -571,21 +595,40 @@ export class DualDisplayComponent {
     }
 
     const orgId = Number(this.userDetails?.OrgId || 0);
-    const urlTree = this.router.createUrlTree(['/pos/customer-display'], {
-      queryParams: {
-        orgId,
-        branchId: selectedRow.BranchId,
-        counterId: selectedRow.CounterId,
-        profileId: selectedRow.Id,
-        branchName: selectedRow.BranchName,
-        counterName: selectedRow.CounterName,
-        headerTitle: selectedRow.ScreenName,
-        tv: openTvMode ? 1 : 0
-      }
+    const queryParams = new URLSearchParams({
+      orgId: String(orgId),
+      branchId: String(selectedRow.BranchId),
+      counterId: String(selectedRow.CounterId),
+      profileId: String(selectedRow.Id),
+      branchName: selectedRow.BranchName,
+      counterName: selectedRow.CounterName,
+      headerTitle: selectedRow.ScreenName,
+      tv: openTvMode ? '1' : '0'
     });
 
-    const runtimeUrl = `${window.location.origin}${this.router.serializeUrl(urlTree)}`;
-    window.open(runtimeUrl, '_blank', 'noopener');
+    const runtimeUrl = new URL(window.location.origin);
+    runtimeUrl.pathname = '/';
+    runtimeUrl.hash = `#/pos/customer-display?${queryParams.toString()}`;
+    window.open(runtimeUrl.toString(), '_blank', 'noopener');
+  }
+
+  private getCurrentBranchId(): number {
+    return Number(this.userDetails?.BranchId || 0);
+  }
+
+  private getCurrentCounterId(): number {
+    const userCounterId = Number(this.userDetails?.CounterId || 0);
+
+    if (userCounterId > 0) {
+      return userCounterId;
+    }
+
+    try {
+      const shiftAssignment = JSON.parse(localStorage.getItem('shiftAssignment') ?? '{}');
+      return Number(shiftAssignment?.CounterId || 0);
+    } catch {
+      return 0;
+    }
   }
 
   private handleRowAction(action: 'edit' | 'delete' | 'activate' | 'deactivate' | 'preview' | 'open'): void {
