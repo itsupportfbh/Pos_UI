@@ -143,7 +143,7 @@
                 }
               </div>
               <h3>{{ item.name }}</h3>
-              <p>{{ gstPercent }}% GST at bill stage</p>
+              <p>{{ gstPercent | number:'1.0-2' }}% {{ taxName }} at bill stage</p>
               <div class="product-footer">
                 <strong>{{ item.price | currency:'INR':'symbol':'1.2-2' }}</strong>
                 <p-button label="Add" icon="pi pi-plus" (onClick)="addQuickItem(item)" />
@@ -161,7 +161,7 @@
         <div>
           <p class="eyebrow">Current Bill</p>
           <h2>{{ currentOrderNumber }}</h2>
-          <p class="cart-subtitle">{{ activeServiceModeLabel }} / {{ currentBranchLabel }}</p>
+          <p class="cart-subtitle"><!--{{ activeServiceModeLabel }} / -->{{ currentBranchLabel }}</p>
         </div>
         <span class="cart-customer-name">{{ currentCustomerLabel }}</span>
       </div>
@@ -172,17 +172,26 @@
           <strong>{{ activeServiceModeLabel }}</strong>
         </div>
         <div>
+          <span>Cashier</span>
+          <strong>{{ currentCashierLabel }}</strong>
+        </div>
+        <div>
           <span>Table</span>
           <strong>{{ currentTableLabel }}</strong>
         </div>
+       
         <div>
-          <span>Branch</span>
-          <strong>{{ currentBranchLabel }}</strong>
+          <span>Counter</span>
+          <strong>{{ currentCounterLabel }}</strong>
         </div>
         <div>
+          <span>Terminal</span>
+          <strong>{{ currentTerminalLabel }}</strong>
+        </div>
+       <!-- <div>
           <span>Status</span>
           <strong>{{ currentStatusLabel }}</strong>
-        </div>
+        </div>-->
       </div>
 
       <div class="cart-section-title compact">
@@ -247,8 +256,9 @@
         <div><span>Subtotal</span><strong>{{ subtotal | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div><span>Discount</span><strong>- {{ discountAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div><span>Service Charge</span><strong>{{ serviceChargeAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
-        <div><span>Tax</span><strong>{{ taxAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span><!--{{taxName}} -->Tax  {{ gstPercent | number:'1.0-2' }}%</span><strong>{{ taxAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div><span>Tip</span><strong>{{ tipAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
+        <div><span>Round Off</span><strong>{{ roundOffAmount | currency:'INR':'symbol':'1.2-2' }}</strong></div>
         <div class="grand-total"><span>Total</span><strong>{{ grandTotal | currency:'INR':'symbol':'1.2-2' }}</strong></div>
       </section>
     </p-card>
@@ -278,7 +288,7 @@
 
     <section class="checkout-grid">
       <div class="checkout-panel">
-        <h3>Customer, Discount & Tip</h3>
+        <h3>Customer, Discount & Charges</h3>
 
         <app-autocomplete-field
           label="Select Customer"
@@ -288,35 +298,68 @@
           [model]="selectedCustomer"
           (modelChange)="selectedCustomer = $event" />
 
-        <div class="discount-row">
-          <div class="discount-type-toggle">
-            <button type="button" class="mode-pill" [class.active]="discountType === 'Amount'" (click)="setDiscountType('Amount')">Amount</button>
-            <button type="button" class="mode-pill" [class.active]="discountType === 'Percent'" (click)="setDiscountType('Percent')">Percent</button>
+        <div class="charges-grid">
+          <div class="discount-row">
+            <div class="discount-type-toggle">
+              <button type="button" class="mode-pill" [class.active]="discountType === 'Amount'" (click)="setDiscountType('Amount')">Amount</button>
+              <button type="button" class="mode-pill" [class.active]="discountType === 'Percent'" (click)="setDiscountType('Percent')">Percent</button>
+            </div>
+
+            <app-text-field
+              label="Discount"
+              inputId="discount"
+              [placeholder]="discountType === 'Amount' ? 'Enter discount amount' : 'Enter discount %'"
+              [model]="discountInput"
+              (modelChange)="onDiscountChange($event)" />
           </div>
 
           <app-text-field
-            label="Discount"
-            inputId="discount"
-            [placeholder]="discountType === 'Amount' ? 'Enter discount amount' : 'Enter discount %'"
-            [model]="discountInput"
-            (modelChange)="onDiscountChange($event)" />
-        </div>
+            label="Tip"
+            inputId="tipAmount"
+            placeholder="Enter tip amount"
+            [model]="tipInput"
+            (modelChange)="onTipChange($event)" />
 
-        <app-text-field
-          label="Tip"
-          inputId="tipAmount"
-          placeholder="Enter tip amount"
-          [model]="tipInput"
-          (modelChange)="onTipChange($event)" />
+          <app-text-field
+            label="Service Charge"
+            inputId="serviceCharge"
+            placeholder="Enter service charge"
+            [model]="serviceChargeInput"
+            (modelChange)="onServiceChargeChange($event)" />
+
+          <app-text-field
+            label="Round Off"
+            inputId="roundOff"
+            placeholder="Enter round off"
+            [model]="roundOffInput"
+            (modelChange)="onRoundOffChange($event)" />
+        </div>
 
       </div>
 
-      <div class="checkout-panel">
-        <h3>Payment Collection</h3>
+      <div class="checkout-panel charges-panel">
+        <div class="payment-collection-header">
+          <h3>Payment Collection</h3>
+          <button type="button" class="split-pay-button" (click)="addPaymentSplit()">
+            Split Pay
+          </button>
+        </div>
 
         <section class="split-payment-list">
           @for (split of paymentSplits; track split.id; let index = $index) {
             <article class="split-payment-row">
+              @if (paymentSplits.length > 1) {
+                <div class="split-payment-title">
+                  <span>Payment {{ index + 1 }}</span>
+                  <button
+                    type="button"
+                    class="remove-payment-button"
+                    (click)="removePaymentSplit(split.id)">
+                    Remove
+                  </button>
+                </div>
+              }
+
               <div class="split-payment-main">
                 <app-select-field
                   label="Payment Mode"
@@ -332,14 +375,6 @@
                   placeholder="Enter amount"
                   [model]="split.amountInput"
                   (modelChange)="updatePaymentSplit(split.id, 'amountInput', '' + $event)" />
-
-                <button
-                  type="button"
-                  class="remove-payment-button"
-                  [disabled]="paymentSplits.length === 1"
-                  (click)="removePaymentSplit(split.id)">
-                  Remove
-                </button>
               </div>
 
               @if (isDigitalPaymentMode(split.paymentMode)) {
@@ -372,14 +407,6 @@
           }
         </section>
 
-        <div class="payment-mode-grid">
-          @for (mode of paymentModes; track mode.value) {
-            <button type="button" class="payment-tile" (click)="addPaymentSplit('' + mode.value)">
-              + {{ mode.label }}
-            </button>
-          }
-        </div>
-
         <div class="payment-balance" [class.change-positive]="balanceAmount >= 0">
           <span>{{ balanceAmount >= 0 ? 'Change / Balance' : 'Pending Amount' }}</span>
           <strong>{{ (balanceAmount >= 0 ? changeAmount : -balanceAmount) | currency:'INR':'symbol':'1.2-2' }}</strong>
@@ -406,7 +433,7 @@
       <div class="action-row">
         <button pButton type="button" class="clear-order-button" icon="pi pi-refresh" label="Clear Bill" severity="danger" [text]="true" (click)="clearBill()"></button>
         <p-button label="Print Bill" icon="pi pi-print" severity="secondary" [outlined]="true" (onClick)="printBill()" />
-        <p-button [label]="isGeneratingBill ? 'Completing' : 'Complete Bill'" icon="pi pi-check-circle"
+        <p-button [label]="isGeneratingBill ? 'Completing' : 'Generate Bill'" icon="pi pi-check-circle"
           [disabled]="isGeneratingBill || !cartItems.length" (onClick)="generateBill()" />
       </div>
     </section>

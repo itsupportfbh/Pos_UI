@@ -75,16 +75,18 @@
           </div>
         </div>
 
-        <div class="tool-block tool-block-toggle">
-          <span class="tool-label">Delivery Type</span>
-          <div class="order-type-toggle delivery-type-toggle" aria-label="Delivery type">
-            @for (servingType of servingTypes; track servingType) {
-              <button type="button" [class.active]="activeServingType === servingType" (click)="selectServingType(servingType)">
-                {{ servingType }}
-              </button>
-            }
+        @if (isDineInOrder()) {
+          <div class="tool-block tool-block-toggle">
+            <span class="tool-label">Delivery Type</span>
+            <div class="order-type-toggle delivery-type-toggle" aria-label="Delivery type">
+              @for (servingType of servingTypes; track servingType) {
+                <button type="button" [class.active]="activeServingType === servingType" (click)="selectServingType(servingType)">
+                  {{ servingType }}
+                </button>
+              }
+            </div>
           </div>
-        </div>
+        }
 
         <div class="tool-block tool-block-search">
           <span class="tool-label">Find Items</span>
@@ -157,7 +159,7 @@
             <p class="eyebrow">Order No: {{ currentOrderNumber }}</p>
             <h2>{{ selectedTableWithFloorName }}</h2>
           </div>
-          <span class="cart-customer-name">{{ activeOrderType }} / {{ activeServingType }}</span>
+          <span class="cart-customer-name">{{ orderTypeDisplayLabel }}</span>
         </div>
 
        

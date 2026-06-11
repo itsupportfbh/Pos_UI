@@ -8,9 +8,7 @@ import { TagModule } from 'primeng/tag';
 import { firstValueFrom } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
-import { BranchService } from '../../../services/branch.service';
 import { CategoryService } from '../../../services/Category.service';
-import { CounterService } from '../../../services/counter.service';
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
 import { FloorService } from '../../../services/floor.service';
 import { OrderHold, OrderHoldItem, OrderHoldService } from '../../../services/order-hold.service';
@@ -64,9 +62,6 @@ export class OrderScreenComponent implements OnInit {
   orgId = 0;
   branchId = 0;
   pageLoading = false;
-
-  organizationName = '';
-  branchName = '';
 
   categories: any[] = [ALL_CATEGORY];
   subCategories: any[] = [ALL_SUBCATEGORY];
@@ -124,9 +119,7 @@ export class OrderScreenComponent implements OnInit {
   constructor(
     private readonly toast: AppToastService,
     private readonly changeDetector: ChangeDetectorRef,
-    private readonly branchService: BranchService,
     private readonly categoryService: CategoryService,
-    private readonly counterService: CounterService,
     private readonly floorService: FloorService,
     private readonly subCategoryService: subCategoryService,
     private readonly orderHoldService: OrderHoldService,
@@ -147,7 +140,6 @@ export class OrderScreenComponent implements OnInit {
       : Number(this.userDetails.BranchId || 0);
 
     try {
-      await this.loadOrderContextNames();
       await this.loadOrderScreenData();
       await this.loadTaxPercentage();
       this.bindActiveHeldOrder();
@@ -155,41 +147,6 @@ export class OrderScreenComponent implements OnInit {
     } finally {
       this.pageLoading = false;
       this.changeDetector.detectChanges();
-    }
-  }
-
-  async loadOrderContextNames(): Promise<void> {
-    this.organizationName = this.getStringValue(this.userDetails,  'OrganizationName', 'organizationName');
-    this.branchName = this.getStringValue(this.userDetails, 'BranchName', 'branchName');
-
-    const counterOrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : this.orgId;
-    const counterBranchId = Number(this.userDetails.IsAdmin || 0) === 1 || Number(this.userDetails.RoleId || 0) === 1
-      ? 0
-      : Number(this.userDetails.BranchId || 0);
-
-    try {
-      const response: any = await firstValueFrom(this.counterService.getAll(counterOrgId, counterBranchId));
-      const counterRows = response?.result ?? [];
-      const counterRow = counterRows.find((row: any) => Number(row.BranchId || 0) === this.branchId) ?? counterRows[0] ?? null;
-
-      this.organizationName = this.getStringValue(counterRow, 'OrganizationName', 'OrgName', 'organizationName') || this.organizationName;
-      this.branchName = this.getStringValue(counterRow, 'BranchName', 'Branch', 'branchName') || this.branchName;
-    } catch {
-      this.toast.warn('Counter Details Not Loaded', 'Using login organization and branch details for this order.');
-    }
-
-    if (!this.branchId || this.branchName) {
-      this.branchName = this.branchName || 'All Branches';
-      return;
-    }
-
-    try {
-      const response: any = await firstValueFrom(this.branchService.getAll(this.orgId));
-      const branchList = response?.result ?? [];
-      const branch = branchList.find((x: any) => Number(x.Id || 0) === this.branchId);
-      this.branchName = this.getStringValue(branch, 'Name', 'name', 'BranchName', 'branchName') || this.branchName;
-    } catch {
-      this.toast.warn('Branch Not Loaded', 'Using login branch details for this order.');
     }
   }
 
@@ -419,7 +376,17 @@ export class OrderScreenComponent implements OnInit {
   }
 
   selectServingType(servingType: string): void {
+    if (!this.isDineInOrder()) {
+      return;
+    }
+
     this.activeServingType = servingType;
+  }
+
+  get orderTypeDisplayLabel(): string {
+    return this.isDineInOrder() && this.activeServingType
+      ? `${this.activeOrderType} / ${this.activeServingType}`
+      : this.activeOrderType;
   }
 
   get categoryOptions(): FieldOption[] {
@@ -813,6 +780,8 @@ export class OrderScreenComponent implements OnInit {
       orderNumber,
       tableId,
       orderType: this.activeOrderType,
+      servingType: this.getServingTypePayloadValue(),
+      serviceType: this.getServingTypePayloadValue(),
       orderStatus: status,
       itemCount: this.itemCount,
       subtotalAmount: this.subtotal,
@@ -886,7 +855,7 @@ export class OrderScreenComponent implements OnInit {
       messages.push('Select order type.');
     }
 
-    if (!this.activeServingType) {
+    if (this.isDineInOrder() && !this.activeServingType) {
       messages.push('Select delivery type.');
     }
 
@@ -917,7 +886,11 @@ export class OrderScreenComponent implements OnInit {
   private getDefaultServingType(orderType: string): string {
     return this.normalizeInputText(orderType).toLowerCase() === 'dine in'
       ? 'Server Delivery'
-      : 'Self Service';
+      : '';
+  }
+
+  private getServingTypePayloadValue(): string {
+    return this.isDineInOrder() ? this.activeServingType : '';
   }
 
   private clearFloorAndTableSelection(): void {
@@ -1111,8 +1084,9 @@ export class OrderScreenComponent implements OnInit {
       this.currentHeldOrder = heldOrder;
       this.currentOrderNumber = this.getOrderNumber(heldOrder) || this.currentOrderNumber;
       this.activeOrderType = this.getStringValue(heldOrder, 'Ordertype', 'ordertype', 'orderType', 'OrderType') || this.activeOrderType;
-      this.activeServingType = this.getStringValue(heldOrder, 'ServingType', 'servingType', 'ServiceType', 'serviceType')
-        || this.getDefaultServingType(this.activeOrderType);
+      this.activeServingType = this.isDineInOrder()
+        ? this.getStringValue(heldOrder, 'ServingType', 'servingType', 'ServiceType', 'serviceType') || this.getDefaultServingType(this.activeOrderType)
+        : '';
       this.selectedTable = this.isDineInOrder() ? this.getTableDisplayValue(heldOrder) || ALL_TABLE : ALL_TABLE;
       this.customerName = this.getStringValue(heldOrder, 'CustomerName', 'customerName', 'GuestName', 'guestName');
       this.ContactNumber = this.getStringValue(heldOrder, 'ContactNumber', 'contactNumber', 'CustomerPhone', 'customerPhone', 'Phone', 'phone');
@@ -1278,10 +1252,10 @@ export class OrderScreenComponent implements OnInit {
       floorid: floorId,
       Ordertype: this.activeOrderType,
       ordertype: this.activeOrderType,
-      ServingType: this.activeServingType,
-      servingType: this.activeServingType,
-      ServiceType: this.activeServingType,
-      serviceType: this.activeServingType,
+      ServingType: this.getServingTypePayloadValue(),
+      servingType: this.getServingTypePayloadValue(),
+      ServiceType: this.getServingTypePayloadValue(),
+      serviceType: this.getServingTypePayloadValue(),
       Orderstatus: status,
       orderstatus: status,
       ItemCount: this.itemCount,
