@@ -217,9 +217,15 @@ export class LoginComponent {
       }
 
       this.showShiftAssignmentDialog = false;
+      const userName = this.selectedUserDetails?.UserName || this.t('common.user', 'User');
+      const shiftName = String(event?.shiftName || '').trim();
+      const successMessage = shiftName
+        ? `${this.t('login.welcome_back_prefix', 'Welcome back,')} ${userName}. ${shiftName} assigned.`
+        : `${this.t('login.welcome_back_prefix', 'Welcome back,')} ${userName}.`;
 
       this.toast.success(
         this.t('login.success_title', 'Login Successful'),
+        successMessage
         `${this.t('login.welcome_back_prefix', 'Welcome back,')} ${this.selectedUserDetails?.UserName || this.t('common.user', 'User')}.`
       );
 

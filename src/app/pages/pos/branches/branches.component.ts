@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { MultiSelectFieldComponent, MultiSelectFieldValue } from '../../../components/form/multiselect-field.component';
@@ -24,6 +25,7 @@ import { CommonService } from '../../../services/common.service';
 import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { TableExportService } from '../../../services/table-export.service';
+ 
 
 type BranchRow = Branch & {
   RowNumber: number;
@@ -58,7 +60,8 @@ const BRANCH_COLUMNS: SharedTableColumn<BranchRow>[] = [
     ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
-    SharedTableCellTemplateDirective
+    SharedTableCellTemplateDirective,
+    ProgressSpinnerModule
   ],
   providers: [ConfirmationService],
   templateUrl: './branches.component.html',
@@ -87,6 +90,7 @@ export class BranchesComponent implements OnInit {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
+  pageLoading = false;
   filterOrganizations: MultiSelectFieldValue = [];
 
   dialogId = 0;
@@ -132,6 +136,8 @@ export class BranchesComponent implements OnInit {
   readonly pageEyebrow = 'Organization';
   readonly pageTitle = 'Branches';
   readonly pageSubtitle = 'Maintain restaurant branch details.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = 'Branch Filters';
   readonly primaryActionLabel = 'Search Branches';
   readonly secondaryActionLabel = 'Clear Filters';
@@ -152,19 +158,25 @@ export class BranchesComponent implements OnInit {
   downloadLoadingLabel = 'Exporting...';
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.showFilterButton = this.userDetails.RoleId === 1;
-    await this.loadBranchRights();
+    try {
+      await this.loadBranchRights();
 
-    this.tableColumns = BRANCH_COLUMNS.map((x: any) => {
-      if (x.field === 'OrganizationName') {
-        x.hidden = this.userDetails.RoleId !== 1;
-      }
+      this.tableColumns = BRANCH_COLUMNS.map((x: any) => {
+        if (x.field === 'OrganizationName') {
+          x.hidden = this.userDetails.RoleId !== 1;
+        }
 
-      return x;
-    });
+        return x;
+      });
 
-    this.loadBranches();
+      this.loadBranches();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadBranchRights(): Promise<void> {
@@ -220,10 +232,13 @@ export class BranchesComponent implements OnInit {
         });
         this.allRows = [...this.tableRows];
 
+        this.pageLoading = false;
         this.changeDetector.detectChanges();
       },
       error: () => {
+        this.pageLoading = false;
         this.toast.error('Load Failed', 'Unable to load branches. Please check API and try again.');
+        this.changeDetector.detectChanges();
       }
     });
   }

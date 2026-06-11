@@ -38,7 +38,7 @@
   </p-card>
 </section>
 
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+<p-dialog appendTo="body" [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
   [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
   [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
   <p-card class="feature-card filter-drawer-card">
@@ -61,7 +61,7 @@
 </p-dialog>
 
 @if (showAddNewButton) {
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+<p-dialog appendTo="body" [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">

@@ -9,6 +9,20 @@
     </div>
   </header>
 
+  @if (pageLoading) {
+    <p-card class="feature-card">
+      <div class="page-spinner-state">
+        <p-progressSpinner ariaLabel="Loading"></p-progressSpinner>
+        <div class="page-spinner-copy">
+          <small class="page-spinner-kicker">Please wait</small>
+          <strong>{{ pageLoadingTitle }}</strong>
+          <span>{{ pageLoadingSubtitle }}</span>
+        </div>
+      </div>
+    </p-card>
+  }
+
+  @if (!pageLoading) {
   <section class="summary-grid workflow-summary-grid">
     <article class="summary-card">
       <span>Edit Tickets</span>
@@ -68,9 +82,10 @@
       </app-shared-table>
     </p-card>
   </section>
+  }
 </section>
 
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+<p-dialog appendTo="body" [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
   [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
   [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
   <p-card class="feature-card filter-drawer-card">
@@ -93,7 +108,7 @@
   </p-card>
 </p-dialog>
 
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '60rem', maxWidth: '96vw' }" [draggable]="false"
+<p-dialog appendTo="body" [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '60rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">

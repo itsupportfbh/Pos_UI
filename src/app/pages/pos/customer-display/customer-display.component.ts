@@ -1,10 +1,14 @@
 import { CommonModule } from '@angular/common';
-import {ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { AppToastService } from '../../../services/app-toast.service';
+import { AppShellService } from '../../../services/app-shell.service';
 import { BranchService } from '../../../services/branch.service';
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
+import { DualDisplayService } from '../../../services/dual-display.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
@@ -31,13 +35,22 @@ const ORDER_STATUS = {
   selector: 'app-customer-display',
   standalone: true,
   imports: [
-    CommonModule
+    CommonModule,
+    ButtonModule
   ],
   templateUrl: './customer-display.component.html',
   styleUrl: './customer-display.component.css'
 })
 export class CustomerDisplayComponent implements OnInit, OnDestroy {
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly handleFullscreenChange = () => {
+    this.isFullscreenActive = Boolean(document.fullscreenElement);
+    if (!document.fullscreenElement && this.isTvMode) {
+      this.isTvMode = false;
+      this.appShellService.setChromeHidden(false);
+    }
+    this.cdr.detectChanges();
+  };
 
   userDetails: any = {};
   customerOrders: CustomerDisplayOrder[] = [];
@@ -51,11 +64,24 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   branchName = '';
   OrgId=0;
   BranchId=0;
+  CounterId = 0;
   organizationLogoUrl = '';
-viewReady = false;
+  profileTitle = 'Customer Order Board';
+  profileWelcomeMessage = '';
+  profileIdleMessage = '';
+  profileCode = '';
+  profileThemeName = '';
+  counterName = '';
+  viewReady = false;
+  isTvMode = false;
+  isFullscreenActive = false;
+  runtimeProfileId = 0;
   constructor(
+    private readonly route: ActivatedRoute,
     private readonly toast: AppToastService,
+    private readonly appShellService: AppShellService,
     private readonly displayMenuItemsService: DisplayMenuItemsService,
+    private readonly dualDisplayService: DualDisplayService,
     private readonly organizationService: OrganizationService,
     private readonly branchService: BranchService,
     private readonly runtimeConfig: RuntimeConfigService,
@@ -63,27 +89,50 @@ viewReady = false;
   ) {}
 
   ngOnInit(): void {
+    this.appShellService.setChromeHidden(false);
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.organizationName = this.getStringValue(this.userDetails,  'OrgName') || 'Unity work POS';
     this.branchName = this.getStringValue(this.userDetails, 'BranchName') || '';
+    document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+    this.refreshTimer = setInterval(() => {
+      this.currentTime = new Date();
+      this.cdr.detectChanges();
+    }, 1000);
 
-     this.OrgId = Number(this.userDetails.OrgId || 0);
-     this.BranchId = Number(this.userDetails.BranchId || 0);
+    this.resolveRuntimeContext();
 
     setTimeout(() => {
-    this.viewReady = true;
-    this.loadDisplayHeaderDetails();
-    this.loadCustomerOrders();
-    this.cdr.detectChanges();
-  });
+      this.viewReady = true;
+      this.loadDisplayHeaderDetails();
+      this.loadRuntimeProfile();
+      this.loadCustomerOrders();
+      if (this.shouldLaunchTvModeFromRoute()) {
+        void this.openTvMode();
+      }
+      this.cdr.detectChanges();
+    });
     
     
   }
 
   ngOnDestroy(): void {
+    this.appShellService.setChromeHidden(false);
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer);
     }
+    document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+  }
+
+  async openTvMode(): Promise<void> {
+    this.isTvMode = true;
+    this.appShellService.setChromeHidden(true);
+    await this.enterFullscreen();
+  }
+
+  async closeTvMode(): Promise<void> {
+    this.isTvMode = false;
+    this.appShellService.setChromeHidden(false);
+    await this.exitFullscreen();
   }
 
   loadCustomerOrders(): void {
@@ -152,6 +201,31 @@ viewReady = false;
 
   getOrderTypeDisplay(order: CustomerDisplayOrder): string {
     return String(order.orderType || '').trim() || 'Order';
+  }
+
+  getCustomerDisplayMessage(): string {
+    if (String(this.profileWelcomeMessage || '').trim()) {
+      return this.profileWelcomeMessage;
+    }
+
+    const organizationName = String(this.organizationName || '').trim() || 'Unity work POS';
+    return `${organizationName} live progress screen for active orders and ready-to-collect calls.`;
+  }
+
+  getQueueEmptyMessage(): string {
+    if (String(this.profileIdleMessage || '').trim()) {
+      return this.profileIdleMessage;
+    }
+
+    return 'Fresh orders from the counter will appear here as soon as they are sent.';
+  }
+
+  getReadyEmptyMessage(): string {
+    if (String(this.profileIdleMessage || '').trim()) {
+      return this.profileIdleMessage;
+    }
+
+    return 'Completed tickets will move here when they are ready for guest collection.';
   }
 
   getOrderStatusDisplay(order: CustomerDisplayOrder): string {
@@ -257,6 +331,46 @@ viewReady = false;
     return ['tone-teal', 'tone-orange', 'tone-green', 'tone-red', 'tone-black'][index % 5];
   }
 
+  getCustomerThemeClass(): string {
+    const themeName = String(this.profileThemeName || '').trim().toLowerCase();
+
+    if (themeName.includes('amber')) {
+      return 'customer-theme-amber';
+    }
+
+    if (themeName.includes('evening') || themeName.includes('luxe')) {
+      return 'customer-theme-luxe';
+    }
+
+    if (themeName.includes('pastel') || themeName.includes('glow')) {
+      return 'customer-theme-pastel';
+    }
+
+    return 'customer-theme-default';
+  }
+
+  private async enterFullscreen(): Promise<void> {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      this.isFullscreenActive = Boolean(document.fullscreenElement);
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async exitFullscreen(): Promise<void> {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch {
+      this.isFullscreenActive = Boolean(document.fullscreenElement);
+      this.cdr.detectChanges();
+    }
+  }
+
   private isDineInOrderType(orderType: string): boolean {
     const normalizedOrderType = String(orderType || '').replace(/[\s_-]+/g, '').toLowerCase();
     return normalizedOrderType.includes('dinein') || normalizedOrderType.includes('dinin') || normalizedOrderType.includes('table');
@@ -277,13 +391,10 @@ viewReady = false;
   }
 
   private loadDisplayHeaderDetails(): void {
-    const orgId = this.getSessionOrgId();
-    const branchId = this.getSessionBranchId();
-
     forkJoin({
-      organization: orgId ? this.organizationService.getById(orgId).pipe(catchError(() => of(null))) : of(null),
-      branch: branchId ? this.branchService.getById(branchId).pipe(catchError(() => of(null))) : of(null),
-      config: orgId ? this.organizationService.GetOrganizationConfigByOrgId(orgId).pipe(catchError(() => of(null))) : of(null)
+      organization: this.OrgId ? this.organizationService.getById(this.OrgId).pipe(catchError(() => of(null))) : of(null),
+      branch: this.BranchId ? this.branchService.getById(this.BranchId).pipe(catchError(() => of(null))) : of(null),
+      config: this.OrgId ? this.organizationService.GetOrganizationConfigByOrgId(this.OrgId).pipe(catchError(() => of(null))) : of(null)
     }).subscribe(({ organization, branch, config }) => {
       const organizationRow = this.getResponseObject(organization);
       const branchRow = this.getResponseObject(branch);
@@ -297,6 +408,57 @@ viewReady = false;
         this.getStringValue(configRow, 'Image', 'image') ||
         this.getStringValue(organizationRow, 'Image', 'image', 'Logo', 'logo')
       );
+      this.cdr.detectChanges();
+    });
+  }
+
+  private loadRuntimeProfile(): void {
+    if (this.runtimeProfileId > 0) {
+      this.loadProfileById(this.runtimeProfileId);
+      return;
+    }
+
+    this.loadActiveProfile();
+  }
+
+  private loadActiveProfile(): void {
+    if (!this.OrgId) {
+      return;
+    }
+
+    this.dualDisplayService.getActiveProfile(this.OrgId, this.BranchId, this.CounterId).subscribe({
+      next: (response: any) => {
+        const profile = this.getResponseObject(response);
+
+        if (!profile || !Object.keys(profile).length) {
+          return;
+        }
+
+        this.applyProfile(profile);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.resetProfileToDefaults();
+      }
+    });
+  }
+
+  private loadProfileById(profileId: number): void {
+    this.dualDisplayService.getById(profileId).subscribe({
+      next: (response: any) => {
+        const profile = this.getResponseObject(response);
+
+        if (!profile || !Object.keys(profile).length) {
+          this.loadActiveProfile();
+          return;
+        }
+
+        this.applyProfile(profile);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadActiveProfile();
+      }
     });
   }
 
@@ -380,6 +542,67 @@ viewReady = false;
 
   private getSessionBranchId(): number {
     return this.getNumberValue(this.userDetails, 'BranchId');
+  }
+
+  private getSessionCounterId(): number {
+    const userCounterId = this.getNumberValue(this.userDetails, 'CounterId', 'counterId', 'counterid');
+
+    if (userCounterId > 0) {
+      return userCounterId;
+    }
+
+    try {
+      const shiftAssignment = JSON.parse(localStorage.getItem('currentShiftAssignment') ?? '{}');
+      return this.getNumberValue(shiftAssignment, 'CounterId', 'counterId', 'counterid');
+    } catch {
+      return 0;
+    }
+  }
+
+  private resolveRuntimeContext(): void {
+    const queryParams = this.route.snapshot.queryParamMap;
+
+    this.OrgId = Number(queryParams.get('orgId') || this.userDetails.OrgId || 0);
+    this.BranchId = Number(queryParams.get('branchId') || this.userDetails.BranchId || 0);
+    this.CounterId = Number(queryParams.get('counterId') || this.getSessionCounterId() || 0);
+    this.runtimeProfileId = Number(queryParams.get('profileId') || 0);
+
+    const routeBranchName = queryParams.get('branchName');
+    const routeCounterName = queryParams.get('counterName');
+    const routeTitle = queryParams.get('headerTitle');
+
+    if (routeBranchName) {
+      this.branchName = routeBranchName;
+    }
+
+    if (routeCounterName) {
+      this.counterName = routeCounterName;
+    }
+
+    if (routeTitle) {
+      this.profileTitle = routeTitle;
+    }
+  }
+
+  private shouldLaunchTvModeFromRoute(): boolean {
+    return this.route.snapshot.queryParamMap.get('tv') === '1';
+  }
+
+  private applyProfile(profile: any): void {
+    this.profileCode = this.getStringValue(profile, 'ProfileCode');
+    this.profileTitle = this.getStringValue(profile, 'HeaderTitle', 'ProfileName') || this.profileTitle || 'Customer Order Board';
+    this.profileWelcomeMessage = this.getStringValue(profile, 'WelcomeMessage');
+    this.profileIdleMessage = this.getStringValue(profile, 'IdleMessage');
+    this.profileThemeName = this.getStringValue(profile, 'ThemeName');
+    this.counterName = this.getStringValue(profile, 'CounterName') || this.counterName;
+  }
+
+  private resetProfileToDefaults(): void {
+    this.profileTitle = 'Customer Order Board';
+    this.profileWelcomeMessage = '';
+    this.profileIdleMessage = '';
+    this.profileThemeName = '';
+    this.counterName = '';
   }
 
   private getResponseObject(response: any): any {

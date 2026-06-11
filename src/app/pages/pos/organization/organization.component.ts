@@ -5,6 +5,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ToggleSwitch } from 'primeng/toggleswitch';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
@@ -24,6 +25,7 @@ import { CommonService } from '../../../services/common.service';
 import { EntityMasterService } from '../../../services/entitymaster.service';
 import { Organization, OrganizationConfig, OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
+ 
 
 const cityOptions: any[] = [];
 const stateOptions: any[] = [];
@@ -49,7 +51,7 @@ const CODE_TEMPLATE_COLUMNS: SharedTableColumn<any>[] = [
 @Component({
   selector: 'app-organization',
   standalone: true,
-  imports: [CommonModule, FormsModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, ToggleSwitch, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, SharedTableCellTemplateDirective],
+  imports: [CommonModule, FormsModule, ConfirmDialogModule, ButtonModule, CardModule, DialogModule, ToggleSwitch, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, SharedTableCellTemplateDirective, ProgressSpinnerModule],
   providers: [ConfirmationService],
   templateUrl: './organization.component.html',
   styleUrl: './organization.component.css'
@@ -74,6 +76,7 @@ export class OrganizationComponent implements OnInit {
   isEditMode = false;
   dialogSubmitted = false;
   dialogSaving = false;
+  pageLoading = false;
   cardSearchText = '';
 
   dialogId = 0;
@@ -128,6 +131,8 @@ export class OrganizationComponent implements OnInit {
   selectedRow: any = null;
   readonly pageTitle = 'Organization';
   readonly pageSubtitle = 'Maintain restaurant organization identity details.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   cityOptions = cityOptions;
   stateOptions = stateOptions;
   countryOptions = countryOptions;
@@ -159,11 +164,18 @@ export class OrganizationComponent implements OnInit {
   rowActionItems: MenuItem[] = [];
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.isSuperAdmin = this.userDetails.RoleId == 1;
     this.isAdminUser = this.userDetails.IsAdmin == 1;
-    await this.loadOrganizationRights();
-    this.loadOrganizations();
+
+    try {
+      await this.loadOrganizationRights();
+      await this.loadOrganizations();
+    } finally {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadOrganizationRights(): Promise<void> {
