@@ -10,6 +10,18 @@
   </header>
 
   <p-card class="feature-card">
+    @if (pageLoading) {
+      <div class="page-spinner-state">
+        <p-progressSpinner ariaLabel="Loading"></p-progressSpinner>
+        <div class="page-spinner-copy">
+          <small class="page-spinner-kicker">Please wait</small>
+          <strong>{{ pageLoadingTitle }}</strong>
+          <span>{{ pageLoadingSubtitle }}</span>
+        </div>
+      </div>
+    }
+
+    @if (!pageLoading) {
     <div class="section-heading">
       <div>
         <h2>{{ tableTitle }}</h2>
@@ -29,10 +41,11 @@
           (click)="openRowActions(rowMenu, $event, row)"></button>
       </ng-template>
     </app-shared-table>
+    }
   </p-card>
 </section>
 
-<p-dialog [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
+<p-dialog appendTo="body" [(visible)]="showFilterSidebar" [modal]="true" position="right" [draggable]="false" [resizable]="false"
   [closable]="true" [dismissableMask]="true" styleClass="filter-drawer-dialog"
   [style]="{ width: '32rem', maxWidth: '96vw', height: '100vh' }" (onHide)="closeFilterSidebar()">
   <p-card class="feature-card filter-drawer-card">
@@ -54,7 +67,7 @@
   </p-card>
 </p-dialog>
 
-<p-dialog [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
+<p-dialog appendTo="body" [(visible)]="showAddDialog" [modal]="true" [style]="{ width: '52rem', maxWidth: '96vw' }" [draggable]="false"
   [resizable]="false" [closable]="true" (onHide)="closeAddDialog()">
   <ng-template pTemplate="header">
     <div class="dialog-copy">
@@ -91,7 +104,7 @@
   </div>
 </p-dialog>
 
-<p-dialog [(visible)]="showPermissionsDialog" [modal]="true" [style]="{ width: '100rem', maxWidth: '98vw', height: '90vh' }"
+<p-dialog appendTo="body" [(visible)]="showPermissionsDialog" [modal]="true" [style]="{ width: '100rem', maxWidth: '98vw', height: '90vh' }"
   styleClass="permissions-dialog" [draggable]="false" [resizable]="false" [closable]="true"
   (onHide)="closePermissionsDialog()">
   <ng-template pTemplate="header">
@@ -106,6 +119,12 @@
           <input type="checkbox" [checked]="isAllPermissionsSelected" (change)="toggleAllPermissions($event)" />
           <span>Select All</span>
         </label>
+
+        <div class="permissions-scope">
+          <app-select-field label="Scope" inputId="permissions-scope" placeholder="Choose scope"
+            [options]="permissionScopeOptions" [numberValue]="true" [filter]="false" [showClear]="false"
+            [model]="permissionScope" (modelChange)="permissionScope = $event" />
+        </div>
 
         <div class="permissions-search">
           <app-text-field label="Search Permissions" inputId="permissions-search" placeholder="Search module or page"
@@ -122,7 +141,7 @@
   <section class="permissions-panel">
     @if (permissionLoading) {
       <div class="permissions-loading">
-        <i class="pi pi-spinner pi-spin"></i>
+        <p-progressSpinner ariaLabel="Loading permissions"></p-progressSpinner>
         <span>Loading permissions...</span>
       </div>
     } @else {

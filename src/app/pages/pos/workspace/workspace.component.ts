@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, Inject, OnInit, PLATFORM_ID, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, Inject, OnDestroy, OnInit, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
@@ -17,6 +17,7 @@ import { TextFieldComponent } from '../../../components/form/text-field.componen
 import { AppToastService } from '../../../services/app-toast.service';
 import { AppTranslationService } from '../../../services/app-translation.service';
 import { ApiMenu, MenuService } from '../../../services/menu.service';
+import { AppShellService } from '../../../services/app-shell.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
@@ -34,7 +35,7 @@ const BACK_OFFICE_SCOPE = 2;
   templateUrl: './workspace.component.html',
   styleUrl: './workspace.component.css'
 })
-export class WorkspaceComponent implements OnInit {
+export class WorkspaceComponent implements OnInit, OnDestroy {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly toast = inject(AppToastService);
@@ -79,14 +80,17 @@ export class WorkspaceComponent implements OnInit {
 
   sidebarOpen = true;
   activeMenuKey = 'dashboard';
+  private chromeHidden = false;
+  private chromeHiddenSubscription: any;
 
   get isDisplayChromeHidden(): boolean {
-    return this.activeMenuKey === 'customer-display';
+    return this.chromeHidden;
   }
 
   constructor(
     private readonly router: Router,
     private readonly menuService: MenuService,
+    private readonly appShellService: AppShellService,
     private readonly organizationService: OrganizationService,
     private readonly runtimeConfig: RuntimeConfigService,
     @Inject(DOCUMENT) private readonly document: Document,
@@ -94,12 +98,20 @@ export class WorkspaceComponent implements OnInit {
   ) {
     this.syncActiveMenu(this.router.url);
     this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)).subscribe((event) => this.syncActiveMenu(event.urlAfterRedirects));
+    this.chromeHiddenSubscription = this.appShellService.chromeHidden$.subscribe((hidden) => {
+      this.chromeHidden = hidden;
+      this.changeDetector.detectChanges();
+    });
   }
 
   ngOnInit(): void {
     this.currentUser.imageUrl = this.getUserImageUrl(String(this.userDetails.Image ?? this.userDetails.UserImage ?? ''));
     this.loadorganizationconfig();
     this.loadMenus();
+  }
+
+  ngOnDestroy(): void {
+    this.chromeHiddenSubscription?.unsubscribe();
   }
 
   loadMenus(): void {
@@ -227,6 +239,11 @@ export class WorkspaceComponent implements OnInit {
   private syncActiveMenu(url: string): void {
     const routeSegment = url.split('/').filter(Boolean).at(-1);
     this.activeMenuKey = routeSegment && routeSegment !== 'pos' ? routeSegment : 'dashboard';
+
+    if (this.activeMenuKey !== 'customer-display' && this.activeMenuKey !== 'display-menu-items' && this.activeMenuKey !== 'kitchen-display') {
+      this.appShellService.setChromeHidden(false);
+    }
+
     const routeScope = Number(this.routeScopeMap.get(this.activeMenuKey) ?? COMMON_MENU_SCOPE);
 
     if (routeScope === FRONT_OFFICE_SCOPE || routeScope === BACK_OFFICE_SCOPE) {

@@ -5,7 +5,8 @@
   <title>Unity work POS</title>
   <base href="./">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/webp" href="cspl-logo.webp">
+  <link rel="icon" type="image/webp" href="./cspl-logo.webp?v=3">
+  <link rel="shortcut icon" type="image/webp" href="./cspl-logo.webp?v=3">
   <style>
     body {
       margin: 0;
@@ -25,6 +26,7 @@
 
     .app-loading-card {
       width: min(24rem, 100%);
+      position: relative;
       display: grid;
       justify-items: center;
       gap: 1rem;
@@ -38,12 +40,25 @@
         0 22px 48px rgba(123, 59, 30, 0.16),
         0 0 0 1px rgba(123, 59, 30, 0.04);
       text-align: center;
+      overflow: hidden;
+    }
+
+    .app-loading-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(115deg, transparent 24%, rgba(255, 255, 255, 0.54) 48%, transparent 72%);
+      transform: translateX(-160%);
+      animation: app-loading-card-shimmer 2.2s ease-in-out infinite;
+      pointer-events: none;
     }
 
     .app-loading-logo {
+      position: relative;
       width: min(14rem, 100%);
       height: auto;
       object-fit: contain;
+      animation: app-loading-logo-pulse 1.9s ease-in-out infinite;
     }
 
     .app-loading-copy strong {
@@ -79,9 +94,34 @@
       animation: app-loading-slide 1.15s ease-in-out infinite;
     }
 
+    .app-loading-bar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      width: 26%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.7) 50%, transparent 100%);
+      transform: translateX(-180%);
+      animation: app-loading-glint 1.15s ease-in-out infinite;
+    }
+
     @keyframes app-loading-slide {
       0% { transform: translateX(-120%); }
       100% { transform: translateX(280%); }
+    }
+
+    @keyframes app-loading-glint {
+      0% { transform: translateX(-180%); }
+      100% { transform: translateX(360%); }
+    }
+
+    @keyframes app-loading-logo-pulse {
+      0%, 100% { transform: scale(0.985); opacity: 0.9; }
+      50% { transform: scale(1.02); opacity: 1; }
+    }
+
+    @keyframes app-loading-card-shimmer {
+      0% { transform: translateX(-160%); }
+      100% { transform: translateX(160%); }
     }
   </style>
 </head>

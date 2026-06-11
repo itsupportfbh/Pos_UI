@@ -1,5 +1,28 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const db = require('./electron/database/db');
+
+// The SQLite schema is managed in the existing database file.
+// Do not recreate tables or seed demo data here on startup.
+
+ipcMain.handle('sqlite-query', async (_, sql, params = []) => {
+  try {
+    const safeParams = Array.isArray(params) ? params : [params];
+    const stmt = db.prepare(sql);
+
+    return {
+      values: stmt.all(...safeParams),
+      error: null
+    };
+  } catch (error) {
+    console.error('sqlite-query failed:', error);
+
+    return {
+      values: [],
+      error: error instanceof Error ? error.message : 'Unknown SQLite error'
+    };
+  }
+});
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -15,9 +38,14 @@ function createWindow() {
     }
   });
 
+  win.webContents.openDevTools();
 
- 
-  win.loadURL(`file://${path.join(__dirname, 'dist/unity-work-pos/browser/index.html')}`);
+  win.loadURL(
+    `file://${path.join(
+      __dirname,
+      'dist/unity-work-pos/browser/index.html'
+    )}`
+  );
 }
 
 app.whenReady().then(createWindow);

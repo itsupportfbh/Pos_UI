@@ -1,20 +1,26 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { AutocompleteFieldComponent } from '../../../components/form/autocomplete-field.component';
 import { FieldOption, SelectFieldComponent } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
 import { ShiftAssignmentComponent } from '../components/shift-assignment/shift-assignment.component';
 import { ShiftAssignmentService } from '../../../services/shift-assignment.service';
 import { AppToastService } from '../../../services/app-toast.service';
+import { BillingService } from '../../../services/billing.service';
 import { DisplayMenuItemsService } from '../../../services/display-menu-items.service';
+import { JoinTableService } from '../../../services/join-table.service';
 import { OrderScreenService } from '../../../services/order-screen.service';
 import { OrganizationService } from '../../../services/organization.service';
 
 type BillingMode = 'search-order' | 'quick-bill';
+type BillingGroupMode = 'single' | 'joined' | 'manual';
 type ServiceMode = 'Dine In' | 'Take Away' | 'Delivery';
+
+const DEFAULT_BILLING_ENTITY_NO = 12;
 const ORDER_SCREEN_TEMPLATE_NAME = 'Order Screen';
 const ORDER_STATUS = {
   Hold: 0,
@@ -25,11 +31,23 @@ const ORDER_STATUS = {
   Cancelled: 5,
   Completed: 6
 } as const;
+const PAYMENT_STATUS = {
+  Pending: 0,
+  Paid: 1,
+  PartialPaid: 2,
+  Cancelled: 3,
+  Refunded: 4,
+  Failed: 5,
+  Voided: 6,
+  Overpaid: 7
+} as const;
 
 type BillOrder = {
   id: number;
   orderNo: string;
+  tableId: number;
   table: string;
+  tableFlow: BillTableFlow;
   customer: string;
   phone: string;
   serviceMode: ServiceMode;
@@ -42,8 +60,19 @@ type BillOrder = {
   discountAmount: number;
   serviceChargeAmount: number;
   taxAmount: number;
+  tipAmount: number;
   totalAmount: number;
   rawOrder?: any;
+};
+
+type BillTableFlow = {
+  mode: 'Move Table' | 'Join Table' | 'No Table Flow';
+  reference: string;
+  fromTable: string;
+  toTable: string;
+  primaryTable: string;
+  joinedTables: string;
+  reason: string;
 };
 
 type BillItem = {
@@ -72,6 +101,26 @@ type QuickMenuItem = {
 
 type BillingCartItem = BillItem & {
   sourceType: 'order' | 'quick';
+  sourceOrderId?: number;
+  sourceOrderNo?: string;
+  sourceTable?: string;
+};
+
+type PaymentSplit = {
+  id: number;
+  paymentMode: string;
+  amountInput: string;
+  referenceNo: string;
+  approvalCode: string;
+  cardLastFour: string;
+};
+
+type ActiveJoinGroup = {
+  id: number;
+  joinNo: string;
+  primaryTableId: number;
+  tableIds: number[];
+  notes: string;
 };
 
 @Component({
@@ -81,6 +130,7 @@ type BillingCartItem = BillItem & {
     CommonModule,
     CardModule,
     ButtonModule,
+    ProgressSpinnerModule,
     TextFieldComponent,
     SelectFieldComponent,
     AutocompleteFieldComponent,
@@ -92,9 +142,12 @@ type BillingCartItem = BillItem & {
 export class BillingComponent implements OnInit {
   private readonly shiftService = inject(ShiftAssignmentService);
   private readonly toast = inject(AppToastService);
+  private readonly billingService = inject(BillingService);
   private readonly displayMenuItemsService = inject(DisplayMenuItemsService);
+  private readonly joinTableService = inject(JoinTableService);
   private readonly orderScreenService = inject(OrderScreenService);
   private readonly organizationService = inject(OrganizationService);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly gstPercent = 9;
   readonly serviceChargePercent = 10;
 
@@ -102,12 +155,16 @@ export class BillingComponent implements OnInit {
 
   readonly pageTitle = 'Billing';
   readonly pageSubtitle = 'Search order, verify items, collect payment, and close the bill.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
 
   userDetails: any = {};
   isLoadingOrders = false;
   isLoadingQuickItems = false;
+  pageLoading = false;
   isGeneratingBill = false;
   private quickBillEntityNo = 0;
+  private readonly billingEntityNo = DEFAULT_BILLING_ENTITY_NO;
   private readonly orderEntityNoCache = new Map<string, number>();
 
   customers: string[] = ['Walk-in Customer'];
@@ -123,8 +180,10 @@ export class BillingComponent implements OnInit {
 
   quickMenuItems: QuickMenuItem[] = [];
   openOrders: BillOrder[] = [];
+  activeJoinGroups: ActiveJoinGroup[] = [];
 
   billingMode: BillingMode = 'search-order';
+  billingGroupMode: BillingGroupMode = 'single';
   serviceFilter: ServiceMode | 'All' = 'All';
   orderSearch = '';
   itemSearch = '';
@@ -134,12 +193,17 @@ export class BillingComponent implements OnInit {
   selectedPaymentMode: string | null = 'Cash';
   discountType: 'Amount' | 'Percent' = 'Amount';
   discountInput = '0';
+  tipInput = '0';
   receivedAmountInput = '0';
   paymentReference = '';
   approvalCode = '';
   cardLastFour = '';
+  private paymentSplitSequence = 1;
+  paymentSplits: PaymentSplit[] = [this.createPaymentSplit('Cash')];
   notes = '';
   currentOrder: BillOrder | null = null;
+  selectedOrders: BillOrder[] = [];
+  selectedJoinGroup: ActiveJoinGroup | null = null;
   cartItems: BillingCartItem[] = [];
   filteredOrders: BillOrder[] = [];
   filteredQuickItems: QuickMenuItem[] = [];
@@ -161,12 +225,16 @@ export class BillingComponent implements OnInit {
   discountAmount = 0;
   serviceChargeAmount = 0;
   taxAmount = 0;
+  tipAmount = 0;
   grandTotal = 0;
   balanceAmount = 0;
+  receivedAmount = 0;
+  changeAmount = 0;
   OrgId = 0;
   BranchId = 0;
 
   ngOnInit(): void {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.applyUserScope();
 
@@ -174,14 +242,25 @@ export class BillingComponent implements OnInit {
       this.showShiftAssignment = true;
     }
 
-    void this.loadBillingOrders();
-    void this.loadQuickMenuItems(true);
+    void Promise.all([
+      this.runInitialLoadTask(this.loadBillingOrders()),
+      this.runInitialLoadTask(this.loadQuickMenuItems(true))
+    ]).finally(() => {
+      this.pageLoading = false;
+      this.cdr.detectChanges();
+    });
     this.filteredCartItems = [];
     this.updateDisplayState();
     this.updatePaymentState();
     this.updateBillingSummary();
   }
 
+  private async runInitialLoadTask(task: Promise<void>, timeoutMs = 8000): Promise<void> {
+    await Promise.race([
+      task.catch(() => undefined),
+      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))
+    ]);
+  }
   
 
   async loadBillingOrders(): Promise<void> {
@@ -189,9 +268,8 @@ export class BillingComponent implements OnInit {
     this.applyUserScope();
 
     try {
-      const response: any = await firstValueFrom(this.displayMenuItemsService.getAll(this.OrgId, this.BranchId));
-      const orderRows = this.getResponseList(response)
-        .filter((order: any) => this.isBillingOrder(order));
+      await this.loadActiveJoinGroups();
+      const orderRows = await this.loadBillingOrderRows();
       const orderDetails = await Promise.all(orderRows.map((order: any) => this.loadBillingOrderDetail(order)));
       const orders = orderDetails
         .filter((order: any) => this.isBillingOrder(order))
@@ -211,6 +289,85 @@ export class BillingComponent implements OnInit {
     } finally {
       this.isLoadingOrders = false;
     }
+  }
+
+  private async loadBillingOrderRows(): Promise<any[]> {
+    const scopedResponse: any = await firstValueFrom(this.displayMenuItemsService.getAll(this.OrgId, this.BranchId));
+    const scopedOrders = this.getResponseList(scopedResponse)
+      .filter((order: any) => this.isBillingOrder(order));
+
+    if (scopedOrders.length || !this.BranchId) {
+      return scopedOrders;
+    }
+
+    const orgResponse: any = await firstValueFrom(this.displayMenuItemsService.getAll(this.OrgId, 0));
+    return this.getResponseList(orgResponse)
+      .filter((order: any) => this.isBillingOrder(order));
+  }
+
+  private async loadActiveJoinGroups(): Promise<void> {
+    try {
+      const response: any = await firstValueFrom(this.joinTableService.getAll(this.OrgId));
+      const rows = this.getResponseList(response).filter((row: any) => {
+        const isDeleted = this.getOptionalBooleanValue(row, 'IsDeleted', 'isDeleted');
+        const isActive = this.getOptionalBooleanValue(row, 'IsActive', 'isActive');
+        const status = this.getStringValue(row, 'Status', 'status').toLowerCase();
+
+        return isDeleted !== true
+          && isActive !== false
+          && status !== 'released'
+          && status !== 'inactive';
+      });
+
+      const groups = await Promise.all(rows.map((row: any) => this.loadJoinGroup(row)));
+      this.activeJoinGroups = groups.filter((group): group is ActiveJoinGroup => Boolean(group && group.tableIds.length > 1));
+    } catch {
+      this.activeJoinGroups = [];
+    }
+  }
+
+  private async loadJoinGroup(row: any): Promise<ActiveJoinGroup | null> {
+    const id = this.getNumberValue(row, 'Id', 'id');
+    const source = id ? await this.loadJoinGroupDetail(id, row) : row;
+    const primaryTableId = this.getNumberValue(source, 'PrimaryTable', 'primaryTable', 'primarytable');
+    const tableIds = [
+      primaryTableId,
+      ...this.getJoinSecondaryTableIds(source)
+    ].filter((tableId, index, list) => tableId > 0 && list.indexOf(tableId) === index);
+
+    if (!tableIds.length) {
+      return null;
+    }
+
+    return {
+      id,
+      joinNo: this.getStringValue(source, 'JoinNo', 'joinNo', 'joinno') || this.getStringValue(row, 'JoinNo', 'joinNo', 'joinno'),
+      primaryTableId,
+      tableIds,
+      notes: this.getStringValue(source, 'Notes', 'notes')
+    };
+  }
+
+  private async loadJoinGroupDetail(id: number, fallback: any): Promise<any> {
+    try {
+      const response: any = await firstValueFrom(this.joinTableService.getById(id));
+      const result = response?.result ?? response?.Result ?? response;
+      return Array.isArray(result) ? result[0] ?? fallback : result ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private getJoinSecondaryTableIds(source: any): number[] {
+    const rawTableIds = this.getRawValue(source, 'TableIds', 'tableIds', 'MergedTables', 'mergedTables', 'SecondaryTables', 'secondaryTables');
+
+    if (!Array.isArray(rawTableIds)) {
+      return [];
+    }
+
+    return rawTableIds
+      .map((table: any) => this.getNumberValue(table, 'TableId', 'tableId', 'Id', 'id') || Number(table || 0))
+      .filter((tableId) => Number.isFinite(tableId) && tableId > 0);
   }
 
   async loadQuickMenuItems(loadTopSix = false): Promise<void> {
@@ -242,15 +399,25 @@ export class BillingComponent implements OnInit {
   }
 
   setBillingMode(mode: BillingMode): void {
+    const hasSelectedOrder = Boolean(this.selectedOrders.length);
+
     this.billingMode = mode;
-    this.currentOrder = null;
-    this.orderSearch = '';
-    this.notes = '';
+
+    if (!hasSelectedOrder) {
+      this.currentOrder = null;
+      this.orderSearch = '';
+      this.notes = '';
+    }
+
     this.updateOrderMatches();
     this.updateDisplayState();
 
     if (mode === 'quick-bill' && !this.cartItems.length) {
       this.selectedCustomer = 'Walk-in Customer';
+    }
+
+    if (mode === 'quick-bill' && !this.quickMenuItems.length) {
+      void this.loadQuickMenuItems(true);
     }
 
     this.updateDisplayState();
@@ -288,29 +455,66 @@ export class BillingComponent implements OnInit {
   }
 
   async selectOrder(order: BillOrder): Promise<void> {
-    const orderId = Number((order as any).id || 0);
+    await this.toggleOrderInBill(order);
+  }
 
-    if (!orderId) {
-      this.toast.error('Invalid Order', 'Unable to load this order from the API.');
+  async toggleOrderInBill(order: BillOrder, event?: Event): Promise<void> {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const joinGroup = this.getActiveJoinGroupForOrder(order);
+
+    if (joinGroup) {
+      await this.toggleJoinGroupInBill(joinGroup);
       return;
     }
 
-    this.isLoadingOrders = true;
+    if (this.isOrderSelected(order)) {
+      const nextOrders = this.selectedOrders.filter((selectedOrder) => selectedOrder.id !== order.id);
+      this.bindSelectedOrders(nextOrders, nextOrders.length > 1 ? 'manual' : 'single');
+      return;
+    }
 
     try {
-      const response: any = await firstValueFrom(this.displayMenuItemsService.getById(orderId));
-      const detailOrder = this.mapApiOrder(this.mergeOrderWithDetails(order.rawOrder ?? order, response));
-      this.bindSelectedOrder(detailOrder);
+      const detailOrder = await this.loadFreshBillOrder(order);
+      this.bindSelectedOrders([...this.selectedOrders, detailOrder], this.selectedOrders.length ? 'manual' : 'single');
     } catch {
-      this.toast.error('Load Failed', 'Unable to load order details from the API.');
-    } finally {
-      this.isLoadingOrders = false;
+      this.toast.error('Load Failed', 'Unable to add this order to the bill.');
+    }
+  }
+
+  private async toggleJoinGroupInBill(joinGroup: ActiveJoinGroup): Promise<void> {
+    const groupOrderRows = this.openOrders.filter((candidate) => joinGroup.tableIds.includes(candidate.tableId));
+    const groupOrderIds = groupOrderRows.map((candidate) => candidate.id);
+    const isEntireGroupSelected = groupOrderIds.length > 0
+      && groupOrderIds.every((orderId) => this.selectedOrders.some((selectedOrder) => selectedOrder.id === orderId));
+
+    if (isEntireGroupSelected) {
+      const nextOrders = this.selectedOrders.filter((selectedOrder) => !groupOrderIds.includes(selectedOrder.id));
+      this.bindSelectedOrders(nextOrders, nextOrders.length > 1 ? 'manual' : 'single');
+      return;
+    }
+
+    try {
+      const detailOrders = await Promise.all(groupOrderRows.map((candidate) => this.loadFreshBillOrder(candidate)));
+      const existingOutsideGroup = this.selectedOrders.filter((selectedOrder) => !groupOrderIds.includes(selectedOrder.id));
+      const nextOrders = [...existingOutsideGroup, ...detailOrders];
+      const mode: BillingGroupMode = existingOutsideGroup.length ? 'manual' : 'joined';
+
+      this.bindSelectedOrders(nextOrders, mode, mode === 'joined' ? joinGroup : null);
+
+      if (mode === 'joined') {
+        this.toast.info('Joined Bill', `${this.currentOrderNumber} loaded for single payment.`);
+      }
+    } catch {
+      this.toast.error('Load Failed', 'Unable to load joined table orders.');
     }
   }
 
   addQuickItem(item: QuickMenuItem): void {
-    this.billingMode = 'quick-bill';
-    this.currentOrder = null;
+    if (!this.selectedOrders.length) {
+      this.billingMode = 'quick-bill';
+    }
+
     this.selectedCustomer = this.selectedCustomer || 'Walk-in Customer';
 
     const existing = this.cartItems.find((x) => x.id === item.id && x.sourceType === 'quick');
@@ -339,24 +543,36 @@ export class BillingComponent implements OnInit {
     this.updateBillingSummary();
   }
 
-  increaseQuantity(itemId: number): void {
+  increaseQuantity(targetItem: BillingCartItem): void {
+    if (this.isCartItemReadonly(targetItem)) {
+      return;
+    }
+
     this.cartItems = this.cartItems.map((item) =>
-      item.id === itemId ? { ...item, qty: item.qty + 1 } : item
+      this.isSameCartItem(item, targetItem) ? { ...item, qty: item.qty + 1 } : item
     );
     this.updateCartMatches();
     this.updateBillingSummary();
   }
 
-  decreaseQuantity(itemId: number): void {
+  decreaseQuantity(targetItem: BillingCartItem): void {
+    if (this.isCartItemReadonly(targetItem)) {
+      return;
+    }
+
     this.cartItems = this.cartItems
-      .map((item) => item.id === itemId ? { ...item, qty: item.qty - 1 } : item)
+      .map((item) => this.isSameCartItem(item, targetItem) ? { ...item, qty: item.qty - 1 } : item)
       .filter((item) => item.qty > 0);
     this.updateCartMatches();
     this.updateBillingSummary();
   }
 
-  removeCartItem(itemId: number): void {
-    this.cartItems = this.cartItems.filter((item) => item.id !== itemId);
+  removeCartItem(targetItem: BillingCartItem): void {
+    if (this.isCartItemReadonly(targetItem)) {
+      return;
+    }
+
+    this.cartItems = this.cartItems.filter((item) => !this.isSameCartItem(item, targetItem));
     this.updateCartMatches();
     this.updateBillingSummary();
   }
@@ -368,6 +584,7 @@ export class BillingComponent implements OnInit {
 
   setPaymentMode(mode: string): void {
     this.selectedPaymentMode = mode;
+    this.updatePaymentSplit(this.paymentSplits[0]?.id ?? 0, 'paymentMode', mode);
 
     if (this.isCashPayment) {
       this.paymentReference = '';
@@ -390,13 +607,70 @@ export class BillingComponent implements OnInit {
     this.updateBillingSummary();
   }
 
+  addPaymentSplit(mode = 'Cash'): void {
+    this.paymentSplits = [
+      ...this.paymentSplits,
+      this.createPaymentSplit(mode)
+    ];
+    this.updatePaymentState();
+    this.updateBillingSummary();
+  }
+
+  removePaymentSplit(splitId: number): void {
+    if (this.paymentSplits.length <= 1) {
+      return;
+    }
+
+    this.paymentSplits = this.paymentSplits.filter((split) => split.id !== splitId);
+    this.selectedPaymentMode = this.paymentSplits[0]?.paymentMode || 'Cash';
+    this.updatePaymentState();
+    this.updateBillingSummary();
+  }
+
+  updatePaymentSplit(splitId: number, field: keyof Omit<PaymentSplit, 'id'>, value: string): void {
+    this.paymentSplits = this.paymentSplits.map((split) => {
+      if (split.id !== splitId) {
+        return split;
+      }
+
+      const nextSplit = { ...split, [field]: value };
+
+      if (field === 'paymentMode') {
+        const mode = String(value || '');
+        nextSplit.referenceNo = this.isDigitalPaymentMode(mode) ? nextSplit.referenceNo : '';
+        nextSplit.approvalCode = this.isCardPaymentMode(mode) ? nextSplit.approvalCode : '';
+        nextSplit.cardLastFour = this.isCardPaymentMode(mode) ? nextSplit.cardLastFour.replace(/\D/g, '').slice(0, 4) : '';
+      }
+
+      if (field === 'amountInput') {
+        nextSplit.amountInput = this.normalizeAmountInput(value);
+      }
+
+      if (field === 'cardLastFour') {
+        nextSplit.cardLastFour = value.replace(/\D/g, '').slice(0, 4);
+      }
+
+      return nextSplit;
+    });
+
+    this.selectedPaymentMode = this.paymentSplits[0]?.paymentMode || 'Cash';
+    this.updatePaymentState();
+    this.updateBillingSummary();
+  }
+
   onDiscountChange(value: string): void {
     this.discountInput = value;
     this.updateBillingSummary();
   }
 
+  onTipChange(value: string): void {
+    this.tipInput = value;
+    this.updateBillingSummary();
+  }
+
   onReceivedAmountChange(value: string): void {
     this.receivedAmountInput = value;
+    this.updatePaymentSplit(this.paymentSplits[0]?.id ?? 0, 'amountInput', value);
     this.updateBillingSummary();
   }
 
@@ -416,6 +690,9 @@ export class BillingComponent implements OnInit {
 
   clearBill(): void {
     this.currentOrder = null;
+    this.selectedOrders = [];
+    this.selectedJoinGroup = null;
+    this.billingGroupMode = 'single';
     this.orderSearch = '';
     this.itemSearch = '';
     this.barcodeSearch = '';
@@ -424,10 +701,12 @@ export class BillingComponent implements OnInit {
     this.selectedPaymentMode = 'Cash';
     this.discountType = 'Amount';
     this.discountInput = '0';
+    this.tipInput = '0';
     this.receivedAmountInput = '0';
     this.paymentReference = '';
     this.approvalCode = '';
     this.cardLastFour = '';
+    this.paymentSplits = [this.createPaymentSplit('Cash')];
     this.notes = '';
     this.cartItems = [];
     this.updateOrderMatches();
@@ -458,12 +737,26 @@ export class BillingComponent implements OnInit {
 
     this.isGeneratingBill = true;
 
-    if (this.currentOrder) {
+    if (this.selectedOrders.length) {
       try {
-        const payload = this.buildCompletedOrderPayload(this.currentOrder);
-        await firstValueFrom(this.displayMenuItemsService.update(payload));
+        const selectedOrders = [...this.selectedOrders];
+        const hasBillingAddOns = this.cartItems.some((item) => item.sourceType === 'quick');
 
-        this.toast.success('Completed', `${this.currentOrder.orderNo} billed and closed.`);
+        if (hasBillingAddOns) {
+          const primaryOrderItems = this.cartItems.filter((item) =>
+            item.sourceType === 'order' && item.sourceOrderId === selectedOrders[0].id
+            || item.sourceType === 'quick'
+          );
+          const payload = this.buildCompletedOrderPayload(selectedOrders[0], primaryOrderItems);
+          await firstValueFrom(this.displayMenuItemsService.update(payload));
+        }
+
+        const billingPayload = await this.buildBillingCreatePayload(selectedOrders[0]);
+        await firstValueFrom(this.billingService.create(billingPayload));
+
+        await this.releaseSelectedJoinGroup();
+
+        this.toast.success('Completed', `${selectedOrders.map((order) => order.orderNo).join(', ')} billed and closed.`);
         this.printBill();
         this.clearBill();
         await this.loadBillingOrders();
@@ -471,7 +764,7 @@ export class BillingComponent implements OnInit {
         const message = error?.error?.message
           || error?.error?.Message
           || error?.message
-          || `Unable to complete ${this.currentOrder.orderNo}.`;
+          || `Unable to complete ${this.currentOrderNumber}.`;
 
         this.toast.error('Billing Failed', message);
       } finally {
@@ -485,6 +778,10 @@ export class BillingComponent implements OnInit {
       const payload = await this.buildQuickBillOrderPayload();
       const response: any = await firstValueFrom(this.displayMenuItemsService.create(payload));
       const generatedOrderNo = this.getApiOrderNumber(response) || payload.OrderNumber;
+      const generatedOrderId = this.getApiOrderId(response);
+
+      const billingPayload = await this.buildBillingCreatePayload(null, generatedOrderId);
+      await firstValueFrom(this.billingService.create(billingPayload));
 
       this.currentOrderNumber = generatedOrderNo;
       this.toast.success('Completed', `${generatedOrderNo} billed and closed.`);
@@ -542,9 +839,18 @@ export class BillingComponent implements OnInit {
   private updateBillingSummary(): void {
     this.totalItems = this.cartItems.reduce((sum, item) => sum + item.qty, 0);
     const cartSubtotal = this.cartItems.reduce((sum, item) => sum + (item.qty * item.rate), 0);
-    this.subtotal = this.currentOrder?.subtotalAmount || cartSubtotal;
+    const selectedOrderSubtotal = this.selectedOrders.reduce((sum, order) => sum + (order.subtotalAmount || 0), 0);
+    const addOnSubtotal = this.selectedOrders.length
+      ? this.cartItems
+          .filter((item) => item.sourceType === 'quick')
+          .reduce((sum, item) => sum + (item.qty * item.rate), 0)
+      : 0;
+    this.subtotal = this.selectedOrders.length
+      ? selectedOrderSubtotal + addOnSubtotal
+      : cartSubtotal;
 
     const discountValue = Number(this.discountInput || 0);
+    const tipValue = Number(this.tipInput || 0);
 
     if (!Number.isFinite(discountValue) || discountValue <= 0) {
       this.discountAmount = 0;
@@ -569,7 +875,8 @@ export class BillingComponent implements OnInit {
       return sum + (((itemTaxable + itemServiceCharge) * this.gstPercent) / 100);
     }, 0);
 
-    this.grandTotal = taxableAmount + this.taxAmount;
+    this.tipAmount = Number.isFinite(tipValue) && tipValue > 0 ? tipValue : 0;
+    this.grandTotal = taxableAmount + this.taxAmount + this.tipAmount;
 
     this.updatePaymentBalance();
 
@@ -578,18 +885,40 @@ export class BillingComponent implements OnInit {
   }
 
   private updatePaymentBalance(): void {
-    const receivedAmount = Number(this.receivedAmountInput || 0);
-    this.balanceAmount = this.isCashPayment && Number.isFinite(receivedAmount)
-      ? receivedAmount - this.grandTotal
-      : 0;
+    this.receivedAmount = this.getReceivedAmount();
+    this.changeAmount = Math.max(this.receivedAmount - this.grandTotal, 0);
+    this.balanceAmount = this.receivedAmount - this.grandTotal;
   }
 
   private updateDisplayState(): void {
-    this.activeServiceModeLabel = this.currentOrder?.serviceMode || (this.billingMode === 'quick-bill' ? 'Take Away' : this.serviceFilter);
-    this.currentCustomerLabel = this.currentOrder?.customer || this.selectedCustomer || 'Walk-in Customer';
-    this.currentOrderNumber = this.currentOrder?.orderNo || 'Direct Billing';
-    this.currentBranchLabel = this.currentOrder?.branch || 'Trichy';
+    const selectedServiceModes = Array.from(new Set(this.selectedOrders.map((order) => order.serviceMode)));
+    const selectedBranches = Array.from(new Set(this.selectedOrders.map((order) => order.branch).filter(Boolean)));
+
+    this.activeServiceModeLabel = selectedServiceModes.length > 1
+      ? 'Mixed'
+      : this.currentOrder?.serviceMode || (this.billingMode === 'quick-bill' ? 'Take Away' : this.serviceFilter);
+    this.currentCustomerLabel = this.selectedOrders.length
+      ? this.getSelectedOrdersCustomerLabel(this.selectedOrders)
+      : this.selectedCustomer || 'Walk-in Customer';
+    this.currentOrderNumber = this.selectedOrders.length
+      ? this.selectedOrders.map((order) => order.orderNo).join(' + ')
+      : 'Direct Billing';
+    this.currentBranchLabel = selectedBranches.length > 1
+      ? 'Multiple Branches'
+      : this.currentOrder?.branch || 'Trichy';
     this.isDineInBill = this.activeServiceModeLabel === 'Dine In';
+  }
+
+  private async releaseSelectedJoinGroup(): Promise<void> {
+    if (this.billingGroupMode !== 'joined' || !this.selectedJoinGroup?.id) {
+      return;
+    }
+
+    try {
+      await firstValueFrom(this.joinTableService.activeInActive(this.selectedJoinGroup.id, false));
+    } catch {
+      this.toast.info('Join Still Active', `${this.selectedJoinGroup.joinNo || 'Joined table'} could not be released automatically.`);
+    }
   }
 
   private updatePaymentState(): void {
@@ -613,35 +942,156 @@ export class BillingComponent implements OnInit {
       this.paymentReferenceLabel = 'PayNow Reference';
     }
 
-    if (this.isCashPayment) {
-      this.settlementSummaryLabel = 'Received';
-      this.settlementSummaryValue = this.receivedAmountInput || '0';
-      return;
-    }
-
-    if (this.isCardPayment) {
-      this.settlementSummaryLabel = 'Approval';
-      this.settlementSummaryValue = this.approvalCode || 'Pending';
-      return;
-    }
-
-    this.settlementSummaryLabel = 'Reference';
-    this.settlementSummaryValue = this.paymentReference || 'Pending';
+    this.settlementSummaryLabel = this.paymentSplits.length > 1 ? 'Split Paid' : 'Received';
+    this.settlementSummaryValue = String(this.getReceivedAmount());
   }
 
-  private bindSelectedOrder(order: BillOrder): void {
-    this.currentOrder = order;
-    this.selectedCustomer = order.customer;
-    this.notes = order.notes;
+  get isSelectedOrderReadonly(): boolean {
+    return Boolean(this.selectedOrders.length);
+  }
+
+  get billModeLabel(): string {
+    if (this.billingGroupMode === 'joined') {
+      return 'Joined Table Bill';
+    }
+
+    if (this.billingGroupMode === 'manual') {
+      return 'Multi Table Bill';
+    }
+
+    return this.currentOrder ? 'Order Billing' : 'Quick Bill';
+  }
+
+  get currentTableLabel(): string {
+    return this.selectedOrders.length
+      ? this.selectedOrders.map((order) => order.table).filter(Boolean).join(', ')
+      : '-';
+  }
+
+  get currentStatusLabel(): string {
+    if (this.selectedOrders.length > 1) {
+      return 'Ready To Bill';
+    }
+
+    return this.currentOrder?.status || 'Draft Bill';
+  }
+
+  get currentTableFlowMode(): BillTableFlow['mode'] {
+    if (this.billingGroupMode === 'joined') {
+      return 'Join Table';
+    }
+
+    return this.currentOrder?.tableFlow?.mode || 'No Table Flow';
+  }
+
+  get currentJoinPrimaryTableLabel(): string {
+    if (!this.selectedJoinGroup) {
+      return this.currentOrder?.tableFlow?.primaryTable || '-';
+    }
+
+    return this.getTableLabelById(this.selectedJoinGroup.primaryTableId);
+  }
+
+  get currentJoinTablesLabel(): string {
+    if (!this.selectedJoinGroup) {
+      return this.currentOrder?.tableFlow?.joinedTables || '-';
+    }
+
+    return this.selectedJoinGroup.tableIds
+      .filter((tableId) => tableId !== this.selectedJoinGroup?.primaryTableId)
+      .map((tableId) => this.getTableLabelById(tableId))
+      .join(', ') || '-';
+  }
+
+  get currentTableFlowReference(): string {
+    return this.selectedJoinGroup?.joinNo || this.currentOrder?.tableFlow?.reference || '-';
+  }
+
+  get currentTableFlowReason(): string {
+    return this.selectedJoinGroup?.notes || this.currentOrder?.tableFlow?.reason || '-';
+  }
+
+  isCartItemReadonly(item: BillingCartItem): boolean {
+    return this.isSelectedOrderReadonly && item.sourceType === 'order';
+  }
+
+  private isSameCartItem(item: BillingCartItem, targetItem: BillingCartItem): boolean {
+    return item.id === targetItem.id
+      && item.sourceType === targetItem.sourceType
+      && (item.sourceOrderId || 0) === (targetItem.sourceOrderId || 0)
+      && (item.comboMenuId || 0) === (targetItem.comboMenuId || 0);
+  }
+
+  isOrderSelected(order: BillOrder): boolean {
+    return this.selectedOrders.some((selectedOrder) => selectedOrder.id === order.id);
+  }
+
+  isOrderInActiveJoin(order: BillOrder): boolean {
+    return Boolean(this.getActiveJoinGroupForOrder(order));
+  }
+
+  private bindSelectedOrders(orders: BillOrder[], mode: BillingGroupMode, joinGroup: ActiveJoinGroup | null = null): void {
+    const distinctOrders = orders.filter((order, index, list) =>
+      order.id > 0 && list.findIndex((candidate) => candidate.id === order.id) === index
+    );
+
+    this.currentOrder = distinctOrders[0] ?? null;
+    this.selectedOrders = distinctOrders;
+    this.selectedJoinGroup = joinGroup;
+    this.billingGroupMode = distinctOrders.length > 1 ? mode : 'single';
+    this.selectedCustomer = this.getSelectedOrdersCustomerLabel(distinctOrders);
+    this.notes = distinctOrders.map((order) => order.notes).filter(Boolean).join(' | ');
     this.discountType = 'Amount';
-    this.discountInput = String(order.discountAmount || 0);
-    this.cartItems = order.items.map((item) => ({
+    this.discountInput = String(distinctOrders.reduce((sum, order) => sum + (order.discountAmount || 0), 0));
+    this.tipInput = String(distinctOrders.reduce((sum, order) => sum + (order.tipAmount || 0), 0));
+    this.cartItems = distinctOrders.flatMap((order) => order.items.map((item) => ({
       ...item,
-      sourceType: 'order'
-    }));
+      sourceType: 'order' as const,
+      sourceOrderId: order.id,
+      sourceOrderNo: order.orderNo,
+      sourceTable: order.table
+    })));
     this.updateCartMatches();
     this.updateDisplayState();
     this.updateBillingSummary();
+  }
+
+  private async loadFreshBillOrder(order: BillOrder): Promise<BillOrder> {
+    const orderId = Number((order as any).id || 0);
+
+    if (!orderId) {
+      throw new Error('Invalid order.');
+    }
+
+    const cachedOrder = this.openOrders.find((candidate) => candidate.id === orderId) ?? order;
+
+    if (cachedOrder.items.length) {
+      return cachedOrder;
+    }
+
+    const response: any = await firstValueFrom(this.displayMenuItemsService.getById(orderId));
+    return this.mapApiOrder(this.mergeOrderWithDetails(order.rawOrder ?? order, response));
+  }
+
+  private getActiveJoinGroupForOrder(order: BillOrder): ActiveJoinGroup | null {
+    if (!order.tableId) {
+      return null;
+    }
+
+    return this.activeJoinGroups.find((group) => group.tableIds.includes(order.tableId)) ?? null;
+  }
+
+  private getTableLabelById(tableId: number): string {
+    return this.openOrders.find((order) => order.tableId === tableId)?.table || this.getTableFallback(tableId);
+  }
+
+  private getSelectedOrdersCustomerLabel(orders: BillOrder[]): string {
+    if (!orders.length) {
+      return 'Walk-in Customer';
+    }
+
+    const customers = Array.from(new Set(orders.map((order) => order.customer).filter(Boolean)));
+    return customers.length === 1 ? customers[0] : 'Multiple Customers';
   }
 
   private applyUserScope(): void {
@@ -659,36 +1109,59 @@ export class BillingComponent implements OnInit {
       return false;
     }
 
-    if (this.isCashPayment) {
-      const receivedAmount = Number(this.receivedAmountInput || 0);
+    if (!this.getValidPaymentSplits().length) {
+      this.toast.warn('Payment Required', 'Add at least one payment amount before completing the bill.');
+      return false;
+    }
 
-      if (!Number.isFinite(receivedAmount) || receivedAmount < this.grandTotal) {
-        this.toast.warn('Payment Pending', 'Enter cash received amount equal to or greater than the bill total.');
+    const receivedAmount = this.getReceivedAmount();
+
+    if (receivedAmount < this.grandTotal) {
+      this.toast.warn('Payment Pending', 'Split payment total must be equal to or greater than the bill total.');
+      return false;
+    }
+
+    for (const split of this.getValidPaymentSplits()) {
+      if (this.isDigitalPaymentMode(split.paymentMode) && !split.referenceNo.trim()) {
+        this.toast.warn('Reference Required', `Enter ${split.paymentMode} reference before completing the bill.`);
+        return false;
+      }
+
+      if (this.isCardPaymentMode(split.paymentMode) && !split.approvalCode.trim()) {
+        this.toast.warn('Approval Required', `Enter ${split.paymentMode} approval code before completing the bill.`);
         return false;
       }
     }
 
-    if (this.isDigitalPayment && !this.paymentReference.trim()) {
-      this.toast.warn('Reference Required', `Enter ${this.paymentReferenceLabel.toLowerCase()} before completing the bill.`);
-      return false;
-    }
-
-    if (this.isCardPayment && !this.approvalCode.trim()) {
-      this.toast.warn('Approval Required', 'Enter card approval code before completing the bill.');
-      return false;
-    }
 
     return true;
   }
 
-  private buildCompletedOrderPayload(order: BillOrder): any {
+  private buildCompletedOrderPayload(order: BillOrder, scopedItems: BillingCartItem[] = this.cartItems): any {
     const rawOrder = order.rawOrder ?? {};
     const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
     const now = new Date().toISOString();
     const orderId = this.getNumberValue(rawOrder, 'OrderId', 'Orderid', 'orderId', 'orderid', 'Id', 'id') || order.id;
-    const items = this.cartItems.map((item) => this.buildCompletedOrderItem(item, orderId, userId, now));
+    const tableId = this.getNumberValue(rawOrder, 'TableId', 'Tableid', 'tableId', 'tableid');
+    const floorId = this.getNumberValue(rawOrder, 'FloorId', 'Floorid', 'floorId', 'floorid');
+    const items = scopedItems.map((item) => this.buildCompletedOrderItem(item, orderId, userId, now));
     const paymentNote = this.getPaymentNote();
     const notes = [this.notes.trim(), paymentNote].filter(Boolean).join(' | ');
+    const scopedSubtotal = scopedItems.reduce((sum, item) => sum + (item.qty * item.rate), 0) || order.subtotalAmount;
+    const scopedDiscount = Math.min(order.discountAmount || 0, scopedSubtotal);
+    const scopedServiceCharge = order.serviceMode === 'Dine In'
+      ? Math.max(scopedSubtotal - scopedDiscount, 0) * this.serviceChargePercent / 100
+      : 0;
+    const scopedTax = scopedItems.reduce((sum, item) => {
+      const itemBase = item.qty * item.rate;
+      const share = scopedSubtotal > 0 ? itemBase / scopedSubtotal : 0;
+      const itemDiscount = scopedDiscount * share;
+      const itemTaxable = Math.max(itemBase - itemDiscount, 0);
+      const itemServiceCharge = order.serviceMode === 'Dine In' ? itemTaxable * this.serviceChargePercent / 100 : 0;
+      return sum + (((itemTaxable + itemServiceCharge) * this.gstPercent) / 100);
+    }, 0) || order.taxAmount;
+    const scopedTip = order.tipAmount || 0;
+    const scopedTotal = Math.max(scopedSubtotal - scopedDiscount + scopedServiceCharge + scopedTax + scopedTip, 0);
 
     return {
       ...rawOrder,
@@ -698,34 +1171,46 @@ export class BillingComponent implements OnInit {
       OrderNumber: this.getStringValue(rawOrder, 'OrderNumber', 'Ordernumber', 'orderNumber', 'ordernumber') || order.orderNo,
       Ordernumber: this.getStringValue(rawOrder, 'Ordernumber', 'OrderNumber', 'orderNumber', 'ordernumber') || order.orderNo,
       orderNumber: this.getStringValue(rawOrder, 'orderNumber', 'OrderNumber', 'Ordernumber', 'ordernumber') || order.orderNo,
+      TableId: tableId,
+      Tableid: tableId,
+      tableId,
+      tableid: tableId,
+      FloorId: floorId,
+      Floorid: floorId,
+      floorId,
+      floorid: floorId,
       OrderStatus: ORDER_STATUS.Completed,
       Orderstatus: ORDER_STATUS.Completed,
       orderStatus: ORDER_STATUS.Completed,
-      ItemCount: this.totalItems,
-      Itemcount: this.totalItems,
-      itemCount: this.totalItems,
-      SubtotalAmount: this.subtotal,
-      subtotalAmount: this.subtotal,
-      DiscountAmount: this.discountAmount,
-      discountAmount: this.discountAmount,
-      ServiceChargeAmount: this.serviceChargeAmount,
-      serviceChargeAmount: this.serviceChargeAmount,
-      TaxAmount: this.taxAmount,
-      taxAmount: this.taxAmount,
-      TotalAmount: this.grandTotal,
-      totalAmount: this.grandTotal,
-      CustomerName: this.selectedCustomer || order.customer || 'Walk-in Customer',
-      customerName: this.selectedCustomer || order.customer || 'Walk-in Customer',
+      ItemCount: scopedItems.reduce((sum, item) => sum + item.qty, 0),
+      Itemcount: scopedItems.reduce((sum, item) => sum + item.qty, 0),
+      itemCount: scopedItems.reduce((sum, item) => sum + item.qty, 0),
+      SubtotalAmount: scopedSubtotal,
+      subtotalAmount: scopedSubtotal,
+      DiscountAmount: scopedDiscount,
+      discountAmount: scopedDiscount,
+      ServiceChargeAmount: scopedServiceCharge,
+      serviceChargeAmount: scopedServiceCharge,
+      TaxAmount: scopedTax,
+      taxAmount: scopedTax,
+      TipAmount: scopedTip,
+      tipAmount: scopedTip,
+      GratuityAmount: scopedTip,
+      gratuityAmount: scopedTip,
+      TotalAmount: scopedTotal,
+      totalAmount: scopedTotal,
+      CustomerName: order.customer || this.selectedCustomer || 'Walk-in Customer',
+      customerName: order.customer || this.selectedCustomer || 'Walk-in Customer',
       Notes: notes,
       notes,
       PaymentMode: this.selectedPaymentMode,
       paymentMode: this.selectedPaymentMode,
       PaymentReference: this.getPaymentReferenceValue(),
       paymentReference: this.getPaymentReferenceValue(),
-      ReceivedAmount: this.isCashPayment ? Number(this.receivedAmountInput || 0) : this.grandTotal,
-      receivedAmount: this.isCashPayment ? Number(this.receivedAmountInput || 0) : this.grandTotal,
-      BalanceAmount: this.balanceAmount,
-      balanceAmount: this.balanceAmount,
+      ReceivedAmount: scopedTotal,
+      receivedAmount: scopedTotal,
+      BalanceAmount: 0,
+      balanceAmount: 0,
       OrgId: this.getPayloadOrgId(rawOrder),
       orgId: this.getPayloadOrgId(rawOrder),
       BranchId: this.getPayloadBranchId(rawOrder),
@@ -741,17 +1226,247 @@ export class BillingComponent implements OnInit {
     };
   }
 
+  private async buildBillingCreatePayload(order: BillOrder | null = this.currentOrder, orderIdOverride = 0, billNoOverride = ''): Promise<any> {
+    const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
+    const now = new Date().toISOString();
+    const rawOrder = order?.rawOrder ?? {};
+    let orderId = orderIdOverride
+      || this.getNumberValue(rawOrder, 'OrderId', 'Orderid', 'orderId', 'orderid', 'Id', 'id')
+      || order?.id
+      || 0;
+    const orgId = order ? this.getPayloadOrgId(rawOrder) : this.getCodeTemplateOrgId();
+    const branchId = order ? this.getPayloadBranchId(rawOrder) : this.getCodeTemplateBranchId();
+    const billNo = billNoOverride;
+    const paymentSplits = this.getValidPaymentSplits();
+    const paymentMode = paymentSplits.length > 1 ? 'Multi Payment' : paymentSplits[0]?.paymentMode || 'Cash';
+    const receivedAmount = this.getReceivedAmount();
+    const changeAmount = Math.max(receivedAmount - this.grandTotal, 0);
+    const balanceAmount = Math.max(this.grandTotal - receivedAmount, 0);
+    const paymentStatus = this.getBillingPaymentStatus(receivedAmount);
+    const taxableAmount = Math.max(this.subtotal - this.discountAmount + this.serviceChargeAmount, 0);
+    const taxPercentage = taxableAmount > 0 ? (this.taxAmount / taxableAmount) * 100 : 0;
+    const sgstPercentage = taxPercentage / 2;
+    const sgstAmount = this.taxAmount / 2;
+    const cgstPercentage = taxPercentage / 2;
+    const cgstAmount = this.taxAmount / 2;
+    const billingOrders = this.buildBillingOrderDetails();
+    const orderIds = billingOrders.map((billingOrder) => Number(billingOrder.OrderId || 0)).filter((id) => id > 0);
+    orderId = orderId || orderIds[0] || 0;
+    const orderIdsCsv = orderIds.join(',');
+    const orderNumbersCsv = billingOrders.map((billingOrder) => billingOrder.OrderNo).filter(Boolean).join(',');
+    const tablesCsv = billingOrders.map((billingOrder) => billingOrder.Table).filter(Boolean).join(',');
+    const multiOrderNote = billingOrders.length > 1
+      ? `Orders: ${orderNumbersCsv}; Tables: ${tablesCsv}; OrderIds: ${orderIdsCsv}`
+      : '';
+    const remarks = [this.notes.trim(), multiOrderNote, this.getPaymentNote()].filter(Boolean).join(' | ');
+
+    return {
+      Id: 0,
+      BillNo: billNo,
+      OrderId: orderId,
+      OrderIds: orderIds,
+      OrderIdsCsv: orderIdsCsv,
+      OrderNumbersCsv: orderNumbersCsv,
+      TablesCsv: tablesCsv,
+      BillingOrders: billingOrders,
+      CustomerId: this.getSelectedCustomerId(rawOrder),
+      BillDate: now,
+      TokenNo: this.getNumberValue(rawOrder, 'TokenNo', 'tokenNo', 'TokenNumber', 'tokenNumber'),
+      GrossAmount: this.roundAmount(this.subtotal),
+      DiscountAmount: this.roundAmount(this.discountAmount),
+      ServiceCharge: this.roundAmount(this.serviceChargeAmount),
+      TaxAmount: this.roundAmount(this.taxAmount),
+      TaxPercentage: this.roundAmount(taxPercentage),
+      TipAmount: this.roundAmount(this.tipAmount),
+      RoundOff: this.roundAmount(Math.round(this.grandTotal) - this.grandTotal),
+      TotalAmount: this.roundAmount(this.grandTotal),
+      ReceivedAmount: this.roundAmount(receivedAmount),
+      BalanceAmount: this.roundAmount(balanceAmount),
+      ChangeAmount: this.roundAmount(changeAmount),
+      BillMode: this.billModeLabel,
+      PaymentStatus: paymentStatus,
+      PaymentType: paymentMode,
+      Remarks: remarks,
+      OrgId: orgId,
+      BranchId: branchId,
+      IsActive: true,
+      IsDeleted: false,
+      CreatedBy: userId || 0,
+      CreatedDate: now,
+      UpdatedBy: userId || 0,
+      UpdatedDate: now,
+      BillingDetails: paymentSplits.map((split) => this.buildBillingPaymentDetail(
+        split,
+        userId,
+        now,
+        taxableAmount,
+        taxPercentage,
+        sgstPercentage,
+        sgstAmount,
+        cgstPercentage,
+        cgstAmount,
+        remarks,
+        paymentStatus,
+        orgId,
+        branchId
+      )),
+      EntityNo: this.billingEntityNo
+    };
+  }
+
+  private buildBillingOrderDetails(): any[] {
+    const sourceOrders = this.selectedOrders.length
+      ? this.selectedOrders
+      : this.currentOrder
+        ? [this.currentOrder]
+        : [];
+
+    return sourceOrders.map((order) => {
+      const orderItems = this.cartItems.filter((item) =>
+        item.sourceType === 'order' && item.sourceOrderId === order.id
+      );
+      const items = orderItems.length ? orderItems : order.items.map((item) => ({
+        ...item,
+        sourceOrderId: order.id,
+        sourceOrderNo: order.orderNo,
+        sourceTable: order.table,
+        sourceType: 'order' as const
+      }));
+      const subtotal = items.reduce((sum, item) => sum + (item.qty * item.rate), 0) || order.subtotalAmount;
+      const discount = Math.min(order.discountAmount || 0, subtotal);
+      const serviceCharge = order.serviceMode === 'Dine In'
+        ? Math.max(subtotal - discount, 0) * this.serviceChargePercent / 100
+        : 0;
+      const tax = items.reduce((sum, item) => {
+        const itemBase = item.qty * item.rate;
+        const share = subtotal > 0 ? itemBase / subtotal : 0;
+        const itemDiscount = discount * share;
+        const itemTaxable = Math.max(itemBase - itemDiscount, 0);
+        const itemServiceCharge = order.serviceMode === 'Dine In' ? itemTaxable * this.serviceChargePercent / 100 : 0;
+        return sum + (((itemTaxable + itemServiceCharge) * this.gstPercent) / 100);
+      }, 0) || order.taxAmount;
+      const tip = order.tipAmount || 0;
+      const total = Math.max(subtotal - discount + serviceCharge + tax + tip, 0);
+
+      return {
+        OrderId: order.id,
+        OrderNo: order.orderNo,
+        TableId: order.tableId,
+        Table: order.table,
+        Customer: order.customer,
+        ServiceMode: order.serviceMode,
+        Branch: order.branch,
+        SubtotalAmount: this.roundAmount(subtotal),
+        DiscountAmount: this.roundAmount(discount),
+        ServiceChargeAmount: this.roundAmount(serviceCharge),
+        TaxAmount: this.roundAmount(tax),
+        TipAmount: this.roundAmount(tip),
+        TotalAmount: this.roundAmount(total),
+        Items: items.map((item) => ({
+          ItemId: item.id,
+          ItemName: item.name,
+          Category: item.category,
+          Quantity: item.qty,
+          Rate: item.rate,
+          TaxPercent: item.taxPercent,
+          KotNo: item.kotNo || '',
+          ItemType: item.itemType || 'Menu',
+          ComboMenuId: item.comboMenuId || 0
+        }))
+      };
+    });
+  }
+
+  private getBillingPaymentStatus(receivedAmount: number): number {
+    if (receivedAmount <= 0) {
+      return PAYMENT_STATUS.Pending;
+    }
+
+    if (receivedAmount < this.grandTotal) {
+      return PAYMENT_STATUS.PartialPaid;
+    }
+
+    if (receivedAmount > this.grandTotal) {
+      return PAYMENT_STATUS.Overpaid;
+    }
+
+    return PAYMENT_STATUS.Paid;
+  }
+
+  private buildBillingPaymentDetail(
+    split: PaymentSplit,
+    userId: number,
+    timestamp: string,
+    taxableAmount: number,
+    taxPercentage: number,
+    sgstPercentage: number,
+    sgstAmount: number,
+    cgstPercentage: number,
+    cgstAmount: number,
+    remarks: string,
+    paymentStatus: number,
+    orgId: number,
+    branchId: number
+  ): any {
+    const amount = this.getPaymentSplitAmount(split);
+    const referenceNo = this.getPaymentSplitReference(split);
+
+    return {
+      Id: 0,
+      BillingId: 0,
+      PaymentMode: split.paymentMode || 'Cash',
+      GrossAmount: this.roundAmount(amount),
+      ReferenceNo: referenceNo,
+      TransactionId: this.isDigitalPaymentMode(split.paymentMode) ? referenceNo : '',
+      CardNumber: this.isCardPaymentMode(split.paymentMode) ? split.cardLastFour.trim() : '',
+      TaxableAmount: this.roundAmount(taxableAmount),
+      TaxPercentage: this.roundAmount(taxPercentage),
+      TaxAmount: this.roundAmount(this.taxAmount),
+      SGSTPercentage: this.roundAmount(sgstPercentage),
+      SGSTAmount: this.roundAmount(sgstAmount),
+      CGSTPercentage: this.roundAmount(cgstPercentage),
+      CGSTAmount: this.roundAmount(cgstAmount),
+      IGSTPercentage: 0,
+      IGSTAmount: 0,
+      TotalAmount: this.roundAmount(amount),
+      Remarks: remarks,
+      PaymentStatus: paymentStatus,
+      OrgId: orgId,
+      BranchId: branchId,
+      IsActive: true,
+      IsDeleted: false,
+      CreatedBy: userId || 0,
+      CreatedDate: timestamp,
+      UpdatedBy: userId || 0,
+      UpdatedDate: timestamp
+    };
+  }
+
   private buildCompletedOrderItem(item: BillingCartItem, orderId: number, userId: number, timestamp: string): any {
     const rawItem = item.rawItem ?? {};
     const quantity = Number(item.qty || 0);
     const unitPrice = Number(item.rate || 0);
+    const sourceOrder = this.selectedOrders.find((order) => order.id === item.sourceOrderId) ?? this.currentOrder;
+    const scopeSource = Object.keys(rawItem).length ? rawItem : sourceOrder?.rawOrder ?? {};
+    const orgId = this.getPayloadOrgId(scopeSource);
+    const branchId = this.getPayloadBranchId(scopeSource);
+    const isCombo = item.itemType === 'Combo';
+    const comboMenuItemId = isCombo
+      ? item.comboMenuId || this.getNumberValue(rawItem, 'ComboMenuItemId', 'comboMenuItemId') || item.id || 0
+      : 0;
 
     return {
       ...rawItem,
-      Itemid: this.getNumberValue(rawItem, 'Itemid', 'itemid', 'ItemId', 'itemId', 'Id', 'id') || item.id,
-      itemid: this.getNumberValue(rawItem, 'itemid', 'Itemid', 'ItemId', 'itemId', 'Id', 'id') || item.id,
+      Itemid: item.sourceType === 'quick' ? 0 : this.getNumberValue(rawItem, 'Itemid', 'itemid', 'ItemId', 'itemId', 'Id', 'id') || item.id,
+      itemid: item.sourceType === 'quick' ? 0 : this.getNumberValue(rawItem, 'itemid', 'Itemid', 'ItemId', 'itemId', 'Id', 'id') || item.id,
       Orderid: this.getNumberValue(rawItem, 'Orderid', 'orderid', 'OrderId', 'orderId') || orderId,
       orderid: this.getNumberValue(rawItem, 'orderid', 'Orderid', 'OrderId', 'orderId') || orderId,
+      Menuitemid: isCombo ? 0 : item.id,
+      menuitemid: isCombo ? 0 : item.id,
+      ComboMenuItemId: comboMenuItemId,
+      comboMenuItemId,
+      Itemname: item.name,
+      itemname: item.name,
       Quantity: quantity,
       quantity,
       Unitprice: unitPrice,
@@ -760,6 +1475,14 @@ export class BillingComponent implements OnInit {
       totalprice: quantity * unitPrice,
       Itemstatus: ORDER_STATUS.Completed,
       itemstatus: ORDER_STATUS.Completed,
+      OrgId: orgId,
+      orgId,
+      BranchId: branchId,
+      branchId,
+      CreatedBy: userId || this.getNumberValue(rawItem, 'CreatedBy', 'createdBy') || 0,
+      createdBy: userId || this.getNumberValue(rawItem, 'CreatedBy', 'createdBy') || 0,
+      CreatedDate: this.getStringValue(rawItem, 'CreatedDate', 'createdDate') || timestamp,
+      createdDate: this.getStringValue(rawItem, 'CreatedDate', 'createdDate') || timestamp,
       UpdatedBy: userId || this.getNumberValue(rawItem, 'UpdatedBy', 'updatedBy') || 0,
       updatedBy: userId || this.getNumberValue(rawItem, 'UpdatedBy', 'updatedBy') || 0,
       UpdatedDate: timestamp,
@@ -770,12 +1493,16 @@ export class BillingComponent implements OnInit {
   }
 
   private getPaymentNote(): string {
-    const paymentReference = this.getPaymentReferenceValue();
-    return [
-      `Payment: ${this.selectedPaymentMode || 'Cash'}`,
-      paymentReference ? `Ref: ${paymentReference}` : '',
-      this.isCashPayment ? `Received: ${Number(this.receivedAmountInput || 0).toFixed(2)}` : ''
-    ].filter(Boolean).join(', ');
+    return this.getValidPaymentSplits()
+      .map((split) => {
+        const amount = this.getPaymentSplitAmount(split).toFixed(2);
+        const reference = this.getPaymentSplitReference(split);
+        return [
+          `${split.paymentMode || 'Cash'}: ${amount}`,
+          reference ? `Ref: ${reference}` : ''
+        ].filter(Boolean).join(' ');
+      })
+      .join(', ');
   }
 
   private getPaymentReferenceValue(): string {
@@ -788,13 +1515,57 @@ export class BillingComponent implements OnInit {
     return this.paymentReference.trim();
   }
 
+  private createPaymentSplit(mode: string): PaymentSplit {
+    return {
+      id: this.paymentSplitSequence++,
+      paymentMode: mode,
+      amountInput: '0',
+      referenceNo: '',
+      approvalCode: '',
+      cardLastFour: ''
+    };
+  }
+
+  private getValidPaymentSplits(): PaymentSplit[] {
+    return this.paymentSplits.filter((split) => this.getPaymentSplitAmount(split) > 0);
+  }
+
+  private getPaymentSplitAmount(split: PaymentSplit): number {
+    const amount = Number(split.amountInput || 0);
+    return Number.isFinite(amount) && amount > 0 ? amount : 0;
+  }
+
+  private getPaymentSplitReference(split: PaymentSplit): string {
+    if (this.isCardPaymentMode(split.paymentMode)) {
+      return [split.approvalCode.trim(), split.cardLastFour.trim() ? `****${split.cardLastFour.trim()}` : '']
+        .filter(Boolean)
+        .join(' / ');
+    }
+
+    return split.referenceNo.trim();
+  }
+
+  isCardPaymentMode(mode: string): boolean {
+    return mode === 'Debit Card' || mode === 'Credit Card';
+  }
+
+  isDigitalPaymentMode(mode: string): boolean {
+    return mode === 'UPI' || mode === 'QR Scan' || mode === 'PayNow';
+  }
+
+  private normalizeAmountInput(value: string): string {
+    const normalizedValue = String(value ?? '').replace(/[^\d.]/g, '');
+    const [whole, ...decimalParts] = normalizedValue.split('.');
+    const decimal = decimalParts.join('').slice(0, 2);
+    return decimalParts.length ? `${whole}.${decimal}` : whole;
+  }
+
   private async buildQuickBillOrderPayload(): Promise<any> {
-    const orderCode = await this.loadLatestOrderNumber(ORDER_SCREEN_TEMPLATE_NAME, this.getCodeTemplateOrgId());
-    this.quickBillEntityNo = orderCode.entityNo;
+    this.quickBillEntityNo = await this.resolveOrderEntityNo(ORDER_SCREEN_TEMPLATE_NAME, this.getCodeTemplateOrgId());
 
     const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
     const now = new Date().toISOString();
-    const orderNumber = orderCode.orderNumber;
+    const orderNumber = '';
     const items = this.cartItems.map((item) => this.buildQuickBillOrderItem(item, userId, now));
 
     return {
@@ -828,6 +1599,10 @@ export class BillingComponent implements OnInit {
       taxAmount: this.taxAmount,
       DiscountAmount: this.discountAmount,
       discountAmount: this.discountAmount,
+      TipAmount: this.tipAmount,
+      tipAmount: this.tipAmount,
+      GratuityAmount: this.tipAmount,
+      gratuityAmount: this.tipAmount,
       TotalAmount: this.grandTotal,
       totalAmount: this.grandTotal,
       CustomerName: this.selectedCustomer || 'Walk-in Customer',
@@ -934,14 +1709,17 @@ export class BillingComponent implements OnInit {
     const discountAmount = this.getNumberValue(order, 'DiscountAmount', 'discountAmount', 'Discount', 'discount');
     const serviceChargeAmount = this.getNumberValue(order, 'ServiceChargeAmount', 'serviceChargeAmount', 'ServiceCharge', 'serviceCharge');
     const taxAmount = this.getNumberValue(order, 'TaxAmount', 'taxAmount', 'Tax', 'tax');
+    const tipAmount = this.getNumberValue(order, 'TipAmount', 'tipAmount', 'GratuityAmount', 'gratuityAmount', 'Tip', 'tip');
     const totalAmount = this.getNumberValue(order, 'TotalAmount', 'totalAmount', 'GrandTotal', 'grandTotal', 'Total', 'total')
-      || Math.max(subtotalAmount - discountAmount + serviceChargeAmount + taxAmount, 0);
+      || Math.max(subtotalAmount - discountAmount + serviceChargeAmount + taxAmount + tipAmount, 0);
 
     return {
       id: this.getNumberValue(order, 'OrderId', 'Orderid', 'orderId', 'orderid', 'Id', 'id'),
       orderNo: this.getStringValue(order, 'OrderNumber', 'orderNumber', 'Ordernumber', 'ordernumber', 'OrderNo', 'orderNo') || '-',
+      tableId,
       table: this.getStringValue(order, 'TableName', 'tableName', 'TableCode', 'tableCode', 'TableNo', 'tableNo', 'Table', 'table')
         || this.getTableFallback(tableId),
+      tableFlow: this.mapTableFlow(order),
       customer: this.getStringValue(order, 'CustomerName', 'customerName', 'GuestName', 'guestName') || 'Walk-in Customer',
       phone: this.getStringValue(order, 'ContactNumber', 'contactNumber', 'CustomerPhone', 'customerPhone', 'Phone', 'phone'),
       serviceMode,
@@ -954,8 +1732,53 @@ export class BillingComponent implements OnInit {
       discountAmount,
       serviceChargeAmount,
       taxAmount,
+      tipAmount,
       totalAmount,
       rawOrder: order
+    };
+  }
+
+  private mapTableFlow(order: any): BillTableFlow {
+    const moveNo = this.getStringValue(order, 'MoveNo', 'moveno', 'MoveNumber', 'moveNumber');
+    const joinNo = this.getStringValue(order, 'JoinNo', 'joinno', 'JoinNumber', 'joinNumber');
+    const fromTable = this.getTableNameValue(order, 'FromTableName', 'fromTableName', 'FromTable', 'fromTable', 'SourceTableName', 'sourceTableName');
+    const toTable = this.getTableNameValue(order, 'ToTableName', 'toTableName', 'ToTable', 'toTable', 'TargetTableName', 'targetTableName');
+    const primaryTable = this.getTableNameValue(order, 'PrimaryTableName', 'primaryTableName', 'PrimaryTable', 'primaryTable');
+    const joinedTables = this.getJoinedTablesLabel(order);
+    const reason = this.getStringValue(order, 'MoveReason', 'movereason', 'Reason', 'reason');
+
+    if (moveNo || fromTable || toTable || reason) {
+      return {
+        mode: 'Move Table',
+        reference: moveNo || '-',
+        fromTable: fromTable || '-',
+        toTable: toTable || this.getStringValue(order, 'TableName', 'tableName') || '-',
+        primaryTable: '-',
+        joinedTables: '-',
+        reason: reason || '-'
+      };
+    }
+
+    if (joinNo || primaryTable || joinedTables) {
+      return {
+        mode: 'Join Table',
+        reference: joinNo || '-',
+        fromTable: '-',
+        toTable: '-',
+        primaryTable: primaryTable || this.getStringValue(order, 'TableName', 'tableName') || '-',
+        joinedTables: joinedTables || '-',
+        reason: this.getStringValue(order, 'Notes', 'notes') || '-'
+      };
+    }
+
+    return {
+      mode: 'No Table Flow',
+      reference: '-',
+      fromTable: '-',
+      toTable: '-',
+      primaryTable: '-',
+      joinedTables: '-',
+      reason: '-'
     };
   }
 
@@ -1019,8 +1842,12 @@ export class BillingComponent implements OnInit {
       return order;
     }
 
-    const response: any = await firstValueFrom(this.displayMenuItemsService.getById(orderId));
-    return this.mergeOrderWithDetails(order, response);
+    try {
+      const response: any = await firstValueFrom(this.displayMenuItemsService.getById(orderId));
+      return this.mergeOrderWithDetails(order, response);
+    } catch {
+      return order;
+    }
   }
 
   private mergeOrderWithDetails(listOrder: any, response: any): any {
@@ -1190,6 +2017,51 @@ export class BillingComponent implements OnInit {
     return this.getStringValue(result, 'OrderNumber', 'Ordernumber', 'orderNumber', 'ordernumber', 'OrderNo', 'orderNo');
   }
 
+  private getApiOrderId(response: any): number {
+    const result = response?.result ?? response?.Result ?? response;
+
+    if (typeof result === 'string' || typeof result === 'number') {
+      const id = Number(result);
+      return Number.isFinite(id) ? id : 0;
+    }
+
+    return this.getNumberValue(
+      result,
+      'OrderId',
+      'Orderid',
+      'orderId',
+      'orderid',
+      'Id',
+      'id'
+    ) || this.getNumberValue(
+      response,
+      'OrderId',
+      'Orderid',
+      'orderId',
+      'orderid',
+      'Id',
+      'id'
+    );
+  }
+
+  private getSelectedCustomerId(source: any = {}): number {
+    return this.getNumberValue(
+      source,
+      'CustomerId',
+      'customerId',
+      'Customerid',
+      'customerid'
+    );
+  }
+
+  private getReceivedAmount(): number {
+    return this.paymentSplits.reduce((sum, split) => sum + this.getPaymentSplitAmount(split), 0);
+  }
+
+  private roundAmount(value: number): number {
+    return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+  }
+
   private getCodeTemplateBranchId(): number {
     return this.getNumberValue(this.userDetails, 'BranchId', 'branchId', 'branchid') || this.BranchId;
   }
@@ -1280,6 +2152,36 @@ export class BillingComponent implements OnInit {
 
   private getTableFallback(tableId: number): string {
     return tableId > 0 ? `Table ${tableId}` : 'Counter';
+  }
+
+  private getTableNameValue(source: any, ...keys: string[]): string {
+    const value = this.getRawValue(source, ...keys);
+
+    if (value === undefined || value === null || value === '') {
+      return '';
+    }
+
+    if (typeof value === 'number' || /^\d+$/.test(String(value).trim())) {
+      return this.getTableFallback(Number(value));
+    }
+
+    return String(value).trim();
+  }
+
+  private getJoinedTablesLabel(order: any): string {
+    const rawTables = this.getRawValue(order, 'JoinedTables', 'joinedTables', 'TableIds', 'tableIds', 'MergedTables', 'mergedTables');
+
+    if (!Array.isArray(rawTables)) {
+      return this.getStringValue(order, 'JoinedTableNames', 'joinedTableNames', 'SecondaryTables', 'secondaryTables');
+    }
+
+    return rawTables
+      .map((table: any) =>
+        this.getStringValue(table, 'TableName', 'tableName', 'Name', 'name')
+        || this.getTableNameValue(table, 'TableId', 'tableId', 'Id', 'id')
+      )
+      .filter(Boolean)
+      .join(', ');
   }
 
   private getStatusCode(status: unknown): number {

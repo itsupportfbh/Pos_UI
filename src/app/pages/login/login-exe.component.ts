@@ -9,6 +9,7 @@ import { AppToastService } from '../../services/app-toast.service';
 import { LoginService } from '../../services/login-exe.service';
 import { ShiftAssignmentComponent } from '../pos/components/shift-assignment/shift-assignment.component';
 import { ChangeDetectorRef } from '@angular/core';
+import { MenuService } from '../../services/menu.service';
 
 @Component({
   selector: 'app-login-exe',
@@ -26,13 +27,17 @@ export class LoginExeComponent {
   loginSession: any = null;
   selectedUserDetails: any = null;
   showShiftAssignmentDialog = false;
+  accessibleRoutes: string[] = [];
+  showRoleDialog = false;
+  userDetailsList: any[] = [];
 
   constructor(
     private readonly router: Router,
     private readonly toast: AppToastService,
     private readonly loginService: LoginService,
+    private readonly menuService: MenuService,
     private readonly cdr: ChangeDetectorRef
-  ) {}
+  ) { }
 
   get pinDigits(): string[] {
     return this.pin.split('').concat(Array(4 - this.pin.length).fill(''));
@@ -55,6 +60,7 @@ export class LoginExeComponent {
   }
 
   async submit(): Promise<void> {
+    debugger;
     if (this.pin.length !== 4) {
       this.errorMessage = 'Enter a 4-digit PIN to continue.';
       return;
@@ -63,12 +69,25 @@ export class LoginExeComponent {
     this.loginSaving = true;
     this.errorMessage = '';
 
-    const payload = { 
+    const payload = {
       Pin: parseInt(this.pin)
     };
 
     try {
-      const response: any = await firstValueFrom(this.loginService.login(payload));
+      // const status = await Network.getStatus();
+
+      let response: any;
+
+      if (navigator.onLine) {
+        response = await firstValueFrom(
+          this.loginService.login(payload)
+        );
+      } else {
+        response = await this.loginService.loginOffline(
+          parseInt(this.pin)
+        );
+      }
+
       const loginData = response.result ?? {};
 
       if (loginData && loginData.Status == true && response.ErrorInfo.Message == true) {
@@ -91,13 +110,39 @@ export class LoginExeComponent {
             OrgId: selectedUser.OrgId ?? '',
             OrgName: selectedUser.OrgName ?? '',
             BranchId: selectedUser.BranchId ?? '',
-            BranchName: selectedUser.BranchName ?? ''
+            BranchName: selectedUser.BranchName ?? '',
+            OrganizationId: selectedUser.OrganizationId ?? selectedUser.OrgId ?? '',
           };
 
           this.loginSession = loginSession;
           this.selectedUserDetails = userDetails;
           localStorage.setItem('loginSession', JSON.stringify(loginSession));
           localStorage.setItem('userDetails', JSON.stringify(userDetails));
+
+          const orgId = Number(userDetails.OrganizationId ?? userDetails.OrgId ?? 0);
+          const roleId = Number(userDetails.RoleId ?? 0);
+
+          try {
+            this.menuService.clearMenuCache();
+            this.accessibleRoutes = await firstValueFrom(this.menuService.getAccessibleRoutes(orgId, roleId, true));
+
+            if (!this.accessibleRoutes.length) {
+              this.clearLoginState();
+              this.showRoleDialog = false;
+              this.toast.warn('No Page Rights', 'There is no any page rights for this user role.');
+              this.cdr.detectChanges();
+              return;
+            }
+          } catch {
+            this.clearLoginState();
+            this.showRoleDialog = false;
+            this.toast.error('Login Failed', 'Unable to load page rights for this user role.');
+            this.cdr.detectChanges();
+            return;
+          }
+
+          this.showRoleDialog = false;
+          this.selectedUserDetails = userDetails;
 
           this.showShiftAssignmentDialog = true;
           this.cdr.detectChanges();
@@ -109,7 +154,8 @@ export class LoginExeComponent {
       }
 
       this.errorMessage = 'Invalid PIN or login credentials.';
-    } catch {
+    } catch (err) {
+      console.error('Login Error:', err);
       this.errorMessage = 'Unable to login. Check your PIN and connection.';
     } finally {
       this.loginSaving = false;
@@ -126,5 +172,15 @@ export class LoginExeComponent {
     );
 
     this.router.navigate(['/pos']);
+  }
+
+  private clearLoginState(): void {
+    localStorage.removeItem('loginSession');
+    localStorage.removeItem('userDetails');
+    localStorage.removeItem('shiftAssignment');
+    this.loginSession = null;
+    this.selectedUserDetails = null;
+    this.userDetailsList = [];
+    this.accessibleRoutes = [];
   }
 }

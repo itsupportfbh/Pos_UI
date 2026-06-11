@@ -6,6 +6,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -49,6 +50,7 @@ const QUICK_SERVE_COLUMNS: SharedTableColumn<QuickServeRow>[] = [
     ButtonModule,
     CardModule,
     DialogModule,
+    ProgressSpinnerModule,
     TextFieldComponent,
     ActionButtonsComponent,
     MenuModule,
@@ -77,6 +79,7 @@ export class QuickServeComponent {
   rowActionItems: MenuItem[] = [];
   allRows: QuickServeRow[] = [];
   tableRows: QuickServeRow[] = [];
+  pageLoading = false;
 
   filterSearchText = '';
 
@@ -98,6 +101,8 @@ export class QuickServeComponent {
   readonly pageEyebrow = 'Orders';
   readonly pageTitle = 'Quick Serve';
   readonly pageSubtitle = 'Handle high-speed counter tickets with short queues and fast pickup handoff.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
@@ -115,7 +120,11 @@ export class QuickServeComponent {
   readonly rowActionHeader = 'Actions';
 
   ngOnInit(): void {
-    this.loadRows();
+    this.pageLoading = true;
+    setTimeout(() => {
+      this.loadRows();
+      this.pageLoading = false;
+    });
   }
 
   loadRows(): void {

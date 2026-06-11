@@ -74,11 +74,11 @@ const RESERVATION_COLUMNS: SharedTableColumn<ReservationRow>[] = [
   styleUrl: './reservation.component.css'
 })
 export class ReservationComponent {
-  
-  
+
+
   private readonly toast = inject(AppToastService);
-  
-  
+
+
   private readonly confirmationService = inject(ConfirmationService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly reservationService = inject(ReservationService);
@@ -187,42 +187,73 @@ export class ReservationComponent {
     this.loadRows();
   }
 
-  loadRows(): void {
-    this.loadReservations();
-    this.loadDiningTables();
+  async loadRows(): Promise<void> {
+    await this.loadReservations();
+    await this.loadDiningTables();
   }
 
-  loadReservations(): void {
+  async loadReservations(): Promise<void> {
     this.isLoading = true;
 
     this.OrgId = Number(this.userDetails.RoleId || 0) === 1 ? 0 : Number(this.userDetails.OrgId);
     this.BranchId = Number(this.userDetails.IsAdmin || 0) === 1 ? 0 : Number(this.userDetails.BranchId);
 
-    this.reservationService.getAll(this.OrgId).subscribe({
-      next: (response: any) => {
+    if (navigator.onLine) {
+      this.reservationService.getAll(this.OrgId).subscribe({
+        next: (response: any) => {
+          let RowNumber = 1;
+          this.allReservations = (response.result ?? []).map((x: any) => {
+            const isActive = x.Status ?? x.isactive ?? false;
+            return {
+              ...x,
+              RowNumber: RowNumber++
+            } as ReservationRow;
+          });
+          this.tableRows = [...this.allReservations];
+          this.updateSummary();
+          this.updatePreview();
+          this.changeDetector.detectChanges();
+        },
+        error: () => {
+          this.toast.error(
+            'Load Failed',
+            'Unable to load reservations. Please check API and try again.'
+          );
+        },
+        complete: () => {
+          this.isLoading = false;
+        }
+      });
+    } else {
+      try {
+
+        const data =
+          await this.reservationService.getAllOffline(this.OrgId);
+
         let RowNumber = 1;
-        this.allReservations = (response.result ?? []).map((x: any) => {
-          const isActive = x.Status ?? x.isactive ?? false;
-          return {
-            ...x,
-            RowNumber: RowNumber++
-          } as ReservationRow;
-        });
+
+        this.allReservations = (data ?? []).map((x: any) => ({
+          ...x,
+          RowNumber: RowNumber++
+        }));
+
         this.tableRows = [...this.allReservations];
+
         this.updateSummary();
         this.updatePreview();
+
         this.changeDetector.detectChanges();
-      },
-      error: () => {
+
+      } catch (error) {
+        console.error(error);
         this.toast.error(
           'Load Failed',
-          'Unable to load reservations. Please check API and try again.'
+          'Unable to load reservations from local database.'
         );
-      },
-      complete: () => {
+      } finally {
         this.isLoading = false;
       }
-    });
+    }
   }
 
   loadDiningTables() {
@@ -305,7 +336,7 @@ export class ReservationComponent {
     this.showAddDialog = false;
   }
 
-  submitAddDialog(): void {
+  async submitAddDialog(): Promise<void> {
     this.dialogSubmitted = true;
 
     if (!this.isDialogFormValid()) {
@@ -334,46 +365,101 @@ export class ReservationComponent {
     if (this.isEditMode && this.editingReservation) {
       payload.Id = this.editingReservation;
       payload.UpdatedBy = 1;
+      if (navigator.onLine) {
+        this.reservationService.update(payload).subscribe({
+          next: (response: any) => {
+            if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
+              this.toast.warn('Duplicate', 'Reservation already exists.');
+              return;
+            }
 
-      this.reservationService.update(payload).subscribe({
+            this.toast.success('Updated', 'Reservation updated successfully.');
+            this.closeAddDialog();
+            this.loadReservations();
+          },
+          error: () => {
+            this.toast.error('Update Failed', 'Unable to update reservation.');
+          }
+        });
+      } else {
+        try {
+          const response = await this.reservationService.updateOffline(payload);
+          if (
+            response === 'AlreadyExists' ||
+            response?.message === 'AlreadyExists'
+          ) {
+            this.toast.warn(
+              'Duplicate',
+              'Reservation already exists.'
+            );
+            return;
+          }
+
+          this.toast.success(
+            'Updated',
+            'Reservation updated successfully.'
+          );
+
+          this.closeAddDialog();
+          await this.loadReservations();
+        } catch {
+          this.toast.error(
+            'Update Failed',
+            'Unable to update reservation.'
+          );
+        }
+      }
+      return;
+    }
+
+    payload.CreatedBy = 1;
+    if (navigator.onLine) {
+      this.reservationService.create(payload).subscribe({
         next: (response: any) => {
           if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
             this.toast.warn('Duplicate', 'Reservation already exists.');
             return;
           }
 
-          this.toast.success('Updated', 'Reservation updated successfully.');
+          this.toast.success('Saved', 'Reservation saved successfully.');
           this.closeAddDialog();
           this.loadReservations();
         },
         error: () => {
-          this.toast.error('Update Failed', 'Unable to update reservation.');
+          this.toast.error('Save Failed', 'Unable to save reservation.');
         }
       });
-
-      return;
-    }
-
-    payload.CreatedBy = 1;
-
-    this.reservationService.create(payload).subscribe({
-      next: (response: any) => {
-        if (response === 'AlreadyExists' || response?.message === 'AlreadyExists') {
-          this.toast.warn('Duplicate', 'Reservation already exists.');
+    } else {
+      try {
+        const response = await this.reservationService.createOffline(payload);
+        if (
+          response === 'AlreadyExists' ||
+          response?.message === 'AlreadyExists'
+        ) {
+          this.toast.warn(
+            'Duplicate',
+            'Reservation already exists.'
+          );
           return;
         }
 
-        this.toast.success('Saved', 'Reservation saved successfully.');
+        this.toast.success(
+          'Saved',
+          'Reservation saved successfully.'
+        );
+
         this.closeAddDialog();
-        this.loadReservations();
-      },
-      error: () => {
-        this.toast.error('Save Failed', 'Unable to save reservation.');
+        await this.loadReservations();
+      } catch {
+        this.toast.error(
+          'Save Failed',
+          'Unable to save reservation.'
+        );
       }
-    });
+    }
   }
 
-  editRow(row: ReservationRow): void {
+  async editRow(row: ReservationRow): Promise<void> {
     this.isEditMode = true;
     this.dialogTitle = 'Edit Reservation';
     this.dialogSubtitle = 'Update the selected guest booking before arrival.';
@@ -381,74 +467,236 @@ export class ReservationComponent {
     this.showAddDialog = true;
     this.editingReservation = row.Id;
 
-    this.reservationService.getById(row.Id).subscribe({
-      next: (response: any) => {
-        const reservation = response?.result?.[0] ?? response?.result ?? response;
-        const rawTableIds = reservation?.tableIds ?? reservation?.TableIds ?? [];
-        debugger;
+    try {
 
-        const toDateInput = (val: any): string => {
-          if (val == null || val === '') return '';
-          if (val instanceof Date) return val.toISOString().slice(0, 10);
-          if (typeof val === 'string') {
-            const isoMatch = val.match(/^(\d{4}-\d{2}-\d{2})/);
-            if (isoMatch) return isoMatch[1];
-          }
-          return '';
-        };
+      let response: any;
 
-        const toTimeInput = (val: any): string => {
-          if (val == null || val === '') return '';
-          if (typeof val === 'string') {
-            const m = val.match(/^(\d{2}:\d{2})/);
-            if (m) return m[1];
-          }
-          return '';
-        };
+      if (navigator.onLine) {
 
-        this.dialogReservationNo = reservation?.code ?? reservation?.Code ?? row.ReservationNo;
-        this.dialogGuestName = String(reservation?.customerName ?? reservation?.CustomerName ?? row.CustomerName);
-        this.dialogContactNo = String(reservation?.customerMobile ?? reservation?.CustomerMobile ?? row.CustomerMobile);
-        this.dialogVisitDate = toDateInput(reservation?.reservationDate ?? reservation?.ReservationDate ?? row.ReservationDate);
-        this.dialogVisitFromTime = toTimeInput(reservation?.reservationFromtime ?? reservation?.ReservationFromtime ?? row.ReservationFromtime);
-        this.dialogVisitToTime = toTimeInput(reservation?.reservationTotime ?? reservation?.ReservationTotime ?? row.ReservationTotime);
-        this.dialogTableName = reservation?.tableName ?? reservation?.TableName ?? row.TableName;
-        this.dialogEmail = reservation?.customerEmail ?? reservation?.CustomerEmail ?? row.CustomerEmail;
-        this.dialogGuestCount = String(reservation?.guestCount ?? reservation?.GuestCount ?? row.Guestcount);
-        this.dialogNotes = reservation?.specialrequests ?? reservation?.Specialrequests ?? row.Specialrequests;
-        // Normalize selected table ids to an array of numeric ids so the multiselect
-        // can match against the `tablesOptions` values (which are numbers).
-        this.selectedTables = (Array.isArray(rawTableIds) ? rawTableIds : []).map((t: any) => {
-          if (t == null) return t;
-          if (typeof t === 'number' || typeof t === 'string') return Number(t);
-          return Number(t.TableId ?? t.tableId ?? t.id ?? t.Id ?? NaN);
-        }).filter((x: number) => !Number.isNaN(x));
-        //this.OrgId = reservation?.orgId ?? reservation?.OrgId ?? row.OrgId;
-        this.dialogCreatedBy = reservation?.createdBy ?? reservation?.CreatedBy ?? 1;
-        this.dialogCreatedDate = reservation?.createdDate ?? reservation?.CreatedDate;
-        this.dialogUpdatedBy = reservation?.updatedBy ?? reservation?.UpdatedBy ?? 1;
-        this.dialogUpdatedDate = reservation?.updatedDate ?? reservation?.UpdatedDate;
-        this.dialogIsDeleted = reservation?.isDeleted ?? reservation?.IsDeleted ?? false;
- 
-        this.showAddDialog = true;
-        //this.toast.info('Edit Mode', `Editing ${row.name}.`);
-      },
-      error: () => {
-        this.toast.error('Load Failed', 'Unable to load reservation details.');
+        response = await firstValueFrom(
+          this.reservationService.getById(row.Id)
+        );
+
+      } else {
+
+        response = await this.reservationService.getByIdOffline(
+          row.Id
+        );
+
       }
-    });
+
+      const reservation =
+        response?.result?.[0] ??
+        response?.result ??
+        response;
+
+      const rawTableIds =
+        reservation?.tableIds ??
+        reservation?.TableIds ??
+        [];
+
+      const toDateInput = (val: any): string => {
+        if (val == null || val === '') return '';
+        if (val instanceof Date) return val.toISOString().slice(0, 10);
+
+        if (typeof val === 'string') {
+          const isoMatch = val.match(/^(\d{4}-\d{2}-\d{2})/);
+          if (isoMatch) return isoMatch[1];
+        }
+
+        return '';
+      };
+
+      const toTimeInput = (val: any): string => {
+        if (val == null || val === '') return '';
+
+        if (typeof val === 'string') {
+          const m = val.match(/^(\d{2}:\d{2})/);
+          if (m) return m[1];
+        }
+
+        return '';
+      };
+
+      this.dialogReservationNo =
+        reservation?.code ??
+        reservation?.Code ??
+        row.ReservationNo;
+
+      this.dialogGuestName =
+        String(
+          reservation?.customerName ??
+          reservation?.CustomerName ??
+          row.CustomerName
+        );
+
+      this.dialogContactNo =
+        String(
+          reservation?.customerMobile ??
+          reservation?.CustomerMobile ??
+          row.CustomerMobile
+        );
+
+      this.dialogVisitDate =
+        toDateInput(
+          reservation?.reservationDate ??
+          reservation?.ReservationDate ??
+          row.ReservationDate
+        );
+
+      this.dialogVisitFromTime =
+        toTimeInput(
+          reservation?.reservationFromtime ??
+          reservation?.ReservationFromtime ??
+          row.ReservationFromtime
+        );
+
+      this.dialogVisitToTime =
+        toTimeInput(
+          reservation?.reservationTotime ??
+          reservation?.ReservationTotime ??
+          row.ReservationTotime
+        );
+
+      this.dialogTableName =
+        reservation?.tableName ??
+        reservation?.TableName ??
+        row.TableName;
+
+      this.dialogEmail =
+        reservation?.customerEmail ??
+        reservation?.CustomerEmail ??
+        row.CustomerEmail;
+
+      this.dialogGuestCount =
+        String(
+          reservation?.guestCount ??
+          reservation?.GuestCount ??
+          row.Guestcount
+        );
+
+      this.dialogNotes =
+        reservation?.specialrequests ??
+        reservation?.Specialrequests ??
+        row.Specialrequests;
+
+      this.selectedTables = (Array.isArray(rawTableIds) ? rawTableIds : [])
+        .map((t: any) => {
+          if (typeof t === 'number') return t;
+          return Number(
+            t.TableId ??
+            t.tableId ??
+            t.Id ??
+            t.id
+          );
+        })
+        .filter((x: number) => !Number.isNaN(x));
+
+      this.showAddDialog = true;
+
+    } catch {
+
+      this.toast.error(
+        'Load Failed',
+        'Unable to load reservation details.'
+      );
+
+    }
+
+    // this.reservationService.getById(row.Id).subscribe({
+    //   next: (response: any) => {
+    //     const reservation = response?.result?.[0] ?? response?.result ?? response;
+    //     const rawTableIds = reservation?.tableIds ?? reservation?.TableIds ?? [];
+    //     debugger;
+
+    //     const toDateInput = (val: any): string => {
+    //       if (val == null || val === '') return '';
+    //       if (val instanceof Date) return val.toISOString().slice(0, 10);
+    //       if (typeof val === 'string') {
+    //         const isoMatch = val.match(/^(\d{4}-\d{2}-\d{2})/);
+    //         if (isoMatch) return isoMatch[1];
+    //       }
+    //       return '';
+    //     };
+
+    //     const toTimeInput = (val: any): string => {
+    //       if (val == null || val === '') return '';
+    //       if (typeof val === 'string') {
+    //         const m = val.match(/^(\d{2}:\d{2})/);
+    //         if (m) return m[1];
+    //       }
+    //       return '';
+    //     };
+
+    //     this.dialogReservationNo = reservation?.code ?? reservation?.Code ?? row.ReservationNo;
+    //     this.dialogGuestName = String(reservation?.customerName ?? reservation?.CustomerName ?? row.CustomerName);
+    //     this.dialogContactNo = String(reservation?.customerMobile ?? reservation?.CustomerMobile ?? row.CustomerMobile);
+    //     this.dialogVisitDate = toDateInput(reservation?.reservationDate ?? reservation?.ReservationDate ?? row.ReservationDate);
+    //     this.dialogVisitFromTime = toTimeInput(reservation?.reservationFromtime ?? reservation?.ReservationFromtime ?? row.ReservationFromtime);
+    //     this.dialogVisitToTime = toTimeInput(reservation?.reservationTotime ?? reservation?.ReservationTotime ?? row.ReservationTotime);
+    //     this.dialogTableName = reservation?.tableName ?? reservation?.TableName ?? row.TableName;
+    //     this.dialogEmail = reservation?.customerEmail ?? reservation?.CustomerEmail ?? row.CustomerEmail;
+    //     this.dialogGuestCount = String(reservation?.guestCount ?? reservation?.GuestCount ?? row.Guestcount);
+    //     this.dialogNotes = reservation?.specialrequests ?? reservation?.Specialrequests ?? row.Specialrequests;
+    //     // Normalize selected table ids to an array of numeric ids so the multiselect
+    //     // can match against the `tablesOptions` values (which are numbers).
+    //     this.selectedTables = (Array.isArray(rawTableIds) ? rawTableIds : []).map((t: any) => {
+    //       if (t == null) return t;
+    //       if (typeof t === 'number' || typeof t === 'string') return Number(t);
+    //       return Number(t.TableId ?? t.tableId ?? t.id ?? t.Id ?? NaN);
+    //     }).filter((x: number) => !Number.isNaN(x));
+    //     //this.OrgId = reservation?.orgId ?? reservation?.OrgId ?? row.OrgId;
+    //     this.dialogCreatedBy = reservation?.createdBy ?? reservation?.CreatedBy ?? 1;
+    //     this.dialogCreatedDate = reservation?.createdDate ?? reservation?.CreatedDate;
+    //     this.dialogUpdatedBy = reservation?.updatedBy ?? reservation?.UpdatedBy ?? 1;
+    //     this.dialogUpdatedDate = reservation?.updatedDate ?? reservation?.UpdatedDate;
+    //     this.dialogIsDeleted = reservation?.isDeleted ?? reservation?.IsDeleted ?? false;
+
+    //     this.showAddDialog = true;
+    //     //this.toast.info('Edit Mode', `Editing ${row.name}.`);
+    //   },
+    //   error: () => {
+    //     this.toast.error('Load Failed', 'Unable to load reservation details.');
+    //   }
+    // });
   }
 
-  deleteRow(row: ReservationRow): void {
-    this.reservationService.delete(row.Id).subscribe({
-      next: () => {
-        this.toast.warn('Deleted', `${row.ReservationNo} removed successfully.`);
-        this.loadReservations();
-      },
-      error: () => {
-        this.toast.error('Delete Failed', 'Unable to delete reservation.');
+  // deleteRow(row: ReservationRow): void {
+  //   this.reservationService.delete(row.Id).subscribe({
+  //     next: () => {
+  //       this.toast.warn('Deleted', `${row.ReservationNo} removed successfully.`);
+  //       this.loadReservations();
+  //     },
+  //     error: () => {
+  //       this.toast.error('Delete Failed', 'Unable to delete reservation.');
+  //     }
+  //   });
+  // }
+
+  async deleteRow(row: ReservationRow): Promise<void> {
+    try {
+      if (navigator.onLine) {
+        await firstValueFrom(
+          this.reservationService.delete(row.Id)
+        );
+      } else {
+        await this.reservationService.deleteOffline(
+          row.Id
+        );
       }
-    });
+
+      this.toast.warn(
+        'Deleted',
+        `${row.ReservationNo} removed successfully.`
+      );
+
+      await this.loadReservations();
+    } catch {
+      this.toast.error(
+        'Delete Failed',
+        'Unable to delete reservation.'
+      );
+    }
   }
 
   activateRow(row: ReservationRow): void {

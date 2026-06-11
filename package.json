@@ -11,8 +11,16 @@
     },
     "files": [
       "dist/**/*",
+      "electron/**/*",
       "main.js",
+      "preload.js",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "database",
+        "to": "database"
+      }
     ]
   },
   "scripts": {
@@ -45,6 +53,7 @@
     "@capacitor/android": "^8.3.0",
     "@capacitor/cli": "^8.3.0",
     "@capacitor/core": "^8.3.0",
+    "@capacitor/network": "^8.0.1",
     "@primeuix/themes": "^2.0.3",
     "better-sqlite3": "^12.10.0",
     "express": "^5.1.0",

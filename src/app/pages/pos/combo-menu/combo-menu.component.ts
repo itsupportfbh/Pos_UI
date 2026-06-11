@@ -6,6 +6,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { firstValueFrom } from 'rxjs';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
@@ -75,7 +76,8 @@ const COMBOMENU_COLUMNS: SharedTableColumn<ComboMenuRow>[] = [
     ActionButtonsComponent,
     MenuModule,
     SharedTableComponent,
-    SharedTableCellTemplateDirective
+    SharedTableCellTemplateDirective,
+    ProgressSpinnerModule
   ],
   providers: [ConfirmationService],
   templateUrl: './combo-menu.component.html',
@@ -103,6 +105,7 @@ export class ComboMenuComponent {
 
   showAddDialog = false;
   showFilterSidebar = false;
+  pageLoading = false;
   isLoading = false;
   isEditMode = false;
   dialogSubmitted = false;
@@ -135,6 +138,8 @@ export class ComboMenuComponent {
   readonly pageEyebrow = 'Food Menu';
   readonly pageTitle = 'Combo Menu';
   readonly pageSubtitle = 'Create bundled menu combinations for promotions, meals, and service speed.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = this.pageTitle + ' Filters';
   readonly primaryActionLabel = 'Search ' + this.pageTitle;
   readonly secondaryActionLabel = 'Clear Filters';
@@ -156,12 +161,18 @@ export class ComboMenuComponent {
   downloadLoading = false;
   downloadLoadingLabel = 'Exporting...';
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
     this.OrgId = Number(this.userDetails.OrgId || 0);
     this.BranchId = Number(this.userDetails.BranchId || 0);
-    await this.loadComboMenuRights();
-    this.loadRows();
-    await this.loadLookupOptions();
+    try {
+      await this.loadComboMenuRights();
+      this.loadRows();
+      await this.loadLookupOptions();
+    } catch {
+      this.pageLoading = false;
+      this.changeDetector.detectChanges();
+    }
   }
 
   async loadComboMenuRights(): Promise<void> {
@@ -244,9 +255,12 @@ export class ComboMenuComponent {
           return x;
         });
         this.tableRows = [...this.allRows];
+        this.pageLoading = false;
         this.changeDetector.detectChanges();
       },
       error: () => {
+        this.pageLoading = false;
+        this.changeDetector.detectChanges();
         this.toast.error(
           'Load Failed',
           'Unable to load combo menus. Please check API and try again.'

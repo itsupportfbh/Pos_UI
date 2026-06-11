@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -44,6 +45,7 @@ const PURCHASEORDER_COLUMNS: SharedTableColumn<PurchaseOrderRow>[] = [
     ButtonModule,
     CardModule,
     DialogModule,
+    ProgressSpinnerModule,
     TextFieldComponent,
     ActionButtonsComponent,
     MenuModule,
@@ -69,6 +71,7 @@ export class PurchaseOrderComponent {
   rowActionItems: MenuItem[] = [];
   allRows: PurchaseOrderRow[] = [];
   tableRows: PurchaseOrderRow[] = [];
+  pageLoading = false;
   userDetails: any = {};
   purchaseOrderEntityNo = Number(sessionStorage.getItem('currentMenuEntityNo') || 0);
   purchaseOrderRights = {
@@ -90,6 +93,8 @@ export class PurchaseOrderComponent {
   readonly pageEyebrow = 'POS';
   readonly pageTitle = 'Purchase Order';
   readonly pageSubtitle = 'Manage purchase order records here.';
+  readonly pageLoadingTitle = 'Please wait';
+  readonly pageLoadingSubtitle = 'Loading records...';
   readonly filterTitle = 'Purchase Order Filters';
   readonly primaryActionLabel = 'Search Purchase Order';
   readonly secondaryActionLabel = 'Clear Filters';
@@ -108,9 +113,14 @@ export class PurchaseOrderComponent {
   readonly rowActionHeader = 'Actions';
 
   async ngOnInit(): Promise<void> {
+    this.pageLoading = true;
     this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-    await this.loadPurchaseOrderRights();
-    this.loadRows();
+    try {
+      await this.loadPurchaseOrderRights();
+      this.loadRows();
+    } finally {
+      this.pageLoading = false;
+    }
   }
 
   async loadPurchaseOrderRights(): Promise<void> {

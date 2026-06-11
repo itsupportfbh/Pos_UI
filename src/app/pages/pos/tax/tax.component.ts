@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, OnInit, QueryList, inject, ViewChildren }
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { ActionButtonsComponent } from '../../../components/form/action-buttons.component';
 import { SelectFieldComponent, SelectFieldValue } from '../../../components/form/select-field.component';
 import { TextFieldComponent } from '../../../components/form/text-field.component';
@@ -20,6 +21,7 @@ import { EntityMasterService } from '../../../services/entitymaster.service';
 import { OrganizationService } from '../../../services/organization.service';
 import { firstValueFrom } from 'rxjs';
 import { TableExportService } from '../../../services/table-export.service';
+ 
 
 const TAX_COLUMNS: SharedTableColumn<any>[] = [
     { field: 'RowNumber', header: '#', sortable: true, width: '5rem' },
@@ -38,7 +40,7 @@ const TAX_COLUMNS: SharedTableColumn<any>[] = [
 @Component({
     selector: 'app-taxes',
     standalone: true,
-    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective],
+    imports: [CommonModule, ButtonModule, CardModule, DialogModule, TextFieldComponent, SelectFieldComponent, ActionButtonsComponent, MenuModule, SharedTableComponent, ConfirmDialogModule, SharedTableCellTemplateDirective, ProgressSpinnerModule],
     providers: [ConfirmationService],
     templateUrl: './tax.component.html',
     styleUrl: './tax.component.css'
@@ -61,6 +63,7 @@ export class TaxComponent implements OnInit {
 
     showAddDialog = false;
     isEditMode = false;
+    pageLoading = false;
     dialogSubmitted = false;
     dialogSaving = false;
     dialogId = 0;
@@ -80,6 +83,8 @@ export class TaxComponent implements OnInit {
     readonly pageEyebrow = 'Tax Management';
     readonly pageTitle = 'Taxes';
     readonly pageSubtitle = 'Manage your tax rates here.';
+    readonly pageLoadingTitle = 'Please wait';
+    readonly pageLoadingSubtitle = 'Loading records...';
     dialogTitle = 'Create Tax';
     dialogSubtitle = 'Create a new tax rate.';
     dialogPrimaryActionLabel = 'Save';
@@ -106,17 +111,23 @@ export class TaxComponent implements OnInit {
     };
 
     async ngOnInit(): Promise<void> {
+        this.pageLoading = true;
         this.userDetails = JSON.parse(localStorage.getItem('userDetails') ?? '{}');
-        await this.loadTaxRights();
-        this.tableColumns = TAX_COLUMNS.map((x: any) => {
-            if (x.field === 'OrganizationName') {
-                x.hidden = this.userDetails.RoleId !== 1;
-            }
+        try {
+            await this.loadTaxRights();
+            this.tableColumns = TAX_COLUMNS.map((x: any) => {
+                if (x.field === 'OrganizationName') {
+                    x.hidden = this.userDetails.RoleId !== 1;
+                }
 
-            return x;
-        });
+                return x;
+            });
 
-        this.loadTaxes();
+            this.loadTaxes();
+        } catch {
+            this.pageLoading = false;
+            this.changeDetector.detectChanges();
+        }
     }
 
     async loadTaxRights(): Promise<void> {
@@ -171,9 +182,12 @@ export class TaxComponent implements OnInit {
                 });
 
                 this.allRows = [...this.tableRows];
+                this.pageLoading = false;
                 this.changeDetector.detectChanges();
             },
             error: () => {
+                this.pageLoading = false;
+                this.changeDetector.detectChanges();
                 this.toast.error(
                     'Load Failed',
                     'Unable to load taxes. Please check API and try again.'

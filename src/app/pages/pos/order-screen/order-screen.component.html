@@ -8,6 +8,20 @@
   </div>
   </header>
 
+  @if (pageLoading) {
+    <p-card class="feature-card">
+      <div class="page-spinner-state">
+        <p-progressSpinner ariaLabel="Loading"></p-progressSpinner>
+        <div class="page-spinner-copy">
+          <small class="page-spinner-kicker">Please wait</small>
+          <strong>{{ pageLoadingTitle }}</strong>
+          <span>{{ pageLoadingSubtitle }}</span>
+        </div>
+      </div>
+    </p-card>
+  }
+
+  @if (!pageLoading) {
   <section class="order-stats">
     <article class="summary-card">
       <span>Items</span>
@@ -147,16 +161,7 @@
           <span class="cart-customer-name">{{ activeOrderType }} / {{ activeServingType }}</span>
         </div>
 
-        <div class="order-context">
-          <div>
-            <span>Organization</span>
-            <strong>{{ organizationName || 'Organization' }}</strong>
-          </div>
-          <div>
-            <span>Branch</span>
-            <strong>{{ branchName || 'Branch' }}</strong>
-          </div>
-        </div>
+       
 
         <div class="cart-section-title">
           <span>Selected Items</span>
@@ -236,7 +241,7 @@
     </aside>
   </section>
 
-  <p-dialog [(visible)]="showOrderValidationDialog" [modal]="true" [draggable]="false" [resizable]="false"
+  <p-dialog appendTo="body" [(visible)]="showOrderValidationDialog" [modal]="true" [draggable]="false" [resizable]="false"
     [closable]="true" [dismissableMask]="true" styleClass="order-validation-dialog"
     [style]="{ width: '28rem', maxWidth: '94vw' }" (onHide)="closeOrderValidationDialog()">
     <ng-template pTemplate="header">
@@ -259,5 +264,6 @@
       <button pButton type="button" label="OK" icon="pi pi-check" (click)="closeOrderValidationDialog()"></button>
     </div>
   </p-dialog>
+  }
 
 </section>
