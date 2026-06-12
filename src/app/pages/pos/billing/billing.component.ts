@@ -114,6 +114,7 @@ type PaymentSplit = {
   id: number;
   paymentMode: string;
   amountInput: string;
+  amountTouched: boolean;
   referenceNo: string;
   approvalCode: string;
   cardLastFour: string;
@@ -602,10 +603,11 @@ export class BillingComponent implements OnInit {
 
   addPaymentSplit(mode = ''): void {
     const defaultMode = mode || String(this.paymentModes[0]?.value || this.selectedPaymentMode || 'Cash');
+    const pendingAmount = this.getPendingAmountBeforeSplit();
 
     this.paymentSplits = [
       ...this.paymentSplits,
-      this.createPaymentSplit(defaultMode)
+      this.createPaymentSplit(defaultMode, pendingAmount)
     ];
     this.updatePaymentState();
     this.updateBillingSummary();
@@ -639,6 +641,7 @@ export class BillingComponent implements OnInit {
 
       if (field === 'amountInput') {
         nextSplit.amountInput = this.normalizeAmountInput(value);
+        nextSplit.amountTouched = true;
       }
 
       if (field === 'cardLastFour') {
@@ -647,6 +650,10 @@ export class BillingComponent implements OnInit {
 
       return nextSplit;
     });
+
+    if (field === 'amountInput') {
+      this.applyPendingAmountToNextSplit(splitId);
+    }
 
     this.selectedPaymentMode = this.paymentSplits[0]?.paymentMode || 'Cash';
     this.updatePaymentState();
@@ -1130,6 +1137,7 @@ export class BillingComponent implements OnInit {
 
     this.grandTotal = Math.max(totalBeforeRoundOff + this.roundOffAmount, 0);
 
+    this.syncUntouchedPaymentAmounts();
     this.updatePaymentBalance();
 
     this.updateDisplayState();
@@ -1138,8 +1146,8 @@ export class BillingComponent implements OnInit {
 
   private updatePaymentBalance(): void {
     this.receivedAmount = this.getReceivedAmount();
-    this.changeAmount = Math.max(this.receivedAmount - this.grandTotal, 0);
-    this.balanceAmount = this.receivedAmount - this.grandTotal;
+    this.changeAmount = Math.max(this.roundAmount(this.receivedAmount - this.grandTotal), 0);
+    this.balanceAmount = this.roundAmount(this.receivedAmount - this.grandTotal);
   }
 
   private updateDisplayState(): void {
@@ -1330,11 +1338,6 @@ export class BillingComponent implements OnInit {
 
     const receivedAmount = this.getReceivedAmount();
 
-    if (receivedAmount < this.grandTotal) {
-      this.toast.warn('Payment Pending', 'Split payment total must be equal to or greater than the bill total.');
-      return false;
-    }
-
     for (const split of this.getValidPaymentSplits()) {
       if (this.isDigitalPaymentMode(split.paymentMode) && !split.referenceNo.trim()) {
         this.toast.warn('Reference Required', `Enter ${split.paymentMode} reference before completing the bill.`);
@@ -1474,8 +1477,8 @@ export class BillingComponent implements OnInit {
     const paymentSplits = this.getValidPaymentSplits();
     const paymentMode = paymentSplits.length > 1 ? 'Multi Payment' : paymentSplits[0]?.paymentMode || 'Cash';
     const receivedAmount = this.getReceivedAmount();
-    const changeAmount = Math.max(receivedAmount - this.grandTotal, 0);
-    const balanceAmount = Math.max(this.grandTotal - receivedAmount, 0);
+    const changeAmount = Math.max(this.roundAmount(receivedAmount - this.grandTotal), 0);
+    const balanceAmount = Math.max(this.roundAmount(this.grandTotal - receivedAmount), 0);
     const paymentStatus = this.getBillingPaymentStatus(receivedAmount);
     const taxableAmount = Math.max(this.subtotal - this.discountAmount + this.serviceChargeAmount, 0);
     const taxPercentage = taxableAmount > 0 ? (this.taxAmount / taxableAmount) * 100 : 0;
@@ -1618,15 +1621,18 @@ export class BillingComponent implements OnInit {
   }
 
   private getBillingPaymentStatus(receivedAmount: number): number {
-    if (receivedAmount <= 0) {
+    const roundedReceivedAmount = this.roundAmount(receivedAmount);
+    const roundedGrandTotal = this.roundAmount(this.grandTotal);
+
+    if (roundedReceivedAmount <= 0) {
       return PAYMENT_STATUS.Pending;
     }
 
-    if (receivedAmount < this.grandTotal) {
+    if (roundedReceivedAmount < roundedGrandTotal) {
       return PAYMENT_STATUS.PartialPaid;
     }
 
-    if (receivedAmount > this.grandTotal) {
+    if (roundedReceivedAmount > roundedGrandTotal) {
       return PAYMENT_STATUS.Overpaid;
     }
 
@@ -1755,11 +1761,12 @@ export class BillingComponent implements OnInit {
       .join(', ');
   }
 
-  private createPaymentSplit(mode: string): PaymentSplit {
+  private createPaymentSplit(mode: string, amount: number = 0): PaymentSplit {
     return {
       id: this.paymentSplitSequence++,
       paymentMode: mode,
-      amountInput: '0',
+      amountInput: this.formatAmountInput(amount),
+      amountTouched: amount > 0,
       referenceNo: '',
       approvalCode: '',
       cardLastFour: ''
@@ -1801,6 +1808,72 @@ export class BillingComponent implements OnInit {
     });
 
     this.updatePaymentState();
+  }
+
+  private syncUntouchedPaymentAmounts(): void {
+    if (!this.paymentSplits.length) {
+      return;
+    }
+
+    let remainingAmount = this.roundAmount(this.grandTotal);
+
+    this.paymentSplits = this.paymentSplits.map((split) => {
+      if (split.amountTouched) {
+        remainingAmount = this.roundAmount(remainingAmount - this.getPaymentSplitAmount(split));
+        return split;
+      }
+
+      const amount = Math.max(remainingAmount, 0);
+      remainingAmount = 0;
+
+      return {
+        ...split,
+        amountInput: this.formatAmountInput(amount)
+      };
+    });
+  }
+
+  private applyPendingAmountToNextSplit(splitId: number): void {
+    const changedIndex = this.paymentSplits.findIndex((split) => split.id === splitId);
+
+    if (changedIndex < 0 || changedIndex >= this.paymentSplits.length - 1) {
+      return;
+    }
+
+    const paidBeforeNext = this.paymentSplits
+      .slice(0, changedIndex + 1)
+      .reduce((sum, split) => sum + this.getPaymentSplitAmount(split), 0);
+    let remainingAmount = Math.max(this.roundAmount(this.grandTotal - paidBeforeNext), 0);
+
+    this.paymentSplits = this.paymentSplits.map((split, index) => {
+      if (index <= changedIndex) {
+        return split;
+      }
+
+      if (index === changedIndex + 1) {
+        const amountInput = this.formatAmountInput(remainingAmount);
+        remainingAmount = 0;
+        return {
+          ...split,
+          amountInput,
+          amountTouched: false
+        };
+      }
+
+      if (!split.amountTouched) {
+        return {
+          ...split,
+          amountInput: '0'
+        };
+      }
+
+      return split;
+    });
+  }
+
+  private getPendingAmountBeforeSplit(): number {
+    const receivedAmount = this.paymentSplits.reduce((sum, split) => sum + this.getPaymentSplitAmount(split), 0);
+    return Math.max(this.roundAmount(this.grandTotal - receivedAmount), 0);
   }
 
   private getValidPaymentSplits(): PaymentSplit[] {

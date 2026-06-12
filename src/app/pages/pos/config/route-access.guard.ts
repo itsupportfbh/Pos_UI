@@ -4,6 +4,10 @@ import { catchError, map, of } from 'rxjs';
 import { MenuService } from '../../../services/menu.service';
 
 const USER_DETAILS_KEY = 'userDetails';
+const ROUTE_ALIASES: Record<string, string[]> = {
+  'kitchen-display': ['display-menu-items'],
+  'display-menu-items': ['kitchen-display']
+};
 
 const getUserDetails = (): any => {
   try {
@@ -19,12 +23,13 @@ const normalizeRoute = (value: string | undefined): string => {
 
 const resolveAccess = (targetRoute: string, routes: string[], router: Router): boolean | UrlTree => {
   const allowedRoutes = routes.map((route) => normalizeRoute(route)).filter((route) => !!route);
+  const targetRoutes = [targetRoute, ...(ROUTE_ALIASES[targetRoute] ?? [])];
 
   if (!allowedRoutes.length) {
     return router.createUrlTree(['/login']);
   }
 
-  if (allowedRoutes.includes(targetRoute)) {
+  if (targetRoutes.some((route) => allowedRoutes.includes(route))) {
     return true;
   }
 

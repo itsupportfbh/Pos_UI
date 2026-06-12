@@ -116,7 +116,7 @@ export const POS_ROUTES: Routes = [
       { path: 'order-screen', loadComponent: orderScreenPage },
       { path: 'order-hold', loadComponent: orderHoldPage },
       { path: 'order-edit', loadComponent: orderEditPage },
-      { path: 'display-menu-items', loadComponent: displayMenuItemsPage },
+      { path: 'display-menu-items', redirectTo: 'kitchen-display', pathMatch: 'full' },
       //{ path: 'serve-orders', loadComponent: serveOrdersPage },
       { path: 'menu-price-change', loadComponent: menuPriceChangePage },
       { path: 'quick-serve', loadComponent: serveOrdersPage },
@@ -162,7 +162,6 @@ export const POS_ROUTES: Routes = [
       { path: 'Tax', redirectTo: 'tax', pathMatch: 'full' },
       { path: 'monthly-sales', redirectTo: 'reports', pathMatch: 'full' },
       { path: 'menu-sales', redirectTo: 'reports', pathMatch: 'full' },
-      { path: 'display-menu-items', redirectTo: 'kitchen-display', pathMatch: 'full' },
       { path: 'membership-management', redirectTo: 'reward-point', pathMatch: 'full' },
       { path: 'reward-points', redirectTo: 'reward-point', pathMatch: 'full' }
     ]

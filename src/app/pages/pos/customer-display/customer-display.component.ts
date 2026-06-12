@@ -13,6 +13,7 @@ import { OrganizationService } from '../../../services/organization.service';
 import { RuntimeConfigService } from '../../../services/runtime-config.service';
 
 type CustomerDisplayOrder = {
+  id: number;
   trackKey: string;
   orderNo: string;
   status: string;
@@ -20,6 +21,7 @@ type CustomerDisplayOrder = {
   orderType?: string;
   customerName?: string;
   sentAt?: string;
+  rawOrder?: any;
 };
 
 const ORDER_STATUS = {
@@ -76,6 +78,7 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
   isTvMode = false;
   isFullscreenActive = false;
   runtimeProfileId = 0;
+  servingOrderKey = '';
   constructor(
     private readonly route: ActivatedRoute,
     private readonly toast: AppToastService,
@@ -179,14 +182,57 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     const orderNo = this.getStringValue(order, 'OrderNumber');
 
     return {
+      id,
       trackKey: `${id || orderNo || 'order'}-${this.getStringValue(order, 'UpdatedDate', 'updatedDate', 'CreatedDate', 'createdDate')}`,
       orderNo,
       status: this.getOrderStatus(order),
       table: this.getStringValue(order, 'TableName') || 'Counter',
       orderType: this.getStringValue(order, 'OrderType'),
       customerName: this.getStringValue(order, 'CustomerName', ) || 'Walk-in Guest',
-      sentAt: this.getStringValue(order, 'CreatedDate')
+      sentAt: this.getStringValue(order, 'CreatedDate'),
+      rawOrder: order
     };
+  }
+
+  markOrderServed(order: CustomerDisplayOrder): void {
+    if (this.servingOrderKey) {
+      return;
+    }
+
+    this.servingOrderKey = order.trackKey;
+    const orderId = order.id || this.getNumberValue(order.rawOrder, 'Orderid', 'OrderId');
+    const updateServed = (sourceOrder: any) => {
+      const payload = this.buildServedPayload(order, sourceOrder);
+
+      this.displayMenuItemsService.KitchenStatusChange(payload).subscribe({
+        next: () => {
+          this.customerOrders = this.customerOrders.filter((item) => item.trackKey !== order.trackKey);
+          this.rebuildStatusBuckets();
+          this.toast.success('Served', `${order.orderNo} marked as served.`);
+        },
+        error: (err: any) => {
+          const message = err?.error?.message
+            || err?.error?.Message
+            || err?.message
+            || `Unable to mark ${order.orderNo} as served.`;
+
+          this.toast.error('Update Failed', message);
+        },
+        complete: () => {
+          this.servingOrderKey = '';
+          this.cdr.detectChanges();
+        }
+      });
+    };
+
+    if (orderId && !this.getOrderItems(order.rawOrder).length) {
+      this.displayMenuItemsService.getById(orderId).pipe(
+        catchError(() => of(order.rawOrder))
+      ).subscribe((response: any) => updateServed(this.mergeOrderWithDetails(order.rawOrder, response)));
+      return;
+    }
+
+    updateServed(order.rawOrder);
   }
 
   getCustomerName(order: CustomerDisplayOrder): string {
@@ -401,6 +447,121 @@ export class CustomerDisplayComponent implements OnInit, OnDestroy {
     }
 
     return result && typeof result === 'object' ? [result] : [];
+  }
+
+  private buildServedPayload(order: CustomerDisplayOrder, sourceOrder: any): any {
+    const rawOrder = sourceOrder ?? order.rawOrder ?? {};
+    const userId = this.getNumberValue(this.userDetails, 'UserId', 'userId', 'Id', 'id');
+    const now = new Date().toISOString();
+
+    return {
+      ...rawOrder,
+      orderid: this.getNumberValue(rawOrder, 'Orderid', 'OrderId') || order.id,
+      OrderId: this.getNumberValue(rawOrder, 'OrderId', 'Orderid') || order.id,
+      OrderStatus: ORDER_STATUS.Served,
+      Orderstatus: ORDER_STATUS.Served,
+      orderStatus: ORDER_STATUS.Served,
+      orderstatus: ORDER_STATUS.Served,
+      updatedBy: userId || this.getNumberValue(rawOrder, 'UpdatedBy') || 0,
+      UpdatedBy: userId || this.getNumberValue(rawOrder, 'UpdatedBy') || 0,
+      updatedDate: now,
+      UpdatedDate: now,
+      items: this.getOrderItems(rawOrder).map((item: any) => ({
+        ...item,
+        Itemstatus: ORDER_STATUS.Served,
+        itemstatus: ORDER_STATUS.Served,
+        UpdatedBy: userId || this.getNumberValue(item, 'UpdatedBy') || 0,
+        updatedDate: now,
+        UpdatedDate: now
+      }))
+    };
+  }
+
+  private mergeOrderWithDetails(listOrder: any, response: any): any {
+    const result = response?.result ?? response?.Result ?? response ?? null;
+    const detailHeader = this.extractOrderHeader(result) ?? {};
+    const detailItems = this.extractOrderItems(result, detailHeader, listOrder);
+
+    return {
+      ...listOrder,
+      ...detailHeader,
+      Items: detailItems,
+      items: detailItems
+    };
+  }
+
+  private extractOrderHeader(result: any): any | null {
+    if (!result) {
+      return null;
+    }
+
+    if (Array.isArray(result)) {
+      return result.find((item: any) => this.isOrderHeaderLike(item)) ?? result[0] ?? null;
+    }
+
+    const nestedHeader = result.Order ??
+      result.order ??
+      result.OrderHeader ??
+      result.orderHeader ??
+      result.Header ??
+      result.header ??
+      result.Master ??
+      result.master;
+
+    if (Array.isArray(nestedHeader)) {
+      return nestedHeader.find((item: any) => this.isOrderHeaderLike(item)) ?? nestedHeader[0] ?? null;
+    }
+
+    return nestedHeader && typeof nestedHeader === 'object' ? nestedHeader : result;
+  }
+
+  private extractOrderItems(result: any, header: any, listOrder: any): any[] {
+    const resultItems = this.getOrderItems(result);
+    const headerItems = this.getOrderItems(header);
+    const listItems = this.getOrderItems(listOrder);
+
+    if (resultItems.length) {
+      return resultItems;
+    }
+
+    if (headerItems.length) {
+      return headerItems;
+    }
+
+    if (Array.isArray(result)) {
+      const itemRows = result.filter((item: any) => this.isOrderItemLike(item));
+
+      if (itemRows.length) {
+        return itemRows;
+      }
+    }
+
+    return listItems;
+  }
+
+  private getOrderItems(order: any): any[] {
+    const items = order?.Items ?? order?.items ?? order?.OrderItems ?? order?.orderItems ?? [];
+    return Array.isArray(items) ? items : [];
+  }
+
+  private isOrderHeaderLike(value: any): boolean {
+    return Boolean(value && typeof value === 'object' && (
+      value.OrderId !== undefined ||
+      value.Orderid !== undefined ||
+      value.orderId !== undefined ||
+      value.orderid !== undefined ||
+      value.OrderNumber !== undefined ||
+      value.orderNumber !== undefined
+    ));
+  }
+
+  private isOrderItemLike(value: any): boolean {
+    return Boolean(value && typeof value === 'object' && (
+      value.Menuitemid !== undefined ||
+      value.ComboMenuItemId !== undefined ||
+      value.Itemname !== undefined ||
+      value.Quantity !== undefined
+    ));
   }
 
   private loadDisplayHeaderDetails(): void {

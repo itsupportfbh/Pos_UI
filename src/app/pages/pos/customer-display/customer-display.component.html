@@ -142,6 +142,18 @@
                   <strong>{{ getElapsedMinutes(order) || 'Ready' }}</strong>
                 </div>
               </div>
+
+              <div class="customer-card-actions">
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-check"
+                  [label]="order.orderNo + ' - ' + getCustomerName(order)"
+                  class="customer-card-serve-button"
+                  [disabled]="servingOrderKey === order.trackKey"
+                  (click)="markOrderServed(order); $event.stopPropagation()"
+                ></button>
+              </div>
             </article>
           } @empty {
             <div class="customer-order-empty">

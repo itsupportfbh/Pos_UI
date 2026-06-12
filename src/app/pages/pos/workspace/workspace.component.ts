@@ -26,6 +26,9 @@ const USER_DETAILS_KEY = 'userDetails';
 const COMMON_MENU_SCOPE = 0;
 const FRONT_OFFICE_SCOPE = 1;
 const BACK_OFFICE_SCOPE = 2;
+const ROUTE_ALIASES: Record<string, string> = {
+  'display-menu-items': 'kitchen-display'
+};
 
 @Component({
   selector: 'app-pos-workspace',
@@ -317,10 +320,15 @@ export class WorkspaceComponent implements OnInit, OnDestroy {
         key: String(subMenu.SubMenuId),
         label: subMenu.SubMenuName,
         description: subMenu.Remarks ?? '',
-        route: subMenu.Route,
+        route: this.getMenuRoute(subMenu.Route),
         entityNo: Number(subMenu.EntityNo || 0)
       }))
     };
+  }
+
+  private getMenuRoute(route: string): string {
+    const normalizedRoute = String(route ?? '').trim().toLowerCase();
+    return ROUTE_ALIASES[normalizedRoute] ?? route;
   }
 
   private getMenuScope(menuScope: number | undefined, subMenuScope: number | undefined): number {

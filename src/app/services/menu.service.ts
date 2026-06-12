@@ -28,6 +28,11 @@ export interface MenuResponse {
   result: ApiMenu[];
 }
 
+const ROUTE_ALIASES: Record<string, string[]> = {
+  'display-menu-items': ['kitchen-display'],
+  'kitchen-display': ['display-menu-items']
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -70,7 +75,9 @@ export class MenuService {
       (menu.SubMenus ?? []).map((subMenu) => String(subMenu.Route ?? '').trim().toLowerCase()).filter((route) => !!route)
     );
 
-    return [...new Set(routes)];
+    const routesWithAliases = routes.flatMap((route) => [route, ...(ROUTE_ALIASES[route] ?? [])]);
+
+    return [...new Set(routesWithAliases)];
   }
 
   private get baseUrl(): string {
